@@ -55,9 +55,8 @@ export default function MainLayout() {
         <div className="page-container">
           <div className="flex items-center justify-between h-16 gap-4">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0">
-              <span className="text-2xl">🐾</span>
-              <span className="font-display font-bold text-xl text-gradient">GlobiPet</span>
+            <Link to="/" className="flex items-center shrink-0">
+              <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
             </Link>
 
             {/* Desktop Nav */}
