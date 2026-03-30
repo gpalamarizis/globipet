@@ -49,7 +49,6 @@ const queryClient = new QueryClient({
 
 // Handle OAuth redirect (Google/Facebook)
 function OAuthHandler() {
-  const { updateUser } = useAuthStore()
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
@@ -58,12 +57,12 @@ function OAuthHandler() {
       try {
         const user = JSON.parse(decodeURIComponent(userStr))
         localStorage.setItem('globipet-auth', JSON.stringify({
-          state: { token, user, isAuthenticated: true }
+          state: { token, user, isAuthenticated: true },
+          version: 0
         }))
-        updateUser(user)
         window.history.replaceState({}, '', '/')
         window.location.reload()
-      } catch {}
+      } catch(e) { console.error(e) }
     }
   }, [])
   return null
