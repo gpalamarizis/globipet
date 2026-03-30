@@ -1,59 +1,63 @@
-import { Outlet, useLocation, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Home, ShoppingBag, Scissors, Heart, MapPin, Calendar,
-  Users, MessageSquare, BookOpen, User, Bell, Search,
-  Menu, X, ChevronDown, LogOut, Settings, Shield
-} from 'lucide-react'
-import { useAuthStore } from '@/store/auth'
+import { useState, useRef, useEffect } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Users, Stethoscope, MapPin, BarChart3, Shield } from 'lucide-react'
+import { useAuthStore } from '@/store/auth'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { cn, getInitials } from '@/lib/utils'
+import LanguageSelector from '@/components/ui/LanguageSelector'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
-import LanguageSelector from '@/components/ui/LanguageSelector'
-import { cn } from '@/lib/utils'
 
 const navItems = [
-  { path: '/',            icon: Home,        labelKey: 'nav.home' },
-  { path: '/social',      icon: Heart,       labelKey: 'nav.social' },
-  { path: '/marketplace', icon: ShoppingBag, labelKey: 'nav.shop' },
-  { path: '/services',    icon: Scissors,    labelKey: 'nav.services' },
-  { path: '/my-pets',     icon: null,        labelKey: 'nav.pets',    emoji: '🐾', requiresAuth: true },
-  { path: '/tracker',     icon: MapPin,      labelKey: 'nav.tracker', requiresAuth: true },
-  { path: '/bookings',    icon: Calendar,    labelKey: 'nav.bookings',requiresAuth: true },
-  { path: '/events',      icon: null,        labelKey: 'nav.events',  emoji: '🎉' },
-  { path: '/community',   icon: Users,       labelKey: 'nav.community',requiresAuth: true },
-  { path: '/forum',       icon: MessageSquare, labelKey: 'nav.forum' },
-  { path: '/breeds',      icon: BookOpen,    labelKey: 'nav.breeds' },
+  { path: '/',            labelKey: 'nav.home',     icon: Home },
+  { path: '/social',      labelKey: 'nav.social',   icon: Heart },
+  { path: '/marketplace', labelKey: 'nav.shop',     icon: ShoppingBag },
+  { path: '/services',    labelKey: 'nav.services', icon: Scissors },
 ]
 
 export default function MainLayout() {
-  const location = useLocation()
   const { t } = useTranslation()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 8)
-    window.addEventListener('scroll', handler, { passive: true })
-    return () => window.removeEventListener('scroll', handler)
+    const handleClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  useEffect(() => { setMobileMenuOpen(false) }, [location.pathname])
+  const { data: cartItems = [] } = useQuery({
+    queryKey: ['cart'],
+    queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => api.get('/notifications?unread=true').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Top Navbar */}
-      <header className={cn(
-        'sticky top-0 z-50 transition-all duration-200',
-        scrolled ? 'glass shadow-sm border-b border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800'
-      )}>
-        <div className="page-container">
+      {/* Navbar */}
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
+
             {/* Logo */}
             <Link to="/" className="flex items-center shrink-0">
               <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
@@ -61,103 +65,101 @@ export default function MainLayout() {
 
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
-              {navItems.slice(0, 6).map((item) => {
-                const active = location.pathname === item.path ||
-                  (item.path !== '/' && location.pathname.startsWith(item.path))
-                if (item.requiresAuth && !isAuthenticated) return null
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={cn('nav-item text-xs', active && 'active')}
-                  >
-                    {item.icon
-                      ? <item.icon size={18} />
-                      : <span className="text-lg leading-none">{item.emoji}</span>
-                    }
-                    <span>{t(item.labelKey)}</span>
-                  </Link>
-                )
-              })}
+              {navItems.map(item => (
+                <Link key={item.path} to={item.path}
+                  className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                    location.pathname === item.path
+                      ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  )}>
+                  <item.icon size={16} />
+                  {t(item.labelKey)}
+                </Link>
+              ))}
             </nav>
 
-            {/* Right side actions */}
+            {/* Right side */}
             <div className="flex items-center gap-2">
-              {/* Language selector */}
               <LanguageSelector />
 
-              {/* Search */}
-              <button className="btn-ghost p-2.5">
-                <Search size={18} />
+              <button className="btn-ghost p-2.5 hidden sm:flex">
+                <Search size={18} className="text-gray-500" />
               </button>
 
-              {isAuthenticated ? (
+              {isAuthenticated && (
                 <>
-                  {/* Notifications */}
-                  <button
-                    className="btn-ghost p-2.5 relative"
-                    onClick={() => setNotifOpen(!notifOpen)}
-                  >
-                    <Bell size={18} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-900 rounded-full" />
+                  <button onClick={() => setNotifOpen(!notifOpen)} className="btn-ghost p-2.5 relative">
+                    <Bell size={18} className="text-gray-500" />
+                    {notifications.length > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                    )}
                   </button>
 
-                  {/* Cart */}
-                  <button
-                    className="btn-ghost p-2.5"
-                    onClick={() => setCartOpen(true)}
-                  >
-                    <ShoppingBag size={18} />
+                  <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative">
+                    <ShoppingCart size={18} className="text-gray-500" />
+                    {cartItems.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {cartItems.length}
+                      </span>
+                    )}
                   </button>
 
                   {/* User menu */}
-                  <div className="relative">
-                    <button
-                      className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-900 font-semibold text-sm overflow-hidden">
+                  <div className="relative" ref={userMenuRef}>
+                    <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
                           ? <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
-                          : user?.full_name?.charAt(0) ?? 'U'
+                          : <span>{getInitials(user?.full_name || 'U')}</span>
                         }
                       </div>
+                      <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                        {user?.full_name?.split(' ')[0]}
+                      </span>
                       <ChevronDown size={14} className="text-gray-400" />
                     </button>
 
                     <AnimatePresence>
                       {userMenuOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 4, scale: 0.96 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-56 card shadow-modal z-50 py-2"
-                          onMouseLeave={() => setUserMenuOpen(false)}
-                        >
-                          <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
-                            <p className="font-semibold text-sm">{user?.full_name}</p>
-                            <p className="text-xs text-gray-500">{user?.email}</p>
+                        <motion.div initial={{ opacity: 0, y: 6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4 }}
+                          className="absolute right-0 top-full mt-1 w-56 card shadow-modal py-1 z-50">
+                          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.full_name}</p>
+                            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                           </div>
-                          <Link to="/profile" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm transition-colors">
-                            <User size={15} /> {t('nav.profile')}
-                          </Link>
-                          {(user?.role === 'service_provider' || user?.role === 'both') && (
-                            <Link to="/provider" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm transition-colors">
-                              <Settings size={15} /> {t('nav.providerDashboard')}
+                          {[
+                            { to: '/profile',    icon: User,          label: t('nav.profile') },
+                            { to: '/my-pets',    icon: PawPrint,      label: t('nav.myPets') },
+                            { to: '/bookings',   icon: Calendar,      label: t('nav.myBookings') },
+                            { to: '/orders',     icon: ShoppingBag,   label: t('nav.shop') },
+                            { to: '/wishlist',   icon: Heart,         label: 'Wishlist' },
+                          ].map(item => (
+                            <Link key={item.to} to={item.to} onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                              <item.icon size={15} className="text-gray-400" />
+                              {item.label}
+                            </Link>
+                          ))}
+                          {(user?.role === 'service_provider' || user?.role === 'admin') && (
+                            <Link to="/provider" onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
+                              <Settings size={15} className="text-gray-400" />
+                              {t('nav.providerDashboard')}
                             </Link>
                           )}
                           {user?.role === 'admin' && (
-                            <Link to="/admin" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm transition-colors">
-                              <Shield size={15} /> {t('nav.adminDashboard')}
+                            <Link to="/admin" onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                              <Shield size={15} className="text-gray-400" />
+                              {t('nav.admin')}
                             </Link>
                           )}
-                          <div className="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
-                            <button
-                              onClick={logout}
-                              className="flex items-center gap-3 px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 text-sm w-full transition-colors"
-                            >
-                              <LogOut size={15} /> {t('nav.logout')}
+                          <div className="border-t border-gray-100 dark:border-gray-800 mt-1">
+                            <button onClick={() => { setUserMenuOpen(false); logout() }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                              <LogOut size={15} />
+                              {t('nav.logout')}
                             </button>
                           </div>
                         </motion.div>
@@ -165,19 +167,17 @@ export default function MainLayout() {
                     </AnimatePresence>
                   </div>
                 </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Link to="/login" className="btn-ghost text-sm">{t('auth.login')}</Link>
-                  <Link to="/register" className="btn-primary text-sm py-2">{t('auth.register')}</Link>
+              )}
+
+              {!isAuthenticated && (
+                <div className="hidden sm:flex items-center gap-2">
+                  <Link to="/login" className="btn-ghost px-4 py-2 text-sm font-medium">{t('nav.login')}</Link>
+                  <Link to="/register" className="btn-primary px-4 py-2 text-sm">{t('auth.register')}</Link>
                 </div>
               )}
 
-              {/* Mobile menu toggle */}
-              <button
-                className="lg:hidden btn-ghost p-2.5"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden btn-ghost p-2">
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>
@@ -185,78 +185,79 @@ export default function MainLayout() {
 
         {/* Mobile menu */}
         <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
-            >
-              <div className="page-container py-3 grid grid-cols-4 gap-1">
-                {navItems.map((item) => {
-                  const active = location.pathname === item.path
-                  if (item.requiresAuth && !isAuthenticated) return null
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={cn('nav-item text-xs', active && 'active')}
-                    >
-                      {item.icon
-                        ? <item.icon size={20} />
-                        : <span className="text-xl">{item.emoji}</span>
-                      }
-                      <span className="truncate">{t(item.labelKey)}</span>
-                    </Link>
-                  )
-                })}
+          {mobileOpen && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="px-4 py-3 space-y-1">
+                {navItems.map(item => (
+                  <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+                    className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium',
+                      location.pathname === item.path ? 'bg-brand-50 text-brand-900' : 'text-gray-700 dark:text-gray-300')}>
+                    <item.icon size={18} />
+                    {t(item.labelKey)}
+                  </Link>
+                ))}
+                {!isAuthenticated && (
+                  <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <Link to="/login" onClick={() => setMobileOpen(false)} className="btn-secondary flex-1 text-center py-2 text-sm">{t('nav.login')}</Link>
+                    <Link to="/register" onClick={() => setMobileOpen(false)} className="btn-primary flex-1 text-center py-2 text-sm">{t('auth.register')}</Link>
+                  </div>
+                )}
+                {isAuthenticated && (
+                  <button onClick={() => { setMobileOpen(false); logout() }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600">
+                    <LogOut size={18} />
+                    {t('nav.logout')}
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </header>
 
-      {/* Page content */}
-      <main className="min-h-[calc(100vh-4rem)]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+      <main className="flex-1">
+        <Outlet />
       </main>
 
-      {/* Bottom nav (mobile) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 z-40 pb-safe">
-        <div className="flex items-center justify-around px-2 py-1">
-          {[
-            { path: '/', icon: Home, label: t('nav.home') },
-            { path: '/marketplace', icon: ShoppingBag, label: t('nav.shop') },
-            { path: '/services', icon: Scissors, label: t('nav.services') },
-            { path: '/social', icon: Heart, label: t('nav.social') },
-            { path: '/profile', icon: User, label: t('nav.profile') },
-          ].map((item) => {
-            const active = location.pathname === item.path
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn('flex flex-col items-center gap-0.5 p-2 rounded-xl transition-all duration-150 min-w-[52px]',
-                  active ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-                )}
-              >
-                <item.icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </Link>
-            )
-          })}
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-400 py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+            <div className="col-span-2 lg:col-span-1">
+              <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto mb-3 brightness-0 invert" />
+              <p className="text-sm text-gray-500">{t('footer.slogan')}</p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.explore')}</h4>
+              <ul className="space-y-2 text-sm">
+                {['/services', '/marketplace', '/events', '/breeds'].map((path, i) => (
+                  <li key={path}><Link to={path} className="hover:text-white transition-colors">{[t('nav.services'), t('nav.shop'), t('nav.events'), t('nav.breeds')][i]}</Link></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.support')}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.help')}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.faq')}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.contact')}</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.legal')}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.terms')}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.privacy')}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t('footer.cookies')}</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 pt-8 text-center text-xs text-gray-600">
+            © {new Date().getFullYear()} GlobiPet. {t('footer.allRights')}
+          </div>
         </div>
-      </nav>
+      </footer>
 
       {/* Drawers */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

@@ -9,10 +9,10 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  loginWithGoogle: () => Promise<void>
   register: (data: RegisterData) => Promise<void>
   logout: () => void
   updateUser: (data: Partial<User>) => void
+  setAuth: (user: User, token: string) => void
   refreshToken: () => Promise<void>
 }
 
@@ -21,9 +21,6 @@ interface RegisterData {
   email: string
   password: string
   role?: 'user' | 'service_provider' | 'both'
-  phone?: string
-  city?: string
-  country?: string
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -34,16 +31,16 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
+      setAuth: (user, token) => {
+        set({ user, token, isAuthenticated: true })
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      },
+
       login: async (email, password) => {
         set({ isLoading: true })
         try {
           const { data } = await api.post('/auth/login', { email, password })
-          set({
-            user: data.user,
-            token: data.token,
-            isAuthenticated: true,
-            isLoading: false,
-          })
+          set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
         } catch (err) {
           set({ isLoading: false })
@@ -51,20 +48,11 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loginWithGoogle: async () => {
-        window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
-      },
-
       register: async (data) => {
         set({ isLoading: true })
         try {
           const { data: res } = await api.post('/auth/register', data)
-          set({
-            user: res.user,
-            token: res.token,
-            isAuthenticated: true,
-            isLoading: false,
-          })
+          set({ user: res.user, token: res.token, isAuthenticated: true, isLoading: false })
           api.defaults.headers.common['Authorization'] = `Bearer ${res.token}`
         } catch (err) {
           set({ isLoading: false })
@@ -96,6 +84,11 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'globipet-auth',
       partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${state.token}`
+        }
+      },
     }
   )
 )
