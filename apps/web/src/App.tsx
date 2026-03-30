@@ -49,19 +49,6 @@ const queryClient = new QueryClient({
 
 // Handle OAuth redirect (Google/Facebook)
 function OAuthHandler() {
-  const { setAuth } = useAuthStore()
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    const userStr = params.get('user')
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(decodeURIComponent(userStr))
-        setAuth(user, token)
-        window.history.replaceState({}, '', '/')
-      } catch(e) { console.error('OAuth error:', e) }
-    }
-  }, [setAuth])
   return null
 }
 
