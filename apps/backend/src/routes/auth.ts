@@ -43,9 +43,53 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     return { token }
   })
 
-  // Google OAuth callback (simplified)
-  app.get('/google/callback', async (req, reply) => {
-    reply.redirect(process.env.APP_URL || 'http://localhost:3000')
+  // Google OAuth - redirect to Google
+  app.get('/google', async (req, reply) => {
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID || '',
+      redirect_uri: process.env.GOOGLE_CALLBACK_URL || '',
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+    })
+    reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
+  })
+
+  // Google OAuth callback
+  app.get('/google/callback', async (req: any, reply) => {
+    try {
+      const { code } = req.query
+      if (!code) return reply.redirect(`${process.env.APP_URL}/login?error=no_code`)
+
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code, client_id: process.env.GOOGLE_CLIENT_ID || '',
+          client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+          redirect_uri: process.env.GOOGLE_CALLBACK_URL || '',
+          grant_type: 'authorization_code',
+        }),
+      })
+      const tokens = await tokenRes.json() as any
+      const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      })
+      const googleUser = await userRes.json() as any
+
+      let user = await prisma.user.findUnique({ where: { email: googleUser.email } })
+      if (!user) {
+        user = await prisma.user.create({
+          data: { email: googleUser.email, full_name: googleUser.name, profile_photo: googleUser.picture, role: 'user' }
+        })
+      }
+
+      const { password_hash: _, ...userSafe } = user as any
+      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
+      reply.redirect(`${process.env.APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+    } catch (err) {
+      reply.redirect(`${process.env.APP_URL}/login?error=google_failed`)
+    }
   })
 }
 

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -11,7 +11,6 @@ import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
-// Lazy load all pages for code splitting
 const Home            = lazy(() => import('@/pages/Home'))
 const Social          = lazy(() => import('@/pages/Social'))
 const Marketplace     = lazy(() => import('@/pages/Marketplace'))
@@ -45,14 +44,30 @@ const AdminDashboard  = lazy(() => import('@/pages/admin/AdminDashboard'))
 const NotFound        = lazy(() => import('@/pages/NotFound'))
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
+  defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false } },
 })
+
+// Handle OAuth redirect (Google/Facebook)
+function OAuthHandler() {
+  const { updateUser } = useAuthStore()
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const userStr = params.get('user')
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userStr))
+        localStorage.setItem('globipet-auth', JSON.stringify({
+          state: { token, user, isAuthenticated: true }
+        }))
+        updateUser(user)
+        window.history.replaceState({}, '', '/')
+        window.location.reload()
+      } catch {}
+    }
+  }, [])
+  return null
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -75,16 +90,15 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <OAuthHandler />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
-              {/* Auth routes */}
               <Route element={<AuthLayout />}>
                 <Route path="/login"           element={<Login />} />
                 <Route path="/register"        element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
 
-              {/* Main app routes */}
               <Route element={<MainLayout />}>
                 <Route path="/"               element={<Home />} />
                 <Route path="/social"         element={<Social />} />
@@ -98,8 +112,6 @@ export default function App() {
                 <Route path="/breeds/:id"     element={<BreedDetail />} />
                 <Route path="/forum"          element={<Forum />} />
                 <Route path="/forum/:id"      element={<ForumTopic />} />
-
-                {/* Protected routes */}
                 <Route path="/telehealth"     element={<PrivateRoute><Telehealth /></PrivateRoute>} />
                 <Route path="/my-pets"        element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"    element={<PrivateRoute><PetDetail /></PrivateRoute>} />
@@ -115,28 +127,19 @@ export default function App() {
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
               </Route>
 
-              {/* Provider dashboard */}
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
                 <Route path="/provider/*" element={<ProviderDashboard />} />
               </Route>
-
-              {/* Admin dashboard */}
               <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
 
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: { borderRadius: '12px', background: '#1a1a1a', color: '#fff', fontSize: '14px' },
-            success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
-            error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-          }}
-        />
+        <Toaster position="top-right" toastOptions={{
+          duration: 4000,
+          style: { borderRadius: '12px', background: '#1a1a1a', color: '#fff', fontSize: '14px' },
+        }} />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </I18nextProvider>
