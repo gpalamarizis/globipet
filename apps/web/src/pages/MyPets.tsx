@@ -1,162 +1,135 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Heart, Syringe, FileText, Activity, MoreVertical, Edit, Trash2, MapPin } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { api } from '@/lib/api'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { Plus, Heart, Activity, MapPin, MoreHorizontal, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { api } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import AddPetModal from '@/components/features/pets/AddPetModal'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import type { Pet } from '@/types'
+import toast from 'react-hot-toast'
 
 const speciesEmoji: Record<string, string> = {
-  dog: '🐶', cat: '🐱', bird: '🐦', rabbit: '🐰',
-  fish: '🐟', reptile: '🦎', horse: '🐴', other: '🐾',
+  dog: '🐶', cat: '🐱', bird: '🐦', rabbit: '🐰', fish: '🐟', reptile: '🦎', horse: '🐴', other: '🐾'
 }
 
 export default function MyPets() {
-  const { user } = useAuthStore()
+  const { t } = useTranslation()
+  const { user, isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
-  const [addModalOpen, setAddModalOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [selectedPet, setSelectedPet] = useState<any>(null)
 
-  const { data: pets, isLoading } = useQuery({
+  const { data: pets = [], isLoading } = useQuery({
     queryKey: ['my-pets'],
-    queryFn: () => api.get('/pets').then(r => r.data),
+    queryFn: () => api.get('/pets/my').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
   })
 
   const deletePet = useMutation({
     mutationFn: (id: string) => api.delete(`/pets/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-pets'] })
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success('Το κατοικίδιο διαγράφηκε') },
   })
 
-  if (isLoading) return <div className="flex justify-center py-24"><LoadingSpinner /></div>
+  const toggleLost = useMutation({
+    mutationFn: ({ id, isLost }: any) => api.patch(`/pets/${id}`, { is_lost: isLost }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-pets'] }),
+  })
+
+  if (!isAuthenticated) return (
+    <div className="page-container py-16 text-center">
+      <p className="text-4xl mb-3">🔒</p>
+      <p className="font-semibold text-gray-900 dark:text-white mb-2">Απαιτείται σύνδεση</p>
+      <a href="/login" className="btn-primary inline-block">Σύνδεση</a>
+    </div>
+  )
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="section-title">Τα Κατοικίδιά μου</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{pets?.length ?? 0} κατοικίδια καταχωρημένα</p>
+          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('pets.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{pets.length} {t('pets.subtitle')}</p>
         </div>
-        <button onClick={() => setAddModalOpen(true)} className="btn-primary flex items-center gap-2">
-          <Plus size={18} /> Προσθήκη
+        <button onClick={() => setAddOpen(true)} className="btn-primary flex items-center gap-2">
+          <Plus size={18} /> {t('pets.addPet')}
         </button>
       </div>
 
-      {pets?.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-24"
-        >
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3].map(i => <div key={i} className="card p-5 space-y-3"><div className="skeleton h-24 w-full rounded-xl"/><div className="skeleton h-4 w-3/4"/><div className="skeleton h-3 w-1/2"/></div>)}
+        </div>
+      ) : pets.length === 0 ? (
+        <div className="text-center py-20">
           <p className="text-6xl mb-4">🐾</p>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Δεν έχετε καταχωρήσει κατοικίδια ακόμα</h2>
-          <p className="text-gray-500 text-sm mb-6">Προσθέστε το πρώτο σας κατοικίδιο για να ξεκινήσετε</p>
-          <button onClick={() => setAddModalOpen(true)} className="btn-primary inline-flex items-center gap-2">
-            <Plus size={18} /> Προσθήκη κατοικίδιου
-          </button>
-        </motion.div>
+          <h3 className="text-xl font-display font-bold text-gray-900 dark:text-white mb-2">{t('pets.noPets')}</h3>
+          <p className="text-gray-500 mb-6">{t('pets.noPetsDesc')}</p>
+          <button onClick={() => setAddOpen(true)} className="btn-primary">{t('pets.addFirst')}</button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {pets.map((pet: Pet, i: number) => (
-            <motion.div
-              key={pet.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <div className="card hover:shadow-card-hover transition-all duration-200 overflow-hidden group">
-                {/* Pet image */}
-                <Link to={`/my-pets/${pet.id}`} className="block">
-                  <div className="aspect-square bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
-                    {pet.image_url ? (
-                      <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-6xl">{speciesEmoji[pet.species] || '🐾'}</span>
-                      </div>
-                    )}
-                    {pet.is_lost && (
-                      <div className="absolute top-2 left-2 badge-red flex items-center gap-1">
-                        <MapPin size={11} /> Χαμένο
-                      </div>
-                    )}
-                    {pet.vaccination_status === 'overdue' && (
-                      <div className="absolute top-2 right-2 badge-red">
-                        ⚠️ Εμβόλιο
-                      </div>
-                    )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pets.map((pet: any, i: number) => (
+            <motion.div key={pet.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              className="card overflow-hidden hover:shadow-md transition-shadow">
+              {/* Pet photo/emoji header */}
+              <div className="h-32 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center relative">
+                {pet.photo_url
+                  ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+                  : <span className="text-6xl">{speciesEmoji[pet.species] || '🐾'}</span>
+                }
+                {pet.is_lost && (
+                  <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                    <AlertTriangle size={10} /> ΧΑΜΕΝΟ
                   </div>
-                </Link>
+                )}
+                <button className="absolute top-2 right-2 w-8 h-8 bg-white/80 dark:bg-gray-900/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                  <MoreHorizontal size={15} className="text-gray-600" />
+                </button>
+              </div>
 
-                <div className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link to={`/my-pets/${pet.id}`}>
-                        <h3 className="font-semibold text-gray-900 dark:text-white hover:text-brand-900 transition-colors">{pet.name}</h3>
-                      </Link>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {pet.breed || pet.species} {pet.age ? `• ${pet.age} ετών` : ''}
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <button
-                        className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        onClick={() => setMenuOpen(menuOpen === pet.id ? null : pet.id)}
-                      >
-                        <MoreVertical size={16} className="text-gray-400" />
-                      </button>
-                      {menuOpen === pet.id && (
-                        <div className="absolute right-0 top-full mt-1 w-40 card shadow-modal z-10 py-1">
-                          <Link
-                            to={`/my-pets/${pet.id}`}
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
-                          >
-                            <Edit size={14} /> Επεξεργασία
-                          </Link>
-                          <button
-                            onClick={() => { deletePet.mutate(pet.id); setMenuOpen(null) }}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
-                          >
-                            <Trash2 size={14} /> Διαγραφή
-                          </button>
-                        </div>
-                      )}
-                    </div>
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{pet.name}</h3>
+                    <p className="text-xs text-gray-500">{pet.breed || pet.species}</p>
                   </div>
+                  <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', pet.gender === 'male' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700')}>
+                    {pet.gender === 'male' ? '♂' : '♀'}
+                  </span>
+                </div>
 
-                  {/* Quick actions */}
-                  <div className="flex gap-2 mt-3">
-                    <Link
-                      to={`/medical-center?pet=${pet.id}`}
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 transition-colors"
-                    >
-                      <Syringe size={13} /> Υγεία
-                    </Link>
-                    <Link
-                      to={`/tracker?pet=${pet.id}`}
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium hover:bg-green-100 transition-colors"
-                    >
-                      <MapPin size={13} /> Tracker
-                    </Link>
-                    <Link
-                      to={`/my-pets/${pet.id}`}
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-xs font-medium hover:bg-orange-100 transition-colors"
-                    >
-                      <Activity size={13} /> Wellness
-                    </Link>
-                  </div>
+                <div className="flex gap-2 mb-3 text-xs text-gray-500">
+                  {pet.age && <span>🎂 {pet.age} {t('pets.years')}</span>}
+                  {pet.weight && <span>⚖️ {pet.weight}kg</span>}
+                  {pet.color && <span>🎨 {pet.color}</span>}
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
+                    <Activity size={12} /> {t('pets.health')}
+                  </button>
+                  <button onClick={() => toggleLost.mutate({ id: pet.id, isLost: !pet.is_lost })}
+                    className={cn('flex-1 text-xs py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5', pet.is_lost ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600')}>
+                    <MapPin size={12} /> {pet.is_lost ? t('pets.markAsFound') : t('pets.markAsLost')}
+                  </button>
                 </div>
               </div>
             </motion.div>
           ))}
+
+          {/* Add new card */}
+          <motion.button onClick={() => setAddOpen(true)} whileHover={{ scale: 1.01 }}
+            className="card p-5 border-dashed flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-brand-900 hover:border-brand-300 transition-colors min-h-[240px]">
+            <div className="w-12 h-12 rounded-2xl border-2 border-dashed border-current flex items-center justify-center">
+              <Plus size={22} />
+            </div>
+            <span className="text-sm font-medium">{t('pets.addPet')}</span>
+          </motion.button>
         </div>
       )}
 
-      <AddPetModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
+      <AddPetModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   )
 }

@@ -15,7 +15,10 @@ export default function Register() {
     e.preventDefault()
     if (form.password.length < 8) { toast.error('Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες'); return }
     try { await register(form); navigate('/'); toast.success('Καλώς ήρθατε στο GlobiPet! 🐾') }
-    catch (err: any) { toast.error(err.message || 'Σφάλμα εγγραφής') }
+    catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Σφάλμα εγγραφής'
+      toast.error(msg)
+    }
   }
 
   const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'

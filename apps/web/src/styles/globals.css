@@ -136,3 +136,23 @@
     background: rgba(15, 17, 23, 0.85);
   }
 }
+
+/* Skeleton loading */
+.skeleton {
+  @apply bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse;
+}
+
+/* Card shadow modal */
+.shadow-modal {
+  box-shadow: 0 20px 60px -10px rgba(0,0,0,0.15), 0 4px 20px -4px rgba(0,0,0,0.1);
+}
+
+/* Divider */
+.divider {
+  @apply border-t border-gray-100 dark:border-gray-800;
+}
+
+/* Badge */
+.badge-blue {
+  @apply text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full;
+}
