@@ -20,6 +20,10 @@ const navItems = [
   { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin },
 ]
 
+const providerNavItems = [
+  { path: '/provider',    labelKey: 'nav.providerDashboard', icon: Settings },
+]
+
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()

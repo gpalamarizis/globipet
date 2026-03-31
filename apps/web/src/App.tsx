@@ -111,7 +111,8 @@ export default function App() {
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
-                <Route path="/provider/*" element={<ProviderDashboard />} />
+                <Route path="/provider" element={<ProviderDashboard />} />
+              <Route path="/provider/*" element={<ProviderDashboard />} />
               </Route>
               <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />
