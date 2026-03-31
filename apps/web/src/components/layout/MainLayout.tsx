@@ -12,10 +12,12 @@ import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
 
 const navItems = [
-  { path: '/',            labelKey: 'nav.home',     icon: Home },
-  { path: '/social',      labelKey: 'nav.social',   icon: Heart },
-  { path: '/marketplace', labelKey: 'nav.shop',     icon: ShoppingBag },
-  { path: '/services',    labelKey: 'nav.services', icon: Scissors },
+  { path: '/',            labelKey: 'nav.home',      icon: Home },
+  { path: '/social',      labelKey: 'nav.social',    icon: Heart },
+  { path: '/marketplace', labelKey: 'nav.shop',      icon: ShoppingBag },
+  { path: '/services',    labelKey: 'nav.services',  icon: Scissors },
+  { path: '/telehealth',  labelKey: 'nav.telehealth', icon: Stethoscope },
+  { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin },
 ]
 
 export default function MainLayout() {
