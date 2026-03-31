@@ -66,6 +66,8 @@ model Service {
   reviews_count         Int      @default(0)
   image_url             String?
   is_active             Boolean  @default(true)
+  reset_token           String?  
+  reset_token_expires   DateTime?
   is_verified           Boolean  @default(false)
   home_visits           Boolean  @default(false)
   emergency_available   Boolean  @default(false)

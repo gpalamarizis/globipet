@@ -157,6 +157,66 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       reply.redirect(`${APP_URL}/login?error=facebook_failed`)
     }
   })
+
+  // Forgot password
+  app.post('/forgot-password', async (req: any, reply) => {
+    const { email } = req.body as any
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user) return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
+
+    const token = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    const expires = new Date(Date.now() + 3600000) // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { reset_token: token, reset_token_expires: expires }
+    })
+
+    const RESEND_KEY = process.env.RESEND_API_KEY
+    const APP_URL = process.env.APP_URL || 'https://globipet.com'
+    const resetUrl = `${APP_URL}/reset-password?token=${token}`
+
+    if (RESEND_KEY) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'GlobiPet <noreply@globipet.com>',
+          to: email,
+          subject: 'Επαναφορά κωδικού GlobiPet',
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+              <img src="${APP_URL}/logo.png" alt="GlobiPet" style="height:50px;margin-bottom:20px"/>
+              <h2>Επαναφορά κωδικού</h2>
+              <p>Κάντε κλικ στον παρακάτω σύνδεσμο για να αλλάξετε τον κωδικό σας:</p>
+              <a href="${resetUrl}" style="display:inline-block;background:#E65100;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Αλλαγή κωδικού</a>
+              <p style="color:#666;font-size:14px">Ο σύνδεσμος λήγει σε 1 ώρα. Αν δεν ζητήσατε αλλαγή κωδικού, αγνοήστε αυτό το email.</p>
+            </div>
+          `
+        })
+      })
+    }
+
+    return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
+  })
+
+  // Reset password
+  app.post('/reset-password', async (req: any, reply) => {
+    const { token, password } = req.body as any
+    const user = await prisma.user.findFirst({
+      where: { reset_token: token, reset_token_expires: { gt: new Date() } }
+    })
+    if (!user) return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος' })
+
+    const bcrypt = await import('bcryptjs')
+    const password_hash = await bcrypt.hash(password, 12)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password_hash, reset_token: null, reset_token_expires: null }
+    })
+    return { message: 'Ο κωδικός άλλαξε επιτυχώς' }
+  })
+
 }
 
 export default authRoutes

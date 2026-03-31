@@ -138,8 +138,10 @@ export default function MainLayout() {
                             { to: '/profile',    icon: User,          label: t('nav.profile') },
                             { to: '/my-pets',    icon: PawPrint,      label: t('nav.myPets') },
                             { to: '/bookings',   icon: Calendar,      label: t('nav.myBookings') },
-                            { to: '/orders',     icon: ShoppingBag,   label: t('nav.shop') },
+                            { to: '/orders',     icon: ShoppingBag,   label: 'Παραγγελίες' },
                             { to: '/wishlist',   icon: Heart,         label: 'Wishlist' },
+                            { to: '/tracker',    icon: MapPin,        label: t('nav.petTracker') },
+                            { to: '/telehealth', icon: MessageSquare, label: t('nav.telehealth') },
                           ].map(item => (
                             <Link key={item.to} to={item.to} onClick={() => setUserMenuOpen(false)}
                               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
