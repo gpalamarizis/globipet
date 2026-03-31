@@ -205,6 +205,13 @@ export default function MainLayout() {
                     <Link to="/register" onClick={() => setMobileOpen(false)} className="btn-primary flex-1 text-center py-2 text-sm">{t('auth.register')}</Link>
                   </div>
                 )}
+                {isAuthenticated && user?.role === 'admin' && (
+                  <a href="/admin" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-purple-600">
+                    <Shield size={18} />
+                    Admin
+                  </a>
+                )}
                 {isAuthenticated && (
                   <button onClick={() => { setMobileOpen(false); logout() }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600">

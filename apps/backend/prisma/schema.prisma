@@ -65,6 +65,7 @@ model Service {
   rating                Float    @default(0)
   reviews_count         Int      @default(0)
   image_url             String?
+  is_active             Boolean  @default(true)
   is_verified           Boolean  @default(false)
   home_visits           Boolean  @default(false)
   emergency_available   Boolean  @default(false)
