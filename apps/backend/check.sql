@@ -1,0 +1,1 @@
+SELECT id, email, role, password_hash FROM users WHERE email='gpal@oban.gr';
