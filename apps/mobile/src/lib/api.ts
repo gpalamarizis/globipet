@@ -1,15 +1,17 @@
 import axios from 'axios'
 
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://globipetbackend-production.up.railway.app/api'
+
 export const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api',
+  baseURL: API_URL,
   timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
 })
 
-api.interceptors.request.use(async (config) => {
-  try {
-    const SecureStore = require('expo-secure-store')
-    const token = await SecureStore.getItemAsync('globipet_token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
-  } catch {}
-  return config
-})
+api.interceptors.response.use(
+  res => res,
+  err => {
+    console.error('API Error:', err.response?.data || err.message)
+    return Promise.reject(err)
+  }
+)

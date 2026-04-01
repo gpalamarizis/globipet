@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /provider
+Disallow: /checkout
+Disallow: /orders
+Disallow: /bookings
+Disallow: /profile
+
+Sitemap: https://globipet.com/sitemap.xml

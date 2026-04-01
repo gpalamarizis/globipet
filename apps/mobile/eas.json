@@ -7,10 +7,11 @@
     },
     "preview": {
       "distribution": "internal",
-      "ios": { "simulator": true }
+      "android": { "buildType": "apk" }
     },
     "production": {
-      "autoIncrement": true
+      "ios": { "resourceClass": "m-medium" },
+      "android": { "buildType": "aab" }
     }
   },
   "submit": {
@@ -21,8 +22,8 @@
         "appleTeamId": "YOUR_APPLE_TEAM_ID"
       },
       "android": {
-        "serviceAccountKeyPath": "./google-play-key.json",
-        "track": "internal"
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
       }
     }
   }
