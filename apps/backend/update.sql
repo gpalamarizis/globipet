@@ -1,1 +1,1 @@
-UPDATE users SET password_hash='$2a$12$fEb97OeVnbhT4jLDx6Bmb.r4VLg4kqP.aelYF/G8f4O6Tfs9y0vfa', role='admin' WHERE email='gpal@oban.gr';
+UPDATE users SET role='admin' WHERE email='gpalamarizis@gmail.com';

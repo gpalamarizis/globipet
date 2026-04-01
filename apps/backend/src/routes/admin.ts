@@ -40,7 +40,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       select: {
         id: true, full_name: true, email: true, role: true,
-        profile_photo: true, is_active: true, is_verified: true,
+        profile_photo: true, is_verified: true,
         created_at: true,
       },
     })
