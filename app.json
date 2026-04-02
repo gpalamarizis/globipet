@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "GlobiPet",
+    "slug": "globipet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "globipet",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E65100"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.globipet.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E65100"
+      },
+      "package": "com.globipet.app",
+      "versionCode": 1
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
+      [
+        "react-native-nfc-manager",
+        {
+          "selectIdentifiers": [],
+          "systemCodes": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
