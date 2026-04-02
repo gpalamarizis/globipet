@@ -36,7 +36,10 @@ const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
 // Plugins
 await app.register(helmet, { contentSecurityPolicy: false })
-await app.register(cors, { origin: process.env.APP_URL || 'http://localhost:3000', credentials: true })
+await app.register(cors, {
+  origin: ['https://globipet.com', 'https://www.globipet.com', 'https://globipet.pages.dev', 'http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+})
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'dev-secret-min-32-chars-here!!' })
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
 await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } })

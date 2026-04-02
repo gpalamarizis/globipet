@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
-  timeout: 15000,
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -31,9 +31,8 @@ api.interceptors.response.use(
       window.location.href = '/login'
     } else if (status === 429) {
       toast.error('Πάρα πολλά αιτήματα. Δοκιμάστε σε λίγο.')
-    } else if (status >= 500) {
-      toast.error('Σφάλμα διακομιστή. Παρακαλώ δοκιμάστε αργότερα.')
     }
+    // Don't show global toast for 500 errors - let components handle them
 
     return Promise.reject({ message, statusCode: status, errors: error.response?.data?.errors })
   }

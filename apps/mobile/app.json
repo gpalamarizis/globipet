@@ -15,16 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.globipet.app",
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Χρειαζόμαστε την τοποθεσία σας για να εντοπίσουμε κατοικίδια κοντά σας.",
-        "NSLocationAlwaysUsageDescription": "Χρειαζόμαστε πάντα πρόσβαση στην τοποθεσία για το GPS tracker του κατοικίδιού σας.",
-        "NSCameraUsageDescription": "Χρειαζόμαστε πρόσβαση στην κάμερα για να φωτογραφίσετε το κατοικίδιό σας.",
-        "NSPhotoLibraryUsageDescription": "Χρειαζόμαστε πρόσβαση στις φωτογραφίες σας."
-      },
-      "config": {
-        "googleMapsApiKey": "YOUR_IOS_MAPS_KEY"
-      }
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,29 +27,30 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "POST_NOTIFICATIONS"
-      ],
-      "config": {
-        "googleMaps": { "apiKey": "YOUR_ANDROID_MAPS_KEY" }
-      }
+      ]
     },
-    "web": { "bundler": "metro", "output": "static" },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-secure-store",
-      ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#E65100" }],
-      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Allow GlobiPet to use your location." }]
+      "expo-secure-store"
     ],
-    "experiments": { "typedRoutes": true },
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
-      "eas": { "projectId": "YOUR_EAS_PROJECT_ID" }
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      },
+      "apiUrl": "https://globipetbackend-production.up.railway.app/api"
     }
   }
 }
