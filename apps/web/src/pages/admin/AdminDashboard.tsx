@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Package, ClipboardList, Database, ChevronRight, X, Play, Shield, Plus, Eye, EyeOff } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -10,13 +10,18 @@ import toast from 'react-hot-toast'
 
 type Tab = 'overview' | 'users' | 'providers' | 'products' | 'orders' | 'database'
 
-function StatCard({ icon: Icon, label, value, color }: any) {
+function StatCard({ icon: Icon, label, value, change, color }: any) {
   return (
     <div className="card p-5">
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', color)}>
-        <Icon size={18} className="text-white" />
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', color)}>
+          <Icon size={18} className="text-white" />
+        </div>
+        {change != null && <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', change > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600')}>
+          {change > 0 ? '+' : ''}{change}%
+        </span>}
       </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value ?? '—'}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
       <p className="text-sm text-gray-500 mt-0.5">{label}</p>
     </div>
   )
@@ -64,7 +69,6 @@ function UsersTab() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <div className="flex gap-3">
         <div className="flex items-center gap-2 flex-1 input">
           <Search size={15} className="text-gray-400 shrink-0" />
@@ -77,12 +81,11 @@ function UsersTab() {
           <option value="service_provider">Πάροχοι</option>
           <option value="admin">Admins</option>
         </select>
-        <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2 text-sm shrink-0">
+        <button onClick={() => setShowCreate(!showCreate)} className="btn-primary flex items-center gap-2 text-sm shrink-0">
           <Plus size={16}/> Νέος χρήστης
         </button>
       </div>
 
-      {/* Create user form */}
       <AnimatePresence>
         {showCreate && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -105,9 +108,11 @@ function UsersTab() {
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Κωδικός *</label>
                 <div className="relative">
-                  <input className="input pr-10" type={showPass ? 'text' : 'password'} placeholder="Τουλάχιστον 8 χαρακτήρες"
+                  <input className="input pr-10" type={showPass ? 'text' : 'password'}
+                    placeholder="Τουλάχιστον 8 χαρακτήρες"
                     value={newUser.password} onChange={e => setNewUser(u => ({...u, password: e.target.value}))} />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                     {showPass ? <EyeOff size={15}/> : <Eye size={15}/>}
                   </button>
                 </div>
@@ -133,7 +138,6 @@ function UsersTab() {
         )}
       </AnimatePresence>
 
-      {/* Users table */}
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
@@ -146,12 +150,12 @@ function UsersTab() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {isLoading ? (
-              [1,2,3].map(i => (
+              [1,2,3,4,5].map(i => (
                 <tr key={i}><td colSpan={4} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>
               ))
             ) : filtered.length === 0 ? (
               <tr><td colSpan={4} className="text-center py-12 text-gray-400">
-                {users.length === 0 ? 'Δεν βρέθηκαν χρήστες στη βάση' : 'Δεν βρέθηκαν αποτελέσματα'}
+                {users.length === 0 ? 'Δεν βρέθηκαν χρήστες' : 'Δεν βρέθηκαν αποτελέσματα'}
               </td></tr>
             ) : filtered.map((u: any) => (
               <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -207,8 +211,177 @@ function UsersTab() {
   )
 }
 
+function ProvidersTab() {
+  const queryClient = useQueryClient()
+  const { data: providers = [], isLoading } = useQuery({
+    queryKey: ['admin-providers'],
+    queryFn: () => api.get('/admin/users?role=service_provider').then(r => r.data?.data ?? []),
+  })
+
+  const verifyProvider = useMutation({
+    mutationFn: ({ id, verified }: any) => api.patch(`/admin/users/${id}`, { is_verified: verified }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-providers'] }); toast.success('Πάροχος ενημερώθηκε') },
+  })
+
+  return (
+    <div className="card overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+          <tr>
+            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Πάροχος</th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Επαλήθευση</th>
+            <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ενέργειες</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={3} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
+          : providers.length === 0 ? <tr><td colSpan={3} className="text-center py-12 text-gray-400">Δεν βρέθηκαν πάροχοι</td></tr>
+          : providers.map((p: any) => (
+            <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs">
+                    {getInitials(p.full_name || 'P')}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{p.full_name}</p>
+                    <p className="text-xs text-gray-500">{p.email}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', p.is_verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>
+                  {p.is_verified ? '✓ Επαληθευμένος' : '⏳ Εκκρεμεί'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <button onClick={() => verifyProvider.mutate({ id: p.id, verified: !p.is_verified })}
+                  className={cn('text-xs px-3 py-1.5 rounded-lg font-medium transition-all', p.is_verified ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100')}>
+                  {p.is_verified ? 'Αφαίρεση' : 'Επαλήθευση'}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ProductsTab() {
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['admin-products'],
+    queryFn: () => api.get('/products?limit=50').then(r => r.data?.data ?? []),
+  })
+
+  const deleteProduct = useMutation({
+    mutationFn: (id: string) => api.delete(`/products/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Προϊόν διαγράφηκε') },
+  })
+
+  const filtered = products.filter((p: any) => p.name?.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 input mb-4">
+        <Search size={15} className="text-gray-400 shrink-0" />
+        <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση προϊόντος..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Προϊόν</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Κατηγορία</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Τιμή</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ενέργειες</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={4} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
+            : filtered.length === 0 ? <tr><td colSpan={4} className="text-center py-12 text-gray-400">Δεν βρέθηκαν προϊόντα</td></tr>
+            : filtered.map((p: any) => (
+              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">📦</div>
+                    <span className="font-medium text-gray-900 dark:text-white">{p.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-500">{p.category}</td>
+                <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{p.price}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => { if(confirm('Διαγραφή προϊόντος;')) deleteProduct.mutate(p.id) }}
+                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={14} className="text-red-500" /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function OrdersTab() {
+  const [statusFilter, setStatusFilter] = useState('all')
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: () => api.get('/orders?limit=50').then(r => r.data?.data ?? []),
+  })
+  const filtered = orders.filter((o: any) => statusFilter === 'all' || o.status === statusFilter)
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {['all','pending','confirmed','shipped','delivered','cancelled'].map(s => (
+          <button key={s} onClick={() => setStatusFilter(s)}
+            className={cn('text-xs px-3 py-1.5 rounded-full font-medium transition-all', statusFilter === s ? 'bg-brand-900 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600')}>
+            {s === 'all' ? 'Όλες' : s === 'pending' ? 'Εκκρεμείς' : s === 'confirmed' ? 'Επιβεβ.' : s === 'shipped' ? 'Αποστολή' : s === 'delivered' ? 'Παράδοση' : 'Ακυρ.'}
+          </button>
+        ))}
+      </div>
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">ID</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Σύνολο</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Κατάσταση</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Ημερομηνία</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={4} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
+            : filtered.length === 0 ? <tr><td colSpan={4} className="text-center py-12 text-gray-400">Δεν βρέθηκαν παραγγελίες</td></tr>
+            : filtered.map((o: any) => (
+              <tr key={o.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">#{o.id?.slice(0,8)}</td>
+                <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{o.total_amount?.toFixed(2) || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
+                    o.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                    o.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                    o.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-700')}>
+                    {o.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-500">{o.created_at ? new Date(o.created_at).toLocaleDateString('el-GR') : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function DatabaseTab() {
-  const [query, setQuery] = useState("SELECT id, email, role, created_at FROM users ORDER BY created_at DESC;")
+  const [query, setQuery] = useState("SELECT id, full_name, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 20;")
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -220,12 +393,12 @@ function DatabaseTab() {
       const { data } = await api.post('/admin/query', { sql: query })
       setResult(data)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Σφάλμα εκτέλεσης')
+      setError(err.response?.data?.message || 'Σφάλμα εκτέλεσης query')
     } finally { setLoading(false) }
   }
 
   const quickQueries = [
-    { label: 'Χρήστες', sql: "SELECT id, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 20;" },
+    { label: 'Χρήστες', sql: "SELECT id, full_name, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 20;" },
     { label: 'Παραγγελίες', sql: "SELECT id, total_amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 20;" },
     { label: 'Κατοικίδια', sql: "SELECT id, name, species, breed FROM pets ORDER BY created_at DESC LIMIT 20;" },
     { label: 'Πίνακες', sql: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" },
@@ -234,6 +407,10 @@ function DatabaseTab() {
   return (
     <div className="space-y-4">
       <div className="card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle size={14} className="text-orange-500" />
+          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Προσοχή: Μόνο για διαχειριστές. Τα DELETE/DROP queries είναι μη αναστρέψιμα.</p>
+        </div>
         <div className="flex flex-wrap gap-2 mb-3">
           {quickQueries.map(q => (
             <button key={q.label} onClick={() => setQuery(q.sql)}
@@ -243,7 +420,8 @@ function DatabaseTab() {
           ))}
         </div>
         <textarea value={query} onChange={e => setQuery(e.target.value)} rows={4}
-          className="w-full font-mono text-sm bg-gray-900 text-green-400 p-4 rounded-xl resize-none outline-none border border-gray-700" />
+          className="w-full font-mono text-sm bg-gray-900 text-green-400 p-4 rounded-xl resize-none outline-none border border-gray-700"
+          placeholder="SELECT * FROM ..." />
         <div className="flex justify-end mt-2">
           <button onClick={runQuery} disabled={loading} className="btn-primary flex items-center gap-2 text-sm">
             <Play size={14} /> {loading ? 'Εκτέλεση...' : 'Εκτέλεση Query'}
@@ -297,16 +475,19 @@ export default function AdminDashboard() {
   })
 
   const tabs = [
-    { id: 'overview', label: 'Επισκόπηση', icon: TrendingUp },
-    { id: 'users',    label: 'Χρήστες',    icon: Users },
-    { id: 'database', label: 'Βάση',        icon: Database },
+    { id: 'overview',  label: 'Επισκόπηση',  icon: TrendingUp },
+    { id: 'users',     label: 'Χρήστες',      icon: Users },
+    { id: 'providers', label: 'Πάροχοι',      icon: Shield },
+    { id: 'products',  label: 'Προϊόντα',     icon: Package },
+    { id: 'orders',    label: 'Παραγγελίες',  icon: ClipboardList },
+    { id: 'database',  label: 'Βάση',         icon: Database },
   ]
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-          <Shield size={20} className="text-purple-600" />
+          <Shield size={20} className="text-purple-600 dark:text-purple-400" />
         </div>
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
@@ -326,16 +507,47 @@ export default function AdminDashboard() {
       </div>
 
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users}       label="Χρήστες"     value={stats?.users}     color="bg-blue-500" />
-          <StatCard icon={PawPrint}    label="Κατοικίδια"  value={stats?.pets}      color="bg-orange-500" />
-          <StatCard icon={ShoppingBag} label="Παραγγελίες" value={stats?.orders}    color="bg-green-500" />
-          <StatCard icon={TrendingUp}  label="Έσοδα"       value={`€${stats?.revenue ?? '0'}`} color="bg-purple-500" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon={Users}       label="Χρήστες"     value={stats?.users ?? '—'}    change={12}  color="bg-blue-500" />
+            <StatCard icon={PawPrint}    label="Κατοικίδια"  value={stats?.pets ?? '—'}     change={8}   color="bg-orange-500" />
+            <StatCard icon={ShoppingBag} label="Παραγγελίες" value={stats?.orders ?? '—'}   change={-3}  color="bg-green-500" />
+            <StatCard icon={TrendingUp}  label="Έσοδα"       value={`€${stats?.revenue ?? '0'}`} change={15} color="bg-purple-500" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon={Shield}      label="Πάροχοι"     value={stats?.providers ?? '—'} change={5}  color="bg-teal-500" />
+            <StatCard icon={Package}     label="Προϊόντα"    value={stats?.products ?? '—'}  change={2}  color="bg-pink-500" />
+            <StatCard icon={ClipboardList} label="Κρατήσεις" value={stats?.bookings ?? '—'}  change={18} color="bg-yellow-500" />
+            <StatCard icon={Database}    label="Εγγραφές DB" value={stats?.total_records ?? '—'} change={null} color="bg-gray-500" />
+          </div>
+          <div className="card p-5">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Γρήγορες ενέργειες</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Διαχείριση χρηστών', tab: 'users' as Tab, icon: Users },
+                { label: 'Εκκρεμείς παραγγελίες', tab: 'orders' as Tab, icon: ClipboardList },
+                { label: 'Επαλήθευση παρόχων', tab: 'providers' as Tab, icon: Shield },
+                { label: 'Προϊόντα', tab: 'products' as Tab, icon: Package },
+                { label: 'SQL Query', tab: 'database' as Tab, icon: Database },
+                { label: 'Νέος χρήστης', tab: 'users' as Tab, icon: Users },
+              ].map((item, i) => (
+                <button key={i} onClick={() => setActiveTab(item.tab)}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left border border-gray-100 dark:border-gray-800">
+                  <item.icon size={16} className="text-gray-400 shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
+                  <ChevronRight size={14} className="text-gray-400 ml-auto" />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {activeTab === 'users'    && <UsersTab />}
-      {activeTab === 'database' && <DatabaseTab />}
+      {activeTab === 'users'     && <UsersTab />}
+      {activeTab === 'providers' && <ProvidersTab />}
+      {activeTab === 'products'  && <ProductsTab />}
+      {activeTab === 'orders'    && <OrdersTab />}
+      {activeTab === 'database'  && <DatabaseTab />}
     </div>
   )
 }
