@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import bcrypt from 'bcryptjs'
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
   // Middleware: only admins
@@ -24,7 +25,10 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
       prisma.product.count(),
       prisma.booking.count(),
     ])
-    const revenueData = await prisma.order.aggregate({ _sum: { total_amount: true }, where: { status: 'delivered' } })
+    const revenueData = await prisma.order.aggregate({
+      _sum: { total_amount: true },
+      where: { status: 'delivered' }
+    })
     return {
       users, pets, orders, providers, products, bookings,
       revenue: revenueData._sum.total_amount?.toFixed(2) ?? '0',
@@ -32,26 +36,63 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  // Get all users
+  // Get all users - fixed to not use is_active
   app.get('/users', async (req: any) => {
     const role = req.query.role
     const users = await prisma.user.findMany({
       where: role ? { role } : undefined,
       orderBy: { created_at: 'desc' },
       select: {
-        id: true, full_name: true, email: true, role: true,
-        profile_photo: true, is_verified: true,
+        id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        profile_photo: true,
+        is_verified: true,
         created_at: true,
       },
     })
     return { data: users }
   })
 
+  // Create user (admin only)
+  app.post('/users', async (req: any, reply) => {
+    const { full_name, email, password, role } = req.body as any
+    if (!email || !password) {
+      return reply.code(400).send({ message: 'Email και κωδικός είναι υποχρεωτικά' })
+    }
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return reply.code(409).send({ message: 'Το email χρησιμοποιείται ήδη' })
+    }
+    const password_hash = await bcrypt.hash(password, 12)
+    const user = await prisma.user.create({
+      data: {
+        full_name: full_name || email.split('@')[0],
+        email,
+        password_hash,
+        role: role || 'user',
+      },
+      select: {
+        id: true, full_name: true, email: true, role: true, created_at: true
+      }
+    })
+    return user
+  })
+
   // Update user
   app.patch('/users/:id', async (req: any) => {
+    const { password, ...rest } = req.body as any
+    const data: any = { ...rest }
+    if (password) {
+      data.password_hash = await bcrypt.hash(password, 12)
+    }
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: req.body,
+      data,
+      select: {
+        id: true, full_name: true, email: true, role: true, created_at: true
+      }
     })
     return user
   })
@@ -62,20 +103,21 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(204).send()
   })
 
-  // Raw SQL query (admin only)
+  // Raw SQL query
   app.post('/query', async (req: any, reply) => {
-    const { sql } = req.body
+    const { sql } = req.body as any
     if (!sql) return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })
-
-    // Basic safety check
     const dangerous = /\b(DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE)\b/i.test(sql)
     if (dangerous) return reply.code(400).send({ message: 'Επικίνδυνη εντολή SQL δεν επιτρέπεται' })
-
     const start = Date.now()
     try {
       const rows = await prisma.$queryRawUnsafe(sql)
       const duration = Date.now() - start
-      return { rows: Array.isArray(rows) ? rows : [rows], rowCount: Array.isArray(rows) ? rows.length : 1, duration }
+      return {
+        rows: Array.isArray(rows) ? rows : [rows],
+        rowCount: Array.isArray(rows) ? rows.length : 1,
+        duration
+      }
     } catch (err: any) {
       return reply.code(400).send({ message: err.message })
     }
