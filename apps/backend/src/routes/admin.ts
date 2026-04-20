@@ -3,7 +3,6 @@ import prisma from '../lib/prisma.js'
 import bcrypt from 'bcryptjs'
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
-  // Middleware: only admins
   app.addHook('preHandler', async (req, reply) => {
     try {
       await (app as any).authenticate(req, reply)
@@ -15,7 +14,6 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  // Stats
   app.get('/stats', async () => {
     const [users, pets, orders, providers, products, bookings] = await Promise.all([
       prisma.user.count(),
@@ -36,7 +34,6 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  // Get all users - fixed to not use is_active
   app.get('/users', async (req: any) => {
     const role = req.query.role
     const users = await prisma.user.findMany({
@@ -48,14 +45,12 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         email: true,
         role: true,
         profile_photo: true,
-        is_verified: true,
         created_at: true,
       },
     })
     return { data: users }
   })
 
-  // Create user (admin only)
   app.post('/users', async (req: any, reply) => {
     const { full_name, email, password, role } = req.body as any
     if (!email || !password) {
@@ -80,7 +75,6 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return user
   })
 
-  // Update user
   app.patch('/users/:id', async (req: any) => {
     const { password, ...rest } = req.body as any
     const data: any = { ...rest }
@@ -97,13 +91,11 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return user
   })
 
-  // Delete user
   app.delete('/users/:id', async (req: any, reply) => {
     await prisma.user.delete({ where: { id: req.params.id } })
     return reply.code(204).send()
   })
 
-  // Raw SQL query
   app.post('/query', async (req: any, reply) => {
     const { sql } = req.body as any
     if (!sql) return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })
