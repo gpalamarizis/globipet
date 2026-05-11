@@ -16,7 +16,7 @@ const mockPets = [
   { id: '3', name: 'Μπόμπι', species: 'dog', emoji: '🐶', battery: 12, signal: 'none', lat: 37.9908, lng: 23.7041, lastSeen: new Date(Date.now() - 45*60000), isLost: true, address: 'Εξάρχεια, Αθήνα' },
 ]
 
-function MapView({ selectedPet, pets }: { selectedPet: any; pets: any[] }) {
+function MapView({ selectedPet, pets, t }: { selectedPet: any; pets: any[]; t: any }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
   const markersRef = useRef<any[]>([])
@@ -45,7 +45,6 @@ function MapView({ selectedPet, pets }: { selectedPet: any; pets: any[] }) {
       map.addControl(new mapboxgl.NavigationControl(), 'top-right')
       map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), 'top-right')
 
-      // Add pet markers
       pets.forEach(pet => {
         const el = document.createElement('div')
         el.innerHTML = `<div style="background:${pet.isLost ? '#ef4444' : '#f97316'};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer">${pet.emoji}</div>`
@@ -56,7 +55,7 @@ function MapView({ selectedPet, pets }: { selectedPet: any; pets: any[] }) {
             <div style="padding:8px;font-family:sans-serif">
               <strong style="font-size:14px">${pet.name}</strong>
               <p style="margin:4px 0;font-size:12px;color:#666">${pet.address}</p>
-              <p style="margin:0;font-size:12px;color:${pet.isLost ? '#ef4444' : '#22c55e'}">${pet.isLost ? '⚠️ Χαμένο' : '✅ Ασφαλές'}</p>
+              <p style="margin:0;font-size:12px;color:${pet.isLost ? '#ef4444' : '#22c55e'}">${pet.isLost ? '⚠️ ' + t('tracker.lost') : '✅ ' + t('tracker.safe')}</p>
             </div>
           `))
           .addTo(map)
@@ -76,12 +75,12 @@ function MapView({ selectedPet, pets }: { selectedPet: any; pets: any[] }) {
 }
 
 export default function PetTracker() {
+  const { t } = useTranslation()
   const { isAuthenticated } = useAuthStore()
   const [selectedPet, setSelectedPet] = useState(mockPets[0])
   const [wsConnected, setWsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     if (!isAuthenticated) return
     try {
@@ -106,37 +105,36 @@ export default function PetTracker() {
   const getSignalIcon = (s: string) => s === 'good' ? '████' : s === 'weak' ? '██░░' : '░░░░'
   const timeSince = (d: Date) => {
     const m = Math.floor((Date.now() - d.getTime()) / 60000)
-    return m < 1 ? 'Τώρα' : m < 60 ? `${m} λεπτά πριν` : `${Math.floor(m/60)} ώρες πριν`
+    return m < 1 ? t('tracker.now') : m < 60 ? `${m} ${t('tracker.minutesAgo')}` : `${Math.floor(m/60)} ${t('tracker.hoursAgo')}`
   }
+  const signalLabel = (s: string) => s === 'good' ? t('tracker.signalGood') : s === 'weak' ? t('tracker.signalWeak') : t('tracker.signalNone')
 
   return (
     <div className="page-container py-6 pb-24 lg:pb-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">GPS Tracker</h1>
+          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('tracker.title')}</h1>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
             <span className={cn('w-2 h-2 rounded-full', wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400')} />
-            {wsConnected ? 'Σύνδεση real-time' : 'Εκτός σύνδεσης'}
+            {wsConnected ? t('tracker.realtime') : t('tracker.offline')}
           </p>
         </div>
         <button className="btn-ghost p-2.5"><Settings size={18} className="text-gray-500" /></button>
       </div>
 
-      {/* Lost pet alert */}
       {mockPets.some(p => p.isLost) && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 mb-6 flex items-center gap-3">
           <AlertTriangle size={20} className="text-red-600 shrink-0" />
           <div>
-            <p className="font-semibold text-red-800 dark:text-red-400 text-sm">Χαμένο κατοικίδιο!</p>
-            <p className="text-xs text-red-600 dark:text-red-500">Ο Μπόμπι δεν έχει εντοπιστεί εδώ και 45 λεπτά</p>
+            <p className="font-semibold text-red-800 dark:text-red-400 text-sm">{t('tracker.lostPetAlert')}</p>
+            <p className="text-xs text-red-600 dark:text-red-500">{t('tracker.lostPetMsg', { name: 'Μπόμπι', minutes: 45 })}</p>
           </div>
-          <button className="ml-auto text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-medium">Εντοπισμός</button>
+          <button className="ml-auto text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-medium">{t('tracker.locate')}</button>
         </motion.div>
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Pet list */}
         <div className="space-y-3">
           {mockPets.map(pet => (
             <motion.div key={pet.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
@@ -147,7 +145,7 @@ export default function PetTracker() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm text-gray-900 dark:text-white">{pet.name}</p>
-                    {pet.isLost && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">ΧΑΜΕΝΟ</span>}
+                    {pet.isLost && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">{t('pets.lostBadge')}</span>}
                   </div>
                   <p className="text-xs text-gray-500 truncate">{pet.address}</p>
                 </div>
@@ -173,17 +171,15 @@ export default function PetTracker() {
 
           <button className="w-full card p-4 flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-brand-900 hover:border-brand-300 transition-colors border-dashed">
             <Plus size={16} />
-            Προσθήκη tracker
+            {t('tracker.addTracker')}
           </button>
         </div>
 
-        {/* Map */}
         <div className="lg:col-span-2 h-[480px]">
-          <MapView selectedPet={selectedPet} pets={mockPets} />
+          <MapView selectedPet={selectedPet} pets={mockPets} t={t} />
         </div>
       </div>
 
-      {/* Selected pet details */}
       {selectedPet && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={selectedPet.id}
           className="card p-5 mt-6">
@@ -195,21 +191,21 @@ export default function PetTracker() {
             </div>
             <div className="ml-auto flex gap-2">
               <button className="btn-secondary text-xs flex items-center gap-1.5">
-                <Navigation size={13} /> Οδηγίες
+                <Navigation size={13} /> {t('tracker.directions')}
               </button>
-              <button onClick={() => toast.success('Αποστολή ειδοποίησης στο tracker!')}
+              <button onClick={() => toast.success(t('tracker.pingSent'))}
                 className="btn-primary text-xs flex items-center gap-1.5">
-                <Wifi size={13} /> Ping
+                <Wifi size={13} /> {t('tracker.ping')}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Μπαταρία', value: `${selectedPet.battery}%`, color: getBatteryColor(selectedPet.battery) },
-              { label: 'Σήμα', value: selectedPet.signal === 'good' ? 'Καλό' : selectedPet.signal === 'weak' ? 'Αδύναμο' : 'Καμία', color: 'text-gray-600' },
-              { label: 'Τελευταία ενημέρωση', value: timeSince(selectedPet.lastSeen), color: 'text-gray-600' },
-              { label: 'Κατάσταση', value: selectedPet.isLost ? 'Χαμένο' : 'Ασφαλές', color: selectedPet.isLost ? 'text-red-500' : 'text-green-500' },
+              { label: t('tracker.battery'), value: `${selectedPet.battery}%`, color: getBatteryColor(selectedPet.battery) },
+              { label: t('tracker.signal'), value: signalLabel(selectedPet.signal), color: 'text-gray-600' },
+              { label: t('tracker.lastUpdate'), value: timeSince(selectedPet.lastSeen), color: 'text-gray-600' },
+              { label: t('tracker.status'), value: selectedPet.isLost ? t('tracker.lost') : t('tracker.safe'), color: selectedPet.isLost ? 'text-red-500' : 'text-green-500' },
             ].map((item, i) => (
               <div key={i} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
                 <p className="text-xs text-gray-500 mb-1">{item.label}</p>

@@ -17,13 +17,15 @@ const statusColors: Record<string, string> = {
 }
 
 export default function MyBookings() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'all'>('upcoming')
   const [reviewBooking, setReviewBooking] = useState<any>(null)
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
+  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
+  const locale = localeMap[i18n.language] || 'el-GR'
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['my-bookings'],
@@ -52,7 +54,7 @@ export default function MyBookings() {
   if (!isAuthenticated) return (
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🔒</p>
-      <Link to="/login" className="btn-primary">Σύνδεση</Link>
+      <Link to="/login" className="btn-primary">{t('auth.login')}</Link>
     </div>
   )
 
@@ -61,11 +63,10 @@ export default function MyBookings() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('bookings.title')}</h1>
         <Link to="/services" className="btn-primary text-sm flex items-center gap-2">
-          <Plus size={16}/> Νέα κράτηση
+          <Plus size={16}/> {t('bookingsExtra.newBooking')}
         </Link>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-6">
         {[
           { id: 'upcoming', label: t('bookings.upcoming') },
@@ -87,7 +88,7 @@ export default function MyBookings() {
           <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
           <h3 className="font-bold text-gray-900 dark:text-white mb-2">{t('bookings.noBookings')}</h3>
           <p className="text-gray-500 mb-6">{t('bookings.noBookingsDesc')}</p>
-          <Link to="/services" className="btn-primary">Εξερεύνηση υπηρεσιών</Link>
+          <Link to="/services" className="btn-primary">{t('bookingsExtra.explore')}</Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -100,7 +101,7 @@ export default function MyBookings() {
                     <span className="text-2xl">✂️</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{booking.service_name || 'Υπηρεσία'}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{booking.service_name || t('bookingsExtra.service')}</p>
                     <p className="text-xs text-gray-500">{booking.provider_name}</p>
                   </div>
                 </div>
@@ -112,19 +113,19 @@ export default function MyBookings() {
               <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <Calendar size={12}/>
-                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleDateString('el-GR', { weekday: 'short', day: '2-digit', month: 'short' }) : '—'}
+                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: 'short' }) : '—'}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={12}/>
-                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  {booking.duration_minutes && ` · ${booking.duration_minutes} λεπτά`}
+                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '—'}
+                  {booking.duration_minutes && ` · ${booking.duration_minutes} ${t('bookings.minutes')}`}
                 </div>
                 {booking.location && <div className="flex items-center gap-1.5 col-span-2"><MapPin size={12}/>{booking.location}</div>}
               </div>
 
               <div className="flex gap-2">
                 {booking.status === 'pending' && (
-                  <button onClick={() => { if(confirm('Ακύρωση κράτησης;')) cancelBooking.mutate(booking.id) }}
+                  <button onClick={() => { if(confirm(t('bookingsExtra.cancelConfirm'))) cancelBooking.mutate(booking.id) }}
                     className="flex-1 btn-secondary text-xs py-2 text-red-600 border-red-200 hover:bg-red-50">
                     {t('bookings.cancel')}
                   </button>
@@ -136,7 +137,7 @@ export default function MyBookings() {
                   </button>
                 )}
                 <Link to={`/services/${booking.service_id}`} className="flex items-center gap-1 text-xs text-brand-900 hover:underline ml-auto">
-                  Λεπτομέρειες <ChevronRight size={12}/>
+                  {t('bookingsExtra.details')} <ChevronRight size={12}/>
                 </Link>
               </div>
             </motion.div>
@@ -144,7 +145,6 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* Review modal */}
       <AnimatePresence>
         {reviewBooking && (
           <>
@@ -153,7 +153,7 @@ export default function MyBookings() {
             <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }}
               className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-sm mx-auto card p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 dark:text-white">Αξιολόγηση υπηρεσίας</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white">{t('bookingsExtra.reviewTitle')}</h3>
                 <button onClick={() => setReviewBooking(null)} className="btn-ghost p-2"><X size={16}/></button>
               </div>
               <p className="text-sm text-gray-500 mb-4">{reviewBooking.service_name}</p>
@@ -164,12 +164,12 @@ export default function MyBookings() {
                   </button>
                 ))}
               </div>
-              <textarea className="input resize-none mb-4" rows={3} placeholder="Σχόλια (προαιρετικά)..."
+              <textarea className="input resize-none mb-4" rows={3} placeholder={t('bookingsExtra.commentPlaceholder')}
                 value={comment} onChange={e => setComment(e.target.value)} />
               <div className="flex gap-3">
-                <button onClick={() => setReviewBooking(null)} className="btn-secondary flex-1">Ακύρωση</button>
+                <button onClick={() => setReviewBooking(null)} className="btn-secondary flex-1">{t('common.cancel')}</button>
                 <button onClick={() => submitReview.mutate()} disabled={submitReview.isPending} className="btn-primary flex-1">
-                  {submitReview.isPending ? 'Αποστολή...' : t('bookings.submitReview')}
+                  {submitReview.isPending ? t('bookingsExtra.sending') : t('bookings.submitReview')}
                 </button>
               </div>
             </motion.div>

@@ -38,7 +38,7 @@ export default function Social() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] })
       setNewPost(''); setSelectedImage(null); setImagePreview(null); setTags([]); setShowCompose(false)
-      toast.success(t('social.published'))
+      toast.success(t('socialExtra.published'))
     },
   })
 
@@ -91,7 +91,7 @@ export default function Social() {
                     {tags.map(tag => <span key={tag} className="badge-blue flex items-center gap-1">#{tag}<button onClick={() => setTags(t => t.filter(x => x !== tag))}><X size={10} /></button></span>)}
                   </div>
                 )}
-                <input type="text" placeholder={t('social.hashtagHint')} value={tagInput} onChange={e => setTagInput(e.target.value)}
+                <input type="text" placeholder={t('socialExtra.hashtagHint')} value={tagInput} onChange={e => setTagInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && tagInput.trim()) { setTags(p => [...p, tagInput.trim().replace('#','')]); setTagInput('') }}}
                   className="mt-2 text-xs bg-transparent outline-none text-gray-500 placeholder:text-gray-300 w-full" />
               </div>
@@ -150,7 +150,7 @@ export default function Social() {
               </div>
             </motion.div>
           ))}
-          {posts.length === 0 && <div className="text-center py-16"><p className="text-4xl mb-3">🐾</p><p className="font-semibold text-gray-900 dark:text-white mb-1">{t('social.noPostsTitle')}</p><p className="text-sm text-gray-500">{t('social.noPostsDesc')}</p></div>}
+          {posts.length === 0 && <div className="text-center py-16"><p className="text-4xl mb-3">🐾</p><p className="font-semibold text-gray-900 dark:text-white mb-1">{t('socialExtra.noPostsTitle')}</p><p className="text-sm text-gray-500">{t('socialExtra.noPostsDesc')}</p></div>}
         </div>
       )}
     </div>

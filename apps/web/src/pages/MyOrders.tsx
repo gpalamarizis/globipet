@@ -15,17 +15,10 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-700',
 }
 
-const statusLabels: Record<string, string> = {
-  pending: 'Εκκρεμεί',
-  confirmed: 'Επιβεβαιώθηκε',
-  shipped: 'Αποστάλθηκε',
-  delivered: 'Παραδόθηκε',
-  cancelled: 'Ακυρώθηκε',
-}
-
 export default function MyOrders() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
+  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -36,23 +29,23 @@ export default function MyOrders() {
   if (!isAuthenticated) return (
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🔒</p>
-      <p className="font-semibold text-gray-900 dark:text-white mb-2">Απαιτείται σύνδεση</p>
-      <Link to="/login" className="btn-primary inline-block">Σύνδεση</Link>
+      <p className="font-semibold text-gray-900 dark:text-white mb-2">{t('auth.requiredTitle')}</p>
+      <Link to="/login" className="btn-primary inline-block">{t('auth.login')}</Link>
     </div>
   )
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-6">Οι παραγγελίες μου</h1>
+      <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-6">{t('orders.title')}</h1>
 
       {isLoading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="card p-5"><div className="skeleton h-20 w-full"/></div>)}</div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingBag size={48} className="mx-auto text-gray-300 mb-4" />
-          <h3 className="font-bold text-gray-900 dark:text-white mb-2">Δεν έχετε παραγγελίες ακόμα</h3>
-          <p className="text-gray-500 mb-6">Ανακαλύψτε τα προϊόντα μας</p>
-          <Link to="/marketplace" className="btn-primary">Αγορές</Link>
+          <h3 className="font-bold text-gray-900 dark:text-white mb-2">{t('orders.noOrders')}</h3>
+          <p className="text-gray-500 mb-6">{t('orders.noOrdersDesc')}</p>
+          <Link to="/marketplace" className="btn-primary">{t('orders.shop')}</Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -65,14 +58,14 @@ export default function MyOrders() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                      Παραγγελία #{order.id?.slice(0, 8).toUpperCase()}
+                      {t('orders.orderNumber')} #{order.id?.slice(0, 8).toUpperCase()}
                     </p>
                     <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[order.status] || 'bg-gray-100 text-gray-700')}>
-                      {statusLabels[order.status] || order.status}
+                      {t(`orders.status.${order.status}`)}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString('el-GR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    {new Date(order.created_at).toLocaleDateString(localeMap[i18n.language] || 'el-GR', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="text-right shrink-0">

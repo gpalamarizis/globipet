@@ -28,7 +28,7 @@ export default function MyPets() {
 
   const deletePet = useMutation({
     mutationFn: (id: string) => api.delete(`/pets/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success('Το κατοικίδιο διαγράφηκε') },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success(t('petsExtra.deleted')) },
   })
 
   const toggleLost = useMutation({
@@ -39,8 +39,8 @@ export default function MyPets() {
   if (!isAuthenticated) return (
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🔒</p>
-      <p className="font-semibold text-gray-900 dark:text-white mb-2">Απαιτείται σύνδεση</p>
-      <a href="/login" className="btn-primary inline-block">Σύνδεση</a>
+      <p className="font-semibold text-gray-900 dark:text-white mb-2">{t('authExtra.requiredTitle')}</p>
+      <a href="/login" className="btn-primary inline-block">{t('auth.login')}</a>
     </div>
   )
 
@@ -72,7 +72,6 @@ export default function MyPets() {
           {pets.map((pet: any, i: number) => (
             <motion.div key={pet.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="card overflow-hidden hover:shadow-md transition-shadow">
-              {/* Pet photo/emoji header */}
               <div className="h-32 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center relative">
                 {pet.photo_url
                   ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
@@ -80,7 +79,7 @@ export default function MyPets() {
                 }
                 {pet.is_lost && (
                   <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
-                    <AlertTriangle size={10} /> ΧΑΜΕΝΟ
+                    <AlertTriangle size={10} /> {t('petsExtra.lostBadge')}
                   </div>
                 )}
                 <button className="absolute top-2 right-2 w-8 h-8 bg-white/80 dark:bg-gray-900/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
@@ -118,7 +117,6 @@ export default function MyPets() {
             </motion.div>
           ))}
 
-          {/* Add new card */}
           <motion.button onClick={() => setAddOpen(true)} whileHover={{ scale: 1.01 }}
             className="card p-5 border-dashed flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-brand-900 hover:border-brand-300 transition-colors min-h-[240px]">
             <div className="w-12 h-12 rounded-2xl border-2 border-dashed border-current flex items-center justify-center">

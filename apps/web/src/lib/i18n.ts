@@ -174,6 +174,60 @@ const el = {
   notFound: {
     title: '404', message: 'Αυτή η σελίδα έχει χαθεί σαν κατοικίδιο...', home: 'Αρχική',
   },
+
+  orders: {
+    title: 'Οι Παραγγελίες μου',
+    orderNumber: 'Παραγγελία',
+    noOrders: 'Δεν έχετε παραγγελίες ακόμα',
+    noOrdersDesc: 'Ανακαλύψτε τα προϊόντα μας',
+    shop: 'Αγορές',
+    status: { pending: 'Εκκρεμεί', confirmed: 'Επιβεβαιώθηκε', shipped: 'Αποστάλθηκε', delivered: 'Παραδόθηκε', cancelled: 'Ακυρώθηκε' },
+  },
+  orderConfirm: {
+    title: 'Η παραγγελία σας ολοκληρώθηκε!',
+    subtitle: 'Σας ευχαριστούμε για την παραγγελία σας. Θα λάβετε email επιβεβαίωσης σύντομα.',
+    details: 'ΛΕΠΤΟΜΕΡΕΙΕΣ ΠΑΡΑΓΓΕΛΙΑΣ',
+    orderNumber: 'Αριθμός παραγγελίας', total: 'Σύνολο', status: 'Κατάσταση', confirmed: 'Επιβεβαιώθηκε',
+    myOrders: 'Οι παραγγελίες μου', continueShopping: 'Συνέχεια αγορών',
+    steps: { confirmation: 'Επιβεβαίωση', preparing: 'Προετοιμασία', shipping: 'Αποστολή', delivery: 'Παράδοση' },
+  },
+  tracker: {
+    title: 'GPS Tracker', realtime: 'Σύνδεση real-time', offline: 'Εκτός σύνδεσης',
+    lostPetAlert: 'Χαμένο κατοικίδιο!', lostPetMsg: 'Ο {{name}} δεν έχει εντοπιστεί εδώ και {{minutes}} λεπτά',
+    locate: 'Εντοπισμός', addTracker: 'Προσθήκη tracker',
+    battery: 'Μπαταρία', signal: 'Σήμα', signalGood: 'Καλό', signalWeak: 'Αδύναμο', signalNone: 'Καμία',
+    lastUpdate: 'Τελευταία ενημέρωση', status: 'Κατάσταση', lost: 'Χαμένο', safe: 'Ασφαλές',
+    now: 'Τώρα', minutesAgo: 'λεπτά πριν', hoursAgo: 'ώρες πριν',
+    directions: 'Οδηγίες', ping: 'Ping', pingSent: 'Αποστολή ειδοποίησης στο tracker!',
+  },
+  petsExtra: {
+    lostBadge: 'ΧΑΜΕΝΟ', deleted: 'Το κατοικίδιο διαγράφηκε',
+  },
+  bookingsExtra: {
+    newBooking: 'Νέα κράτηση', explore: 'Εξερεύνηση υπηρεσιών',
+    details: 'Λεπτομέρειες', service: 'Υπηρεσία',
+    reviewTitle: 'Αξιολόγηση υπηρεσίας', sending: 'Αποστολή...',
+    commentPlaceholder: 'Σχόλια (προαιρετικά)...', cancelConfirm: 'Σίγουρα θέλετε να ακυρώσετε την κράτηση;',
+  },
+  authExtra: {
+    requiredTitle: 'Απαιτείται σύνδεση',
+  },
+  notFoundExtra: {
+    title: 'Σελίδα δεν βρέθηκε',
+    message: 'Η σελίδα που ζητάτε δεν υπάρχει ή έχει μετακινηθεί.',
+    home: 'Επιστροφή στην αρχική',
+  },
+  socialExtra: {
+    published: 'Η δημοσίευση δημιουργήθηκε!', hashtagHint: 'Προσθήκη hashtag (πατήστε Enter)',
+    noPostsTitle: 'Δεν υπάρχουν αναρτήσεις', noPostsDesc: 'Γίνετε ο πρώτος που θα μοιραστεί κάτι',
+  },
+  homeExtra: {
+    users: 'Χρήστες', providers: 'Πάροχοι', pets: 'Κατοικίδια', rating: 'Βαθμολογία',
+    aiPowered: 'AI-POWERED', explore: 'Εξερεύνηση',
+  },
+  commonExtra: {
+    viewAll: 'Όλα',
+  },
 }
 
 // English
@@ -308,6 +362,56 @@ const en: typeof el = {
     checkout: 'Checkout', total: 'Total', added: 'Added to cart!',
   },
   notFound: { title: '404', message: 'This page got lost like a pet...', home: 'Home' },
+
+  orders: {
+    title: 'My Orders', orderNumber: 'Order',
+    noOrders: 'No orders yet', noOrdersDesc: 'Discover our products', shop: 'Shop',
+    status: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' },
+  },
+  orderConfirm: {
+    title: 'Your order is complete!',
+    subtitle: 'Thank you for your order. You will receive a confirmation email shortly.',
+    details: 'ORDER DETAILS', orderNumber: 'Order number', total: 'Total', status: 'Status', confirmed: 'Confirmed',
+    myOrders: 'My Orders', continueShopping: 'Continue shopping',
+    steps: { confirmation: 'Confirmation', preparing: 'Preparing', shipping: 'Shipping', delivery: 'Delivery' },
+  },
+  tracker: {
+    title: 'GPS Tracker', realtime: 'Real-time connection', offline: 'Offline',
+    lostPetAlert: 'Lost pet!', lostPetMsg: '{{name}} has not been located for {{minutes}} minutes',
+    locate: 'Locate', addTracker: 'Add tracker',
+    battery: 'Battery', signal: 'Signal', signalGood: 'Good', signalWeak: 'Weak', signalNone: 'None',
+    lastUpdate: 'Last update', status: 'Status', lost: 'Lost', safe: 'Safe',
+    now: 'Now', minutesAgo: 'minutes ago', hoursAgo: 'hours ago',
+    directions: 'Directions', ping: 'Ping', pingSent: 'Notification sent to tracker!',
+  },
+  petsExtra: {
+    lostBadge: 'LOST', deleted: 'Pet deleted',
+  },
+  bookingsExtra: {
+    newBooking: 'New booking', explore: 'Explore services',
+    details: 'Details', service: 'Service',
+    reviewTitle: 'Rate Service', sending: 'Sending...',
+    commentPlaceholder: 'Comments (optional)...', cancelConfirm: 'Are you sure you want to cancel?',
+  },
+  authExtra: {
+    requiredTitle: 'Login required',
+  },
+  notFoundExtra: {
+    title: 'Page not found',
+    message: 'The page you are looking for does not exist or has been moved.',
+    home: 'Back to home',
+  },
+  socialExtra: {
+    published: 'Post published!', hashtagHint: 'Add hashtag (press Enter)',
+    noPostsTitle: 'No posts yet', noPostsDesc: 'Be the first to share something',
+  },
+  homeExtra: {
+    users: 'Users', providers: 'Providers', pets: 'Pets', rating: 'Rating',
+    aiPowered: 'AI-POWERED', explore: 'Explore',
+  },
+  commonExtra: {
+    viewAll: 'View All',
+  },
 }
 
 // Spanish
@@ -442,6 +546,56 @@ const es: typeof el = {
     checkout: 'Finalizar compra', total: 'Total', added: '¡Añadido a la cesta!',
   },
   notFound: { title: '404', message: 'Esta página se perdió como una mascota...', home: 'Inicio' },
+
+  orders: {
+    title: 'Mis Pedidos', orderNumber: 'Pedido',
+    noOrders: 'No tienes pedidos', noOrdersDesc: 'Descubre nuestros productos', shop: 'Comprar',
+    status: { pending: 'Pendiente', confirmed: 'Confirmado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' },
+  },
+  orderConfirm: {
+    title: '¡Tu pedido está completo!',
+    subtitle: 'Gracias por tu pedido. Recibirás un email de confirmación pronto.',
+    details: 'DETALLES DEL PEDIDO', orderNumber: 'Número de pedido', total: 'Total', status: 'Estado', confirmed: 'Confirmado',
+    myOrders: 'Mis Pedidos', continueShopping: 'Seguir comprando',
+    steps: { confirmation: 'Confirmación', preparing: 'Preparación', shipping: 'Envío', delivery: 'Entrega' },
+  },
+  tracker: {
+    title: 'GPS Tracker', realtime: 'Conexión en tiempo real', offline: 'Sin conexión',
+    lostPetAlert: '¡Mascota perdida!', lostPetMsg: '{{name}} no ha sido localizado durante {{minutes}} minutos',
+    locate: 'Localizar', addTracker: 'Añadir tracker',
+    battery: 'Batería', signal: 'Señal', signalGood: 'Buena', signalWeak: 'Débil', signalNone: 'Ninguna',
+    lastUpdate: 'Última actualización', status: 'Estado', lost: 'Perdida', safe: 'Segura',
+    now: 'Ahora', minutesAgo: 'minutos atrás', hoursAgo: 'horas atrás',
+    directions: 'Direcciones', ping: 'Ping', pingSent: '¡Notificación enviada al tracker!',
+  },
+  petsExtra: {
+    lostBadge: 'PERDIDA', deleted: 'Mascota eliminada',
+  },
+  bookingsExtra: {
+    newBooking: 'Nueva reserva', explore: 'Explorar servicios',
+    details: 'Detalles', service: 'Servicio',
+    reviewTitle: 'Valorar servicio', sending: 'Enviando...',
+    commentPlaceholder: 'Comentarios (opcional)...', cancelConfirm: '¿Seguro que quieres cancelar?',
+  },
+  authExtra: {
+    requiredTitle: 'Inicio de sesión requerido',
+  },
+  notFoundExtra: {
+    title: 'Página no encontrada',
+    message: 'La página que buscas no existe o ha sido movida.',
+    home: 'Volver al inicio',
+  },
+  socialExtra: {
+    published: '¡Publicación creada!', hashtagHint: 'Añadir hashtag (pulsa Enter)',
+    noPostsTitle: 'No hay publicaciones', noPostsDesc: 'Sé el primero en compartir algo',
+  },
+  homeExtra: {
+    users: 'Usuarios', providers: 'Proveedores', pets: 'Mascotas', rating: 'Valoración',
+    aiPowered: 'AI-POWERED', explore: 'Explorar',
+  },
+  commonExtra: {
+    viewAll: 'Ver Todo',
+  },
 }
 
 // French
@@ -576,6 +730,56 @@ const fr: typeof el = {
     checkout: 'Passer la commande', total: 'Total', added: 'Ajouté au panier!',
   },
   notFound: { title: '404', message: 'Cette page s\'est perdue comme un animal...', home: 'Accueil' },
+
+  orders: {
+    title: 'Mes Commandes', orderNumber: 'Commande',
+    noOrders: 'Pas de commandes', noOrdersDesc: 'Découvrez nos produits', shop: 'Boutique',
+    status: { pending: 'En attente', confirmed: 'Confirmée', shipped: 'Expédiée', delivered: 'Livrée', cancelled: 'Annulée' },
+  },
+  orderConfirm: {
+    title: 'Votre commande est complète!',
+    subtitle: 'Merci pour votre commande. Vous recevrez un email de confirmation bientôt.',
+    details: 'DÉTAILS DE LA COMMANDE', orderNumber: 'Numéro de commande', total: 'Total', status: 'Statut', confirmed: 'Confirmée',
+    myOrders: 'Mes Commandes', continueShopping: 'Continuer les achats',
+    steps: { confirmation: 'Confirmation', preparing: 'Préparation', shipping: 'Expédition', delivery: 'Livraison' },
+  },
+  tracker: {
+    title: 'GPS Tracker', realtime: 'Connexion temps réel', offline: 'Hors ligne',
+    lostPetAlert: 'Animal perdu!', lostPetMsg: '{{name}} n\'a pas été localisé depuis {{minutes}} minutes',
+    locate: 'Localiser', addTracker: 'Ajouter un tracker',
+    battery: 'Batterie', signal: 'Signal', signalGood: 'Bon', signalWeak: 'Faible', signalNone: 'Aucun',
+    lastUpdate: 'Dernière mise à jour', status: 'Statut', lost: 'Perdu', safe: 'En sécurité',
+    now: 'Maintenant', minutesAgo: 'minutes', hoursAgo: 'heures',
+    directions: 'Directions', ping: 'Ping', pingSent: 'Notification envoyée au tracker!',
+  },
+  petsExtra: {
+    lostBadge: 'PERDU', deleted: 'Animal supprimé',
+  },
+  bookingsExtra: {
+    newBooking: 'Nouvelle réservation', explore: 'Explorer les services',
+    details: 'Détails', service: 'Service',
+    reviewTitle: 'Évaluer le service', sending: 'Envoi...',
+    commentPlaceholder: 'Commentaires (optionnel)...', cancelConfirm: 'Voulez-vous vraiment annuler?',
+  },
+  authExtra: {
+    requiredTitle: 'Connexion requise',
+  },
+  notFoundExtra: {
+    title: 'Page non trouvée',
+    message: 'La page recherchée n\'existe pas ou a été déplacée.',
+    home: 'Retour à l\'accueil',
+  },
+  socialExtra: {
+    published: 'Publication créée!', hashtagHint: 'Ajouter hashtag (Entrée)',
+    noPostsTitle: 'Pas de publications', noPostsDesc: 'Soyez le premier à partager',
+  },
+  homeExtra: {
+    users: 'Utilisateurs', providers: 'Prestataires', pets: 'Animaux', rating: 'Note',
+    aiPowered: 'AI-POWERED', explore: 'Explorer',
+  },
+  commonExtra: {
+    viewAll: 'Tout Voir',
+  },
 }
 
 // Chinese
@@ -710,6 +914,56 @@ const zh: typeof el = {
     checkout: '结账', total: '总计', added: '已添加到购物车!',
   },
   notFound: { title: '404', message: '此页面像宠物一样迷路了...', home: '首页' },
+
+  orders: {
+    title: '我的订单', orderNumber: '订单',
+    noOrders: '暂无订单', noOrdersDesc: '探索我们的商品', shop: '购物',
+    status: { pending: '待处理', confirmed: '已确认', shipped: '已发货', delivered: '已送达', cancelled: '已取消' },
+  },
+  orderConfirm: {
+    title: '您的订单已完成!',
+    subtitle: '感谢您的订单。您将很快收到确认邮件。',
+    details: '订单详情', orderNumber: '订单号', total: '总计', status: '状态', confirmed: '已确认',
+    myOrders: '我的订单', continueShopping: '继续购物',
+    steps: { confirmation: '确认', preparing: '准备中', shipping: '运输中', delivery: '送达' },
+  },
+  tracker: {
+    title: 'GPS追踪器', realtime: '实时连接', offline: '离线',
+    lostPetAlert: '走失宠物!', lostPetMsg: '{{name}}已经{{minutes}}分钟未被定位',
+    locate: '定位', addTracker: '添加追踪器',
+    battery: '电池', signal: '信号', signalGood: '良好', signalWeak: '弱', signalNone: '无',
+    lastUpdate: '最后更新', status: '状态', lost: '走失', safe: '安全',
+    now: '现在', minutesAgo: '分钟前', hoursAgo: '小时前',
+    directions: '导航', ping: 'Ping', pingSent: '已向追踪器发送通知!',
+  },
+  petsExtra: {
+    lostBadge: '走失', deleted: '宠物已删除',
+  },
+  bookingsExtra: {
+    newBooking: '新预约', explore: '探索服务',
+    details: '详情', service: '服务',
+    reviewTitle: '评价服务', sending: '发送中...',
+    commentPlaceholder: '评论(可选)...', cancelConfirm: '确定要取消吗?',
+  },
+  authExtra: {
+    requiredTitle: '需要登录',
+  },
+  notFoundExtra: {
+    title: '页面未找到',
+    message: '您要查找的页面不存在或已被移动。',
+    home: '返回首页',
+  },
+  socialExtra: {
+    published: '帖子已发布!', hashtagHint: '添加标签(按Enter)',
+    noPostsTitle: '暂无帖子', noPostsDesc: '成为第一个分享的人',
+  },
+  homeExtra: {
+    users: '用户', providers: '服务商', pets: '宠物', rating: '评分',
+    aiPowered: 'AI-POWERED', explore: '探索',
+  },
+  commonExtra: {
+    viewAll: '查看全部',
+  },
 }
 
 i18n

@@ -35,10 +35,10 @@ export default function Home() {
   }
 
   const stats = [
-    { value: '50K+', label: t('home.users'), icon: Users },
-    { value: '2K+',  label: t('home.pets') === 'Κατοικίδια' ? 'Πάροχοι' : 'Providers', icon: Shield },
-    { value: '120K+', label: t('home.pets'), icon: Heart },
-    { value: '4.9★', label: t('home.rating'), icon: Star },
+    { value: '50K+', label: t('homeExtra.users'), icon: Users },
+    { value: '2K+',  label: t('homeExtra.pets') === 'Κατοικίδια' ? 'Πάροχοι' : 'Providers', icon: Shield },
+    { value: '120K+', label: t('homeExtra.pets'), icon: Heart },
+    { value: '4.9★', label: t('homeExtra.rating'), icon: Star },
   ]
 
   const categories = [
@@ -191,7 +191,7 @@ export default function Home() {
             <div className="relative">
               <div className="flex items-center gap-2 mb-4">
                 <Zap size={20} className="text-yellow-300" />
-                <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">{t('home.aiPowered')}</span>
+                <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">{t('homeExtra.aiPowered')}</span>
               </div>
               <h2 className="text-2xl lg:text-4xl font-display font-bold mb-4 leading-tight">{t('home.aiTitle')}</h2>
               <p className="text-white/80 mb-8 max-w-lg">{t('home.aiDesc')}</p>
@@ -215,7 +215,7 @@ export default function Home() {
               </div>
               <h2 className="section-title mb-3">{t('home.marketTitle')}</h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">{t('home.marketDesc')}</p>
-              <Link to="/market-insights" className="btn-primary inline-flex items-center gap-2">{t('home.explore')} <ArrowRight size={16} /></Link>
+              <Link to="/market-insights" className="btn-primary inline-flex items-center gap-2">{t('homeExtra.explore')} <ArrowRight size={16} /></Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[

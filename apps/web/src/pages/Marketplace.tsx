@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Search, Filter, SlidersHorizontal, Grid, List, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
@@ -8,26 +9,21 @@ import ProductCard from '@/components/features/marketplace/ProductCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { Product, ProductCategory } from '@/types'
 
-const categories: { value: ProductCategory | 'all'; label: string; emoji: string }[] = [
-  { value: 'all',         label: 'Όλα',         emoji: '🛍️' },
-  { value: 'food',        label: 'Τροφές',       emoji: '🦴' },
-  { value: 'toys',        label: 'Παιχνίδια',    emoji: '🎾' },
-  { value: 'accessories', label: 'Αξεσουάρ',    emoji: '🎀' },
-  { value: 'health',      label: 'Υγεία',        emoji: '💊' },
-  { value: 'grooming',    label: 'Grooming',     emoji: '✂️' },
-  { value: 'training',    label: 'Εκπαίδευση',  emoji: '🎓' },
-  { value: 'housing',     label: 'Κατοικία',     emoji: '🏠' },
+const categoryKeys: { value: ProductCategory | 'all'; key: string; emoji: string }[] = [
+  { value: 'all',         key: 'all',         emoji: '🛍️' },
+  { value: 'food',        key: 'food',        emoji: '🦴' },
+  { value: 'toys',        key: 'toys',        emoji: '🎾' },
+  { value: 'accessories', key: 'accessories', emoji: '🎀' },
+  { value: 'health',      key: 'health',      emoji: '💊' },
+  { value: 'grooming',    key: 'grooming',    emoji: '✂️' },
+  { value: 'training',    key: 'training',    emoji: '🎓' },
+  { value: 'housing',     key: 'housing',     emoji: '🏠' },
 ]
 
-const sortOptions = [
-  { value: 'featured', label: 'Προτεινόμενα' },
-  { value: 'price_asc', label: 'Τιμή: Χαμηλή → Υψηλή' },
-  { value: 'price_desc', label: 'Τιμή: Υψηλή → Χαμηλή' },
-  { value: 'rating', label: 'Βαθμολογία' },
-  { value: 'newest', label: 'Νεότερα' },
-]
+const sortKeys = ['featured', 'price_asc', 'price_desc', 'rating', 'newest']
 
 export default function Marketplace() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') || '')
   const [category, setCategory] = useState<string>(searchParams.get('category') || 'all')
@@ -51,12 +47,14 @@ export default function Marketplace() {
     }).then(r => r.data),
   })
 
+  const getCategoryLabel = (key: string) => t(`marketplace.categories.${key}`)
+
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="section-title mb-1">Κατάστημα</h1>
-        <p className="text-gray-500 text-sm">Τρόφιμα, παιχνίδια, αξεσουάρ και πολλά ακόμα</p>
+        <h1 className="section-title mb-1">{t('marketplace.title')}</h1>
+        <p className="text-gray-500 text-sm">{t('marketplace.subtitle')}</p>
       </div>
 
       {/* Search + Sort bar */}
@@ -65,7 +63,7 @@ export default function Marketplace() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
-            placeholder="Αναζήτηση προϊόντος..."
+            placeholder={t('marketplace.searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="input pl-10 py-2.5"
@@ -76,7 +74,7 @@ export default function Marketplace() {
           onChange={(e) => setSort(e.target.value)}
           className="input py-2.5 w-auto cursor-pointer text-sm"
         >
-          {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {sortKeys.map(k => <option key={k} value={k}>{t(`marketplace.sort.${k}`)}</option>)}
         </select>
         <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-xl p-1">
           <button
@@ -92,7 +90,7 @@ export default function Marketplace() {
 
       {/* Category pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-        {categories.map((cat) => (
+        {categoryKeys.map((cat) => (
           <button
             key={cat.value}
             onClick={() => { setCategory(cat.value); setPage(1) }}
@@ -103,7 +101,7 @@ export default function Marketplace() {
             }`}
           >
             <span>{cat.emoji}</span>
-            {cat.label}
+            {getCategoryLabel(cat.key)}
           </button>
         ))}
       </div>
@@ -111,8 +109,8 @@ export default function Marketplace() {
       {/* Results count */}
       {!isLoading && data && (
         <p className="text-sm text-gray-500 mb-4">
-          {data.total} αποτελέσματα
-          {category !== 'all' && ` σε "${categories.find(c => c.value === category)?.label}"`}
+          {data.total} {t('marketplace.results')}
+          {category !== 'all' && ` ${t('marketplace.inCategory')} "${getCategoryLabel(category)}"`}
         </p>
       )}
 
@@ -149,8 +147,8 @@ export default function Marketplace() {
           {data?.data?.length === 0 && (
             <div className="text-center py-24">
               <p className="text-4xl mb-4">🔍</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Δεν βρέθηκαν προϊόντα</p>
-              <p className="text-gray-500 text-sm">Δοκιμάστε διαφορετικούς όρους αναζήτησης</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('marketplace.noResults')}</p>
+              <p className="text-gray-500 text-sm">{t('marketplace.noResultsDesc')}</p>
             </div>
           )}
 
