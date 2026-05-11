@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Search, MapPin, Filter, Map, List, Star, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
@@ -9,20 +10,21 @@ import ServicesMap from '@/components/features/services/ServicesMap'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { Service, ServiceType } from '@/types'
 
-const serviceTypes: { value: ServiceType | 'all'; label: string; emoji: string }[] = [
-  { value: 'all',          label: 'Όλες',         emoji: '🔍' },
-  { value: 'veterinary',   label: 'Κτηνίατρος',  emoji: '🩺' },
-  { value: 'grooming',     label: 'Grooming',     emoji: '✂️' },
-  { value: 'training',     label: 'Εκπαίδευση',  emoji: '🎓' },
-  { value: 'pet_sitting',  label: 'Pet Sitting',  emoji: '🏠' },
-  { value: 'walking',      label: 'Βόλτες',       emoji: '🚶' },
-  { value: 'boarding',     label: 'Boarding',     emoji: '🛏️' },
-  { value: 'pet_taxi',     label: 'Pet Taxi',     emoji: '🚕' },
-  { value: 'photography',  label: 'Φωτογράφιση', emoji: '📸' },
-  { value: 'pharmacy',     label: 'Φαρμακείο',   emoji: '💊' },
+const serviceTypeKeys: { value: ServiceType | 'all'; key: string; emoji: string }[] = [
+  { value: 'all',          key: 'all',         emoji: '🔍' },
+  { value: 'veterinary',   key: 'veterinary',  emoji: '🩺' },
+  { value: 'grooming',     key: 'grooming',    emoji: '✂️' },
+  { value: 'training',     key: 'training',    emoji: '🎓' },
+  { value: 'pet_sitting',  key: 'pet_sitting', emoji: '🏠' },
+  { value: 'walking',      key: 'walking',     emoji: '🚶' },
+  { value: 'boarding',     key: 'boarding',    emoji: '🛏️' },
+  { value: 'pet_taxi',     key: 'pet_taxi',    emoji: '🚕' },
+  { value: 'photography',  key: 'photography', emoji: '📸' },
+  { value: 'pharmacy',     key: 'pharmacy',    emoji: '💊' },
 ]
 
 export default function Services() {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') || '')
   const [city, setCity] = useState(searchParams.get('city') || '')
@@ -46,11 +48,16 @@ export default function Services() {
     }).then(r => r.data),
   })
 
+  const getTypeLabel = (key: string) => {
+    if (key === 'all') return t('services.allServices')
+    return t(`services.types.${key}`)
+  }
+
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
       <div className="mb-6">
-        <h1 className="section-title mb-1">Υπηρεσίες</h1>
-        <p className="text-gray-500 text-sm">Βρείτε τον κατάλληλο πάροχο για το κατοικίδιό σας</p>
+        <h1 className="section-title mb-1">{t('services.title')}</h1>
+        <p className="text-gray-500 text-sm">{t('services.subtitle')}</p>
       </div>
 
       {/* Search */}
@@ -59,7 +66,7 @@ export default function Services() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             className="input pl-10 py-2.5"
-            placeholder="Αναζήτηση..."
+            placeholder={t('services.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -68,7 +75,7 @@ export default function Services() {
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             className="input pl-10 py-2.5 w-36"
-            placeholder="Πόλη..."
+            placeholder={t('services.cityPlaceholder')}
             value={city}
             onChange={(e) => setCity(e.target.value)}
           />
@@ -87,7 +94,7 @@ export default function Services() {
 
       {/* Type filter */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        {serviceTypes.map((st) => (
+        {serviceTypeKeys.map((st) => (
           <button
             key={st.value}
             onClick={() => setType(st.value)}
@@ -97,7 +104,7 @@ export default function Services() {
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300'
             }`}
           >
-            <span>{st.emoji}</span>{st.label}
+            <span>{st.emoji}</span>{getTypeLabel(st.key)}
           </button>
         ))}
       </div>
@@ -110,7 +117,7 @@ export default function Services() {
             onlyVerified ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
           }`}
         >
-          <CheckCircle size={13} /> Επαληθευμένοι
+          <CheckCircle size={13} /> {t('services.verified')}
         </button>
         <button
           onClick={() => setOnlyEmergency(!onlyEmergency)}
@@ -118,7 +125,7 @@ export default function Services() {
             onlyEmergency ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
           }`}
         >
-          🚨 Έκτακτα
+          🚨 {t('services.emergency')}
         </button>
         {[4, 4.5].map((r) => (
           <button
@@ -140,7 +147,7 @@ export default function Services() {
       ) : (
         <>
           {data?.data?.length > 0 && (
-            <p className="text-sm text-gray-500 mb-4">{data.total} αποτελέσματα</p>
+            <p className="text-sm text-gray-500 mb-4">{data.total} {t('services.results')}</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {data?.data?.map((service: Service, i: number) => (
@@ -157,8 +164,8 @@ export default function Services() {
           {data?.data?.length === 0 && (
             <div className="text-center py-24">
               <p className="text-4xl mb-4">🔍</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Δεν βρέθηκαν υπηρεσίες</p>
-              <p className="text-gray-500 text-sm">Δοκιμάστε διαφορετικά φίλτρα</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('services.noResults')}</p>
+              <p className="text-gray-500 text-sm">{t('services.noResultsDesc')}</p>
             </div>
           )}
         </>
