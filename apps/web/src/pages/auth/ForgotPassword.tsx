@@ -1,72 +1,70 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { motion } from 'framer-motion'
+import { CheckCircle, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function ForgotPassword() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     try {
       await api.post('/auth/forgot-password', { email })
       setSent(true)
-      toast.success('Email αποστολής επαναφοράς εστάλη!')
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Σφάλμα αποστολής email')
+      toast.error(err?.response?.data?.message || err.message || t('common.error'))
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4 relative">
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher variant="full" />
+      </div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
+            <span className="text-3xl">🐾</span>
+            <span className="font-display font-bold text-2xl text-gradient">GlobiPet</span>
           </Link>
-          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Επαναφορά κωδικού</h1>
-          <p className="text-gray-500 text-sm mt-1">Θα σας στείλουμε οδηγίες στο email σας</p>
+          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('authExtraLogin.forgotTitle')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('authExtraLogin.forgotSubtitle')}</p>
         </div>
 
         <div className="card p-6">
           {sent ? (
             <div className="text-center py-4">
-              <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
-              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Email εστάλη!</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Ελέγξτε το inbox σας στο <strong>{email}</strong> για οδηγίες επαναφοράς κωδικού.
-              </p>
-              <p className="text-xs text-gray-400">Δεν το βρίσκετε; Ελέγξτε τα spam.</p>
+              <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+              <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white mb-2">{t('authExtraLogin.resetSent')}</h2>
+              <p className="text-sm text-gray-500">{t('authExtraLogin.forgotSubtitle')}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="email" className="input pl-9" placeholder="you@example.com"
-                    value={email} onChange={e => setEmail(e.target.value)} required />
-                </div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.email')}</label>
+                <input type="email" className="input" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full">
-                {loading ? 'Αποστολή...' : 'Αποστολή οδηγιών'}
+              <button type="submit" disabled={isLoading} className="btn-primary w-full">
+                {isLoading ? t('common.loading') : t('authExtraLogin.sendReset')}
               </button>
             </form>
           )}
         </div>
 
-        <div className="text-center mt-4">
-          <Link to="/login" className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700">
-            <ArrowLeft size={14}/> Πίσω στη σύνδεση
-          </Link>
-        </div>
+        <Link to="/login" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mt-4 hover:text-brand-900">
+          <ArrowLeft size={14}/> {t('authExtraLogin.backToLogin')}
+        </Link>
       </motion.div>
     </div>
   )

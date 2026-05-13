@@ -13,6 +13,7 @@ export interface User {
   loyalty_tier: 'bronze' | 'silver' | 'gold' | 'platinum'
   total_points: number
   created_at: string
+  preferred_language?: string  // ← ΠΡΟΣΘΕΣΕ ΑΥΤΟ
 }
 
 // ─── Pets ────────────────────────────────────────────────────────────────────
