@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
+import TranslationEditor from '@/components/admin/TranslationEditor'
 
-type Tab = 'overview' | 'users' | 'providers' | 'products' | 'orders' | 'database'
+type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database'
 
 function StatCard({ icon: Icon, label, value, change, color }: any) {
   return (
@@ -282,6 +283,7 @@ function ProvidersTab() {
 function ProductsTab() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
+  const [translateProduct, setTranslateProduct] = useState<any>(null)
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -291,6 +293,14 @@ function ProductsTab() {
   const deleteProduct = useMutation({
     mutationFn: (id: string) => api.delete(`/products/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Προϊόν διαγράφηκε') },
+  })
+
+  const saveTranslations = useMutation({
+    mutationFn: (vars: { id: string; translations: any }) => api.patch(`/products/${vars.id}`, {
+      name_translations: vars.translations.name,
+      description_translations: vars.translations.description,
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Οι μεταφράσεις αποθηκεύτηκαν') },
   })
 
   const filtered = products.filter((p: any) => p.name?.toLowerCase().includes(search.toLowerCase()))
@@ -325,14 +335,116 @@ function ProductsTab() {
                 <td className="px-4 py-3 text-gray-500">{p.category}</td>
                 <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{p.price}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => { if(confirm('Διαγραφή προϊόντος;')) deleteProduct.mutate(p.id) }}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={14} className="text-red-500" /></button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setTranslateProduct(p)} title="Μεταφράσεις"
+                      className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"><Globe size={14} className="text-blue-500" /></button>
+                    <button onClick={() => { if(confirm('Διαγραφή προϊόντος;')) deleteProduct.mutate(p.id) }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={14} className="text-red-500" /></button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <TranslationEditor
+        open={!!translateProduct}
+        onClose={() => setTranslateProduct(null)}
+        title={`Μεταφράσεις: ${translateProduct?.name || ''}`}
+        defaultName={translateProduct?.name}
+        defaultDescription={translateProduct?.description}
+        initialName={translateProduct?.name_translations}
+        initialDescription={translateProduct?.description_translations}
+        onSave={(t) => translateProduct && saveTranslations.mutate({ id: translateProduct.id, translations: t })}
+      />
+    </div>
+  )
+}
+
+function ServicesTab() {
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [translateService, setTranslateService] = useState<any>(null)
+
+  const { data: services = [], isLoading } = useQuery({
+    queryKey: ['admin-services'],
+    queryFn: () => api.get('/services?limit=50').then(r => r.data?.data ?? []),
+  })
+
+  const deleteService = useMutation({
+    mutationFn: (id: string) => api.delete(`/services/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-services'] }); toast.success('Υπηρεσία διαγράφηκε') },
+  })
+
+  const saveTranslations = useMutation({
+    mutationFn: (vars: { id: string; translations: any }) => api.patch(`/services/${vars.id}`, {
+      provider_name_translations: vars.translations.name,
+      description_translations: vars.translations.description,
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-services'] }); toast.success('Οι μεταφράσεις αποθηκεύτηκαν') },
+  })
+
+  const filtered = services.filter((s: any) =>
+    s.provider_name?.toLowerCase().includes(search.toLowerCase()) ||
+    s.service_type?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 input mb-4">
+        <Search size={15} className="text-gray-400 shrink-0" />
+        <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση υπηρεσίας..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Πάροχος</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Τύπος</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Πόλη</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Τιμή</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ενέργειες</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={5} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
+            : filtered.length === 0 ? <tr><td colSpan={5} className="text-center py-12 text-gray-400">Δεν βρέθηκαν υπηρεσίες</td></tr>
+            : filtered.map((s: any) => (
+              <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">🩺</div>
+                    <span className="font-medium text-gray-900 dark:text-white">{s.provider_name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-500">{s.service_type}</td>
+                <td className="px-4 py-3 text-gray-500">{s.city}</td>
+                <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{s.price}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setTranslateService(s)} title="Μεταφράσεις"
+                      className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"><Globe size={14} className="text-blue-500" /></button>
+                    <button onClick={() => { if(confirm('Διαγραφή υπηρεσίας;')) deleteService.mutate(s.id) }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={14} className="text-red-500" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <TranslationEditor
+        open={!!translateService}
+        onClose={() => setTranslateService(null)}
+        title={`Μεταφράσεις: ${translateService?.provider_name || ''}`}
+        defaultName={translateService?.provider_name}
+        defaultDescription={translateService?.description}
+        initialName={translateService?.provider_name_translations}
+        initialDescription={translateService?.description_translations}
+        onSave={(t) => translateService && saveTranslations.mutate({ id: translateService.id, translations: t })}
+      />
     </div>
   )
 }
@@ -490,6 +602,7 @@ export default function AdminDashboard() {
     { id: 'users',     label: 'Χρήστες',      icon: Users },
     { id: 'providers', label: 'Πάροχοι',      icon: Shield },
     { id: 'products',  label: 'Προϊόντα',     icon: Package },
+    { id: 'services',  label: 'Υπηρεσίες',    icon: PawPrint },
     { id: 'orders',    label: 'Παραγγελίες',  icon: ClipboardList },
     { id: 'database',  label: 'Βάση',         icon: Database },
   ]
@@ -557,6 +670,7 @@ export default function AdminDashboard() {
       {activeTab === 'users'     && <UsersTab />}
       {activeTab === 'providers' && <ProvidersTab />}
       {activeTab === 'products'  && <ProductsTab />}
+      {activeTab === 'services'  && <ServicesTab />}
       {activeTab === 'orders'    && <OrdersTab />}
       {activeTab === 'database'  && <DatabaseTab />}
     </div>

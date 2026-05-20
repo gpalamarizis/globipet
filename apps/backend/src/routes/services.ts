@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
 const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (req: any) => {
+    const lang = getRequestLang(req)
     const { q, city, service_type, verified, emergency, min_rating, page = 1, limit = 20 } = req.query
     const where: any = {}
     if (q) where.OR = [{ provider_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
@@ -16,10 +18,15 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
       prisma.service.findMany({ where, skip, take: Number(limit), orderBy: { rating: 'desc' } }),
       prisma.service.count({ where })
     ])
-    return { data, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
+    const translated = translateRecords(data, lang, ['provider_name', 'description'])
+    return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
-  app.get('/:id', async (req: any) => prisma.service.findUniqueOrThrow({ where: { id: req.params.id } }))
+  app.get('/:id', async (req: any) => {
+    const lang = getRequestLang(req)
+    const service = await prisma.service.findUniqueOrThrow({ where: { id: req.params.id } })
+    return translateRecord(service, lang, ['provider_name', 'description'])
+  })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email, full_name } = req.user as any
