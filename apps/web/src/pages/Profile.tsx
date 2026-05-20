@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 
 export default function Profile() {
   const { t } = useTranslation()
@@ -247,6 +248,11 @@ export default function Profile() {
           }
         </div>
       )}
+
+      {/* Change Password */}
+      <div className="mt-6">
+        <ChangeMyPasswordCard />
+      </div>
 
       {/* Logout */}
       <button onClick={logout} className="w-full mt-6 flex items-center justify-center gap-2 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
 
 type Tab = 'overview' | 'users' | 'providers' | 'products' | 'orders' | 'database'
 
@@ -34,6 +35,7 @@ function UsersTab() {
   const [showCreate, setShowCreate] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'user' })
+  const [passwordUser, setPasswordUser] = useState<any>(null)
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -191,7 +193,14 @@ function UsersTab() {
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     <button
+                      onClick={() => setPasswordUser(u)}
+                      title="Αλλαγή κωδικού"
+                      className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <Key size={14} className="text-blue-500" />
+                    </button>
+                    <button
                       onClick={() => { if(confirm(`Διαγραφή χρήστη ${u.email};`)) deleteUser.mutate(u.id) }}
+                      title="Διαγραφή χρήστη"
                       className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                       <Trash2 size={14} className="text-red-500" />
                     </button>
@@ -207,6 +216,8 @@ function UsersTab() {
           </div>
         )}
       </div>
+
+      <ChangePasswordModal user={passwordUser} onClose={() => setPasswordUser(null)} />
     </div>
   )
 }
