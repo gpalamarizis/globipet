@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -9,6 +9,9 @@ import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
 import TranslationEditor from '@/components/admin/TranslationEditor'
+import ProductFormModal from '@/components/admin/ProductFormModal'
+import ServiceFormModal from '@/components/admin/ServiceFormModal'
+import BulkImportModal from '@/components/admin/BulkImportModal'
 
 type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database'
 
@@ -284,6 +287,9 @@ function ProductsTab() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [translateProduct, setTranslateProduct] = useState<any>(null)
+  const [editProduct, setEditProduct] = useState<any>(null)
+  const [newProductOpen, setNewProductOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -307,9 +313,17 @@ function ProductsTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 input mb-4">
-        <Search size={15} className="text-gray-400 shrink-0" />
-        <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση προϊόντος..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-2 input flex-1">
+          <Search size={15} className="text-gray-400 shrink-0" />
+          <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση προϊόντος..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <button onClick={() => setBulkOpen(true)} className="btn-secondary flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <FileSpreadsheet size={14}/> Excel Import
+        </button>
+        <button onClick={() => setNewProductOpen(true)} className="btn-primary flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <Plus size={14}/> Νέο Προϊόν
+        </button>
       </div>
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
@@ -336,6 +350,8 @@ function ProductsTab() {
                 <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{p.price}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setEditProduct(p)} title="Επεξεργασία"
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Edit2 size={14} className="text-gray-600" /></button>
                     <button onClick={() => setTranslateProduct(p)} title="Μεταφράσεις"
                       className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"><Globe size={14} className="text-blue-500" /></button>
                     <button onClick={() => { if(confirm('Διαγραφή προϊόντος;')) deleteProduct.mutate(p.id) }}
@@ -358,6 +374,10 @@ function ProductsTab() {
         initialDescription={translateProduct?.description_translations}
         onSave={(t) => translateProduct && saveTranslations.mutate({ id: translateProduct.id, translations: t })}
       />
+
+      <ProductFormModal open={newProductOpen} onClose={() => setNewProductOpen(false)} />
+      <ProductFormModal open={!!editProduct} onClose={() => setEditProduct(null)} product={editProduct} />
+      <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} type="products" />
     </div>
   )
 }
@@ -366,6 +386,9 @@ function ServicesTab() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [translateService, setTranslateService] = useState<any>(null)
+  const [editService, setEditService] = useState<any>(null)
+  const [newServiceOpen, setNewServiceOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['admin-services'],
@@ -392,9 +415,17 @@ function ServicesTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 input mb-4">
-        <Search size={15} className="text-gray-400 shrink-0" />
-        <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση υπηρεσίας..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-2 input flex-1">
+          <Search size={15} className="text-gray-400 shrink-0" />
+          <input className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" placeholder="Αναζήτηση υπηρεσίας..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <button onClick={() => setBulkOpen(true)} className="btn-secondary flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <FileSpreadsheet size={14}/> Excel Import
+        </button>
+        <button onClick={() => setNewServiceOpen(true)} className="btn-primary flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <Plus size={14}/> Νέα Υπηρεσία
+        </button>
       </div>
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
@@ -423,6 +454,8 @@ function ServicesTab() {
                 <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">€{s.price}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setEditService(s)} title="Επεξεργασία"
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Edit2 size={14} className="text-gray-600" /></button>
                     <button onClick={() => setTranslateService(s)} title="Μεταφράσεις"
                       className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"><Globe size={14} className="text-blue-500" /></button>
                     <button onClick={() => { if(confirm('Διαγραφή υπηρεσίας;')) deleteService.mutate(s.id) }}
@@ -445,6 +478,10 @@ function ServicesTab() {
         initialDescription={translateService?.description_translations}
         onSave={(t) => translateService && saveTranslations.mutate({ id: translateService.id, translations: t })}
       />
+
+      <ServiceFormModal open={newServiceOpen} onClose={() => setNewServiceOpen(false)} />
+      <ServiceFormModal open={!!editService} onClose={() => setEditService(null)} service={editService} />
+      <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} type="services" />
     </div>
   )
 }

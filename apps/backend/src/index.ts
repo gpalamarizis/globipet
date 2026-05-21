@@ -31,6 +31,7 @@ import wishlistRoutes from './routes/wishlist.js'
 import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
 import aiRoutes from './routes/ai.js'
+import bulkImportRoutes from './routes/bulk-import.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -73,6 +74,7 @@ const routes = [
   { prefix: '/api/reviews', handler: reviewsRoutes },
   { prefix: '/api/wishlist', handler: wishlistRoutes },
   { prefix: '/api/admin', handler: adminRoutes },
+  { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
 ]
