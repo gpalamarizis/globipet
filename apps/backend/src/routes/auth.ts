@@ -69,6 +69,65 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     return { token }
   })
 
+  // ─── GOOGLE OAUTH FOR MOBILE APPS ────────────────────────────────
+  // Mobile app sends Google's access_token + user info from native OAuth flow
+  // Backend verifies the token and creates/updates user, returns JWT
+  app.post('/google/mobile', async (req: any, reply) => {
+    try {
+      const { access_token, user: googleUserData } = req.body as any
+
+      if (!access_token || !googleUserData?.email) {
+        return reply.code(400).send({ message: 'Λείπουν δεδομένα' })
+      }
+
+      // Verify the access_token by calling Google's userinfo endpoint
+      // This ensures the token is valid and belongs to this user
+      const verifyRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      if (!verifyRes.ok) {
+        return reply.code(401).send({ message: 'Μη έγκυρο Google token' })
+      }
+      const verifiedUser = await verifyRes.json() as any
+
+      // Make sure the email matches what client sent (prevent token swapping)
+      if (verifiedUser.email !== googleUserData.email) {
+        return reply.code(401).send({ message: 'Email mismatch' })
+      }
+
+      // Get preferred language from Google locale
+      const googleLocale = (verifiedUser.locale || googleUserData.locale || '').toLowerCase().split('-')[0]
+      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
+      const preferredLang = supportedLangs.includes(googleLocale) ? googleLocale : 'el'
+
+      // Find or create user
+      let user = await prisma.user.findUnique({ where: { email: verifiedUser.email } })
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: verifiedUser.email,
+            full_name: verifiedUser.name || googleUserData.full_name,
+            profile_photo: verifiedUser.picture || googleUserData.profile_photo,
+            role: 'user',
+            preferred_language: preferredLang,
+          }
+        })
+      } else if (!user.profile_photo && (verifiedUser.picture || googleUserData.profile_photo)) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { profile_photo: verifiedUser.picture || googleUserData.profile_photo }
+        })
+      }
+
+      const { password_hash: _, ...userSafe } = user as any
+      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
+      return { user: userSafe, token }
+    } catch (err: any) {
+      console.error('Google mobile OAuth error:', err)
+      return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
+    }
+  })
+
   // ─── GOOGLE OAUTH ───────────────────────────────────────────────
 
   app.get('/google', async (req, reply) => {
