@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Package, Save } from 'lucide-react'
+import ImageUploadField from '@/components/admin/ImageUploadField'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -163,10 +164,12 @@ export default function ProductFormModal({ open, onClose, product }: Props) {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">URL Εικόνας</label>
-                <input className="input" placeholder="https://..." value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} />
-              </div>
+              <ImageUploadField
+                label="Εικόνα προϊόντος"
+                value={form.image_url}
+                onChange={(url) => setForm({...form, image_url: url})}
+                folder="products"
+              />
 
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Είδος ζώου (multiple)</label>
