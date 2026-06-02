@@ -45,16 +45,15 @@ export default function Checkout() {
         total_amount: grandTotal,
       })
 
-      // If card payment, create Stripe session
+      // If card payment, create Viva.com Smart Checkout session
       if (paymentMethod === 'card') {
-        const { data: session } = await api.post('/orders/checkout-session', {
+        const { data: viva } = await api.post('/orders/viva/checkout', {
           order_id: order.id,
-          items: cartItems,
-          success_url: `${window.location.origin}/orders/${order.id}?success=true`,
-          cancel_url: `${window.location.origin}/checkout`,
+          total_amount: grandTotal,
         })
-        if (session.url) {
-          window.location.href = session.url
+        if (viva.checkoutUrl) {
+          // Redirect to Viva Smart Checkout (handles card, Apple Pay, Google Pay, Klarna, PayPal)
+          window.location.href = viva.checkoutUrl
           return
         }
       }

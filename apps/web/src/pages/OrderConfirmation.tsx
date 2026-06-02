@@ -1,80 +1,83 @@
-import { useParams, useSearchParams, Link } from 'react-router-dom'
+// NOTE: This is an EXAMPLE success handler.
+// If you already have an OrderConfirmation page, just add the Viva verification
+// logic shown in the useEffect below to your existing page.
+
+import { useEffect, useState } from 'react'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
-import { CheckCircle, Package, Truck, Home, ShoppingBag } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 
 export default function OrderConfirmation() {
-  const { t } = useTranslation()
   const { id } = useParams()
   const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [verifying, setVerifying] = useState(false)
 
-  const { data: order } = useQuery({
+  // Viva returns these query params on redirect: ?t=transactionId&s=orderCode&eventId=...
+  const transactionId = params.get('t')
+  const vivaSuccess = params.get('s')  // orderCode present = came back from Viva
+
+  const { data: order, refetch } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/orders/${id}`).then(r => r.data),
     enabled: !!id,
   })
 
+  // Verify Viva payment when redirected back
+  useEffect(() => {
+    const verify = async () => {
+      if (transactionId && id) {
+        setVerifying(true)
+        try {
+          await api.post('/orders/viva/verify', {
+            order_id: id,
+            transaction_id: transactionId,
+          })
+          await refetch()
+        } catch {
+          // verification will also happen via webhook
+        } finally {
+          setVerifying(false)
+        }
+      }
+    }
+    verify()
+  }, [transactionId, id])
+
+  const isPaid = order?.payment_status === 'paid'
+
   return (
-    <div className="page-container py-16 text-center max-w-lg mx-auto">
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', duration: 0.5 }}>
-        <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
-          <CheckCircle size={40} className="text-green-600" />
-        </div>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-2">
-          {t('orderConfirm.title')} 🎉
-        </h1>
-        <p className="text-gray-500 mb-6">{t('orderConfirm.subtitle')}</p>
-
-        {order && (
-          <div className="card p-5 text-left mb-6">
-            <p className="text-xs font-medium text-gray-500 mb-3">{t('orderConfirm.details')}</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">{t('orderConfirm.orderNumber')}</span>
-                <span className="font-mono font-medium">#{order.id?.slice(0, 8).toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">{t('orderConfirm.total')}</span>
-                <span className="font-bold text-gray-900 dark:text-white">€{order.total_amount?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">{t('orderConfirm.status')}</span>
-                <span className="text-green-600 font-medium">{t('orderConfirm.confirmed')}</span>
-              </div>
-            </div>
+    <div className="page-container py-16 max-w-lg mx-auto text-center">
+      {verifying ? (
+        <>
+          <Loader2 size={56} className="mx-auto text-brand-900 animate-spin mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Επιβεβαίωση πληρωμής...</h1>
+          <p className="text-gray-500">Παρακαλώ περιμένετε</p>
+        </>
+      ) : isPaid ? (
+        <>
+          <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Η πληρωμή ολοκληρώθηκε! 🎉</h1>
+          <p className="text-gray-500 mb-6">Η παραγγελία σας επιβεβαιώθηκε και θα την επεξεργαστούμε σύντομα.</p>
+          <div className="card p-4 mb-6 text-left">
+            <p className="text-sm text-gray-500">Αριθμός παραγγελίας</p>
+            <p className="font-mono font-bold text-gray-900 dark:text-white">#{id?.slice(0, 8)}</p>
+            <p className="text-sm text-gray-500 mt-2">Σύνολο</p>
+            <p className="font-bold text-gray-900 dark:text-white">€{order?.total_amount?.toFixed(2)}</p>
           </div>
-        )}
-
-        <div className="flex justify-center gap-8 mb-8">
-          {[
-            { icon: CheckCircle, key: 'confirmation', done: true },
-            { icon: Package, key: 'preparing', done: false },
-            { icon: Truck, key: 'shipping', done: false },
-            { icon: Home, key: 'delivery', done: false },
-          ].map((s, i) => (
-            <div key={i} className="text-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${s.done ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                <s.icon size={18} />
-              </div>
-              <p className="text-xs text-gray-500">{t(`orderConfirm.steps.${s.key}`)}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex gap-3">
-          <Link to="/orders" className="btn-secondary flex-1 flex items-center justify-center gap-2">
-            <Package size={16}/> {t('orderConfirm.myOrders')}
-          </Link>
-          <Link to="/marketplace" className="btn-primary flex-1 flex items-center justify-center gap-2">
-            <ShoppingBag size={16}/> {t('orderConfirm.continueShopping')}
-          </Link>
-        </div>
-      </motion.div>
+          <button onClick={() => navigate('/orders')} className="btn-primary w-full">
+            <Package size={16} className="inline mr-2"/>Οι παραγγελίες μου
+          </button>
+        </>
+      ) : (
+        <>
+          <XCircle size={56} className="mx-auto text-amber-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Εκκρεμεί πληρωμή</h1>
+          <p className="text-gray-500 mb-6">Η παραγγελία δημιουργήθηκε αλλά η πληρωμή δεν έχει επιβεβαιωθεί ακόμα.</p>
+          <button onClick={() => navigate('/orders')} className="btn-secondary w-full">Οι παραγγελίες μου</button>
+        </>
+      )}
     </div>
   )
 }

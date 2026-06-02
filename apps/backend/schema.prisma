@@ -52,10 +52,8 @@ model Service {
   id                    String   @id @default(uuid())
   provider_email        String
   provider_name         String
-  provider_name_translations Json?
   service_type          String
   description           String
-  description_translations Json?
   price                 Float
   location              String?
   city                  String
@@ -107,9 +105,7 @@ model Booking {
 model Product {
   id                  String   @id @default(uuid())
   name                String
-  name_translations   Json?
   description         String
-  description_translations Json?
   price               Float
   category            String
   brand               String?
@@ -135,9 +131,11 @@ model Order {
   items            Json[]
   total_amount     Float
   status           String   @default("pending")
+  payment_status   String   @default("unpaid")
   shipping_address Json
   payment_method   String?
   payment_intent   String?
+  payment_ref      String?
   coupon_code      String?
   discount_amount  Float?
   notes            String?
@@ -192,9 +190,7 @@ model Post {
 model Event {
   id               String   @id @default(uuid())
   title            String
-  title_translations Json?
   description      String
-  description_translations Json?
   event_type       String
   date             String
   end_date         String?
@@ -222,12 +218,10 @@ model Event {
 model Breed {
   id               String   @id @default(uuid())
   name             String
-  name_translations Json?
   name_el          String?
   species          String
   fci_number       String?
   description      String
-  description_translations Json?
   origin           String?
   size             String
   weight_min       Float?
