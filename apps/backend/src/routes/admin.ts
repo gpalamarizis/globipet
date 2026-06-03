@@ -1,0 +1,119 @@
+import type { FastifyPluginAsync } from 'fastify'
+import prisma from '../lib/prisma.js'
+import bcrypt from 'bcryptjs'
+
+const adminRoutes: FastifyPluginAsync = async (app) => {
+  app.addHook('preHandler', async (req, reply) => {
+    try {
+      await (app as any).authenticate(req, reply)
+      if ((req.user as any)?.role !== 'admin') {
+        return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })
+      }
+    } catch {
+      return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' })
+    }
+  })
+
+  app.get('/stats', async () => {
+    const [users, pets, orders, providers, products, bookings] = await Promise.all([
+      prisma.user.count(),
+      prisma.pet.count(),
+      prisma.order.count(),
+      prisma.user.count({ where: { role: 'service_provider' } }),
+      prisma.product.count(),
+      prisma.booking.count(),
+    ])
+    const revenueData = await prisma.order.aggregate({
+      _sum: { total_amount: true },
+      where: { status: 'delivered' }
+    })
+    return {
+      users, pets, orders, providers, products, bookings,
+      revenue: revenueData._sum.total_amount?.toFixed(2) ?? '0',
+      total_records: users + pets + orders + products + bookings,
+    }
+  })
+
+  app.get('/users', async (req: any) => {
+    const role = req.query.role
+    const users = await prisma.user.findMany({
+      where: role ? { role } : undefined,
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        profile_photo: true,
+        created_at: true,
+      },
+    })
+    return { data: users }
+  })
+
+  app.post('/users', async (req: any, reply) => {
+    const { full_name, email, password, role } = req.body as any
+    if (!email || !password) {
+      return reply.code(400).send({ message: 'Email και κωδικός είναι υποχρεωτικά' })
+    }
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return reply.code(409).send({ message: 'Το email χρησιμοποιείται ήδη' })
+    }
+    const password_hash = await bcrypt.hash(password, 12)
+    const user = await prisma.user.create({
+      data: {
+        full_name: full_name || email.split('@')[0],
+        email,
+        password_hash,
+        role: role || 'user',
+      },
+      select: {
+        id: true, full_name: true, email: true, role: true, created_at: true
+      }
+    })
+    return user
+  })
+
+  app.patch('/users/:id', async (req: any) => {
+    const { password, ...rest } = req.body as any
+    const data: any = { ...rest }
+    if (password) {
+      data.password_hash = await bcrypt.hash(password, 12)
+    }
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data,
+      select: {
+        id: true, full_name: true, email: true, role: true, created_at: true
+      }
+    })
+    return user
+  })
+
+  app.delete('/users/:id', async (req: any, reply) => {
+    await prisma.user.delete({ where: { id: req.params.id } })
+    return reply.code(204).send()
+  })
+
+  app.post('/query', async (req: any, reply) => {
+    const { sql } = req.body as any
+    if (!sql) return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })
+    const dangerous = /\b(DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE)\b/i.test(sql)
+    if (dangerous) return reply.code(400).send({ message: 'Επικίνδυνη εντολή SQL δεν επιτρέπεται' })
+    const start = Date.now()
+    try {
+      const rows = await prisma.$queryRawUnsafe(sql)
+      const duration = Date.now() - start
+      return {
+        rows: Array.isArray(rows) ? rows : [rows],
+        rowCount: Array.isArray(rows) ? rows.length : 1,
+        duration
+      }
+    } catch (err: any) {
+      return reply.code(400).send({ message: err.message })
+    }
+  })
+}
+
+export default adminRoutes
