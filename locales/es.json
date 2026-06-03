@@ -1,0 +1,162 @@
+{
+  "common": {
+    "search": "Buscar...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "back": "Atrás",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "yes": "Sí",
+    "no": "No",
+    "all": "Todos",
+    "no_results": "No se encontraron resultados",
+    "logout_confirm": "¿Estás seguro?",
+    "tagline": "El mejor cuidado para los mejores amigos del humano"
+  },
+  "tabs": {
+    "home": "Inicio",
+    "services": "Servicios",
+    "marketplace": "Tienda",
+    "pets": "Mascotas",
+    "social": "Social",
+    "profile": "Perfil"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "logout": "Cerrar sesión",
+    "email": "Email",
+    "password": "Contraseña",
+    "password_min": "Contraseña (mínimo 8 caracteres)",
+    "full_name": "Nombre completo",
+    "forgot_password": "Olvidé la contraseña",
+    "no_account": "¿No tienes cuenta? ",
+    "have_account": "¿Tienes cuenta? ",
+    "sign_in": "Entrar",
+    "signing_in": "Entrando...",
+    "registering": "Registrando...",
+    "create_account": "Crear cuenta",
+    "subtitle_login": "Inicia sesión en tu cuenta",
+    "fill_credentials": "Introduce email y contraseña",
+    "fill_all_fields": "Completa todos los campos",
+    "password_min_error": "La contraseña debe tener al menos 8 caracteres",
+    "wrong_credentials": "Datos incorrectos",
+    "login_error": "Error de inicio de sesión",
+    "register_error": "Error de registro",
+    "account_type": "Tipo de cuenta",
+    "user_owner": "🐾 Dueño",
+    "service_provider_short": "🩺 Proveedor",
+    "reset_password": "Restablecer contraseña",
+    "reset_desc": "Introduce tu email y te enviaremos instrucciones.",
+    "email_required": "Introduce tu email",
+    "try_again": "Inténtalo de nuevo",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "email_sent": "✅ ¡Email enviado! Revisa tu bandeja.",
+    "back_to_login": "Volver al inicio de sesión",
+    "back_arrow": "← Atrás"
+  },
+  "home": {
+    "greeting": "¡Hola, {{name}}! 👋",
+    "search_service": "🔍  Buscar servicio...",
+    "categories": "Categorías",
+    "top_services": "Mejores Servicios",
+    "join_free": "Únete gratis",
+    "join_desc": "Reservas, mascotas, GPS tracker y mucho más",
+    "have_account_link": "Ya tengo cuenta"
+  },
+  "services": {
+    "title": "Servicios",
+    "search": "🔍  Buscar...",
+    "minutes": "min",
+    "book": "Reservar",
+    "no_services": "No se encontraron servicios",
+    "types": {
+      "all": "Todos",
+      "grooming": "Peluquería",
+      "veterinary": "Veterinario",
+      "walking": "Paseos",
+      "pet_sitting": "Cuidado",
+      "training": "Entrenamiento",
+      "boarding": "Alojamiento",
+      "pet_taxi": "Taxi"
+    },
+    "categories": {
+      "grooming": "Peluquería",
+      "veterinary": "Veterinario",
+      "walking": "Paseos",
+      "pet_sitting": "Cuidado",
+      "training": "Entrenamiento",
+      "pet_taxi": "Pet Taxi"
+    }
+  },
+  "marketplace": {
+    "title": "Tienda",
+    "search": "🔍  Buscar...",
+    "no_products": "No se encontraron productos",
+    "categories": {
+      "all": "Todos",
+      "food": "Comida",
+      "toys": "Juguetes",
+      "accessories": "Accesorios",
+      "health": "Salud",
+      "grooming": "Aseo"
+    }
+  },
+  "pets": {
+    "title": "Mis Mascotas",
+    "add": "+ Añadir",
+    "add_pet": "Añadir mascota",
+    "new_pet": "Nueva mascota",
+    "no_pets": "No tienes mascotas aún",
+    "auth_required": "Se requiere inicio de sesión",
+    "added": "¡Mascota añadida!",
+    "add_error": "Error al añadir",
+    "species": "Especie",
+    "name": "Nombre *",
+    "name_placeholder": "ej. Rex",
+    "breed": "Raza",
+    "breed_placeholder": "ej. Labrador",
+    "age": "Edad (años)",
+    "weight": "Peso (kg)",
+    "gender": "Género",
+    "male": "♂ Macho",
+    "female": "♀ Hembra",
+    "color": "Color",
+    "color_placeholder": "ej. Marrón",
+    "microchip": "Número de Microchip",
+    "microchip_placeholder": "15 dígitos",
+    "microchip_note": "Introduce el número manualmente (NFC disponible en versión final)",
+    "save": "Guardar mascota",
+    "saving": "Guardando...",
+    "no_chip": "Sin microchip",
+    "years": "años",
+    "lost_badge": "PERDIDA",
+    "mark_found": "✓ Encontrada",
+    "mark_lost": "! Perdida"
+  },
+  "social": {
+    "title": "Social Feed",
+    "no_posts": "No hay publicaciones"
+  },
+  "profile": {
+    "guest_title": "Inicia sesión para acceder",
+    "owner": "🐾 Dueño",
+    "provider": "🩺 Proveedor",
+    "admin": "⚡ Admin",
+    "logout_title": "Cerrar sesión",
+    "menu": {
+      "pets": "Mis Mascotas",
+      "bookings": "Reservas",
+      "orders": "Pedidos",
+      "tracker": "GPS Tracker",
+      "telehealth": "Telesalud",
+      "language": "Idioma"
+    }
+  },
+  "language": {
+    "title": "Idioma",
+    "subtitle": "Elige el idioma de la app"
+  }
+}
