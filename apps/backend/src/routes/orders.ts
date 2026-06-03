@@ -38,7 +38,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         })),
         total_amount: parseFloat(total_amount),
         status: 'pending',
-        payment_status: 'unpaid',
+        
         shipping_address: shipping_address,
         payment_method,
       }
@@ -48,7 +48,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     return order
   })
 
-  // ─── VIVA.COM SMART CHECKOUT ─────────────────────────────────────
+  // ─── VIVA.COM SMART CHECKOUT ────────────────────────────────────────────────
   app.post('/viva/checkout', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { order_id, total_amount } = req.body as any
     const user = req.user as any
@@ -69,7 +69,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
       await prisma.order.update({
         where: { id: order_id },
-        data: { payment_ref: String(orderCode), payment_method: 'viva' },
+        data: { payment_intent: String(orderCode), payment_method: 'viva' },
       })
 
       return { checkoutUrl, orderCode }
@@ -97,8 +97,8 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
             where: { id: merchantTrns },
             data: {
               status: 'confirmed',
-              payment_status: 'paid',
-              payment_ref: String(transactionId),
+              
+              payment_intent: String(transactionId),
             },
           }).catch(() => {})
         }
@@ -118,12 +118,18 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     const baseUrl = isDemo
       ? 'https://demo.vivapayments.com'
       : 'https://www.vivapayments.com'
-    const credentials = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
-    const res = await fetch(`${baseUrl}/api/messages/config/token`, {
-      headers: { 'Authorization': `Basic ${credentials}` }
-    })
-    const data = await res.json() as any
-    return { Key: data.Key }
+
+    try {
+      const credentials = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
+      const res = await fetch(`${baseUrl}/api/messages/config/token`, {
+        headers: { 'Authorization': `Basic ${credentials}` }
+      })
+      const data = await res.json() as any
+      return { Key: data.Key }
+    } catch (err: any) {
+      console.error('Viva webhook key error:', err)
+      return reply.code(500).send({ Key: '' })
+    }
   })
 
   // Manual verify (called from success page)
@@ -135,7 +141,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         if (transaction.statusId === 'F') {
           await prisma.order.update({
             where: { id: order_id },
-            data: { status: 'confirmed', payment_status: 'paid', payment_ref: String(transaction_id) },
+            data: { status: 'confirmed',  payment_intent: String(transaction_id) },
           })
           return { paid: true, order_id }
         }
