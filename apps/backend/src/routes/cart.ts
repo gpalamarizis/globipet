@@ -10,7 +10,7 @@ const routes: FastifyPluginAsync = async (app) => {
       where: { user_email: email },
       orderBy: { created_at: 'desc' },
     })
-    const total = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+    const total = items.reduce((sum: number, item: any) => sum + (item.product_price * item.quantity), 0)
     return { data: items, total }
   })
 
@@ -19,14 +19,13 @@ const routes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const { product_id, product_name, product_price, product_image, quantity = 1 } = req.body as any
 
-    // Check if item already in cart
-    const existing = await prisma.cartItem.findFirst({
-      where: { user_email: email, product_id },
+    const existing = await prisma.cartItem.findUnique({
+      where: { user_email_product_id: { user_email: email, product_id } },
     })
 
     if (existing) {
       const updated = await prisma.cartItem.update({
-        where: { id: existing.id },
+        where: { user_email_product_id: { user_email: email, product_id } },
         data: { quantity: existing.quantity + quantity },
       })
       return { data: updated, success: true }
@@ -36,9 +35,9 @@ const routes: FastifyPluginAsync = async (app) => {
       data: {
         user_email: email,
         product_id,
-        name: product_name,
-        price: parseFloat(product_price),
-        image: product_image || null,
+        product_name,
+        product_price: parseFloat(product_price),
+        product_image: product_image || null,
         quantity,
       },
     })
@@ -50,18 +49,13 @@ const routes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const { quantity } = req.body as any
 
-    const item = await prisma.cartItem.findFirst({
-      where: { id: req.params.id, user_email: email },
-    })
-    if (!item) return { success: false }
-
     if (quantity <= 0) {
-      await prisma.cartItem.delete({ where: { id: req.params.id } })
+      await prisma.cartItem.deleteMany({ where: { id: req.params.id, user_email: email } })
       return { success: true, deleted: true }
     }
 
-    const updated = await prisma.cartItem.update({
-      where: { id: req.params.id },
+    const updated = await prisma.cartItem.updateMany({
+      where: { id: req.params.id, user_email: email },
       data: { quantity },
     })
     return { data: updated, success: true }
@@ -73,13 +67,6 @@ const routes: FastifyPluginAsync = async (app) => {
     await prisma.cartItem.deleteMany({
       where: { id: req.params.id, user_email: email },
     })
-    return { success: true }
-  })
-
-  // DELETE clear entire cart
-  app.delete('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { email } = req.user as any
-    await prisma.cartItem.deleteMany({ where: { user_email: email } })
     return { success: true }
   })
 }
