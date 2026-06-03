@@ -12,6 +12,9 @@
  *   VIVA_CLIENT_SECRET     - Smart Checkout OAuth client secret
  *   VIVA_SOURCE_CODE       - Payment source code (from Viva dashboard)
  *   VIVA_ENV               - 'demo' or 'production' (default: 'demo')
+ *   VIVA_MERCHANT_ID       - Merchant ID (for webhook verification)
+ *   VIVA_API_KEY           - API Key (for webhook verification)
+ *   FRONTEND_URL           - Frontend URL (e.g. https://globipet.com)
  */
 
 type VivaEnv = 'demo' | 'production'
@@ -27,6 +30,7 @@ function getBaseUrls() {
       accounts: 'https://accounts.vivapayments.com',
       api: 'https://api.vivapayments.com',
       checkout: 'https://www.vivapayments.com/web/checkout',
+      legacy: 'https://www.vivapayments.com',
     }
   }
   // Demo / sandbox
@@ -34,6 +38,7 @@ function getBaseUrls() {
     accounts: 'https://demo-accounts.vivapayments.com',
     api: 'https://demo-api.vivapayments.com',
     checkout: 'https://demo.vivapayments.com/web/checkout',
+    legacy: 'https://demo.vivapayments.com',
   }
 }
 
@@ -96,6 +101,7 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
   const token = await getVivaAccessToken()
   const { api, checkout } = getBaseUrls()
   const sourceCode = process.env.VIVA_SOURCE_CODE
+  const frontendUrl = process.env.FRONTEND_URL || 'https://globipet.com'
 
   // Amount must be in cents (integer)
   const amountInCents = Math.round(params.amount * 100)
@@ -115,9 +121,11 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
     allowRecurring: false,
     maxInstallments: 12,           // allow installments
     merchantTrns: params.orderId,  // our order id - comes back in webhook
+    sourceCode: sourceCode,
     tags: ['globipet'],
+    successUrl: `${frontendUrl}/orders/${params.orderId}/confirmation`,
+    failureUrl: `${frontendUrl}/orders/${params.orderId}/confirmation`,
   }
-  if (sourceCode) body.sourceCode = sourceCode
 
   const res = await fetch(`${api}/checkout/v2/orders`, {
     method: 'POST',

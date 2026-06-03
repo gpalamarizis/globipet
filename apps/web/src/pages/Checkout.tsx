@@ -23,8 +23,7 @@ export default function Checkout() {
     postal_code: '',
     country: 'GR',
   })
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'cash'>('card')
-  const [card, setCard] = useState({ number: '', expiry: '', cvv: '', name: '' })
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card')
 
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cart'],
@@ -45,14 +44,14 @@ export default function Checkout() {
         total_amount: grandTotal,
       })
 
-      // If card payment, create Viva.com Smart Checkout session
+      // If card payment, redirect to Viva Smart Checkout
       if (paymentMethod === 'card') {
         const { data: viva } = await api.post('/orders/viva/checkout', {
           order_id: order.id,
           total_amount: grandTotal,
         })
         if (viva.checkoutUrl) {
-          // Redirect to Viva Smart Checkout (handles card, Apple Pay, Google Pay, Klarna, PayPal)
+          // Redirect to Viva Smart Checkout (handles card, Apple Pay, Google Pay, installments)
           window.location.href = viva.checkoutUrl
           return
         }
@@ -161,8 +160,7 @@ export default function Checkout() {
 
               <div className="space-y-3 mb-5">
                 {[
-                  { id: 'card', label: 'Πιστωτική / Χρεωστική κάρτα', icon: '💳' },
-                  { id: 'paypal', label: 'PayPal', icon: '🔵' },
+                  { id: 'card', label: 'Κάρτα / Apple Pay / Google Pay', icon: '💳' },
                   { id: 'cash', label: 'Αντικαταβολή', icon: '💵' },
                 ].map(m => (
                   <label key={m.id} className={cn('flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all',
@@ -176,30 +174,16 @@ export default function Checkout() {
               </div>
 
               {paymentMethod === 'card' && (
-                <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lock size={14} className="text-green-600" />
-                    <span className="text-xs text-green-600 font-medium">Ασφαλής πληρωμή μέσω Stripe</span>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Lock size={14} className="text-blue-600" />
+                    <span className="text-xs text-blue-600 font-medium">
+                      Θα μεταφερθείτε στο ασφαλές περιβάλλον πληρωμής Viva Wallet
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Αριθμός κάρτας</label>
-                    <input className="input font-mono" placeholder="1234 5678 9012 3456" maxLength={19}
-                      value={card.number} onChange={e => setCard(c => ({...c, number: e.target.value.replace(/\s/g,'').replace(/(.{4})/g,'$1 ').trim()}))} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Ημερομηνία λήξης</label>
-                      <input className="input" placeholder="MM/YY" maxLength={5} value={card.expiry} onChange={e => setCard(c => ({...c, expiry: e.target.value}))} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">CVV</label>
-                      <input className="input" placeholder="123" maxLength={4} type="password" value={card.cvv} onChange={e => setCard(c => ({...c, cvv: e.target.value}))} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα κατόχου</label>
-                    <input className="input" placeholder="GEORGE PALAMARIZIS" value={card.name} onChange={e => setCard(c => ({...c, name: e.target.value.toUpperCase()}))} />
-                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Αποδεκτές κάρτες: Visa, Mastercard, American Express. Έως 12 άτοκες δόσεις.
+                  </p>
                 </div>
               )}
 
@@ -227,7 +211,7 @@ export default function Checkout() {
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                   <p className="text-xs font-medium text-gray-500 mb-2">ΤΡΟΠΟΣ ΠΛΗΡΩΜΗΣ</p>
                   <p className="text-sm text-gray-900 dark:text-white">
-                    {paymentMethod === 'card' ? '💳 Κάρτα' : paymentMethod === 'paypal' ? '🔵 PayPal' : '💵 Αντικαταβολή'}
+                    {paymentMethod === 'card' ? '💳 Κάρτα μέσω Viva Wallet' : '💵 Αντικαταβολή'}
                   </p>
                 </div>
               </div>

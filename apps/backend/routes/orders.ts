@@ -48,7 +48,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     return order
   })
 
-  // ─── VIVA.COM SMART CHECKOUT ─────────────────────────────────────
+  // ─── VIVA.COM SMART CHECKOUT ────────────────────────────────────────────────
   app.post('/viva/checkout', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { order_id, total_amount } = req.body as any
     const user = req.user as any
@@ -112,8 +112,24 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   // Viva webhook verification key (Viva sends GET to verify endpoint)
   app.get('/viva/webhook', async (req: any, reply) => {
-    const key = process.env.VIVA_WEBHOOK_KEY || ''
-    return { Key: key }
+    const merchantId = process.env.VIVA_MERCHANT_ID
+    const apiKey = process.env.VIVA_API_KEY
+    const isDemo = (process.env.VIVA_ENV || 'demo') === 'demo'
+    const baseUrl = isDemo
+      ? 'https://demo.vivapayments.com'
+      : 'https://www.vivapayments.com'
+
+    try {
+      const credentials = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
+      const res = await fetch(`${baseUrl}/api/messages/config/token`, {
+        headers: { 'Authorization': `Basic ${credentials}` }
+      })
+      const data = await res.json() as any
+      return { Key: data.Key }
+    } catch (err: any) {
+      console.error('Viva webhook key error:', err)
+      return reply.code(500).send({ Key: '' })
+    }
   })
 
   // Manual verify (called from success page)
