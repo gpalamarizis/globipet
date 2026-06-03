@@ -112,8 +112,18 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   // Viva webhook verification key (Viva sends GET to verify endpoint)
   app.get('/viva/webhook', async (req: any, reply) => {
-    const key = process.env.VIVA_WEBHOOK_KEY || ''
-    return { Key: key }
+    const merchantId = process.env.VIVA_MERCHANT_ID
+    const apiKey = process.env.VIVA_API_KEY
+    const isDemo = (process.env.VIVA_ENV || 'demo') === 'demo'
+    const baseUrl = isDemo
+      ? 'https://demo.vivapayments.com'
+      : 'https://www.vivapayments.com'
+    const credentials = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
+    const res = await fetch(`${baseUrl}/api/messages/config/token`, {
+      headers: { 'Authorization': `Basic ${credentials}` }
+    })
+    const data = await res.json() as any
+    return { Key: data.Key }
   })
 
   // Manual verify (called from success page)
