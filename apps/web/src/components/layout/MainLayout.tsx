@@ -20,10 +20,6 @@ const navItems = [
   { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin },
 ]
 
-const providerNavItems = [
-  { path: '/provider',    labelKey: 'nav.providerDashboard', icon: Settings },
-]
-
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()
@@ -34,6 +30,14 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close all drawers/menus on route change
+  useEffect(() => {
+    setCartOpen(false)
+    setNotifOpen(false)
+    setUserMenuOpen(false)
+    setMobileOpen(false)
+  }, [location.pathname])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -138,7 +142,7 @@ export default function MainLayout() {
                             { to: '/profile',    icon: User,          label: t('nav.profile') },
                             { to: '/my-pets',    icon: PawPrint,      label: t('nav.myPets') },
                             { to: '/bookings',   icon: Calendar,      label: t('nav.myBookings') },
-                            { to: '/orders',     icon: ShoppingBag,   label: 'Παραγγελίες' },
+                            { to: '/orders',     icon: ShoppingBag,   label: t('orders.title') },
                             { to: '/wishlist',   icon: Heart,         label: 'Wishlist' },
                             { to: '/tracker',    icon: MapPin,        label: t('nav.petTracker') },
                             { to: '/telehealth', icon: MessageSquare, label: t('nav.telehealth') },
