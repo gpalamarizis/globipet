@@ -1,0 +1,1 @@
+SELECT id, email, role, LEFT(password_hash, 20) as hash_preview FROM users WHERE email='gpal@oban.gr';

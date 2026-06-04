@@ -32,12 +32,13 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         items: items.map((item: any) => ({
           product_id: item.product_id || item.id,
           name: item.product_name || item.name,
-          price: parseFloat(item.product_price || item.price),
+          price: parseFloat(item.price || item.product_price),
           quantity: item.quantity,
           image: item.product_image || item.image || null,
         })),
         total_amount: parseFloat(total_amount),
         status: 'pending',
+        payment_status: 'unpaid',
         shipping_address: shipping_address,
         payment_method,
       }
@@ -68,7 +69,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
       await prisma.order.update({
         where: { id: order_id },
-        data: { payment_intent: String(orderCode), payment_method: 'viva' },
+        data: { payment_ref: String(orderCode), payment_method: 'viva' },
       })
 
       return { checkoutUrl, orderCode }
@@ -87,16 +88,17 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
       // 1796 = Transaction Payment Created (success)
       if (eventType === 1796 && eventData) {
-        const merchantTrns = eventData.MerchantTrns
+        const merchantTrns = eventData.MerchantTrns  // our order id
         const transactionId = eventData.TransactionId
-        const statusId = eventData.StatusId
+        const statusId = eventData.StatusId          // 'F' = Finished
 
         if (merchantTrns && statusId === 'F') {
           await prisma.order.update({
             where: { id: merchantTrns },
             data: {
               status: 'confirmed',
-              payment_intent: String(transactionId),
+              payment_status: 'paid',
+              payment_ref: String(transactionId),
             },
           }).catch(() => {})
         }
@@ -139,7 +141,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         if (transaction.statusId === 'F') {
           await prisma.order.update({
             where: { id: order_id },
-            data: { status: 'confirmed', payment_intent: String(transaction_id) },
+            data: { status: 'confirmed', payment_status: 'paid', payment_ref: String(transaction_id) },
           })
           return { paid: true, order_id }
         }

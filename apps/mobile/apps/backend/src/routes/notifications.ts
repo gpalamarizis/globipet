@@ -5,32 +5,31 @@ import prisma from '../lib/prisma.js'
 const clients = new Map<string, any>()
 
 const notificationsRoutes: FastifyPluginAsync = async (app) => {
+
   // WebSocket endpoint for real-time
   app.get('/ws', { websocket: true } as any, (socket: any, req: any) => {
-    const userEmail = (req.query as any)?.userEmail
-    if (userEmail) clients.set(userEmail, socket)
+    const userId = (req.query as any)?.userId
+    if (userId) clients.set(userId, socket)
+
     socket.on('message', (raw: any) => {
       try {
         const msg = JSON.parse(raw.toString())
         if (msg.type === 'ping') socket.send(JSON.stringify({ type: 'pong' }))
         if (msg.type === 'location_update') {
-          broadcastToUser(msg.userEmail, { type: 'location_update', ...msg })
+          // Broadcast GPS update to relevant clients
+          broadcastToUser(msg.userId, { type: 'location_update', ...msg })
         }
       } catch {}
     })
-    socket.on('close', () => { if (userEmail) clients.delete(userEmail) })
-    socket.send(JSON.stringify({ type: 'connected', userEmail }))
+
+    socket.on('close', () => { if (userId) clients.delete(userId) })
+    socket.send(JSON.stringify({ type: 'connected', userId }))
   })
 
   // Get notifications
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { email } = req.user as any
-    const { unread } = req.query as any
     const notifications = await prisma.notification.findMany({
-      where: {
-        user_email: email,
-        ...(unread === 'true' ? { is_read: false } : {}),
-      },
+      where: { user_id: (req.user as any).id },
       orderBy: { created_at: 'desc' },
       take: 20,
     })
@@ -39,37 +38,33 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
 
   // Mark as read
   app.patch('/:id/read', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { email } = req.user as any
-    await prisma.notification.updateMany({
-      where: { id: req.params.id, user_email: email },
-      data: { is_read: true },
-    })
+    await prisma.notification.update({ where: { id: req.params.id }, data: { is_read: true } })
     return { success: true }
   })
 
   // Mark all as read
   app.patch('/read-all', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { email } = req.user as any
     await prisma.notification.updateMany({
-      where: { user_email: email, is_read: false },
-      data: { is_read: true },
+      where: { user_id: (req.user as any).id, is_read: false },
+      data: { is_read: true }
     })
     return { success: true }
   })
 
   // Send notification (internal)
   app.post('/send', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { user_email, title, message, type } = req.body as any
+    const { user_id, title, message, type } = req.body as any
     const notification = await prisma.notification.create({
-      data: { user_email, title, message, type: type || 'info' },
+      data: { user_id, title, message, type: type || 'info' }
     })
-    broadcastToUser(user_email, { type: 'notification', notification })
+    // Push to WebSocket if connected
+    broadcastToUser(user_id, { type: 'notification', notification })
     return notification
   })
 }
 
-export function broadcastToUser(userEmail: string, data: any) {
-  const socket = clients.get(userEmail)
+export function broadcastToUser(userId: string, data: any) {
+  const socket = clients.get(userId)
   if (socket && socket.readyState === 1) {
     socket.send(JSON.stringify(data))
   }

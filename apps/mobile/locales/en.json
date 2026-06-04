@@ -1,0 +1,162 @@
+{
+  "common": {
+    "search": "Search...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "no_results": "No results found",
+    "logout_confirm": "Are you sure?",
+    "tagline": "Best care for the best human's friends"
+  },
+  "tabs": {
+    "home": "Home",
+    "services": "Services",
+    "marketplace": "Shop",
+    "pets": "Pets",
+    "social": "Social",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "password_min": "Password (at least 8 characters)",
+    "full_name": "Full name",
+    "forgot_password": "Forgot password",
+    "no_account": "Don't have an account? ",
+    "have_account": "Have an account? ",
+    "sign_in": "Sign in",
+    "signing_in": "Signing in...",
+    "registering": "Registering...",
+    "create_account": "Create account",
+    "subtitle_login": "Sign in to your account",
+    "fill_credentials": "Please enter email and password",
+    "fill_all_fields": "Please fill all fields",
+    "password_min_error": "Password must be at least 8 characters",
+    "wrong_credentials": "Wrong credentials",
+    "login_error": "Login error",
+    "register_error": "Registration error",
+    "account_type": "Account type",
+    "user_owner": "🐾 Owner",
+    "service_provider_short": "🩺 Provider",
+    "reset_password": "Reset password",
+    "reset_desc": "Enter your email and we will send you reset instructions.",
+    "email_required": "Please enter your email",
+    "try_again": "Please try again",
+    "send": "Send",
+    "sending": "Sending...",
+    "email_sent": "✅ Email sent! Check your inbox.",
+    "back_to_login": "Back to login",
+    "back_arrow": "← Back"
+  },
+  "home": {
+    "greeting": "Hi, {{name}}! 👋",
+    "search_service": "🔍  Search for a service...",
+    "categories": "Categories",
+    "top_services": "Top Services",
+    "join_free": "Join for free",
+    "join_desc": "Bookings, pets, GPS tracker and much more",
+    "have_account_link": "I already have an account"
+  },
+  "services": {
+    "title": "Services",
+    "search": "🔍  Search...",
+    "minutes": "min",
+    "book": "Book",
+    "no_services": "No services found",
+    "types": {
+      "all": "All",
+      "grooming": "Grooming",
+      "veterinary": "Vet",
+      "walking": "Walking",
+      "pet_sitting": "Sitting",
+      "training": "Training",
+      "boarding": "Boarding",
+      "pet_taxi": "Taxi"
+    },
+    "categories": {
+      "grooming": "Grooming",
+      "veterinary": "Veterinary",
+      "walking": "Walking",
+      "pet_sitting": "Pet Sitting",
+      "training": "Training",
+      "pet_taxi": "Pet Taxi"
+    }
+  },
+  "marketplace": {
+    "title": "Shop",
+    "search": "🔍  Search...",
+    "no_products": "No products found",
+    "categories": {
+      "all": "All",
+      "food": "Food",
+      "toys": "Toys",
+      "accessories": "Accessories",
+      "health": "Health",
+      "grooming": "Grooming"
+    }
+  },
+  "pets": {
+    "title": "My Pets",
+    "add": "+ Add",
+    "add_pet": "Add pet",
+    "new_pet": "New pet",
+    "no_pets": "You have no pets yet",
+    "auth_required": "Login required",
+    "added": "Pet added!",
+    "add_error": "Error adding pet",
+    "species": "Species",
+    "name": "Name *",
+    "name_placeholder": "e.g. Rex",
+    "breed": "Breed",
+    "breed_placeholder": "e.g. Labrador",
+    "age": "Age (years)",
+    "weight": "Weight (kg)",
+    "gender": "Gender",
+    "male": "♂ Male",
+    "female": "♀ Female",
+    "color": "Color",
+    "color_placeholder": "e.g. Brown",
+    "microchip": "Microchip number",
+    "microchip_placeholder": "15 digits",
+    "microchip_note": "Enter the number manually (NFC available in final version)",
+    "save": "Save pet",
+    "saving": "Saving...",
+    "no_chip": "No microchip",
+    "years": "years",
+    "lost_badge": "LOST",
+    "mark_found": "✓ Found",
+    "mark_lost": "! Lost"
+  },
+  "social": {
+    "title": "Social Feed",
+    "no_posts": "No posts yet"
+  },
+  "profile": {
+    "guest_title": "Log in to access",
+    "owner": "🐾 Owner",
+    "provider": "🩺 Provider",
+    "admin": "⚡ Admin",
+    "logout_title": "Logout",
+    "menu": {
+      "pets": "My Pets",
+      "bookings": "Bookings",
+      "orders": "Orders",
+      "tracker": "GPS Tracker",
+      "telehealth": "Telehealth",
+      "language": "Language"
+    }
+  },
+  "language": {
+    "title": "Language",
+    "subtitle": "Choose app language"
+  }
+}

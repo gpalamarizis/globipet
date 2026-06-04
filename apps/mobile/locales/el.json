@@ -1,0 +1,162 @@
+{
+  "common": {
+    "search": "Αναζήτηση...",
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "back": "Πίσω",
+    "loading": "Φόρτωση...",
+    "error": "Σφάλμα",
+    "success": "Επιτυχία",
+    "yes": "Ναι",
+    "no": "Όχι",
+    "all": "Όλα",
+    "no_results": "Δεν βρέθηκαν αποτελέσματα",
+    "logout_confirm": "Σίγουρα;",
+    "tagline": "Best care for the best human's friends"
+  },
+  "tabs": {
+    "home": "Αρχική",
+    "services": "Υπηρεσίες",
+    "marketplace": "Κατάστημα",
+    "pets": "Κατοικίδια",
+    "social": "Social",
+    "profile": "Προφίλ"
+  },
+  "auth": {
+    "login": "Σύνδεση",
+    "register": "Εγγραφή",
+    "logout": "Αποσύνδεση",
+    "email": "Email",
+    "password": "Κωδικός",
+    "password_min": "Κωδικός (τουλάχιστον 8 χαρακτήρες)",
+    "full_name": "Ονοματεπώνυμο",
+    "forgot_password": "Ξέχασα τον κωδικό",
+    "no_account": "Δεν έχετε λογαριασμό; ",
+    "have_account": "Έχετε λογαριασμό; ",
+    "sign_in": "Σύνδεση",
+    "signing_in": "Σύνδεση...",
+    "registering": "Εγγραφή...",
+    "create_account": "Δημιουργία λογαριασμού",
+    "subtitle_login": "Σύνδεση στον λογαριασμό σας",
+    "fill_credentials": "Συμπληρώστε email και κωδικό",
+    "fill_all_fields": "Συμπληρώστε όλα τα πεδία",
+    "password_min_error": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες",
+    "wrong_credentials": "Λανθασμένα στοιχεία",
+    "login_error": "Σφάλμα σύνδεσης",
+    "register_error": "Σφάλμα εγγραφής",
+    "account_type": "Τύπος λογαριασμού",
+    "user_owner": "🐾 Ιδιοκτήτης",
+    "service_provider_short": "🩺 Πάροχος",
+    "reset_password": "Επαναφορά κωδικού",
+    "reset_desc": "Εισάγετε το email σας και θα σας στείλουμε οδηγίες επαναφοράς.",
+    "email_required": "Εισάγετε το email σας",
+    "try_again": "Δοκιμάστε ξανά",
+    "send": "Αποστολή",
+    "sending": "Αποστολή...",
+    "email_sent": "✅ Το email εστάλη! Ελέγξτε το inbox σας.",
+    "back_to_login": "Πίσω στη σύνδεση",
+    "back_arrow": "← Πίσω"
+  },
+  "home": {
+    "greeting": "Γεια, {{name}}! 👋",
+    "search_service": "🔍  Αναζήτηση υπηρεσίας...",
+    "categories": "Κατηγορίες",
+    "top_services": "Κορυφαίες Υπηρεσίες",
+    "join_free": "Γίνετε μέλος δωρεάν",
+    "join_desc": "Κρατήσεις, κατοικίδια, GPS tracker και πολλά άλλα",
+    "have_account_link": "Έχω ήδη λογαριασμό"
+  },
+  "services": {
+    "title": "Υπηρεσίες",
+    "search": "🔍  Αναζήτηση...",
+    "minutes": "λεπτά",
+    "book": "Κράτηση",
+    "no_services": "Δεν βρέθηκαν υπηρεσίες",
+    "types": {
+      "all": "Όλες",
+      "grooming": "Grooming",
+      "veterinary": "Κτηνίατρος",
+      "walking": "Βόλτες",
+      "pet_sitting": "Sitting",
+      "training": "Εκπαίδευση",
+      "boarding": "Boarding",
+      "pet_taxi": "Taxi"
+    },
+    "categories": {
+      "grooming": "Grooming",
+      "veterinary": "Κτηνίατρος",
+      "walking": "Βόλτες",
+      "pet_sitting": "Pet Sitting",
+      "training": "Εκπαίδευση",
+      "pet_taxi": "Pet Taxi"
+    }
+  },
+  "marketplace": {
+    "title": "Κατάστημα",
+    "search": "🔍  Αναζήτηση...",
+    "no_products": "Δεν βρέθηκαν προϊόντα",
+    "categories": {
+      "all": "Όλα",
+      "food": "Τροφές",
+      "toys": "Παιχνίδια",
+      "accessories": "Αξεσουάρ",
+      "health": "Υγεία",
+      "grooming": "Grooming"
+    }
+  },
+  "pets": {
+    "title": "Κατοικίδιά μου",
+    "add": "+ Προσθήκη",
+    "add_pet": "Προσθήκη κατοικίδιου",
+    "new_pet": "Νέο κατοικίδιο",
+    "no_pets": "Δεν έχετε κατοικίδια ακόμα",
+    "auth_required": "Απαιτείται σύνδεση",
+    "added": "Κατοικίδιο προστέθηκε!",
+    "add_error": "Σφάλμα προσθήκης",
+    "species": "Είδος",
+    "name": "Όνομα *",
+    "name_placeholder": "π.χ. Ρέξ",
+    "breed": "Ράτσα",
+    "breed_placeholder": "π.χ. Labrador",
+    "age": "Ηλικία (έτη)",
+    "weight": "Βάρος (kg)",
+    "gender": "Φύλο",
+    "male": "♂ Αρσενικό",
+    "female": "♀ Θηλυκό",
+    "color": "Χρώμα",
+    "color_placeholder": "π.χ. Καφέ",
+    "microchip": "Αριθμός Microchip",
+    "microchip_placeholder": "15 ψηφία",
+    "microchip_note": "Εισάγετε τον αριθμό χειροκίνητα (NFC διαθέσιμο στην τελική έκδοση)",
+    "save": "Αποθήκευση κατοικίδιου",
+    "saving": "Αποθήκευση...",
+    "no_chip": "Χωρίς microchip",
+    "years": "ετών",
+    "lost_badge": "ΧΑΜΕΝΟ",
+    "mark_found": "✓ Βρέθηκε",
+    "mark_lost": "! Χάθηκε"
+  },
+  "social": {
+    "title": "Social Feed",
+    "no_posts": "Δεν υπάρχουν δημοσιεύσεις"
+  },
+  "profile": {
+    "guest_title": "Συνδεθείτε για πρόσβαση",
+    "owner": "🐾 Ιδιοκτήτης",
+    "provider": "🩺 Πάροχος",
+    "admin": "⚡ Admin",
+    "logout_title": "Αποσύνδεση",
+    "menu": {
+      "pets": "Κατοικίδιά μου",
+      "bookings": "Κρατήσεις",
+      "orders": "Παραγγελίες",
+      "tracker": "GPS Tracker",
+      "telehealth": "Τηλεϊατρική",
+      "language": "Γλώσσα"
+    }
+  },
+  "language": {
+    "title": "Γλώσσα",
+    "subtitle": "Επιλέξτε τη γλώσσα της εφαρμογής"
+  }
+}
