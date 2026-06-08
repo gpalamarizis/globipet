@@ -228,57 +228,370 @@ function UsersTab() {
 
 function ProvidersTab() {
   const queryClient = useQueryClient()
+  const [showImport, setShowImport] = useState(false)
+  const [showAddOne, setShowAddOne] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importResult, setImportResult] = useState<any>(null)
+  const [newProvider, setNewProvider] = useState<any>({
+    full_name: '', email: '', phone: '', password: '', city: '', country: 'GR',
+    service_type: 'grooming', service_title: '', description: '', price: '',
+    duration_minutes: 60, location: '', home_visits: false, emergency_available: false,
+    years_experience: 0, specializations: '', pet_types: '', languages: 'el,en', is_verified: false,
+  })
+
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['admin-providers'],
     queryFn: () => api.get('/admin/users?role=service_provider').then(r => r.data?.data ?? []),
   })
 
   const verifyProvider = useMutation({
-    mutationFn: ({ id, verified }: any) => api.patch(`/admin/users/${id}`, { is_verified: verified }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-providers'] }); toast.success('Πάροχος ενημερώθηκε') },
+    mutationFn: ({ id, verified }: any) => api.post(`/admin/providers/${id}/verify`, { verified }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-providers'] })
+      const count = res.data?.services_updated ?? 0
+      toast.success(`Πάροχος ενημερώθηκε${count > 0 ? ` (${count} υπηρεσίες)` : ''}`)
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Σφάλμα επαλήθευσης'),
   })
 
+  const bulkImport = useMutation({
+    mutationFn: (rows: any[]) => api.post('/admin/providers/bulk-import', { rows }),
+    onSuccess: (res: any) => {
+      setImportResult(res.data)
+      queryClient.invalidateQueries({ queryKey: ['admin-providers'] })
+      toast.success(`${res.data.created} πάροχοι εισήχθησαν`)
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Σφάλμα εισαγωγής'),
+  })
+
+  const addOne = useMutation({
+    mutationFn: () => api.post('/admin/providers/bulk-import', { rows: [newProvider] }),
+    onSuccess: (res: any) => {
+      if (res.data.created > 0) {
+        toast.success('Πάροχος προστέθηκε')
+        setShowAddOne(false)
+        setNewProvider({
+          full_name: '', email: '', phone: '', password: '', city: '', country: 'GR',
+          service_type: 'grooming', service_title: '', description: '', price: '',
+          duration_minutes: 60, location: '', home_visits: false, emergency_available: false,
+          years_experience: 0, specializations: '', pet_types: '', languages: 'el,en', is_verified: false,
+        })
+        queryClient.invalidateQueries({ queryKey: ['admin-providers'] })
+      } else {
+        toast.error(res.data.errors?.[0]?.message || 'Σφάλμα προσθήκης')
+      }
+    },
+  })
+
+  const handleFile = async (file: File) => {
+    setImportFile(file)
+    setImportResult(null)
+    const XLSX = await import('xlsx')
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    setImportPreview(rows as any[])
+  }
+
+  const downloadTemplate = () => {
+    window.open('/templates/GlobiPet_Providers_Template.xlsx', '_blank')
+  }
+
   return (
-    <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-          <tr>
-            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Πάροχος</th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Επαλήθευση</th>
-            <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ενέργειες</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-          {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={3} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
-          : providers.length === 0 ? <tr><td colSpan={3} className="text-center py-12 text-gray-400">Δεν βρέθηκαν πάροχοι</td></tr>
-          : providers.map((p: any) => (
-            <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs">
-                    {getInitials(p.full_name || 'P')}
+    <div className="space-y-4">
+      {/* Action bar */}
+      <div className="flex flex-wrap gap-2 justify-end">
+        <button onClick={downloadTemplate} className="btn-secondary flex items-center gap-2 text-sm">
+          <FileSpreadsheet size={15}/> Λήψη προτύπου Excel
+        </button>
+        <button onClick={() => setShowAddOne(true)} className="btn-secondary flex items-center gap-2 text-sm">
+          <Plus size={15}/> Προσθήκη ενός
+        </button>
+        <button onClick={() => setShowImport(true)} className="btn-primary flex items-center gap-2 text-sm">
+          <FileSpreadsheet size={15}/> Μαζική εισαγωγή
+        </button>
+      </div>
+
+      {/* Providers table */}
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Πάροχος</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Επαλήθευση</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Ενέργειες</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {isLoading ? [1,2,3].map(i => <tr key={i}><td colSpan={3} className="px-4 py-3"><div className="skeleton h-8 w-full"/></td></tr>)
+            : providers.length === 0 ? <tr><td colSpan={3} className="text-center py-12 text-gray-400">Δεν βρέθηκαν πάροχοι</td></tr>
+            : providers.map((p: any) => (
+              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs">
+                      {getInitials(p.full_name || 'P')}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">{p.full_name}</p>
+                      <p className="text-xs text-gray-500">{p.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', p.is_verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>
+                    {p.is_verified ? '✓ Επαληθευμένος' : '⏳ Εκκρεμεί'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => verifyProvider.mutate({ id: p.id, verified: !p.is_verified })}
+                    disabled={verifyProvider.isPending}
+                    className={cn('text-xs px-3 py-1.5 rounded-lg font-medium transition-all', p.is_verified ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100')}>
+                    {p.is_verified ? 'Αφαίρεση' : 'Επαλήθευση'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bulk import modal */}
+      <AnimatePresence>
+        {showImport && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            onClick={() => { setShowImport(false); setImportFile(null); setImportPreview([]); setImportResult(null) }}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-gray-900 rounded-2xl shadow-modal max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <FileSpreadsheet size={18}/> Μαζική εισαγωγή παρόχων
+                </h3>
+                <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview([]); setImportResult(null) }} className="btn-ghost p-2">
+                  <X size={18}/>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5">
+                {!importResult && (
+                  <>
+                    <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-700 dark:text-blue-300">
+                      <p className="font-semibold mb-1">Οδηγίες</p>
+                      <p>1. Κάνε λήψη του προτύπου Excel.</p>
+                      <p>2. Συμπλήρωσε τις γραμμές με τους παρόχους.</p>
+                      <p>3. Ανέβασε το αρχείο εδώ για προεπισκόπηση.</p>
+                      <p>4. Πάτησε "Εισαγωγή" για ολοκλήρωση.</p>
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      <button onClick={downloadTemplate} className="btn-secondary flex items-center gap-2 text-sm">
+                        <FileSpreadsheet size={15}/> Λήψη προτύπου
+                      </button>
+                      <label className="btn-primary flex items-center gap-2 text-sm cursor-pointer">
+                        <Plus size={15}/> Επιλογή Excel
+                        <input type="file" accept=".xlsx,.xls" className="hidden"
+                          onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+                      </label>
+                    </div>
+
+                    {importFile && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Αρχείο: <strong>{importFile.name}</strong> ({importPreview.length} γραμμές)
+                      </div>
+                    )}
+
+                    {importPreview.length > 0 && (
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto max-h-64 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-medium text-gray-500">#</th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-500">Όνομα</th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-500">Email</th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-500">Υπηρεσία</th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-500">Τιμή</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {importPreview.slice(0, 50).map((row: any, i: number) => (
+                              <tr key={i}>
+                                <td className="px-3 py-2 text-gray-400">{i + 2}</td>
+                                <td className="px-3 py-2 text-gray-900 dark:text-white">{row.full_name}</td>
+                                <td className="px-3 py-2 text-gray-600">{row.email}</td>
+                                <td className="px-3 py-2 text-gray-600">{row.service_title || row.service_type}</td>
+                                <td className="px-3 py-2 text-gray-600">{row.price ? `€${row.price}` : '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {importResult && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                      <p className="font-semibold text-green-700 dark:text-green-300">
+                        ✓ Εισήχθησαν {importResult.created} πάροχοι
+                      </p>
+                      {importResult.skipped > 0 && (
+                        <p className="text-sm text-yellow-700 mt-1">
+                          ⚠ Παραλήφθηκαν {importResult.skipped} (διπλότυπα emails)
+                        </p>
+                      )}
+                    </div>
+                    {importResult.errors?.length > 0 && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                        <p className="font-semibold text-red-700 dark:text-red-300 mb-2">Σφάλματα:</p>
+                        <ul className="text-sm text-red-600 space-y-1 max-h-40 overflow-y-auto">
+                          {importResult.errors.map((e: any, i: number) => (
+                            <li key={i}>Γραμμή {e.row}: {e.message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3 justify-end">
+                <button onClick={() => { setShowImport(false); setImportFile(null); setImportPreview([]); setImportResult(null) }} className="btn-secondary">
+                  Κλείσιμο
+                </button>
+                {!importResult && importPreview.length > 0 && (
+                  <button onClick={() => bulkImport.mutate(importPreview)} disabled={bulkImport.isPending} className="btn-primary">
+                    {bulkImport.isPending ? 'Εισαγωγή...' : `Εισαγωγή ${importPreview.length} εγγραφών`}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add one provider modal */}
+      <AnimatePresence>
+        {showAddOne && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowAddOne(false)}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-gray-900 rounded-2xl shadow-modal max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Plus size={18}/> Προσθήκη παρόχου
+                </h3>
+                <button onClick={() => setShowAddOne(false)} className="btn-ghost p-2"><X size={18}/></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Ονοματεπώνυμο / Επωνυμία *</label>
+                    <input className="input" value={newProvider.full_name} onChange={e => setNewProvider({...newProvider, full_name: e.target.value})} />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{p.full_name}</p>
-                    <p className="text-xs text-gray-500">{p.email}</p>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Email *</label>
+                    <input type="email" className="input" value={newProvider.email} onChange={e => setNewProvider({...newProvider, email: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Τηλέφωνο</label>
+                    <input className="input" value={newProvider.phone} onChange={e => setNewProvider({...newProvider, phone: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Κωδικός *</label>
+                    <input type="text" className="input" value={newProvider.password} onChange={e => setNewProvider({...newProvider, password: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Πόλη</label>
+                    <input className="input" value={newProvider.city} onChange={e => setNewProvider({...newProvider, city: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Τύπος υπηρεσίας</label>
+                    <select className="input" value={newProvider.service_type} onChange={e => setNewProvider({...newProvider, service_type: e.target.value})}>
+                      <option value="grooming">Grooming</option>
+                      <option value="walking">Walking</option>
+                      <option value="veterinary">Κτηνίατρος</option>
+                      <option value="training">Εκπαίδευση</option>
+                      <option value="sitting">Pet sitting</option>
+                      <option value="daycare">Daycare</option>
+                      <option value="boarding">Boarding</option>
+                      <option value="transport">Μεταφορά</option>
+                      <option value="photography">Φωτογράφιση</option>
+                      <option value="other">Άλλο</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Τιμή (€)</label>
+                    <input type="number" step="0.01" className="input" value={newProvider.price} onChange={e => setNewProvider({...newProvider, price: e.target.value})} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Τίτλος υπηρεσίας *</label>
+                    <input className="input" value={newProvider.service_title} onChange={e => setNewProvider({...newProvider, service_title: e.target.value})} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label>
+                    <textarea className="input" rows={3} value={newProvider.description} onChange={e => setNewProvider({...newProvider, description: e.target.value})} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Διεύθυνση</label>
+                    <input className="input" value={newProvider.location} onChange={e => setNewProvider({...newProvider, location: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Έτη εμπειρίας</label>
+                    <input type="number" className="input" value={newProvider.years_experience} onChange={e => setNewProvider({...newProvider, years_experience: parseInt(e.target.value) || 0})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Διάρκεια (λεπτά)</label>
+                    <input type="number" className="input" value={newProvider.duration_minutes} onChange={e => setNewProvider({...newProvider, duration_minutes: parseInt(e.target.value) || 60})} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Εξειδικεύσεις (χωρισμένες με κόμμα)</label>
+                    <input className="input" placeholder="κουρά, μπάνιο, ξεκοτσίδωμα" value={newProvider.specializations} onChange={e => setNewProvider({...newProvider, specializations: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Τύποι κατοικιδίων</label>
+                    <input className="input" placeholder="dog,cat,bird" value={newProvider.pet_types} onChange={e => setNewProvider({...newProvider, pet_types: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Γλώσσες</label>
+                    <input className="input" placeholder="el,en" value={newProvider.languages} onChange={e => setNewProvider({...newProvider, languages: e.target.value})} />
+                  </div>
+                  <div className="col-span-2 flex flex-wrap gap-4 pt-2">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={newProvider.home_visits} onChange={e => setNewProvider({...newProvider, home_visits: e.target.checked})} />
+                      Κατ' οίκον επισκέψεις
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={newProvider.emergency_available} onChange={e => setNewProvider({...newProvider, emergency_available: e.target.checked})} />
+                      Διαθέσιμος για έκτακτα
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={newProvider.is_verified} onChange={e => setNewProvider({...newProvider, is_verified: e.target.checked})} />
+                      Άμεσα επαληθευμένος
+                    </label>
                   </div>
                 </div>
-              </td>
-              <td className="px-4 py-3">
-                <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', p.is_verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>
-                  {p.is_verified ? '✓ Επαληθευμένος' : '⏳ Εκκρεμεί'}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <button onClick={() => verifyProvider.mutate({ id: p.id, verified: !p.is_verified })}
-                  className={cn('text-xs px-3 py-1.5 rounded-lg font-medium transition-all', p.is_verified ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100')}>
-                  {p.is_verified ? 'Αφαίρεση' : 'Επαλήθευση'}
+              </div>
+
+              <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3 justify-end">
+                <button onClick={() => setShowAddOne(false)} className="btn-secondary">Άκυρο</button>
+                <button onClick={() => addOne.mutate()}
+                  disabled={addOne.isPending || !newProvider.full_name || !newProvider.email || !newProvider.password}
+                  className="btn-primary">
+                  {addOne.isPending ? 'Προσθήκη...' : 'Προσθήκη παρόχου'}
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

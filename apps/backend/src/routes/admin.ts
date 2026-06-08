@@ -45,6 +45,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         email: true,
         role: true,
         profile_photo: true,
+        is_verified: true,
         created_at: true,
       },
     })
@@ -68,9 +69,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         password_hash,
         role: role || 'user',
       },
-      select: {
-        id: true, full_name: true, email: true, role: true, created_at: true
-      }
+      select: { id: true, full_name: true, email: true, role: true, created_at: true }
     })
     return user
   })
@@ -84,9 +83,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data,
-      select: {
-        id: true, full_name: true, email: true, role: true, created_at: true
-      }
+      select: { id: true, full_name: true, email: true, role: true, is_verified: true, created_at: true }
     })
     return user
   })
@@ -94,6 +91,108 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   app.delete('/users/:id', async (req: any, reply) => {
     await prisma.user.delete({ where: { id: req.params.id } })
     return reply.code(204).send()
+  })
+
+  // Verify provider — updates User.is_verified AND all their Services
+  app.post('/providers/:id/verify', async (req: any, reply) => {
+    const { verified } = req.body as any
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, email: true, role: true }
+    })
+    if (!user) return reply.code(404).send({ message: 'Ο πάροχος δεν βρέθηκε' })
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { is_verified: !!verified },
+      select: { id: true, full_name: true, email: true, is_verified: true }
+    })
+
+    const servicesUpdate = await prisma.service.updateMany({
+      where: { provider_email: user.email },
+      data: { is_verified: !!verified }
+    })
+
+    return {
+      user: updatedUser,
+      services_updated: servicesUpdate.count
+    }
+  })
+
+  // Bulk import providers from parsed Excel rows
+  app.post('/providers/bulk-import', async (req: any, reply) => {
+    const { rows } = req.body as any
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return reply.code(400).send({ message: 'Δεν δόθηκαν εγγραφές' })
+    }
+
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [] as any[]
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      try {
+        const email = String(row.email || '').trim().toLowerCase()
+        if (!email || !row.full_name || !row.password) {
+          results.errors.push({ row: i + 2, message: 'Λείπουν υποχρεωτικά πεδία (full_name, email, password)' })
+          continue
+        }
+
+        const existing = await prisma.user.findUnique({ where: { email } })
+        if (existing) {
+          results.skipped++
+          results.errors.push({ row: i + 2, message: `Το email ${email} υπάρχει ήδη` })
+          continue
+        }
+
+        const password_hash = await bcrypt.hash(String(row.password), 12)
+        const toBool = (v: any) => v === true || String(v).toUpperCase() === 'TRUE'
+        const toList = (v: any) => v ? String(v).split(',').map((x: string) => x.trim()).filter(Boolean) : []
+
+        const user = await prisma.user.create({
+          data: {
+            full_name: row.full_name,
+            email,
+            password_hash,
+            phone: row.phone || null,
+            role: 'service_provider',
+            is_verified: toBool(row.is_verified),
+          }
+        })
+
+        if (row.service_type && row.service_title) {
+          await prisma.service.create({
+            data: {
+              provider_email: email,
+              title: row.service_title,
+              service_type: row.service_type,
+              description: row.description || '',
+              price: parseFloat(String(row.price || 0)) || 0,
+              duration_minutes: parseInt(String(row.duration_minutes || 60)) || 60,
+              location: row.location || row.city || '',
+              city: row.city || '',
+              country: row.country || 'GR',
+              home_visits: toBool(row.home_visits),
+              emergency_available: toBool(row.emergency_available),
+              years_experience: parseInt(String(row.years_experience || 0)) || 0,
+              specializations: toList(row.specializations),
+              pet_types: toList(row.pet_types),
+              languages: toList(row.languages),
+              is_verified: toBool(row.is_verified),
+            }
+          })
+        }
+
+        results.created++
+      } catch (err: any) {
+        results.errors.push({ row: i + 2, message: err.message })
+      }
+    }
+
+    return results
   })
 
   app.post('/query', async (req: any, reply) => {
