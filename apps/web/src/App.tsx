@@ -41,6 +41,7 @@ const Register        = lazy(() => import('@/pages/auth/Register'))
 const ForgotPassword  = lazy(() => import('@/pages/auth/ForgotPassword'))
 const ResetPassword   = lazy(() => import('@/pages/auth/ResetPassword'))
 const ProviderDashboard = lazy(() => import('@/pages/provider/ProviderDashboard'))
+const ProviderPackagesPage = lazy(() => import('@/pages/provider/ProviderPackagesPage'))
 const AdminDashboard  = lazy(() => import('@/pages/admin/AdminDashboard'))
 const NotFound        = lazy(() => import('@/pages/NotFound'))
 
@@ -110,11 +111,12 @@ export default function App() {
                 <Route path="/orders"         element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"     element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
+                <Route path="/provider/packages" element={<ProviderRoute><ProviderPackagesPage /></ProviderRoute>} />
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
                 <Route path="/provider" element={<ProviderDashboard />} />
-              <Route path="/provider/*" element={<ProviderDashboard />} />
+                <Route path="/provider/*" element={<ProviderDashboard />} />
               </Route>
               <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />
@@ -131,4 +133,3 @@ export default function App() {
     </I18nextProvider>
   )
 }
-" " 

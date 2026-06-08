@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Users, Stethoscope, MapPin, BarChart3, Shield } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Users, Stethoscope, MapPin, BarChart3, Shield, Package } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -153,6 +153,13 @@ export default function MainLayout() {
                               {item.label}
                             </Link>
                           ))}
+                          {(user?.role === 'service_provider' || user?.role === 'admin') && (
+                            <Link to="/provider/packages" onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
+                              <Package size={15} className="text-gray-400" />
+                              Τα πακέτα μου
+                            </Link>
+                          )}
                           {(user?.role === 'service_provider' || user?.role === 'admin') && (
                             <Link to="/provider" onClick={() => setUserMenuOpen(false)}
                               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
