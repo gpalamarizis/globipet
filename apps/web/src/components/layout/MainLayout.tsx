@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
+import { useDismissable } from '@/hooks/useDismissable'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
@@ -29,7 +30,7 @@ export default function MainLayout() {
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const userMenuRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useDismissable<HTMLDivElement>(userMenuOpen, () => setUserMenuOpen(false))
 
   // Close all drawers/menus on route change
   useEffect(() => {
@@ -38,16 +39,6 @@ export default function MainLayout() {
     setUserMenuOpen(false)
     setMobileOpen(false)
   }, [location.pathname])
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
 
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cart'],
