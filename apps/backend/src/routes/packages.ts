@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { CATALOG_PRESETS, type CategoryKey } from '../lib/catalog-presets.js'
 
 /**
  * Public + provider package endpoints.
@@ -9,23 +10,16 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
 
   // ===== PUBLIC =====
 
-  // Get packages for a service (grouped)
   app.get('/service/:serviceId', async (req: any) => {
     const packages = await prisma.servicePackage.findMany({
-      where: {
-        service_id: req.params.serviceId,
-        is_active: true
-      },
+      where: { service_id: req.params.serviceId, is_active: true },
       orderBy: [{ display_order: 'asc' }, { price: 'asc' }]
     })
-
-    // Group by `group` field
     const grouped: Record<string, any[]> = {}
     for (const pkg of packages) {
       if (!grouped[pkg.group]) grouped[pkg.group] = []
       grouped[pkg.group].push(pkg)
     }
-
     return { data: packages, grouped }
   })
 
@@ -40,29 +34,119 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       }
     })
 
-    // List my packages (provider must own the service)
+    // List my services + packages
     provider.get('/my', async (req: any) => {
       const userEmail = (req.user as any).email
       const services = await prisma.service.findMany({
         where: { provider_email: userEmail },
         include: {
-          packages: {
-            orderBy: [{ display_order: 'asc' }, { group: 'asc' }, { price: 'asc' }]
-          }
+          packages: { orderBy: [{ display_order: 'asc' }, { group: 'asc' }, { price: 'asc' }] }
         }
       })
       return { data: services }
     })
 
-    // Create package
+    // ===== NEW: Onboarding wizard =====
+    // Creates a Service + initial packages in one call.
+    // Called from the registration wizard or "Setup my services" flow.
+    provider.post('/setup', async (req: any, reply) => {
+      const userEmail = (req.user as any).email
+      const userName = (req.user as any).full_name || userEmail
+
+      const {
+        category,
+        title,
+        description,
+        city,
+        country,
+        location,
+        home_visits,
+        emergency_available,
+        years_experience,
+        specializations,
+        pet_types,
+        languages,
+        preset_keys,    // array of indices into CATALOG_PRESETS[category]
+        custom_packages // array of custom packages
+      } = req.body as any
+
+      if (!category || !title) {
+        return reply.code(400).send({ message: 'Λείπει category ή title' })
+      }
+
+      // Build packages list — combine selected presets + custom
+      const presetList = CATALOG_PRESETS[category as CategoryKey] || []
+      const fromPresets = Array.isArray(preset_keys)
+        ? preset_keys
+            .map((idx: number) => presetList[idx])
+            .filter(Boolean)
+        : []
+      const fromCustom = Array.isArray(custom_packages) ? custom_packages : []
+      const allPackages = [...fromPresets, ...fromCustom]
+
+      // Create service + packages in transaction
+      const result = await prisma.$transaction(async (tx) => {
+        const service = await tx.service.create({
+          data: {
+            provider_email: userEmail,
+            category,
+            title,
+            description: description || null,
+            city: city || null,
+            country: country || 'GR',
+            location: location || null,
+            home_visits: !!home_visits,
+            emergency_available: !!emergency_available,
+            years_experience: parseInt(years_experience) || 0,
+            specializations: Array.isArray(specializations) ? specializations : (specializations ? String(specializations).split(',').map((s: string) => s.trim()) : []),
+            pet_types: Array.isArray(pet_types) ? pet_types : (pet_types ? String(pet_types).split(',').map((s: string) => s.trim()) : []),
+            languages: Array.isArray(languages) ? languages : (languages ? String(languages).split(',').map((s: string) => s.trim()) : ['el','en']),
+            is_active: true,
+          }
+        })
+
+        if (allPackages.length > 0) {
+          await tx.servicePackage.createMany({
+            data: allPackages.map((p: any, i: number) => ({
+              service_id: service.id,
+              group: p.group || 'service',
+              name: p.name,
+              description: p.description || null,
+              size: p.size || null,
+              pet_type: p.pet_type || null,
+              breed_group: p.breed_group || null,
+              modality: p.modality || null,
+              price: parseFloat(String(p.price)) || 0,
+              duration_minutes: parseInt(String(p.duration_minutes)) || 60,
+              is_addon: !!p.is_addon,
+              display_order: i,
+            }))
+          })
+        }
+
+        return tx.service.findUnique({
+          where: { id: service.id },
+          include: { packages: true }
+        })
+      })
+
+      // Make sure user role is service_provider (if registered as 'user')
+      const user = await prisma.user.findUnique({ where: { email: userEmail } })
+      if (user && user.role === 'user') {
+        await prisma.user.update({
+          where: { email: userEmail },
+          data: { role: 'service_provider' }
+        })
+      }
+
+      return { service: result, packages_count: allPackages.length }
+    })
+
     provider.post('/', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const body = req.body as any
 
-      // Verify the service belongs to this provider
-      const service = await prisma.service.findUnique({
-        where: { id: body.service_id }
-      })
+      const service = await prisma.service.findUnique({ where: { id: body.service_id } })
       if (!service || service.provider_email !== userEmail) {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα σε αυτή την υπηρεσία' })
       }
@@ -87,7 +171,6 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       return pkg
     })
 
-    // Update package
     provider.patch('/:id', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const pkg = await prisma.servicePackage.findUnique({
@@ -118,7 +201,6 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       return updated
     })
 
-    // Delete package
     provider.delete('/:id', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const pkg = await prisma.servicePackage.findUnique({
@@ -132,7 +214,6 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(204).send()
     })
 
-    // Bulk create from preset catalog
     provider.post('/bulk', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const { service_id, packages } = req.body as any
