@@ -2,10 +2,6 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { CATALOG_PRESETS, type CategoryKey } from '../lib/catalog-presets.js'
 
-/**
- * Public + provider package endpoints.
- * Mounted at /api/packages
- */
 const packageRoutes: FastifyPluginAsync = async (app) => {
 
   // ===== PUBLIC =====
@@ -46,45 +42,27 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       return { data: services }
     })
 
-    // ===== NEW: Onboarding wizard =====
-    // Creates a Service + initial packages in one call.
-    // Called from the registration wizard or "Setup my services" flow.
+    // ===== Onboarding wizard: create service + packages =====
     provider.post('/setup', async (req: any, reply) => {
       const userEmail = (req.user as any).email
-      const userName = (req.user as any).full_name || userEmail
-
       const {
-        category,
-        title,
-        description,
-        city,
-        country,
-        location,
-        home_visits,
-        emergency_available,
-        years_experience,
-        specializations,
-        pet_types,
-        languages,
-        preset_keys,    // array of indices into CATALOG_PRESETS[category]
-        custom_packages // array of custom packages
+        category, title, description, city, country, location,
+        home_visits, emergency_available, years_experience,
+        specializations, pet_types, languages,
+        preset_keys, custom_packages
       } = req.body as any
 
       if (!category || !title) {
         return reply.code(400).send({ message: 'Λείπει category ή title' })
       }
 
-      // Build packages list — combine selected presets + custom
       const presetList = CATALOG_PRESETS[category as CategoryKey] || []
       const fromPresets = Array.isArray(preset_keys)
-        ? preset_keys
-            .map((idx: number) => presetList[idx])
-            .filter(Boolean)
+        ? preset_keys.map((idx: number) => presetList[idx]).filter(Boolean)
         : []
       const fromCustom = Array.isArray(custom_packages) ? custom_packages : []
       const allPackages = [...fromPresets, ...fromCustom]
 
-      // Create service + packages in transaction
       const result = await prisma.$transaction(async (tx) => {
         const service = await tx.service.create({
           data: {
@@ -130,18 +108,71 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         })
       })
 
-      // Make sure user role is service_provider (if registered as 'user')
       const user = await prisma.user.findUnique({ where: { email: userEmail } })
       if (user && user.role === 'user') {
-        await prisma.user.update({
-          where: { email: userEmail },
-          data: { role: 'service_provider' }
-        })
+        await prisma.user.update({ where: { email: userEmail }, data: { role: 'service_provider' } })
       }
 
       return { service: result, packages_count: allPackages.length }
     })
 
+    // ===== NEW: Update existing service basic info =====
+    provider.patch('/services/:id', async (req: any, reply) => {
+      const userEmail = (req.user as any).email
+      const service = await prisma.service.findUnique({ where: { id: req.params.id } })
+      if (!service || service.provider_email !== userEmail) {
+        return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      }
+      const body = req.body as any
+      const data: any = {}
+
+      if (body.title !== undefined) data.title = body.title
+      if (body.description !== undefined) data.description = body.description
+      if (body.city !== undefined) data.city = body.city
+      if (body.country !== undefined) data.country = body.country
+      if (body.location !== undefined) data.location = body.location
+      if (body.home_visits !== undefined) data.home_visits = !!body.home_visits
+      if (body.emergency_available !== undefined) data.emergency_available = !!body.emergency_available
+      if (body.years_experience !== undefined) data.years_experience = parseInt(body.years_experience) || 0
+      if (body.is_active !== undefined) data.is_active = !!body.is_active
+      if (body.cover_image !== undefined) data.cover_image = body.cover_image
+
+      if (body.specializations !== undefined) {
+        data.specializations = Array.isArray(body.specializations)
+          ? body.specializations
+          : String(body.specializations).split(',').map((s: string) => s.trim()).filter(Boolean)
+      }
+      if (body.pet_types !== undefined) {
+        data.pet_types = Array.isArray(body.pet_types)
+          ? body.pet_types
+          : String(body.pet_types).split(',').map((s: string) => s.trim()).filter(Boolean)
+      }
+      if (body.languages !== undefined) {
+        data.languages = Array.isArray(body.languages)
+          ? body.languages
+          : String(body.languages).split(',').map((s: string) => s.trim()).filter(Boolean)
+      }
+
+      const updated = await prisma.service.update({
+        where: { id: req.params.id },
+        data,
+        include: { packages: true }
+      })
+      return updated
+    })
+
+    // ===== NEW: Delete service (cascades to packages) =====
+    provider.delete('/services/:id', async (req: any, reply) => {
+      const userEmail = (req.user as any).email
+      const service = await prisma.service.findUnique({ where: { id: req.params.id } })
+      if (!service || service.provider_email !== userEmail) {
+        return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      }
+      await prisma.service.delete({ where: { id: req.params.id } })
+      return reply.code(204).send()
+    })
+
+    // ===== Existing package CRUD =====
     provider.post('/', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const body = req.body as any
