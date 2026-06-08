@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -17,13 +17,28 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('overview')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Initialize form from user data
   const [form, setForm] = useState({
-    full_name: user?.full_name || '',
-    bio: (user as any)?.bio || '',
-    phone: (user as any)?.phone || '',
-    city: (user as any)?.city || '',
-    website: (user as any)?.website || '',
+    full_name: '',
+    bio: '',
+    phone: '',
+    city: '',
+    website: '',
   })
+
+  // Sync form when user data changes (fixes empty fields on first load)
+  useEffect(() => {
+    if (user) {
+      setForm({
+        full_name: user.full_name || '',
+        bio: (user as any).bio || '',
+        phone: (user as any).phone || '',
+        city: (user as any).city || '',
+        website: (user as any).website || '',
+      })
+    }
+  }, [user])
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
@@ -33,18 +48,18 @@ export default function Profile() {
 
   const { data: bookings = [] } = useQuery({
     queryKey: ['my-bookings'],
-    queryFn: () => api.get('/bookings/my').then(r => r.data?.data ?? []),
+    queryFn: () => api.get('/bookings').then(r => r.data?.data ?? []),
     enabled: !!user,
   })
 
   const saveProfile = useMutation({
-    mutationFn: () => api.put(`/users/${user?.id}`, form),
+    mutationFn: () => api.patch('/users/me', form),
     onSuccess: (res) => {
       updateUser(res.data)
       setEditing(false)
-      toast.success(t('profile.saved'))
+      toast.success(t('profile.saved') || 'Αποθηκεύτηκε')
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα αποθήκευσης'),
   })
 
   const uploadPhoto = async (file: File) => {
@@ -56,14 +71,28 @@ export default function Profile() {
       const { data } = await api.post('/upload?folder=profiles', fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      await api.put(`/users/${user?.id}`, { profile_photo: data.url })
-      updateUser({ ...user!, profile_photo: data.url })
+      const updated = await api.patch('/users/me', { profile_photo: data.url })
+      updateUser(updated.data)
       toast.success('Φωτογραφία ενημερώθηκε!')
     } catch {
       toast.error('Σφάλμα κατά το upload')
     } finally {
       setUploading(false)
     }
+  }
+
+  const handleCancelEdit = () => {
+    // Restore form from user
+    if (user) {
+      setForm({
+        full_name: user.full_name || '',
+        bio: (user as any).bio || '',
+        phone: (user as any).phone || '',
+        city: (user as any).city || '',
+        website: (user as any).website || '',
+      })
+    }
+    setEditing(false)
   }
 
   const tabs = [
@@ -127,15 +156,15 @@ export default function Profile() {
           <div className="flex gap-2 shrink-0">
             {editing ? (
               <>
-                <button onClick={() => setEditing(false)} className="btn-ghost p-2"><X size={16}/></button>
+                <button onClick={handleCancelEdit} className="btn-ghost p-2"><X size={16}/></button>
                 <button onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending}
                   className="btn-primary px-3 py-2 text-sm flex items-center gap-1.5">
-                  <Save size={14}/>{saveProfile.isPending ? t('profile.saving') : t('profile.save')}
+                  <Save size={14}/>{saveProfile.isPending ? (t('profile.saving') || 'Αποθήκευση...') : (t('profile.save') || 'Αποθήκευση')}
                 </button>
               </>
             ) : (
               <button onClick={() => setEditing(true)} className="btn-secondary px-3 py-2 text-sm flex items-center gap-1.5">
-                <Edit3 size={14}/>{t('profile.edit')}
+                <Edit3 size={14}/>{t('profile.edit') || 'Επεξεργασία'}
               </button>
             )}
           </div>
@@ -145,35 +174,35 @@ export default function Profile() {
         {editing && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.bio')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.bio') || 'Bio'}</label>
               <textarea className="input resize-none" rows={2} placeholder="Λίγα λόγια για εσάς..."
                 value={form.bio} onChange={e => setForm(f => ({...f, bio: e.target.value}))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.phone')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.phone') || 'Τηλέφωνο'}</label>
               <input className="input" placeholder="+30 6900000000" value={form.phone}
                 onChange={e => setForm(f => ({...f, phone: e.target.value}))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.city')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.city') || 'Πόλη'}</label>
               <input className="input" placeholder="Αθήνα" value={form.city}
                 onChange={e => setForm(f => ({...f, city: e.target.value}))} />
             </div>
             <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.website')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.website') || 'Website'}</label>
               <input className="input" placeholder="https://..." value={form.website}
                 onChange={e => setForm(f => ({...f, website: e.target.value}))} />
             </div>
           </motion.div>
         )}
 
-        {/* Info display */}
+        {/* Info display (when NOT editing) */}
         {!editing && (
           <div className="mt-4 flex flex-wrap gap-3">
             {(user as any)?.bio && <p className="text-sm text-gray-600 dark:text-gray-400 w-full">{(user as any).bio}</p>}
             {(user as any)?.city && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin size={12}/>{(user as any).city}</span>}
             {(user as any)?.phone && <span className="flex items-center gap-1 text-xs text-gray-500"><Phone size={12}/>{(user as any).phone}</span>}
-            {(user as any)?.website && <a href={(user as any).website} target="_blank" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>}
+            {(user as any)?.website && <a href={(user as any).website} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>}
           </div>
         )}
       </div>
@@ -208,12 +237,12 @@ export default function Profile() {
       {/* Tab content */}
       {activeTab === 'overview' && (
         <div className="card p-5">
-          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — Bronze</h3>
+          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier') || 'Επίπεδο'} — Bronze</h3>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
             <div className="bg-orange-500 h-3 rounded-full" style={{ width: '15%' }} />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>0 {t('loyalty.points')}</span>
+            <span>0 {t('loyalty.points') || 'πόντοι'}</span>
             <span>500 για Silver</span>
           </div>
         </div>
@@ -234,7 +263,7 @@ export default function Profile() {
       {activeTab === 'orders' && (
         <div className="card p-5">
           {orders.length === 0
-            ? <p className="text-center text-gray-500 py-8">{t('profile.noOrders')}</p>
+            ? <p className="text-center text-gray-500 py-8">{t('profile.noOrders') || 'Δεν υπάρχουν παραγγελίες'}</p>
             : orders.map((o: any) => <div key={o.id} className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 text-sm">{o.id}</div>)
           }
         </div>
@@ -243,7 +272,7 @@ export default function Profile() {
       {activeTab === 'bookings' && (
         <div className="card p-5">
           {bookings.length === 0
-            ? <p className="text-center text-gray-500 py-8">{t('profile.noBookings')}</p>
+            ? <p className="text-center text-gray-500 py-8">{t('profile.noBookings') || 'Δεν υπάρχουν κρατήσεις'}</p>
             : bookings.map((b: any) => <div key={b.id} className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 text-sm">{b.id}</div>)
           }
         </div>
