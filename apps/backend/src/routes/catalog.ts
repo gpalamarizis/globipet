@@ -1,28 +1,45 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { CATALOG_PRESETS, type CategoryKey } from '../lib/catalog-presets.js'
+import prisma from '../lib/prisma.js'
 
 /**
- * Public catalog endpoints. Mounted at /api/catalog
+ * Public catalog endpoints — reads from DB now.
+ * Mounted at /api/catalog
  */
 const catalogRoutes: FastifyPluginAsync = async (app) => {
 
-  // Get preset packages for a category
+  // Public: get templates for a category
   app.get('/preset/:category', async (req: any, reply) => {
-    const cat = req.params.category as CategoryKey
-    const preset = CATALOG_PRESETS[cat]
-    if (!preset) {
-      return reply.code(404).send({ message: 'Άγνωστη κατηγορία' })
-    }
-    return { data: preset }
+    const cat = req.params.category
+    const templates = await prisma.catalogTemplate.findMany({
+      where: { category: cat, is_active: true },
+      orderBy: [{ display_order: 'asc' }, { group: 'asc' }]
+    })
+    // Return shape compatible with existing frontend: include price=0
+    const data = templates.map(t => ({
+      id: t.id,
+      group: t.group,
+      name: t.name,
+      description: t.description,
+      size: t.size,
+      pet_type: t.pet_type,
+      breed_group: t.breed_group,
+      modality: t.modality,
+      price: 0,
+      duration_minutes: t.suggested_duration_minutes,
+      is_addon: t.is_addon,
+    }))
+    return { data }
   })
 
-  // List all categories
+  // Public: list distinct categories that have templates
   app.get('/categories', async () => {
+    const rows = await prisma.catalogTemplate.groupBy({
+      by: ['category'],
+      _count: { _all: true },
+      where: { is_active: true }
+    })
     return {
-      data: Object.keys(CATALOG_PRESETS).map(key => ({
-        key,
-        count: CATALOG_PRESETS[key as CategoryKey].length
-      }))
+      data: rows.map(r => ({ key: r.category, count: r._count._all }))
     }
   })
 }

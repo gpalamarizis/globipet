@@ -421,4 +421,31 @@ model BookingPackage {
   @@index([booking_id])
   @@map("booking_packages")
 }
+// ============================================================
+// ADD THIS MODEL at the end of prisma/schema.prisma
+// (next to ServicePackage)
+// ============================================================
+
+model CatalogTemplate {
+  id              String   @id @default(cuid())
+  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | other
+  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
+  name            String
+  description     String?
+  size            String?  // small | medium | large | xlarge
+  pet_type        String?  // dog | cat | rabbit | bird | other
+  breed_group     String?
+  modality        String?  // in_clinic | home_visit | telehealth | emergency
+  suggested_duration_minutes Int @default(60)
+  is_addon        Boolean  @default(false)
+  is_active       Boolean  @default(true)
+  display_order   Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([category])
+  @@index([category, group])
+  @@map("catalog_templates")
+}
+
 
