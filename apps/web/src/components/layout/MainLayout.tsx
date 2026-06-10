@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -32,7 +32,6 @@ export default function MainLayout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useDismissable<HTMLDivElement>(userMenuOpen, () => setUserMenuOpen(false))
 
-  // Close all drawers/menus on route change
   useEffect(() => {
     setCartOpen(false)
     setNotifOpen(false)
@@ -54,17 +53,14 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Navbar */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
 
-            {/* Logo */}
             <Link to="/" className="flex items-center shrink-0">
               <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
             </Link>
 
-            {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {navItems.map(item => (
                 <Link key={item.path} to={item.path}
@@ -79,7 +75,6 @@ export default function MainLayout() {
               ))}
             </nav>
 
-            {/* Right side */}
             <div className="flex items-center gap-2">
               <LanguageSelector />
 
@@ -105,8 +100,7 @@ export default function MainLayout() {
                     )}
                   </button>
 
-                  {/* User menu */}
-                  <div className="relative" ref={userMenuRef}>
+                  <div className="relative">
                     <button onClick={() => setUserMenuOpen(!userMenuOpen)}
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
@@ -123,7 +117,11 @@ export default function MainLayout() {
 
                     <AnimatePresence>
                       {userMenuOpen && (
-                        <motion.div initial={{ opacity: 0, y: 6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4 }}
+                        <motion.div
+                          ref={userMenuRef}
+                          initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4 }}
                           className="absolute right-0 top-full mt-1 w-56 card shadow-modal py-1 z-50">
                           <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.full_name}</p>
@@ -193,7 +191,6 @@ export default function MainLayout() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -237,7 +234,6 @@ export default function MainLayout() {
         <Outlet />
       </main>
 
-      {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
@@ -276,7 +272,6 @@ export default function MainLayout() {
         </div>
       </footer>
 
-      {/* Drawers */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
