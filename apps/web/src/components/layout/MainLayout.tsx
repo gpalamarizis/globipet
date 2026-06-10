@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Users, Stethoscope, MapPin, BarChart3, Shield, Package } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Package } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -13,10 +13,10 @@ import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
 
 const navItems = [
-  { path: '/',            labelKey: 'nav.home',      icon: Home },
-  { path: '/social',      labelKey: 'nav.social',    icon: Heart },
-  { path: '/marketplace', labelKey: 'nav.shop',      icon: ShoppingBag },
-  { path: '/services',    labelKey: 'nav.services',  icon: Scissors },
+  { path: '/',            labelKey: 'nav.home',       icon: Home },
+  { path: '/social',      labelKey: 'nav.social',     icon: Heart },
+  { path: '/marketplace', labelKey: 'nav.shop',       icon: ShoppingBag },
+  { path: '/services',    labelKey: 'nav.services',   icon: Scissors },
   { path: '/telehealth',  labelKey: 'nav.telehealth', icon: Stethoscope },
   { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin },
 ]
@@ -30,7 +30,9 @@ export default function MainLayout() {
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const userMenuRef = useDismissable<HTMLDivElement>(userMenuOpen, () => setUserMenuOpen(false))
+
+  const closeUserMenu = useCallback(() => setUserMenuOpen(false), [])
+  const userMenuRef = useDismissable<HTMLDivElement>(userMenuOpen, closeUserMenu)
 
   // Close all drawers/menus on route change
   useEffect(() => {
@@ -107,7 +109,8 @@ export default function MainLayout() {
 
                   {/* User menu */}
                   <div className="relative" ref={userMenuRef}>
-                    <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    <button
+                      onClick={() => setUserMenuOpen(prev => !prev)}
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
@@ -123,7 +126,10 @@ export default function MainLayout() {
 
                     <AnimatePresence>
                       {userMenuOpen && (
-                        <motion.div initial={{ opacity: 0, y: 6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4 }}
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4 }}
                           className="absolute right-0 top-full mt-1 w-56 card shadow-modal py-1 z-50">
                           <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.full_name}</p>
