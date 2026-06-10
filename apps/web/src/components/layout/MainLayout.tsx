@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Package } from 'lucide-react'
@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
-import { useDismissable } from '@/hooks/useDismissable'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
@@ -24,17 +23,12 @@ const navItems = [
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
-  const closeUserMenu = useCallback(() => setUserMenuOpen(false), [])
-  const userMenuRef = useDismissable<HTMLDivElement>(userMenuOpen, closeUserMenu)
-
-  // Close all drawers/menus on route change
   useEffect(() => {
     setCartOpen(false)
     setNotifOpen(false)
@@ -56,17 +50,14 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Navbar */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
 
-            {/* Logo */}
             <Link to="/" className="flex items-center shrink-0">
               <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
             </Link>
 
-            {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {navItems.map(item => (
                 <Link key={item.path} to={item.path}
@@ -81,7 +72,6 @@ export default function MainLayout() {
               ))}
             </nav>
 
-            {/* Right side */}
             <div className="flex items-center gap-2">
               <LanguageSelector />
 
@@ -108,10 +98,18 @@ export default function MainLayout() {
                   </button>
 
                   {/* User menu */}
-                  <div className="relative" ref={userMenuRef}>
+                  <div className="relative">
+                    {/* Invisible overlay - closes menu on outside click */}
+                    {userMenuOpen && (
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setUserMenuOpen(false)}
+                      />
+                    )}
+
                     <button
                       onClick={() => setUserMenuOpen(prev => !prev)}
-                      className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      className="relative z-50 flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
                           ? <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
@@ -199,7 +197,6 @@ export default function MainLayout() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -243,7 +240,6 @@ export default function MainLayout() {
         <Outlet />
       </main>
 
-      {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
@@ -282,7 +278,6 @@ export default function MainLayout() {
         </div>
       </footer>
 
-      {/* Drawers */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
