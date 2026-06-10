@@ -99,6 +99,14 @@ export default function MainLayout() {
 
                   {/* User menu */}
                   <div className="relative">
+                    {/* Invisible overlay - closes menu on outside click */}
+                    {userMenuOpen && (
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setUserMenuOpen(false)}
+                      />
+                    )}
+
                     <button
                       onClick={() => setUserMenuOpen(prev => !prev)}
                       className="relative z-50 flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -269,10 +277,6 @@ export default function MainLayout() {
           </div>
         </div>
       </footer>
-
-      {userMenuOpen && (
-        <div className="fixed inset-0 z-[49]" onClick={() => setUserMenuOpen(false)} />
-      )}
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
