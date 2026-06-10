@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -29,14 +29,18 @@ export default function MainLayout() {
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
-  // Close menu on outside click
+  // Close user menu when clicking outside
   useEffect(() => {
-    if (!userMenuOpen) return
-    const handle = () => setUserMenuOpen(false)
-    document.addEventListener('click', handle)
-    return () => document.removeEventListener('click', handle)
-  }, [userMenuOpen])
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     setCartOpen(false)
@@ -106,10 +110,10 @@ export default function MainLayout() {
                     )}
                   </button>
 
-                  {/* User menu */}
-                  <div className="relative">
+                  {/* User menu - ref wraps BOTH button and dropdown */}
+                  <div className="relative" ref={userMenuRef}>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setUserMenuOpen(prev => !prev) }}
+                      onClick={() => setUserMenuOpen(prev => !prev)}
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
@@ -126,7 +130,6 @@ export default function MainLayout() {
                     <AnimatePresence>
                       {userMenuOpen && (
                         <motion.div
-                          onClick={(e) => e.stopPropagation()}
                           initial={{ opacity: 0, y: 6, scale: 0.96 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 4 }}
