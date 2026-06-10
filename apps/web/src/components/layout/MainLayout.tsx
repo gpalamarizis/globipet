@@ -30,6 +30,14 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const handle = () => setUserMenuOpen(false)
+    document.addEventListener('click', handle)
+    return () => document.removeEventListener('click', handle)
+  }, [userMenuOpen])
+
   useEffect(() => {
     setCartOpen(false)
     setNotifOpen(false)
@@ -51,16 +59,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-
-      {/* Overlay to close user menu on outside click */}
-      {userMenuOpen && (
-        <div
-          className="fixed inset-0 z-[55]"
-          onClick={() => setUserMenuOpen(false)}
-        />
-      )}
-
-      <header className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
 
@@ -108,8 +107,9 @@ export default function MainLayout() {
                   </button>
 
                   {/* User menu */}
-                  <div className="relative z-[60]">
-                    <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setUserMenuOpen(prev => !prev) }}
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
@@ -126,10 +126,11 @@ export default function MainLayout() {
                     <AnimatePresence>
                       {userMenuOpen && (
                         <motion.div
+                          onClick={(e) => e.stopPropagation()}
                           initial={{ opacity: 0, y: 6, scale: 0.96 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 4 }}
-                          className="absolute right-0 top-full mt-1 w-56 card shadow-modal py-1 z-[60]">
+                          className="absolute right-0 top-full mt-1 w-56 card shadow-modal py-1 z-50">
                           <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.full_name}</p>
                             <p className="text-xs text-gray-500 truncate">{user?.email}</p>
