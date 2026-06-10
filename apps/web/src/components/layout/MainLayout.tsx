@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
-import { useDismissable } from '@/hooks/useDismissable'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
@@ -229,7 +228,9 @@ export default function MainLayout() {
           )}
         </AnimatePresence>
       </header>
-
+{userMenuOpen && (
+  <div className="fixed inset-0 z-30" onClick={() => setUserMenuOpen(false)} />
+)}
       <main className="flex-1">
         <Outlet />
       </main>
