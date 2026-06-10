@@ -55,7 +55,7 @@ export default function MainLayout() {
       {/* Overlay to close user menu on outside click */}
       {userMenuOpen && (
         <div
-          className="fixed inset-0 z-30"
+          className="fixed inset-0 z-[45]"
           onClick={() => setUserMenuOpen(false)}
         />
       )}
