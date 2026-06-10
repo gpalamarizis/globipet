@@ -10,6 +10,10 @@ import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
+import AdminCatalogPage from '@/pages/admin/AdminCatalogPage'
+import AdminServicesPage from '@/pages/admin/AdminServicesPage'
+import AdminPackagesPage from '@/pages/admin/AdminPackagesPage'
+
 
 const Home            = lazy(() => import('@/pages/Home'))
 const Social          = lazy(() => import('@/pages/Social'))
@@ -112,6 +116,10 @@ export default function App() {
                 <Route path="/orders/:id"     element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
                 <Route path="/provider/packages" element={<ProviderRoute><ProviderPackagesPage /></ProviderRoute>} />
+                <Route path="/admin/catalog"  element={<AdminCatalogPage />} />
+                <Route path="/admin/services" element={<AdminServicesPage />} />
+                <Route path="/admin/packages" element={<AdminPackagesPage />} />
+
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
