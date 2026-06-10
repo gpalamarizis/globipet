@@ -25,9 +25,9 @@ export default function CartDrawer({ open, onClose }: { open: boolean; onClose: 
 
   const total = cart.reduce((s: number, i: any) => s + i.product_price * i.quantity, 0)
 
-  // Navigate directly — MainLayout's useEffect on location.pathname will close the drawer
   const handleCheckout = () => {
-    navigate('/checkout')
+    onClose()
+    setTimeout(() => navigate('/checkout'), 50)
   }
 
   return (
