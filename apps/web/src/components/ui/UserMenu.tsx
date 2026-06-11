@@ -1,13 +1,18 @@
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Heart, ShoppingBag, MapPin, Shield, Package, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Heart, ShoppingBag, MapPin, Shield, Package } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
-import { getInitials } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
 export default function UserMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuthStore()
   const { t } = useTranslation()
+  const location = useLocation()
+
+  useEffect(() => {
+    onClose()
+  }, [location.pathname])
 
   return (
     <AnimatePresence>
@@ -32,28 +37,28 @@ export default function UserMenu({ open, onClose }: { open: boolean; onClose: ()
               { to: '/tracker',    icon: MapPin,        label: t('nav.petTracker') },
               { to: '/telehealth', icon: MessageSquare, label: t('nav.telehealth') },
             ].map(item => (
-              <Link key={item.to} to={item.to} onClick={onClose}
+              <Link key={item.to} to={item.to}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <item.icon size={15} className="text-gray-400" />
                 {item.label}
               </Link>
             ))}
             {(user?.role === 'service_provider' || user?.role === 'admin') && (
-              <Link to="/provider/packages" onClick={onClose}
+              <Link to="/provider/packages"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
                 <Package size={15} className="text-gray-400" />
                 Τα πακέτα μου
               </Link>
             )}
             {(user?.role === 'service_provider' || user?.role === 'admin') && (
-              <Link to="/provider" onClick={onClose}
+              <Link to="/provider"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
                 <Settings size={15} className="text-gray-400" />
                 {t('nav.providerDashboard')}
               </Link>
             )}
             {user?.role === 'admin' && (
-              <Link to="/admin" onClick={onClose}
+              <Link to="/admin"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <Shield size={15} className="text-gray-400" />
                 {t('nav.admin')}
