@@ -47,6 +47,7 @@ const ResetPassword   = lazy(() => import('@/pages/auth/ResetPassword'))
 const ProviderDashboard = lazy(() => import('@/pages/provider/ProviderDashboard'))
 const ProviderPackagesPage = lazy(() => import('@/pages/provider/ProviderPackagesPage'))
 const AdminDashboard  = lazy(() => import('@/pages/admin/AdminDashboard'))
+const Insurance       = lazy(() => import('@/pages/Insurance'))
 const NotFound        = lazy(() => import('@/pages/NotFound'))
 
 const queryClient = new QueryClient({
@@ -119,6 +120,7 @@ export default function App() {
                 <Route path="/admin/catalog"  element={<AdminCatalogPage />} />
                 <Route path="/admin/services" element={<AdminServicesPage />} />
                 <Route path="/admin/packages" element={<AdminPackagesPage />} />
+                <Route path="/insurance"       element={<Insurance />} />
 
               </Route>
 
