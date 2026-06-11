@@ -11,7 +11,7 @@ const el = {
     petTracker: 'Tracker', myBookings: 'Κρατήσεις', profile: 'Προφίλ',
     provider: 'Πάροχος', providerDashboard: 'Dashboard Παρόχου',
     providerTools: 'Εργαλεία Παρόχου', admin: 'Admin', login: 'Σύνδεση',
-    logout: 'Αποσύνδεση', breeds: 'Ράτσες',
+    logout: 'Αποσύνδεση', breeds: 'Ράτσες', insurance: 'Ασφάλιση',
   },
   auth: {
     login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση', insurance: 'Ασφάλιση',
@@ -276,7 +276,7 @@ const en: typeof el = {
     petTracker: 'Tracker', myBookings: 'Bookings', profile: 'Profile',
     provider: 'Provider', providerDashboard: 'Provider Dashboard',
     providerTools: 'Provider Tools', admin: 'Admin', login: 'Login',
-    logout: 'Logout', breeds: 'Breeds',
+    logout: 'Logout', breeds: 'Breeds', insurance: 'Insurance',
   },
   auth: {
     login: 'Login', register: 'Register', logout: 'Logout', insurance: 'Insurance',
@@ -496,7 +496,7 @@ const es: typeof el = {
     petTracker: 'Rastreador', myBookings: 'Reservas', profile: 'Perfil',
     provider: 'Proveedor', providerDashboard: 'Panel Proveedor',
     providerTools: 'Herramientas', admin: 'Admin', login: 'Iniciar sesión',
-    logout: 'Cerrar sesión', breeds: 'Razas',
+    logout: 'Cerrar sesión', breeds: 'Razas', insurance: 'Seguro',
   },
   auth: {
     login: 'Iniciar sesión', register: 'Registrarse', logout: 'Cerrar sesión', insurance: 'Seguro',
@@ -716,7 +716,7 @@ const fr: typeof el = {
     petTracker: 'Tracker', myBookings: 'Réservations', profile: 'Profil',
     provider: 'Prestataire', providerDashboard: 'Tableau de bord',
     providerTools: 'Outils', admin: 'Admin', login: 'Connexion',
-    logout: 'Déconnexion', breeds: 'Races',
+    logout: 'Déconnexion', breeds: 'Races', insurance: 'Assurance',
   },
   auth: {
     login: 'Connexion', register: "S'inscrire", logout: 'Déconnexion', insurance: 'Assurance',
