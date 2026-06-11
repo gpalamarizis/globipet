@@ -14,7 +14,7 @@ const el = {
     logout: 'Αποσύνδεση', breeds: 'Ράτσες',
   },
   auth: {
-    login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση',
+    login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση', insurance: 'Ασφάλιση',
     email: 'Email', password: 'Κωδικός', forgotPassword: 'Ξέχασα τον κωδικό',
     noAccount: 'Δεν έχετε λογαριασμό;', hasAccount: 'Έχετε ήδη λογαριασμό;',
     fullName: 'Ονοματεπώνυμο', loginWith: 'Σύνδεση με',
@@ -279,7 +279,7 @@ const en: typeof el = {
     logout: 'Logout', breeds: 'Breeds',
   },
   auth: {
-    login: 'Login', register: 'Register', logout: 'Logout',
+    login: 'Login', register: 'Register', logout: 'Logout', insurance: 'Insurance',
     email: 'Email', password: 'Password', forgotPassword: 'Forgot password',
     noAccount: "Don't have an account?", hasAccount: 'Already have an account?',
     fullName: 'Full Name', loginWith: 'Login with', registerWith: 'Register with',
@@ -499,7 +499,7 @@ const es: typeof el = {
     logout: 'Cerrar sesión', breeds: 'Razas',
   },
   auth: {
-    login: 'Iniciar sesión', register: 'Registrarse', logout: 'Cerrar sesión',
+    login: 'Iniciar sesión', register: 'Registrarse', logout: 'Cerrar sesión', insurance: 'Seguro',
     email: 'Email', password: 'Contraseña', forgotPassword: 'Olvidé mi contraseña',
     noAccount: '¿No tienes cuenta?', hasAccount: '¿Ya tienes cuenta?',
     fullName: 'Nombre completo', loginWith: 'Iniciar con', registerWith: 'Registrarse con',
@@ -719,7 +719,7 @@ const fr: typeof el = {
     logout: 'Déconnexion', breeds: 'Races',
   },
   auth: {
-    login: 'Connexion', register: "S'inscrire", logout: 'Déconnexion',
+    login: 'Connexion', register: "S'inscrire", logout: 'Déconnexion', insurance: 'Assurance',
     email: 'Email', password: 'Mot de passe', forgotPassword: 'Mot de passe oublié',
     noAccount: 'Pas de compte?', hasAccount: 'Déjà un compte?',
     fullName: 'Nom complet', loginWith: 'Se connecter avec', registerWith: "S'inscrire avec",
@@ -936,7 +936,7 @@ const zh: typeof el = {
     petTracker: '追踪器', myBookings: '预约', profile: '个人资料',
     provider: '服务商', providerDashboard: '服务商面板',
     providerTools: '工具', admin: '管理员', login: '登录',
-    logout: '退出', breeds: '品种',
+    logout: '退出', breeds: '品种', insurance: '保险',
   },
   auth: {
     login: '登录', register: '注册', logout: '退出',
