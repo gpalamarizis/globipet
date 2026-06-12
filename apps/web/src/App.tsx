@@ -13,6 +13,7 @@ import LoadingScreen from '@/components/ui/LoadingScreen'
 import AdminCatalogPage from '@/pages/admin/AdminCatalogPage'
 import AdminServicesPage from '@/pages/admin/AdminServicesPage'
 import AdminPackagesPage from '@/pages/admin/AdminPackagesPage'
+import AdminInsurancePage from '@/pages/admin/AdminInsurancePage'
 
 
 const Home            = lazy(() => import('@/pages/Home'))
@@ -120,6 +121,7 @@ export default function App() {
                 <Route path="/admin/catalog"  element={<AdminCatalogPage />} />
                 <Route path="/admin/services" element={<AdminServicesPage />} />
                 <Route path="/admin/packages" element={<AdminPackagesPage />} />
+                <Route path="/admin/insurance" element={<AdminInsurancePage />} />
                 <Route path="/insurance"       element={<Insurance />} />
 
               </Route>
