@@ -21,7 +21,6 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
   transport: { label: 'Μεταφορά', emoji: '🚐' },
   photography: { label: 'Φωτογράφιση', emoji: '📷' },
   insurance: { label: 'Ασφάλιση', emoji: '🛡️' },
-  insurance: { label: 'Ασφάλιση', emoji: '🛡️' },
   other: { label: 'Άλλο', emoji: '✨' },
 }
 
