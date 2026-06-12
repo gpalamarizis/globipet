@@ -14,3 +14,4 @@ dist/
 node_modules/ 
 .expo/ 
 credentials/ 
+apps/mobile 
