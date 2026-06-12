@@ -59,7 +59,7 @@ export default function AddPetModal({ open, onClose }: Props) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-lg mx-auto card p-6 shadow-modal max-h-[90vh] overflow-y-auto"
+            className="fixed inset-x-4 top-4 bottom-4 z-50 max-w-lg mx-auto card p-6 shadow-modal overflow-y-auto flex flex-col"
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Προσθήκη κατοικίδιου</h2>
