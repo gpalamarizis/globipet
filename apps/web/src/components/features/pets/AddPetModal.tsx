@@ -37,11 +37,11 @@ export default function AddPetModal({ open, onClose }: Props) {
       weight: form.weight ? Number(form.weight) : undefined,
       owner_email: user?.email,
     }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-pets'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['my-pets'] })
       toast.success(`${form.name} προστέθηκε!`)
-      onClose()
       setForm({ name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '' })
+      onClose()
     },
     onError: () => toast.error('Σφάλμα κατά την προσθήκη'),
   })
