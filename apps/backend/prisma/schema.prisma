@@ -428,7 +428,7 @@ model BookingPackage {
 
 model CatalogTemplate {
   id              String   @id @default(cuid())
-  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | other
+  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | insurance | other
   group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
   name            String
   description     String?

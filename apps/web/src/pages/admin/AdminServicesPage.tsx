@@ -20,6 +20,7 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
   training: { label: 'Εκπαίδευση', emoji: '🎓' },
   transport: { label: 'Μεταφορά', emoji: '🚐' },
   photography: { label: 'Φωτογράφιση', emoji: '📷' },
+  insurance: { label: 'Ασφάλιση', emoji: '🛡️' },
   other: { label: 'Άλλο', emoji: '✨' },
 }
 
