@@ -7,7 +7,6 @@ import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import * as XLSX from 'xlsx'
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
 import TranslationEditor from '@/components/admin/TranslationEditor'
 import ProductFormModal from '@/components/admin/ProductFormModal'
@@ -973,6 +972,7 @@ function InsuranceTab() {
     if (!file) return
     setImporting(true)
     try {
+      const XLSX = await import('xlsx')
       const data = await file.arrayBuffer()
       const wb = XLSX.read(data)
       const providersSheet = wb.Sheets['Insurance Providers']
