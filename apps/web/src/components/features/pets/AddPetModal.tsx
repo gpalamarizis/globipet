@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,10 +25,31 @@ const species = [
 export default function AddPetModal({ open, onClose }: Props) {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
+  const [uploading, setUploading] = useState(false)
   const [form, setForm] = useState({
     name: '', species: 'dog', breed: '', age: '', weight: '',
-    gender: 'male', color: '', microchip_number: '',
+    gender: 'male', color: '', microchip_number: '', photo_url: '',
   })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.post('/upload?folder=pets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setForm(f => ({ ...f, photo_url: res.data.url }))
+    } catch {
+      toast.error('Σφάλμα κατά το upload φωτογραφίας')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const addPet = useMutation({
     mutationFn: () => api.post('/pets', {
@@ -37,11 +58,11 @@ export default function AddPetModal({ open, onClose }: Props) {
       weight: form.weight ? Number(form.weight) : undefined,
       owner_email: user?.email,
     }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['my-pets'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-pets'] })
       toast.success(`${form.name} προστέθηκε!`)
-      setForm({ name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '' })
       onClose()
+      setForm({ name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', photo_url: '' })
     },
     onError: () => toast.error('Σφάλμα κατά την προσθήκη'),
   })
@@ -67,6 +88,20 @@ export default function AddPetModal({ open, onClose }: Props) {
             </div>
 
             <div className="space-y-4">
+              <div className="flex justify-center mb-2">
+                <div className="relative">
+                  <div onClick={() => fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-brand-400 transition-colors overflow-hidden">
+                    {form.photo_url
+                      ? <img src={form.photo_url} alt="pet" className="w-full h-full object-cover"/>
+                      : uploading
+                        ? <span className="text-xs text-gray-400">...</span>
+                        : <Camera size={24} className="text-gray-400"/>
+                    }
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload}/>
+                </div>
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Όνομα *</label>
                 <input className="input" placeholder="π.χ. Ρέξ" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
