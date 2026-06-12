@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { api } from '@/lib/api'
+import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 
@@ -56,12 +56,8 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
     if (!file) return
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/upload?folder=pets', formData, {
-        
-      })
-      setForm(f => ({ ...f, image_url: res.data.url }))
+      const url = await uploadFile(file, 'pets')
+      setForm(f => ({ ...f, image_url: url }))
       toast.success('Φωτογραφία ανέβηκε!')
     } catch {
       toast.error('Σφάλμα κατά το upload')
