@@ -5,6 +5,7 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import adminCatalogRoutes from './routes/admin-catalog.js'
+import insuranceRoutes from './routes/insurance.js'
 
 // Routes
 import authRoutes from './routes/auth.js'
@@ -84,6 +85,7 @@ const routes = [
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
+  { prefix: '/api', handler: insuranceRoutes },
 ]
 
 for (const { prefix, handler } of routes) {

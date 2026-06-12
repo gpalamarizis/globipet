@@ -448,4 +448,73 @@ model CatalogTemplate {
   @@map("catalog_templates")
 }
 
+// Πρόσθεσε στο τέλος του schema.prisma
+
+model InsuranceProvider {
+  id          String   @id @default(cuid())
+  name        String
+  name_el     String?
+  logo_url    String?
+  website     String?
+  phone       String?
+  email       String?
+  description String?
+  is_active   Boolean  @default(true)
+  display_order Int    @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  plans       InsurancePlan[]
+
+  @@map("insurance_providers")
+}
+
+model InsurancePlan {
+  id                    String   @id @default(cuid())
+  provider_id           String
+  provider              InsuranceProvider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+
+  name                  String
+  name_el               String?
+  description           String?
+  tier                  String   // basic | standard | premium | comprehensive
+  price_monthly         Float
+  price_annual          Float?
+  currency              String   @default("EUR")
+
+  // Κάλυψη
+  covers_accidents      Boolean  @default(true)
+  covers_illness        Boolean  @default(true)
+  covers_surgery        Boolean  @default(false)
+  covers_dental         Boolean  @default(false)
+  covers_preventive     Boolean  @default(false)
+  covers_liability      Boolean  @default(false)
+  covers_death          Boolean  @default(false)
+
+  // Όρια
+  annual_limit          Float?
+  per_incident_limit    Float?
+  deductible            Float?
+  reimbursement_percent Int?     // π.χ. 80 = 80%
+  waiting_period_days   Int      @default(14)
+
+  // Κατάλληλο για
+  pet_types             String[] @default([])  // dog | cat | rabbit | bird
+  max_age_years         Int?
+  min_age_months        Int?
+
+  features              String[] @default([])  // extra features as strings
+  exclusions            String[] @default([])
+
+  is_active             Boolean  @default(true)
+  is_featured           Boolean  @default(false)
+  display_order         Int      @default(0)
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@index([provider_id])
+  @@index([tier])
+  @@map("insurance_plans")
+}
 
