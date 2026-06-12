@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import { api } from '../lib/api'
-import { signOutGoogle } from '../lib/googleAuth'
 
 interface User {
   id: string
@@ -9,17 +8,6 @@ interface User {
   full_name: string
   role: string
   profile_photo?: string
-  preferred_language?: string
-}
-
-interface GoogleSignInData {
-  idToken: string
-  accessToken: string | null
-  user: {
-    email: string
-    full_name: string
-    profile_photo?: string | null
-  }
 }
 
 interface AuthState {
@@ -28,13 +16,12 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  signInWithGoogleToken: (data: GoogleSignInData) => Promise<void>
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
   loadToken: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -45,8 +32,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       const token = await SecureStore.getItemAsync('token')
       const userStr = await SecureStore.getItemAsync('user')
       if (token && userStr) {
+        const user = JSON.parse(userStr)
+        set({ token, user, isAuthenticated: true })
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        set({ token, user: JSON.parse(userStr), isAuthenticated: true })
       }
     } catch {}
   },
@@ -55,24 +43,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true })
     try {
       const { data } = await api.post('/auth/login', { email, password })
-      await SecureStore.setItemAsync('token', data.token)
-      await SecureStore.setItemAsync('user', JSON.stringify(data.user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-      set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
-    } catch (err) {
-      set({ isLoading: false })
-      throw err
-    }
-  },
-
-  signInWithGoogleToken: async (googleData) => {
-    set({ isLoading: true })
-    try {
-      const { data } = await api.post('/auth/google/mobile', {
-        id_token: googleData.idToken,
-        access_token: googleData.accessToken,
-        user: googleData.user,
-      })
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
@@ -101,8 +71,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     await SecureStore.deleteItemAsync('token')
     await SecureStore.deleteItemAsync('user')
     delete api.defaults.headers.common['Authorization']
-    // Also sign out from Google
-    await signOutGoogle()
     set({ user: null, token: null, isAuthenticated: false })
   },
 }))

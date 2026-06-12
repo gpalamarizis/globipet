@@ -1,105 +1,49 @@
-# 🐾 GlobiPet — Monorepo
+# GlobiPet Mobile App
 
-> "Best care for the best human's friends"
+React Native + Expo app για iOS και Android.
 
-## Project Structure
+## Setup
 
-```
-globipet/
-├── apps/
-│   ├── web/          # React 18 + TypeScript + Tailwind (PWA)
-│   ├── backend/      # Node.js + Fastify + PostgreSQL
-│   └── mobile/       # React Native + Expo (iOS + Android)
-├── packages/
-│   ├── ui/           # Shared UI components
-│   └── config/       # Shared configs (ESLint, TS, Tailwind)
-└── shared/           # Shared types & utilities
-```
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Web Frontend | React 18 + TypeScript + Tailwind CSS + Vite |
-| Mobile | React Native + Expo SDK 51 |
-| Backend | Node.js + Fastify + Prisma ORM |
-| Primary DB | PostgreSQL 16 + PostGIS |
-| Cache / Realtime | Redis 7 |
-| Search | Elasticsearch 8 (Phase 2) |
-| File Storage | Cloudflare R2 |
-| Payments | Stripe |
-| Push Notifications | Firebase Cloud Messaging |
-| Video (Telehealth) | Daily.co |
-| AI Features | OpenAI API (GPT-4o) |
-| Deployment | Cloudflare Pages (web) + Railway (backend) |
-
-## Quick Start
-
-### Prerequisites
-- Node.js 20+
-- PostgreSQL 16+
-- Redis 7+
-- pnpm 8+ (recommended) or npm
-
-### 1. Clone & Install
-```bash
-git clone https://github.com/your-org/globipet.git
-cd globipet
-npm install
-```
-
-### 2. Environment Setup
-```bash
-cp apps/backend/.env.example apps/backend/.env
-cp apps/web/.env.example apps/web/.env
-# Edit both .env files with your credentials
-```
-
-### 3. Database Setup
-```bash
-npm run db:migrate
-npm run db:seed
-```
-
-### 4. Start Development
-```bash
-npm run dev          # Web + Backend
-npm run dev:mobile   # Mobile (separate terminal)
-```
-
-## Deployment
-
-### Web → Cloudflare Pages
-```bash
-npm run build:web
-# Connect repo to Cloudflare Pages, set build output: apps/web/dist
-```
-
-### Backend → Railway
-```bash
-# Connect repo to Railway, set root directory: apps/backend
-# Add PostgreSQL + Redis services in Railway dashboard
-```
-
-### Mobile → App Stores
 ```bash
 cd apps/mobile
-npx eas build --platform ios --profile production
-npx eas build --platform android --profile production
-npx eas submit --platform ios
-npx eas submit --platform android
+npm install
+cp .env.example .env
 ```
 
-## Environment Variables
+## Development
 
-See `apps/backend/.env.example` and `apps/web/.env.example` for all required variables.
+```bash
+npm start          # Start Expo dev server
+npm run ios        # Run on iOS simulator
+npm run android    # Run on Android emulator
+```
 
-## Supported Languages
-- 🇬🇷 Ελληνικά (default)
-- 🇬🇧 English
-- 🇪🇸 Español
-- 🇫🇷 Français
-- 🇨🇳 中文
+## Build για production
 
-## License
-Proprietary — GlobiPet © 2026
+```bash
+# Εγκατάσταση EAS CLI
+npm install -g eas-cli
+eas login
+
+# Build
+npm run build:ios      # iOS (.ipa)
+npm run build:android  # Android (.aab)
+
+# Submit στα stores
+npm run submit:ios
+npm run submit:android
+```
+
+## Screens
+
+- **Home** — Αρχική με featured services/products
+- **Services** — Λίστα υπηρεσιών με φίλτρα
+- **Marketplace** — Κατάστημα προϊόντων
+- **Social** — Social feed
+- **Profile** — Προφίλ, κρατήσεις, παραγγελίες
+
+## Auth
+
+- Email/Password login
+- Google OAuth (μέσω backend)
+- Secure token storage με expo-secure-store
