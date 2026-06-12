@@ -5,7 +5,7 @@ import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Tra
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
 import TranslationEditor from '@/components/admin/TranslationEditor'
@@ -1012,6 +1012,17 @@ export default function AdminDashboard() {
                   <ChevronRight size={14} className="text-gray-400 ml-auto" />
                 </button>
               ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Ειδικές σελίδες</h4>
+              <div className="flex flex-wrap gap-3">
+                <Link to="/admin/catalog" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <Database size={15} className="text-gray-400"/> Κατάλογος Υπηρεσιών <ChevronRight size={13} className="text-gray-400"/>
+                </Link>
+                <Link to="/admin/insurance" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <Shield size={15} className="text-gray-400"/> Ασφαλιστικές Εταιρείες <ChevronRight size={13} className="text-gray-400"/>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
