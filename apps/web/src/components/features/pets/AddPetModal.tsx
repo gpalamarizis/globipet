@@ -59,7 +59,7 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
       const formData = new FormData()
       formData.append('file', file)
       const res = await api.post('/upload?folder=pets', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        
       })
       setForm(f => ({ ...f, image_url: res.data.url }))
       toast.success('Φωτογραφία ανέβηκε!')
