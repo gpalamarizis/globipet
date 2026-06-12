@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Plus, Trash2, Edit2, Check, X, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react'
+import { Shield, Plus, Trash2, Edit2, Check, X, ArrowLeft, ChevronDown, ChevronRight, Upload, Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import * as XLSX from 'xlsx'
 
 const TIER_LABELS: Record<string, string> = {
   basic: 'Βασικό', standard: 'Standard', premium: 'Premium', comprehensive: 'Ολοκληρωμένο'
@@ -18,6 +19,45 @@ export default function AdminInsurancePage() {
   const [editingProvider, setEditingProvider] = useState<any>(null)
   const [editingPlan, setEditingPlan] = useState<any>(null)
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    try {
+      const data = await file.arrayBuffer()
+      const wb = XLSX.read(data)
+      
+      const providersSheet = wb.Sheets['Insurance Providers']
+      const plansSheet = wb.Sheets['Insurance Plans']
+      
+      const providers = providersSheet 
+        ? XLSX.utils.sheet_to_json(providersSheet, { range: 4 }).filter((r: any) => r['name *'] || r.name)
+            .map((r: any) => ({ name: r['name *'] || r.name, name_el: r.name_el, website: r.website, phone: r.phone, email: r.email, description: r.description, logo_url: r.logo_url, display_order: r.display_order }))
+        : []
+
+      const plans = plansSheet
+        ? XLSX.utils.sheet_to_json(plansSheet, { range: 4 }).filter((r: any) => r['provider_name *'] || r.provider_name)
+            .map((r: any) => ({ provider_name: r['provider_name *'] || r.provider_name, plan_name: r['plan_name *'] || r.plan_name, plan_name_el: r.plan_name_el, tier: r['tier *'] || r.tier, price_monthly: r['price_monthly *'] || r.price_monthly, price_annual: r.price_annual, covers_accidents: r['covers_accidents *'] || r.covers_accidents, covers_illness: r['covers_illness *'] || r.covers_illness, covers_surgery: r.covers_surgery, covers_dental: r.covers_dental, covers_preventive: r.covers_preventive, covers_liability: r.covers_liability, covers_death: r.covers_death, annual_limit: r.annual_limit, deductible: r.deductible, reimbursement_pct: r.reimbursement_pct, waiting_days: r.waiting_days, pet_types: r.pet_types }))
+        : []
+
+      const result = await api.post('/insurance/bulk-import', { providers, plans })
+      const { providers_created, plans_created, errors } = result.data
+      
+      toast.success(`✅ ${providers_created} εταιρείες, ${plans_created} πλάνα εισήχθησαν`)
+      if (errors?.length > 0) {
+        toast.error(`⚠️ ${errors.length} σφάλματα - δες console`)
+        console.error('Import errors:', errors)
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin-insurance-providers'] })
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Σφάλμα κατά την εισαγωγή')
+    } finally {
+      setImporting(false)
+      e.target.value = ''
+    }
+  }
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['admin-insurance-providers'],
@@ -46,10 +86,20 @@ export default function AdminInsurancePage() {
           </h1>
           <p className="text-sm text-gray-500">Διαχείριση ασφαλιστικών εταιρειών και πλάνων</p>
         </div>
-        <button onClick={() => { setEditingProvider(null); setShowProviderModal(true) }}
-          className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={15}/> Νέα Εταιρεία
-        </button>
+        <div className="flex items-center gap-2">
+          <a href="/templates/GlobiPet_Insurance_Import_Template.xlsx" download
+            className="btn-secondary flex items-center gap-2 text-sm">
+            <Download size={15}/> Template Excel
+          </a>
+          <label className={`btn-secondary flex items-center gap-2 text-sm cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+            <Upload size={15}/> {importing ? 'Εισαγωγή...' : 'Bulk Import Excel'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleBulkImport} disabled={importing}/>
+          </label>
+          <button onClick={() => { setEditingProvider(null); setShowProviderModal(true) }}
+            className="btn-primary flex items-center gap-2 text-sm">
+            <Plus size={15}/> Νέα Εταιρεία
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
