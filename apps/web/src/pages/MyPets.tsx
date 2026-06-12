@@ -74,8 +74,8 @@ export default function MyPets() {
             <motion.div key={pet.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="card overflow-hidden hover:shadow-md transition-shadow">
               <div className="h-32 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center relative">
-                {pet.photo_url
-                  ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+                {pet.image_url
+                  ? <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover" />
                   : <span className="text-6xl">{speciesEmoji[pet.species] || '🐾'}</span>
                 }
                 {pet.is_lost && (

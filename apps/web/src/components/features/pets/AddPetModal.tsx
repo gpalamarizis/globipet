@@ -23,7 +23,7 @@ const species = [
   { value: 'other', label: 'Άλλο', emoji: '🐾' },
 ]
 
-const emptyForm = { name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', photo_url: '' }
+const emptyForm = { name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', image_url: '' }
 
 export default function AddPetModal({ open, onClose, editing }: Props) {
   const { user } = useAuthStore()
@@ -44,7 +44,7 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
         gender: editing.gender || 'male',
         color: editing.color || '',
         microchip_number: editing.microchip_number || '',
-        photo_url: editing.photo_url || '',
+        image_url: editing.image_url || '',
       })
     } else {
       setForm(emptyForm)
@@ -61,7 +61,7 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
       const res = await api.post('/upload?folder=pets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      setForm(f => ({ ...f, photo_url: res.data.url }))
+      setForm(f => ({ ...f, image_url: res.data.url }))
     } catch {
       toast.error('Σφάλμα κατά το upload φωτογραφίας')
     } finally {
@@ -117,8 +117,8 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               <div className="flex justify-center">
                 <div onClick={() => fileInputRef.current?.click()}
                   className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-brand-400 transition-colors overflow-hidden">
-                  {form.photo_url
-                    ? <img src={form.photo_url} alt="pet" className="w-full h-full object-cover"/>
+                  {form.image_url
+                    ? <img src={form.image_url} alt="pet" className="w-full h-full object-cover"/>
                     : uploading
                       ? <span className="text-xs text-gray-400">...</span>
                       : <Camera size={24} className="text-gray-400"/>
