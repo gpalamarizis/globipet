@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 interface Props {
   open: boolean
   onClose: () => void
+  editing?: any
 }
 
 const species = [
@@ -22,37 +23,21 @@ const species = [
   { value: 'other', label: 'Άλλο', emoji: '🐾' },
 ]
 
-export default function AddPetModal({ open, onClose }: Props) {
+export default function AddPetModal({ open, onClose, editing }: Props) {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const [uploading, setUploading] = useState(false)
   const [form, setForm] = useState({
     name: '', species: 'dog', breed: '', age: '', weight: '',
-    gender: 'male', color: '', microchip_number: '', photo_url: '',
+    gender: 'male', color: '', microchip_number: '',
   })
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/upload?folder=pets', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-      setForm(f => ({ ...f, photo_url: res.data.url }))
-    } catch {
-      toast.error('Σφάλμα κατά το upload φωτογραφίας')
-    } finally {
-      setUploading(false)
-    }
-  }
-
   const addPet = useMutation({
-    mutationFn: () => api.post('/pets', {
+    mutationFn: () => editing ? api.patch(`/pets/${editing.id}`, {
+      ...form,
+      age: form.age ? Number(form.age) : undefined,
+      weight: form.weight ? Number(form.weight) : undefined,
+      owner_email: user?.email,
+    }) : api.post('/pets', {
       ...form,
       age: form.age ? Number(form.age) : undefined,
       weight: form.weight ? Number(form.weight) : undefined,
@@ -60,9 +45,9 @@ export default function AddPetModal({ open, onClose }: Props) {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-pets'] })
-      toast.success(`${form.name} προστέθηκε!`)
+      toast.success(editing ? `${form.name} ενημερώθηκε!` : `${form.name} προστέθηκε!`)
       onClose()
-      setForm({ name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', photo_url: '' })
+      setForm({ name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '' })
     },
     onError: () => toast.error('Σφάλμα κατά την προσθήκη'),
   })
@@ -83,25 +68,11 @@ export default function AddPetModal({ open, onClose }: Props) {
             className="fixed inset-x-4 top-4 bottom-4 z-50 max-w-lg mx-auto card p-6 shadow-modal overflow-y-auto flex flex-col"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Προσθήκη κατοικίδιου</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{editing ? 'Επεξεργασία κατοικίδιου' : 'Προσθήκη κατοικίδιου'}</h2>
               <button onClick={onClose} className="btn-ghost p-2"><X size={18} /></button>
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-center mb-2">
-                <div className="relative">
-                  <div onClick={() => fileInputRef.current?.click()}
-                    className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-brand-400 transition-colors overflow-hidden">
-                    {form.photo_url
-                      ? <img src={form.photo_url} alt="pet" className="w-full h-full object-cover"/>
-                      : uploading
-                        ? <span className="text-xs text-gray-400">...</span>
-                        : <Camera size={24} className="text-gray-400"/>
-                    }
-                  </div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload}/>
-                </div>
-              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Όνομα *</label>
                 <input className="input" placeholder="π.χ. Ρέξ" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -168,7 +139,7 @@ export default function AddPetModal({ open, onClose }: Props) {
                 disabled={!form.name || addPet.isPending}
                 className="btn-primary flex-1"
               >
-                {addPet.isPending ? 'Αποθήκευση...' : 'Προσθήκη'}
+                {addPet.isPending ? 'Αποθήκευση...' : editing ? 'Ενημέρωση' : 'Προσθήκη'}
               </button>
             </div>
           </motion.div>

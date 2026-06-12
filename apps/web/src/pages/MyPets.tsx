@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Heart, Activity, MapPin, MoreHorizontal, Edit, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Heart, Activity, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ export default function MyPets() {
   const { user, isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
+  const [editPet, setEditPet] = useState<any>(null)
   const [selectedPet, setSelectedPet] = useState<any>(null)
 
   const { data: pets = [], isLoading } = useQuery({
@@ -105,8 +106,8 @@ export default function MyPets() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button onClick={() => setSelectedPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
-                    <Activity size={12} /> {t('pets.health')}
+                  <button onClick={() => setEditPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
+                    <Edit size={12} /> Επεξεργασία
                   </button>
                   <button onClick={() => toggleLost.mutate({ id: pet.id, isLost: !pet.is_lost })}
                     className={cn('flex-1 text-xs py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5', pet.is_lost ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600')}>
@@ -128,6 +129,7 @@ export default function MyPets() {
       )}
 
       <AddPetModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddPetModal open={!!editPet} onClose={() => setEditPet(null)} editing={editPet} />
     </div>
   )
 }
