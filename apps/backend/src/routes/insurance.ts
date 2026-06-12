@@ -92,3 +92,68 @@ export default async function insuranceRoutes(app: FastifyInstance) {
     return reply.send({ success: true })
   })
 }
+
+// ============ BULK IMPORT ============
+// POST /insurance/bulk-import
+app.post('/insurance/bulk-import', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
+  const { providers = [], plans = [] } = req.body
+
+  const results = { providers_created: 0, plans_created: 0, errors: [] as any[] }
+
+  // Import providers first
+  for (let i = 0; i < providers.length; i++) {
+    const row = providers[i]
+    try {
+      if (!row.name) throw new Error('Λείπει το όνομα εταιρείας')
+      await prisma.insuranceProvider.upsert({
+        where: { name: row.name },
+        update: { name_el: row.name_el, website: row.website, phone: row.phone, email: row.email, description: row.description, logo_url: row.logo_url, display_order: parseInt(row.display_order) || 0 },
+        create: { name: row.name, name_el: row.name_el, website: row.website, phone: row.phone, email: row.email, description: row.description, logo_url: row.logo_url, display_order: parseInt(row.display_order) || 0, is_active: true },
+      })
+      results.providers_created++
+    } catch (err: any) {
+      results.errors.push({ type: 'provider', row: i + 1, error: err.message })
+    }
+  }
+
+  // Import plans
+  for (let i = 0; i < plans.length; i++) {
+    const row = plans[i]
+    try {
+      if (!row.provider_name || !row.plan_name || !row.tier || !row.price_monthly) {
+        throw new Error('Λείπουν υποχρεωτικά πεδία')
+      }
+      const provider = await prisma.insuranceProvider.findFirst({ where: { name: row.provider_name } })
+      if (!provider) throw new Error(`Δεν βρέθηκε εταιρεία: ${row.provider_name}`)
+
+      await prisma.insurancePlan.create({
+        data: {
+          provider_id: provider.id,
+          name: row.plan_name,
+          name_el: row.plan_name_el || null,
+          tier: row.tier,
+          price_monthly: parseFloat(row.price_monthly),
+          price_annual: row.price_annual ? parseFloat(row.price_annual) : null,
+          covers_accidents: row.covers_accidents === 'TRUE' || row.covers_accidents === true,
+          covers_illness: row.covers_illness === 'TRUE' || row.covers_illness === true,
+          covers_surgery: row.covers_surgery === 'TRUE' || row.covers_surgery === true,
+          covers_dental: row.covers_dental === 'TRUE' || row.covers_dental === true,
+          covers_preventive: row.covers_preventive === 'TRUE' || row.covers_preventive === true,
+          covers_liability: row.covers_liability === 'TRUE' || row.covers_liability === true,
+          covers_death: row.covers_death === 'TRUE' || row.covers_death === true,
+          annual_limit: row.annual_limit ? parseFloat(row.annual_limit) : null,
+          deductible: row.deductible ? parseFloat(row.deductible) : null,
+          reimbursement_percent: row.reimbursement_pct ? parseInt(row.reimbursement_pct) : null,
+          waiting_period_days: row.waiting_days ? parseInt(row.waiting_days) : 14,
+          pet_types: row.pet_types ? row.pet_types.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+          is_active: true,
+        }
+      })
+      results.plans_created++
+    } catch (err: any) {
+      results.errors.push({ type: 'plan', row: i + 1, name: row.plan_name, error: err.message })
+    }
+  }
+
+  return reply.send(results)
+})
