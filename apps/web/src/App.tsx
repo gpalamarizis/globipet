@@ -22,6 +22,7 @@ const ProductDetail   = lazy(() => import('@/pages/ProductDetail'))
 const Services        = lazy(() => import('@/pages/Services'))
 const ServiceDetail   = lazy(() => import('@/pages/ServiceDetail'))
 const AiPetHealth     = lazy(() => import('@/pages/AiPetHealth'))
+const AiEmotion       = lazy(() => import('@/pages/AiEmotion'))
 const PetPassport     = lazy(() => import('@/pages/PetPassport'))
 const Playdates       = lazy(() => import('@/pages/Playdates'))
 const Communities     = lazy(() => import('@/pages/Communities'))
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="/forum"          element={<Forum />} />
                 <Route path="/forum/:id"      element={<ForumTopic />} />
                 <Route path="/ai-health"      element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
+                <Route path="/ai-emotion"     element={<PrivateRoute><AiEmotion /></PrivateRoute>} />
                 <Route path="/passport"       element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/playdates"      element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"   element={<PrivateRoute><Communities /></PrivateRoute>} />

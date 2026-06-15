@@ -18,6 +18,7 @@ const navItems = [
   { path: '/marketplace', labelKey: 'nav.shop',       icon: ShoppingBag },
   { path: '/services',    labelKey: 'nav.services',   icon: Scissors },
   { path: '/ai-health',   labelKey: 'nav.aiHealth',   icon: Brain },
+  { path: '/ai-emotion',  labelKey: 'nav.aiEmotion',  icon: Heart },
   { path: '/passport',    labelKey: 'nav.passport',   icon: BookOpen },
   { path: '/playdates',   labelKey: 'nav.playdates',  icon: PawPrint },
   { path: '/communities', labelKey: 'nav.communities', icon: Building2 },
