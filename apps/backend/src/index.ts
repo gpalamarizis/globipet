@@ -107,3 +107,4 @@ app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOStrin
 const port = parseInt(process.env.PORT || '4000')
 await app.listen({ port, host: '0.0.0.0' })
 console.log(`🐾 GlobiPet API running on port ${port}`)
+"" 
