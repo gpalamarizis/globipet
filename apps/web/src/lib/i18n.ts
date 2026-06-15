@@ -11,7 +11,8 @@ const el = {
     petTracker: 'Tracker', myBookings: 'Κρατήσεις', profile: 'Προφίλ',
     provider: 'Πάροχος', providerDashboard: 'Dashboard Παρόχου',
     providerTools: 'Εργαλεία Παρόχου', admin: 'Admin', login: 'Σύνδεση',
-    logout: 'Αποσύνδεση', breeds: 'Ράτσες', insurance: 'Ασφάλιση', aiHealth: 'AI Υγεία', aiEmotion: 'AI Emotion', passport: 'Passport',
+    logout: 'Αποσύνδεση', breeds: 'Ράτσες', insurance: 'Ασφάλιση',
+    aiHealth: 'AI Υγεία', aiEmotion: 'AI Emotion', passport: 'Passport', playdates: 'Playdates', communities: 'Κοινότητες',
   },
   auth: {
     login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση', insurance: 'Ασφάλιση',
@@ -276,7 +277,8 @@ const en: typeof el = {
     petTracker: 'Tracker', myBookings: 'Bookings', profile: 'Profile',
     provider: 'Provider', providerDashboard: 'Provider Dashboard',
     providerTools: 'Provider Tools', admin: 'Admin', login: 'Login',
-    logout: 'Logout', breeds: 'Breeds', insurance: 'Insurance', aiHealth: 'AI Health', aiEmotion: 'AI Emotion', passport: 'Passport',
+    logout: 'Logout', breeds: 'Breeds', insurance: 'Insurance',
+    aiHealth: 'AI Health', aiEmotion: 'AI Emotion', passport: 'Passport', playdates: 'Playdates', communities: 'Communities',
   },
   auth: {
     login: 'Login', register: 'Register', logout: 'Logout', insurance: 'Insurance',
@@ -496,7 +498,8 @@ const es: typeof el = {
     petTracker: 'Rastreador', myBookings: 'Reservas', profile: 'Perfil',
     provider: 'Proveedor', providerDashboard: 'Panel Proveedor',
     providerTools: 'Herramientas', admin: 'Admin', login: 'Iniciar sesión',
-    logout: 'Cerrar sesión', breeds: 'Razas', insurance: 'Seguro', aiHealth: 'Salud AI', aiEmotion: 'AI Emotion', passport: 'Passport',
+    logout: 'Cerrar sesión', breeds: 'Razas', insurance: 'Seguro',
+    aiHealth: 'Salud AI', aiEmotion: 'AI Emoción', passport: 'Pasaporte', playdates: 'Playdates', communities: 'Comunidades',
   },
   auth: {
     login: 'Iniciar sesión', register: 'Registrarse', logout: 'Cerrar sesión', insurance: 'Seguro',
@@ -716,7 +719,8 @@ const fr: typeof el = {
     petTracker: 'Tracker', myBookings: 'Réservations', profile: 'Profil',
     provider: 'Prestataire', providerDashboard: 'Tableau de bord',
     providerTools: 'Outils', admin: 'Admin', login: 'Connexion',
-    logout: 'Déconnexion', breeds: 'Races', insurance: 'Assurance', aiHealth: 'Santé IA', aiEmotion: 'AI Emotion', passport: 'Passport',
+    logout: 'Déconnexion', breeds: 'Races', insurance: 'Assurance',
+    aiHealth: 'Santé IA', aiEmotion: 'Émotion IA', passport: 'Passeport', playdates: 'Playdates', communities: 'Communautés',
   },
   auth: {
     login: 'Connexion', register: "S'inscrire", logout: 'Déconnexion', insurance: 'Assurance',
@@ -936,7 +940,8 @@ const zh: typeof el = {
     petTracker: '追踪器', myBookings: '预约', profile: '个人资料',
     provider: '服务商', providerDashboard: '服务商面板',
     providerTools: '工具', admin: '管理员', login: '登录',
-    logout: '退出', breeds: '品种', insurance: '保险', aiHealth: 'AI健康', aiEmotion: 'AI情感', passport: 'Passport',
+    logout: '退出', breeds: '品种', insurance: '保险',
+    aiHealth: 'AI健康', aiEmotion: 'AI情感', passport: '护照', playdates: '玩耍约会', communities: '社区',
   },
   auth: {
     login: '登录', register: '注册', logout: '退出',
