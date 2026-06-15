@@ -1,5 +1,20 @@
 /**
  * Viva.com (Viva Wallet) Smart Checkout integration helper.
+ *
+ * Flow:
+ * 1. Get OAuth2 access token (client credentials)
+ * 2. Create a payment order -> returns orderCode
+ * 3. Redirect customer to Smart Checkout with orderCode
+ * 4. Verify payment via webhook or transaction API
+ *
+ * Environment variables needed:
+ *   VIVA_CLIENT_ID         - Smart Checkout OAuth client id
+ *   VIVA_CLIENT_SECRET     - Smart Checkout OAuth client secret
+ *   VIVA_SOURCE_CODE       - Payment source code (from Viva dashboard)
+ *   VIVA_ENV               - 'demo' or 'production' (default: 'demo')
+ *   VIVA_MERCHANT_ID       - Merchant ID (for webhook verification)
+ *   VIVA_API_KEY           - API Key (for webhook verification)
+ *   FRONTEND_URL           - Frontend URL (e.g. https://globipet.com)
  */
 
 type VivaEnv = 'demo' | 'production'
@@ -15,18 +30,26 @@ function getBaseUrls() {
       accounts: 'https://accounts.vivapayments.com',
       api: 'https://api.vivapayments.com',
       checkout: 'https://www.vivapayments.com/web/checkout',
+      legacy: 'https://www.vivapayments.com',
     }
   }
+  // Demo / sandbox
   return {
     accounts: 'https://demo-accounts.vivapayments.com',
     api: 'https://demo-api.vivapayments.com',
     checkout: 'https://demo.vivapayments.com/web/checkout',
+    legacy: 'https://demo.vivapayments.com',
   }
 }
 
+// Cache the token in memory (valid ~1 hour)
 let cachedToken: { token: string; expiresAt: number } | null = null
 
+/**
+ * Get an OAuth2 access token using client credentials.
+ */
 export async function getVivaAccessToken(): Promise<string> {
+  // Return cached token if still valid (with 60s buffer)
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60000) {
     return cachedToken.token
   }
@@ -63,20 +86,24 @@ export async function getVivaAccessToken(): Promise<string> {
 }
 
 interface CreatePaymentOrderParams {
-  amount: number
+  amount: number          // in EUR (e.g. 29.99)
   customerEmail: string
   customerName?: string
   customerPhone?: string
-  orderId: string
+  orderId: string         // our internal order id (stored in merchantTrns)
   description?: string
 }
 
+/**
+ * Create a Viva payment order. Returns the orderCode used for checkout redirect.
+ */
 export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): Promise<{ orderCode: string; checkoutUrl: string }> {
   const token = await getVivaAccessToken()
   const { api, checkout } = getBaseUrls()
   const sourceCode = process.env.VIVA_SOURCE_CODE
   const frontendUrl = process.env.FRONTEND_URL || 'https://globipet.com'
 
+  // Amount must be in cents (integer)
   const amountInCents = Math.round(params.amount * 100)
 
   const body: any = {
@@ -89,11 +116,11 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
       countryCode: 'GR',
       requestLang: 'el-GR',
     },
-    paymentTimeout: 1800,
+    paymentTimeout: 1800,          // 30 minutes
     preauth: false,
     allowRecurring: false,
-    maxInstallments: 12,
-    merchantTrns: params.orderId,
+    maxInstallments: 12,           // allow installments
+    merchantTrns: params.orderId,  // our order id - comes back in webhook
     sourceCode: sourceCode,
     tags: ['globipet'],
     successUrl: `${frontendUrl}/orders/${params.orderId}/confirmation`,
@@ -114,14 +141,8 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
     throw new Error(`Viva create order error: ${res.status} ${text}`)
   }
 
-  // Parse as text first to preserve precision of large integers
-  const text = await res.text()
-  // Extract orderCode as string to avoid JavaScript number precision loss
-  const match = text.match(/"orderCode"\s*:\s*(\d+)/)
-  if (!match) {
-    throw new Error('Viva: orderCode not found in response')
-  }
-  const orderCode = match[1]
+  const data = await res.json() as any
+  const orderCode = String(data.orderCode)
 
   return {
     orderCode,
@@ -129,6 +150,9 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
   }
 }
 
+/**
+ * Retrieve a transaction by its ID to verify payment.
+ */
 export async function getVivaTransaction(transactionId: string): Promise<any> {
   const token = await getVivaAccessToken()
   const { api } = getBaseUrls()

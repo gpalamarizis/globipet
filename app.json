@@ -38,10 +38,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fb18039a-36c8-4c24-af71-6f4853701cf9"
+      }
     }
   }
 }

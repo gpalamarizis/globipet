@@ -10,11 +10,6 @@ import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
-import AdminCatalogPage from '@/pages/admin/AdminCatalogPage'
-import AdminServicesPage from '@/pages/admin/AdminServicesPage'
-import AdminPackagesPage from '@/pages/admin/AdminPackagesPage'
-import AdminInsurancePage from '@/pages/admin/AdminInsurancePage'
-
 
 const Home            = lazy(() => import('@/pages/Home'))
 const Social          = lazy(() => import('@/pages/Social'))
@@ -46,9 +41,7 @@ const Register        = lazy(() => import('@/pages/auth/Register'))
 const ForgotPassword  = lazy(() => import('@/pages/auth/ForgotPassword'))
 const ResetPassword   = lazy(() => import('@/pages/auth/ResetPassword'))
 const ProviderDashboard = lazy(() => import('@/pages/provider/ProviderDashboard'))
-const ProviderPackagesPage = lazy(() => import('@/pages/provider/ProviderPackagesPage'))
 const AdminDashboard  = lazy(() => import('@/pages/admin/AdminDashboard'))
-const Insurance       = lazy(() => import('@/pages/Insurance'))
 const NotFound        = lazy(() => import('@/pages/NotFound'))
 
 const queryClient = new QueryClient({
@@ -117,18 +110,11 @@ export default function App() {
                 <Route path="/orders"         element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"     element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
-                <Route path="/provider/packages" element={<ProviderRoute><ProviderPackagesPage /></ProviderRoute>} />
-                <Route path="/admin/catalog"  element={<AdminCatalogPage />} />
-                <Route path="/admin/services" element={<AdminServicesPage />} />
-                <Route path="/admin/packages" element={<AdminPackagesPage />} />
-                <Route path="/admin/insurance" element={<AdminInsurancePage />} />
-                <Route path="/insurance"       element={<Insurance />} />
-
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
                 <Route path="/provider" element={<ProviderDashboard />} />
-                <Route path="/provider/*" element={<ProviderDashboard />} />
+              <Route path="/provider/*" element={<ProviderDashboard />} />
               </Route>
               <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />
@@ -145,3 +131,4 @@ export default function App() {
     </I18nextProvider>
   )
 }
+" " 

@@ -2,25 +2,19 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { CreditCard, Lock, ShoppingBag, ChevronRight, Check, Truck, ArrowLeft, Package } from 'lucide-react'
+import { CreditCard, Lock, ShoppingBag, ChevronRight, Check, Truck, ArrowLeft } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
-const SHIPPING_METHODS = [
-  { id: 'boxnow', label: 'BoxNow Locker', price: 2.50, desc: '1-2 εργάσιμες • Παραλαβή από locker', icon: '📦' },
-  { id: 'acs', label: 'ACS Courier', price: 3.99, desc: '1-3 εργάσιμες • Παράδοση στην πόρτα', icon: '🚚' },
-  { id: 'elta', label: 'ΕΛΤΑ Courier', price: 4.50, desc: '2-4 εργάσιμες • Παράδοση στην πόρτα', icon: '✉️' },
-  { id: 'pickup', label: 'Παραλαβή από κατάστημα', price: 0, desc: 'Δωρεάν • Διαθέσιμο σε 24h', icon: '🏪' },
-]
-
 export default function Checkout() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [step, setStep] = useState<'address' | 'shipping' | 'payment' | 'review'>('address')
+  const [step, setStep] = useState<'address' | 'payment' | 'review'>('address')
+  const [loading, setLoading] = useState(false)
   const [address, setAddress] = useState({
     full_name: user?.full_name || '',
     phone: '',
@@ -29,7 +23,6 @@ export default function Checkout() {
     postal_code: '',
     country: 'GR',
   })
-  const [shippingMethod, setShippingMethod] = useState<string>('boxnow')
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card')
 
   const { data: cartItems = [] } = useQuery({
@@ -37,26 +30,28 @@ export default function Checkout() {
     queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
   })
 
-  const selectedShipping = SHIPPING_METHODS.find(m => m.id === shippingMethod)!
-  const subtotal = cartItems.reduce((sum: number, item: any) => sum + (item.product_price * item.quantity), 0)
-  const shipping = subtotal > 50 ? 0 : selectedShipping.price
-  const grandTotal = subtotal + shipping
+  const total = cartItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+  const shipping = total > 50 ? 0 : 3.99
+  const grandTotal = total + shipping
 
   const placeOrder = useMutation({
     mutationFn: async () => {
+      // Create order
       const { data: order } = await api.post('/orders', {
         items: cartItems,
-        shipping_address: { ...address, shipping_method: shippingMethod },
+        shipping_address: address,
         payment_method: paymentMethod,
         total_amount: grandTotal,
       })
 
+      // If card payment, redirect to Viva Smart Checkout
       if (paymentMethod === 'card') {
         const { data: viva } = await api.post('/orders/viva/checkout', {
           order_id: order.id,
           total_amount: grandTotal,
         })
         if (viva.checkoutUrl) {
+          // Redirect to Viva Smart Checkout (handles card, Apple Pay, Google Pay, installments)
           window.location.href = viva.checkoutUrl
           return
         }
@@ -73,10 +68,9 @@ export default function Checkout() {
   })
 
   const steps = [
-    { id: 'address',  label: 'Διεύθυνση' },
-    { id: 'shipping', label: 'Αποστολή' },
-    { id: 'payment',  label: 'Πληρωμή' },
-    { id: 'review',   label: 'Επιβεβαίωση' },
+    { id: 'address', label: 'Διεύθυνση' },
+    { id: 'payment', label: 'Πληρωμή' },
+    { id: 'review',  label: 'Επιβεβαίωση' },
   ]
 
   if (cartItems.length === 0) return (
@@ -89,25 +83,26 @@ export default function Checkout() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <button onClick={() => navigate(-1)} className="btn-ghost p-2"><ArrowLeft size={18}/></button>
         <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Ολοκλήρωση παραγγελίας</h1>
       </div>
 
       {/* Steps */}
-      <div className="flex items-center justify-center mb-8 overflow-x-auto">
+      <div className="flex items-center justify-center mb-8">
         {steps.map((s, i) => (
-          <div key={s.id} className="flex items-center shrink-0">
-            <div className={cn('flex items-center gap-2', step === s.id ? 'text-brand-900' : i < steps.findIndex(x => x.id === step) ? 'text-green-600' : 'text-gray-400')}>
-              <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all',
+          <div key={s.id} className="flex items-center">
+            <div className={cn('flex items-center gap-2 cursor-pointer', step === s.id ? 'text-brand-900' : i < steps.findIndex(x => x.id === step) ? 'text-green-600' : 'text-gray-400')}>
+              <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all',
                 step === s.id ? 'border-brand-900 bg-brand-50 text-brand-900' :
                 i < steps.findIndex(x => x.id === step) ? 'border-green-500 bg-green-500 text-white' :
                 'border-gray-200 text-gray-400')}>
-                {i < steps.findIndex(x => x.id === step) ? <Check size={12}/> : i + 1}
+                {i < steps.findIndex(x => x.id === step) ? <Check size={14}/> : i + 1}
               </div>
-              <span className="text-xs font-medium hidden sm:block">{s.label}</span>
+              <span className="text-sm font-medium hidden sm:block">{s.label}</span>
             </div>
-            {i < steps.length - 1 && <div className={cn('w-8 h-0.5 mx-1.5', i < steps.findIndex(x => x.id === step) ? 'bg-green-500' : 'bg-gray-200')} />}
+            {i < steps.length - 1 && <div className={cn('w-12 h-0.5 mx-2', i < steps.findIndex(x => x.id === step) ? 'bg-green-500' : 'bg-gray-200')} />}
           </div>
         ))}
       </div>
@@ -116,7 +111,7 @@ export default function Checkout() {
         {/* Main form */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Address */}
+          {/* Address step */}
           {step === 'address' && (
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-6">
               <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Truck size={18}/> Διεύθυνση παράδοσης</h2>
@@ -134,6 +129,8 @@ export default function Checkout() {
                   <select className="input" value={address.country} onChange={e => setAddress(a => ({...a, country: e.target.value}))}>
                     <option value="GR">Ελλάδα</option>
                     <option value="CY">Κύπρος</option>
+                    <option value="DE">Γερμανία</option>
+                    <option value="GB">Ηνωμένο Βασίλειο</option>
                   </select>
                 </div>
                 <div className="col-span-2">
@@ -149,60 +146,14 @@ export default function Checkout() {
                   <input className="input" value={address.postal_code} onChange={e => setAddress(a => ({...a, postal_code: e.target.value}))} placeholder="10431" />
                 </div>
               </div>
-              <button onClick={() => setStep('shipping')} disabled={!address.full_name || !address.street || !address.city || !address.phone}
+              <button onClick={() => setStep('payment')} disabled={!address.full_name || !address.street || !address.city}
                 className="btn-primary w-full mt-4 flex items-center justify-center gap-2">
                 Συνέχεια <ChevronRight size={16}/>
               </button>
             </motion.div>
           )}
 
-          {/* Shipping */}
-          {step === 'shipping' && (
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-6">
-              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Package size={18}/> Τρόπος αποστολής</h2>
-
-              <div className="space-y-2.5">
-                {SHIPPING_METHODS.map(m => {
-                  const effectivePrice = subtotal > 50 ? 0 : m.price
-                  return (
-                    <label key={m.id}
-                      className={cn('flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                        shippingMethod === m.id
-                          ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-brand-300')}>
-                      <input type="radio" name="shipping" value={m.id} checked={shippingMethod === m.id} onChange={() => setShippingMethod(m.id)} className="sr-only" />
-                      <span className="text-2xl shrink-0">{m.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white">{m.label}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{m.desc}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        {effectivePrice === 0 ? (
-                          <span className="text-sm font-bold text-green-600">Δωρεάν</span>
-                        ) : (
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">€{m.price.toFixed(2)}</span>
-                        )}
-                      </div>
-                      {shippingMethod === m.id && <Check size={16} className="text-brand-900 shrink-0" />}
-                    </label>
-                  )
-                })}
-              </div>
-
-              {subtotal > 50 && (
-                <p className="text-xs text-green-600 mt-3 font-medium">✓ Δωρεάν αποστολή για αγορές άνω των €50</p>
-              )}
-
-              <div className="flex gap-3 mt-4">
-                <button onClick={() => setStep('address')} className="btn-secondary flex-1">Πίσω</button>
-                <button onClick={() => setStep('payment')} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                  Συνέχεια <ChevronRight size={16}/>
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Payment */}
+          {/* Payment step */}
           {step === 'payment' && (
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-6">
               <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><CreditCard size={18}/> Τρόπος πληρωμής</h2>
@@ -210,10 +161,10 @@ export default function Checkout() {
               <div className="space-y-3 mb-5">
                 {[
                   { id: 'card', label: 'Κάρτα / Apple Pay / Google Pay', icon: '💳' },
-                  { id: 'cash', label: 'Αντικαταβολή (+€2)', icon: '💵' },
+                  { id: 'cash', label: 'Αντικαταβολή', icon: '💵' },
                 ].map(m => (
-                  <label key={m.id} className={cn('flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                    paymentMethod === m.id ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-brand-300')}>
+                  <label key={m.id} className={cn('flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all',
+                    paymentMethod === m.id ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-200 dark:border-gray-700')}>
                     <input type="radio" name="payment" value={m.id} checked={paymentMethod === m.id} onChange={() => setPaymentMethod(m.id as any)} className="sr-only" />
                     <span className="text-xl">{m.icon}</span>
                     <span className="font-medium text-sm text-gray-900 dark:text-white">{m.label}</span>
@@ -237,7 +188,7 @@ export default function Checkout() {
               )}
 
               <div className="flex gap-3 mt-4">
-                <button onClick={() => setStep('shipping')} className="btn-secondary flex-1">Πίσω</button>
+                <button onClick={() => setStep('address')} className="btn-secondary flex-1">Πίσω</button>
                 <button onClick={() => setStep('review')} className="btn-primary flex-1 flex items-center justify-center gap-2">
                   Συνέχεια <ChevronRight size={16}/>
                 </button>
@@ -245,7 +196,7 @@ export default function Checkout() {
             </motion.div>
           )}
 
-          {/* Review */}
+          {/* Review step */}
           {step === 'review' && (
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-6">
               <h2 className="font-bold text-gray-900 dark:text-white mb-4">Επιβεβαίωση παραγγελίας</h2>
@@ -256,12 +207,6 @@ export default function Checkout() {
                   <p className="text-sm text-gray-900 dark:text-white">{address.full_name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{address.street}, {address.city} {address.postal_code}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{address.phone}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">ΤΡΟΠΟΣ ΑΠΟΣΤΟΛΗΣ</p>
-                  <p className="text-sm text-gray-900 dark:text-white">
-                    {selectedShipping.icon} {selectedShipping.label} {shipping === 0 ? '(Δωρεάν)' : `(€${shipping.toFixed(2)})`}
-                  </p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                   <p className="text-xs font-medium text-gray-500 mb-2">ΤΡΟΠΟΣ ΠΛΗΡΩΜΗΣ</p>
@@ -283,31 +228,32 @@ export default function Checkout() {
           )}
         </div>
 
-        {/* Summary */}
+        {/* Order summary */}
         <div className="card p-5 h-fit sticky top-20">
           <h3 className="font-bold text-gray-900 dark:text-white mb-4">Σύνοψη παραγγελίας</h3>
-          <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+          <div className="space-y-3 mb-4">
             {cartItems.map((item: any) => (
               <div key={item.id} className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm shrink-0">
-                  {item.product_image ? <img src={item.product_image} alt="" className="w-full h-full object-cover rounded-lg"/> : '📦'}
+                  {item.image ? <img src={item.image} alt="" className="w-full h-full object-cover rounded-lg"/> : '📦'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.product_name}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</p>
                   <p className="text-xs text-gray-500">x{item.quantity}</p>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.product_price * item.quantity).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.price * item.quantity).toFixed(2)}</p>
               </div>
             ))}
           </div>
           <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-              <span>Υποσύνολο</span><span>€{subtotal.toFixed(2)}</span>
+              <span>Υποσύνολο</span><span>€{total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-              <span>Μεταφορικά ({selectedShipping.label})</span>
+              <span>Μεταφορικά</span>
               <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>{shipping === 0 ? 'Δωρεάν' : `€${shipping.toFixed(2)}`}</span>
             </div>
+            {shipping > 0 && <p className="text-xs text-gray-400">Δωρεάν αποστολή για αγορές άνω των €50</p>}
             <div className="flex justify-between font-bold text-gray-900 dark:text-white pt-2 border-t border-gray-100 dark:border-gray-800">
               <span>Σύνολο</span><span>€{grandTotal.toFixed(2)}</span>
             </div>

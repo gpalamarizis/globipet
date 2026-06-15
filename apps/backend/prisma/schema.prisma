@@ -26,7 +26,6 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   @@map("users")
-  is_verified      Boolean   @default(false)
 }
 
 model Pet {
@@ -51,92 +50,57 @@ model Pet {
 }
 
 model Service {
-  id                    String   @id @default(cuid())
+  id                    String   @id @default(uuid())
   provider_email        String
-  category              String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | other
-  title                 String
-  description           String?
-  city                  String?
-  country               String   @default("GR")
+  provider_name         String
+  service_type          String
+  description           String
+  price                 Float
   location              String?
+  city                  String
   latitude              Float?
   longitude             Float?
-  cover_image           String?
-  images                String[] @default([])
+  contact_phone         String?
+  contact_email         String?
+  available_days        Int[]
+  rating                Float    @default(0)
+  reviews_count         Int      @default(0)
+  image_url             String?
+  is_active             Boolean  @default(true)
+  reset_token           String?  
+  reset_token_expires   DateTime?
+  is_verified           Boolean  @default(false)
   home_visits           Boolean  @default(false)
   emergency_available   Boolean  @default(false)
-  years_experience      Int      @default(0)
-  specializations       String[] @default([])
-  pet_types             String[] @default([])
-  languages             String[] @default([])
-  is_verified           Boolean  @default(false)
-  is_active             Boolean  @default(true)
-  rating                Float    @default(0)
-  review_count          Int      @default(0)
+  years_experience      Int?
+  specializations       String[]
+  pet_types             String[]
+  languages             String[]
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
-
-  packages              ServicePackage[]
-  bookings              Booking[]
-
-  @@index([provider_email])
-  @@index([category])
-  @@index([city])
   @@map("services")
 }
 
 model Booking {
-  id              String   @id @default(cuid())
-  service_id      String
-  service         Service  @relation(fields: [service_id], references: [id])
-  user_email      String
-  pet_id          String?
-  scheduled_at    DateTime
-  status          String   @default("pending") // pending | confirmed | in_progress | completed | cancelled
-  total_price     Float
-  notes           String?
-  payment_method  String?  // card | cash
-  payment_status  String   @default("unpaid") // unpaid | paid | refunded
-  payment_ref     String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  packages        BookingPackage[]
-
-  @@index([user_email])
-  @@index([service_id])
+  id             String   @id @default(uuid())
+  service_id     String
+  provider_email String
+  provider_name  String
+  customer_email String
+  customer_name  String
+  pet_id         String?
+  pet_name       String?
+  booking_date   String
+  booking_time   String
+  duration       Int?
+  total_price    Float
+  status         String   @default("pending")
+  notes          String?
+  rating         Int?
+  review         String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
   @@map("bookings")
-}
-
-model ServicePackage {
-  id              String   @id @default(cuid())
-  service_id      String
-  service         Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
-
-  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | oncology | specialty | dental | emergency | other
-  name            String
-  description     String?
-
-  size            String?  // small | medium | large | xlarge
-  pet_type        String?  // dog | cat | rabbit | bird | other
-  breed_group     String?  // terrier | poodle | retriever | other
-  modality        String?  // in_clinic | home_visit | emergency | telehealth
-
-  price           Float
-  duration_minutes Int     @default(60)
-
-  is_addon        Boolean  @default(false)
-  is_active       Boolean  @default(true)
-  display_order   Int      @default(0)
-
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  booking_items   BookingPackage[]
-
-  @@index([service_id])
-  @@index([group])
-  @@map("service_packages")
 }
 
 model Product {
@@ -408,44 +372,3 @@ model TelehealthConsultation {
   created_at     DateTime @default(now())
   @@map("telehealth_consultations")
 }
-model BookingPackage {
-  id              String         @id @default(cuid())
-  booking_id      String
-  booking         Booking        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  package_id      String
-  package         ServicePackage @relation(fields: [package_id], references: [id])
-  quantity        Int            @default(1)
-  price_snapshot  Float
-  name_snapshot   String
-
-  @@index([booking_id])
-  @@map("booking_packages")
-}
-// ============================================================
-// ADD THIS MODEL at the end of prisma/schema.prisma
-// (next to ServicePackage)
-// ============================================================
-
-model CatalogTemplate {
-  id              String   @id @default(cuid())
-  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | other
-  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
-  name            String
-  description     String?
-  size            String?  // small | medium | large | xlarge
-  pet_type        String?  // dog | cat | rabbit | bird | other
-  breed_group     String?
-  modality        String?  // in_clinic | home_visit | telehealth | emergency
-  suggested_duration_minutes Int @default(60)
-  is_addon        Boolean  @default(false)
-  is_active       Boolean  @default(true)
-  display_order   Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  @@index([category])
-  @@index([category, group])
-  @@map("catalog_templates")
-}
-
-

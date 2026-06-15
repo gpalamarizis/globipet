@@ -4,7 +4,6 @@ import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
-import adminCatalogRoutes from './routes/admin-catalog.js'
 
 // Routes
 import authRoutes from './routes/auth.js'
@@ -33,9 +32,6 @@ import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
 import aiRoutes from './routes/ai.js'
 import bulkImportRoutes from './routes/bulk-import.js'
-import packagesRoutes from './routes/packages.js'
-import catalogRoutes from './routes/catalog.js'
-
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -81,9 +77,6 @@ const routes = [
   { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
-  { prefix: '/api/packages', handler: packagesRoutes },
-  { prefix: '/api/catalog', handler: catalogRoutes },
-  { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
 ]
 
 for (const { prefix, handler } of routes) {
