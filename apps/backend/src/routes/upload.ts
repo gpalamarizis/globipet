@@ -22,7 +22,6 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
       const publicUrl = process.env.CF_R2_PUBLIC_URL
 
       if (!accountId || !bucketName || !accessKeyId || !secretAccessKey) {
-        // Fallback: base64 data URL (dev only)
         const base64 = body.toString('base64')
         const dataUrl = `data:${data.mimetype};base64,${base64}`
         return { url: dataUrl, key: `base64-${Date.now()}` }
@@ -32,6 +31,7 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
         region: 'auto',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: { accessKeyId, secretAccessKey },
+        forcePathStyle: true,
       })
 
       const folder = (req.query as any).folder || 'uploads'
