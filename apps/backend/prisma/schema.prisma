@@ -26,6 +26,13 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   @@map("users")
+<<<<<<< HEAD
+=======
+  is_verified      Boolean   @default(false)
+  address          String?
+  latitude         Float?
+  longitude        Float?
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 }
 
 model Pet {
@@ -372,3 +379,264 @@ model TelehealthConsultation {
   created_at     DateTime @default(now())
   @@map("telehealth_consultations")
 }
+<<<<<<< HEAD
+=======
+model BookingPackage {
+  id              String         @id @default(cuid())
+  booking_id      String
+  booking         Booking        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  package_id      String
+  package         ServicePackage @relation(fields: [package_id], references: [id])
+  quantity        Int            @default(1)
+  price_snapshot  Float
+  name_snapshot   String
+
+  @@index([booking_id])
+  @@map("booking_packages")
+}
+// ============================================================
+// ADD THIS MODEL at the end of prisma/schema.prisma
+// (next to ServicePackage)
+// ============================================================
+
+model CatalogTemplate {
+  id              String   @id @default(cuid())
+  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | insurance | other
+  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
+  name            String
+  description     String?
+  size            String?  // small | medium | large | xlarge
+  pet_type        String?  // dog | cat | rabbit | bird | other
+  breed_group     String?
+  modality        String?  // in_clinic | home_visit | telehealth | emergency
+  suggested_duration_minutes Int @default(60)
+  is_addon        Boolean  @default(false)
+  is_active       Boolean  @default(true)
+  display_order   Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([category])
+  @@index([category, group])
+  @@map("catalog_templates")
+}
+
+// Πρόσθεσε στο τέλος του schema.prisma
+
+model InsuranceProvider {
+  id          String   @id @default(cuid())
+  name        String
+  name_el     String?
+  logo_url    String?
+  website     String?
+  phone       String?
+  email       String?
+  description String?
+  is_active   Boolean  @default(true)
+  display_order Int    @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  plans       InsurancePlan[]
+
+  @@map("insurance_providers")
+}
+
+model InsurancePlan {
+  id                    String   @id @default(cuid())
+  provider_id           String
+  provider              InsuranceProvider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+
+  name                  String
+  name_el               String?
+  description           String?
+  tier                  String   // basic | standard | premium | comprehensive
+  price_monthly         Float
+  price_annual          Float?
+  currency              String   @default("EUR")
+
+  // Κάλυψη
+  covers_accidents      Boolean  @default(true)
+  covers_illness        Boolean  @default(true)
+  covers_surgery        Boolean  @default(false)
+  covers_dental         Boolean  @default(false)
+  covers_preventive     Boolean  @default(false)
+  covers_liability      Boolean  @default(false)
+  covers_death          Boolean  @default(false)
+
+  // Όρια
+  annual_limit          Float?
+  per_incident_limit    Float?
+  deductible            Float?
+  reimbursement_percent Int?     // π.χ. 80 = 80%
+  waiting_period_days   Int      @default(14)
+
+  // Κατάλληλο για
+  pet_types             String[] @default([])  // dog | cat | rabbit | bird
+  max_age_years         Int?
+  min_age_months        Int?
+
+  features              String[] @default([])  // extra features as strings
+  exclusions            String[] @default([])
+
+  is_active             Boolean  @default(true)
+  is_featured           Boolean  @default(false)
+  display_order         Int      @default(0)
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@index([provider_id])
+  @@index([tier])
+  @@map("insurance_plans")
+}
+
+
+model PetPedigree {
+  id                  String   @id @default(cuid())
+  pet_id              String   @unique
+  owner_email         String
+  registration_number String?
+  kennel_club         String?
+  father_name         String?
+  mother_name         String?
+  breeder_name        String?
+  breeder_contact     String?
+  birth_certificate   String?
+  pedigree_document   String?
+  certifications      String[] @default([])
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@map("pet_pedigrees")
+}
+
+model PetTravelDocument {
+  id                  String   @id @default(cuid())
+  pet_id              String
+  owner_email         String
+  travel_type         String
+  origin_city         String?
+  destination_city    String
+  destination_country String?
+  departure_date      String
+  return_date         String?
+  carrier             String?
+  booking_ref         String?
+  document_url        String?
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([pet_id])
+  @@index([owner_email])
+  @@map("pet_travel_documents")
+}
+
+model PlaydateEvent {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  creator_photo   String?
+  title           String
+  description     String?
+  event_type      String   // walk | play | meetup | training | other
+  date            String
+  time            String
+  duration_minutes Int     @default(60)
+  location        String
+  city            String
+  latitude        Float?
+  longitude       Float?
+  max_participants Int     @default(10)
+  pet_types       String[] @default([])
+  is_public       Boolean  @default(true)
+  status          String   @default("active") // active | cancelled | completed
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  invitations     PlaydateInvitation[]
+
+  @@index([city])
+  @@index([creator_email])
+  @@map("playdate_events")
+}
+
+model PlaydateInvitation {
+  id            String   @id @default(cuid())
+  event_id      String
+  event         PlaydateEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  invitee_email String
+  invitee_name  String
+  invitee_photo String?
+  pet_name      String?
+  status        String   @default("pending") // pending | accepted | declined
+  message       String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([event_id, invitee_email])
+  @@index([invitee_email])
+  @@map("playdate_invitations")
+}
+
+model Community {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  name            String
+  description     String?
+  address         String?
+  city            String
+  latitude        Float
+  longitude       Float
+  radius_km       Float    @default(1.0)
+  image_url       String?
+  is_public       Boolean  @default(true)
+  member_count    Int      @default(1)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  members         CommunityMember[]
+  messages        CommunityMessage[]
+
+  @@index([city])
+  @@map("communities")
+}
+
+model CommunityMember {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  user_email    String
+  user_name     String
+  user_photo    String?
+  role          String    @default("member") // admin | member
+  joined_at     DateTime  @default(now())
+
+  @@unique([community_id, user_email])
+  @@index([user_email])
+  @@map("community_members")
+}
+
+model CommunityMessage {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  author_email  String
+  author_name   String
+  author_photo  String?
+  content       String?
+  image_url     String?
+  created_at    DateTime  @default(now())
+
+  @@index([community_id])
+  @@map("community_messages")
+}
+
+// NOTE: Also add these fields to the User model manually:
+// latitude  Float?
+// longitude Float?
+// address   String?
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be

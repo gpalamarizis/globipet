@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Users, Stethoscope, MapPin, BarChart3, Shield } from 'lucide-react'
+=======
+import { useState, useEffect, useRef } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, Stethoscope, MapPin, Shield, Brain, BookOpen, PawPrint, Building2 } from 'lucide-react'
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -11,6 +19,7 @@ import LanguageSelector from '@/components/ui/LanguageSelector'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
 
+<<<<<<< HEAD
 const navItems = [
   { path: '/',            labelKey: 'nav.home',      icon: Home },
   { path: '/social',      labelKey: 'nav.social',    icon: Heart },
@@ -22,18 +31,98 @@ const navItems = [
 
 const providerNavItems = [
   { path: '/provider',    labelKey: 'nav.providerDashboard', icon: Settings },
+=======
+const simpleNavItems = [
+  { path: '/',            labelKey: 'nav.home',     icon: Home },
+  { path: '/social',      labelKey: 'nav.social',   icon: Heart },
+  { path: '/marketplace', labelKey: 'nav.shop',     icon: ShoppingBag },
+  { path: '/passport',    labelKey: 'nav.passport', icon: BookOpen },
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 ]
+
+const servicesDropdown = [
+  { path: '/services',    labelKey: 'nav.services',   icon: Scissors,    color: 'text-orange-500' },
+  { path: '/telehealth',  labelKey: 'nav.telehealth', icon: Stethoscope, color: 'text-blue-500' },
+  { path: '/insurance',   labelKey: 'nav.insurance',  icon: Shield,      color: 'text-green-500' },
+  { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin,      color: 'text-red-500' },
+  { path: '/ai-health',   labelKey: 'nav.aiHealth',   icon: Brain,       color: 'text-purple-500' },
+  { path: '/ai-emotion',  labelKey: 'nav.aiEmotion',  icon: Heart,       color: 'text-pink-500' },
+]
+
+const communityDropdown = [
+  { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,   color: 'text-green-500' },
+  { path: '/communities', labelKey: 'nav.communities', icon: Building2,  color: 'text-purple-500' },
+]
+
+function NavDropdown({ label, icon: Icon, items }: {
+  label: string
+  icon: any
+  items: typeof servicesDropdown
+}) {
+  const { t } = useTranslation()
+  const location = useLocation()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isActive = items.some(i => location.pathname === i.path)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  useEffect(() => { setOpen(false) }, [location.pathname])
+
+  // Also close on any link click inside
+  const handleLinkClick = () => { setOpen(false) }
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(o => !o)}
+        className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+          isActive || open
+            ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+        )}>
+        <Icon size={14} />
+        {label}
+        <ChevronDown size={12} className={cn('transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 z-50">
+          {items.map(item => (
+            <Link key={item.path} to={item.path}
+              onClick={() => setOpen(false)}
+              className={cn('flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                location.pathname === item.path
+                  ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 font-medium'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              )}>
+              <item.icon size={16} className={item.color} />
+              {t(item.labelKey)}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+<<<<<<< HEAD
   const userMenuRef = useRef<HTMLDivElement>(null)
+=======
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false)
+  const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false)
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -69,19 +158,37 @@ export default function MainLayout() {
               <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
             </Link>
 
+<<<<<<< HEAD
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {navItems.map(item => (
+=======
+            {/* Desktop nav */}
+            <nav className="hidden lg:flex items-center gap-0.5">
+              {simpleNavItems.map(item => (
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
                 <Link key={item.path} to={item.path}
-                  className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                  className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                     location.pathname === item.path
                       ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   )}>
-                  <item.icon size={16} />
+                  <item.icon size={14} />
                   {t(item.labelKey)}
                 </Link>
               ))}
+
+              <NavDropdown
+                label={t('nav.services')}
+                icon={Scissors}
+                items={servicesDropdown}
+              />
+
+              <NavDropdown
+                label={t('nav.community')}
+                icon={PawPrint}
+                items={communityDropdown}
+              />
             </nav>
 
             {/* Right side */}
@@ -110,6 +217,7 @@ export default function MainLayout() {
                     )}
                   </button>
 
+<<<<<<< HEAD
                   {/* User menu */}
                   <div className="relative" ref={userMenuRef}>
                     <button onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -174,6 +282,21 @@ export default function MainLayout() {
                       )}
                     </AnimatePresence>
                   </div>
+=======
+                  <button onClick={() => setUserMenuOpen(prev => !prev)}
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
+                      {user?.profile_photo
+                        ? <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
+                        : <span>{getInitials(user?.full_name || 'U')}</span>
+                      }
+                    </div>
+                    <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                      {user?.full_name?.split(' ')[0]}
+                    </span>
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
                 </>
               )}
 
@@ -197,7 +320,7 @@ export default function MainLayout() {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
               <div className="px-4 py-3 space-y-1">
-                {navItems.map(item => (
+                {simpleNavItems.map(item => (
                   <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
                     className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium',
                       location.pathname === item.path ? 'bg-brand-50 text-brand-900' : 'text-gray-700 dark:text-gray-300')}>
@@ -205,6 +328,45 @@ export default function MainLayout() {
                     {t(item.labelKey)}
                   </Link>
                 ))}
+
+                {/* Services section */}
+                <button onClick={() => setMobileServicesOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="flex items-center gap-3"><Scissors size={18} />{t('nav.services')}</span>
+                  <ChevronDown size={16} className={cn('transition-transform', mobileServicesOpen && 'rotate-180')} />
+                </button>
+                {mobileServicesOpen && (
+                  <div className="pl-4 space-y-1">
+                    {servicesDropdown.map(item => (
+                      <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+                        className={cn('flex items-center gap-3 px-3 py-2 rounded-xl text-sm',
+                          location.pathname === item.path ? 'bg-brand-50 text-brand-900 font-medium' : 'text-gray-600 dark:text-gray-400')}>
+                        <item.icon size={16} className={item.color} />
+                        {t(item.labelKey)}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* Community section */}
+                <button onClick={() => setMobileCommunityOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="flex items-center gap-3"><PawPrint size={18} />{t('nav.community')}</span>
+                  <ChevronDown size={16} className={cn('transition-transform', mobileCommunityOpen && 'rotate-180')} />
+                </button>
+                {mobileCommunityOpen && (
+                  <div className="pl-4 space-y-1">
+                    {communityDropdown.map(item => (
+                      <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+                        className={cn('flex items-center gap-3 px-3 py-2 rounded-xl text-sm',
+                          location.pathname === item.path ? 'bg-brand-50 text-brand-900 font-medium' : 'text-gray-600 dark:text-gray-400')}>
+                        <item.icon size={16} className={item.color} />
+                        {t(item.labelKey)}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
                 {!isAuthenticated && (
                   <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                     <Link to="/login" onClick={() => setMobileOpen(false)} className="btn-secondary flex-1 text-center py-2 text-sm">{t('nav.login')}</Link>
@@ -214,15 +376,18 @@ export default function MainLayout() {
                 {isAuthenticated && user?.role === 'admin' && (
                   <a href="/admin" onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-purple-600">
-                    <Shield size={18} />
-                    Admin
+                    <Shield size={18} />Admin
                   </a>
                 )}
                 {isAuthenticated && (
                   <button onClick={() => { setMobileOpen(false); logout() }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600">
+<<<<<<< HEAD
                     <LogOut size={18} />
                     {t('nav.logout')}
+=======
+                    <Shield size={18} />{t('nav.logout')}
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
                   </button>
                 )}
               </div>

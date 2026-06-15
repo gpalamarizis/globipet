@@ -2,14 +2,75 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 
 const routes: FastifyPluginAsync = async (app) => {
-  app.get('/', async (req: any) => {
-    const { page = 1, limit = 20 } = req.query
-    const skip = (Number(page) - 1) * Number(limit)
-    return { data: [], total: 0, page: Number(page), totalPages: 0 }
+
+  app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const { email } = req.user as any
+    const data = await prisma.pet.findMany({
+      where: { owner_email: email },
+      orderBy: { created_at: 'desc' },
+    })
+    return { data }
   })
-  app.get('/:id', async (req: any) => ({ id: req.params.id }))
-  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => ({ success: true }))
-  app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any) => ({ success: true }))
-  app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any) => ({ success: true }))
+
+  app.get('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const pet = await prisma.pet.findUnique({ where: { id: req.params.id } })
+    if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    if (pet.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    return pet
+  })
+
+  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const { name, species, breed, age, weight, gender, color, microchip_number, image_url } = req.body as any
+    if (!name || !species) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    const pet = await prisma.pet.create({
+      data: {
+        owner_email: email,
+        name,
+        species,
+        breed: breed || null,
+        age: age ? parseFloat(age) : null,
+        weight: weight ? parseFloat(weight) : null,
+        gender: gender || null,
+        color: color || null,
+        microchip_number: microchip_number || null,
+        image_url: image_url || null,
+      }
+    })
+    return reply.code(201).send({ data: pet })
+  })
+
+  app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const existing = await prisma.pet.findUnique({ where: { id: req.params.id } })
+    if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    if (existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const { name, species, breed, age, weight, gender, color, microchip_number, image_url, is_lost, last_seen_location } = req.body as any
+    const data: any = {}
+    if (name !== undefined) data.name = name
+    if (species !== undefined) data.species = species
+    if (breed !== undefined) data.breed = breed
+    if (age !== undefined) data.age = age ? parseFloat(age) : null
+    if (weight !== undefined) data.weight = weight ? parseFloat(weight) : null
+    if (gender !== undefined) data.gender = gender
+    if (color !== undefined) data.color = color
+    if (microchip_number !== undefined) data.microchip_number = microchip_number
+    if (image_url !== undefined) data.image_url = image_url
+    if (is_lost !== undefined) data.is_lost = !!is_lost
+    if (last_seen_location !== undefined) data.last_seen_location = last_seen_location
+    const pet = await prisma.pet.update({ where: { id: req.params.id }, data })
+    return { data: pet }
+  })
+
+  app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const existing = await prisma.pet.findUnique({ where: { id: req.params.id } })
+    if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    if (existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    await prisma.pet.delete({ where: { id: req.params.id } })
+    return reply.code(204).send()
+  })
 }
+
 export default routes

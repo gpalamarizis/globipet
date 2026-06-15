@@ -4,6 +4,11 @@ import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
+<<<<<<< HEAD
+=======
+import adminCatalogRoutes from './routes/admin-catalog.js'
+import insuranceRoutes from './routes/insurance.js'
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 
 // Routes
 import authRoutes from './routes/auth.js'
@@ -31,6 +36,9 @@ import wishlistRoutes from './routes/wishlist.js'
 import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
 import aiRoutes from './routes/ai.js'
+import passportRoutes from './routes/passport.js'
+import playdatesRoutes from './routes/playdates.js'
+import communitiesRoutes from './routes/communities.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
@@ -77,6 +85,16 @@ const routes = [
   { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
+<<<<<<< HEAD
+=======
+  { prefix: '/api/passport', handler: passportRoutes },
+  { prefix: '/api/playdates', handler: playdatesRoutes },
+  { prefix: '/api/communities', handler: communitiesRoutes },
+  { prefix: '/api/packages', handler: packagesRoutes },
+  { prefix: '/api/catalog', handler: catalogRoutes },
+  { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
+  { prefix: '/api', handler: insuranceRoutes },
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 ]
 
 for (const { prefix, handler } of routes) {

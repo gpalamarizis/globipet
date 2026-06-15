@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Heart, Activity, MapPin, MoreHorizontal, Edit, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Activity, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ export default function MyPets() {
   const { user, isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
+  const [editPet, setEditPet] = useState<any>(null)
   const [selectedPet, setSelectedPet] = useState<any>(null)
 
   const { data: pets = [], isLoading } = useQuery({
@@ -28,7 +29,7 @@ export default function MyPets() {
 
   const deletePet = useMutation({
     mutationFn: (id: string) => api.delete(`/pets/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success(t('petsExtra.deleted')) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success('Διαγράφηκε') },
   })
 
   const toggleLost = useMutation({
@@ -73,8 +74,8 @@ export default function MyPets() {
             <motion.div key={pet.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="card overflow-hidden hover:shadow-md transition-shadow">
               <div className="h-32 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center relative">
-                {pet.photo_url
-                  ? <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+                {pet.image_url
+                  ? <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover" />
                   : <span className="text-6xl">{speciesEmoji[pet.species] || '🐾'}</span>
                 }
                 {pet.is_lost && (
@@ -82,9 +83,6 @@ export default function MyPets() {
                     <AlertTriangle size={10} /> {t('petsExtra.lostBadge')}
                   </div>
                 )}
-                <button className="absolute top-2 right-2 w-8 h-8 bg-white/80 dark:bg-gray-900/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                  <MoreHorizontal size={15} className="text-gray-600" />
-                </button>
               </div>
 
               <div className="p-4">
@@ -104,15 +102,19 @@ export default function MyPets() {
                   {pet.color && <span>🎨 {pet.color}</span>}
                 </div>
 
-                <div className="flex gap-2">
-                  <button onClick={() => setSelectedPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
-                    <Activity size={12} /> {t('pets.health')}
+                <div className="flex gap-2 mb-2">
+                  <button onClick={() => setEditPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
+                    <Edit size={12} /> Επεξεργασία
                   </button>
                   <button onClick={() => toggleLost.mutate({ id: pet.id, isLost: !pet.is_lost })}
                     className={cn('flex-1 text-xs py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5', pet.is_lost ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600')}>
                     <MapPin size={12} /> {pet.is_lost ? t('pets.markAsFound') : t('pets.markAsLost')}
                   </button>
                 </div>
+                <button onClick={() => { if (confirm(`Διαγραφή ${pet.name};`)) deletePet.mutate(pet.id) }}
+                  className="w-full btn-ghost text-xs py-1.5 text-red-500 flex items-center justify-center gap-1.5">
+                  <Trash2 size={12} /> Διαγραφή
+                </button>
               </div>
             </motion.div>
           ))}
@@ -128,6 +130,7 @@ export default function MyPets() {
       )}
 
       <AddPetModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddPetModal open={!!editPet} onClose={() => setEditPet(null)} editing={editPet} />
     </div>
   )
 }

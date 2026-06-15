@@ -10,6 +10,13 @@ import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
+<<<<<<< HEAD
+=======
+import AdminCatalogPage from '@/pages/admin/AdminCatalogPage'
+import AdminServicesPage from '@/pages/admin/AdminServicesPage'
+import AdminPackagesPage from '@/pages/admin/AdminPackagesPage'
+
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 
 const Home            = lazy(() => import('@/pages/Home'))
 const Social          = lazy(() => import('@/pages/Social'))
@@ -17,6 +24,11 @@ const Marketplace     = lazy(() => import('@/pages/Marketplace'))
 const ProductDetail   = lazy(() => import('@/pages/ProductDetail'))
 const Services        = lazy(() => import('@/pages/Services'))
 const ServiceDetail   = lazy(() => import('@/pages/ServiceDetail'))
+const AiPetHealth     = lazy(() => import('@/pages/AiPetHealth'))
+const AiEmotion       = lazy(() => import('@/pages/AiEmotion'))
+const PetPassport     = lazy(() => import('@/pages/PetPassport'))
+const Playdates       = lazy(() => import('@/pages/Playdates'))
+const Communities     = lazy(() => import('@/pages/Communities'))
 const Telehealth      = lazy(() => import('@/pages/Telehealth'))
 const MyPets          = lazy(() => import('@/pages/MyPets'))
 const PetDetail       = lazy(() => import('@/pages/PetDetail'))
@@ -97,6 +109,11 @@ export default function App() {
                 <Route path="/breeds/:id"     element={<BreedDetail />} />
                 <Route path="/forum"          element={<Forum />} />
                 <Route path="/forum/:id"      element={<ForumTopic />} />
+                <Route path="/ai-health"      element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
+                <Route path="/ai-emotion"     element={<PrivateRoute><AiEmotion /></PrivateRoute>} />
+                <Route path="/passport"       element={<PrivateRoute><PetPassport /></PrivateRoute>} />
+                <Route path="/playdates"      element={<PrivateRoute><Playdates /></PrivateRoute>} />
+                <Route path="/communities"   element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"     element={<PrivateRoute><Telehealth /></PrivateRoute>} />
                 <Route path="/my-pets"        element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"    element={<PrivateRoute><PetDetail /></PrivateRoute>} />
@@ -110,6 +127,15 @@ export default function App() {
                 <Route path="/orders"         element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"     element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
+<<<<<<< HEAD
+=======
+                <Route path="/provider/packages" element={<ProviderRoute><ProviderPackagesPage /></ProviderRoute>} />
+                <Route path="/admin/catalog"  element={<AdminCatalogPage />} />
+                <Route path="/admin/services" element={<AdminServicesPage />} />
+                <Route path="/admin/packages" element={<AdminPackagesPage />} />
+                <Route path="/insurance"       element={<Insurance />} />
+
+>>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
