@@ -68,24 +68,22 @@ function NavDropdown({ label, icon: Icon, items }: {
         <ChevronDown size={12} className={cn('transition-transform', open && 'rotate-180')} />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
-            className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 z-50">
-            {items.map(item => (
-              <Link key={item.path} to={item.path} onClick={handleLinkClick}
-                className={cn('flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
-                  location.pathname === item.path
-                    ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                )}>
-                <item.icon size={16} className={item.color} />
-                {t(item.labelKey)}
-              </Link>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 z-50">
+          {items.map(item => (
+            <Link key={item.path} to={item.path}
+              onClick={() => setOpen(false)}
+              className={cn('flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                location.pathname === item.path
+                  ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 font-medium'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              )}>
+              <item.icon size={16} className={item.color} />
+              {t(item.labelKey)}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
