@@ -518,3 +518,45 @@ model InsurancePlan {
   @@map("insurance_plans")
 }
 
+
+model PetPedigree {
+  id                  String   @id @default(cuid())
+  pet_id              String   @unique
+  owner_email         String
+  registration_number String?
+  kennel_club         String?
+  father_name         String?
+  mother_name         String?
+  breeder_name        String?
+  breeder_contact     String?
+  birth_certificate   String?
+  pedigree_document   String?
+  certifications      String[] @default([])
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@map("pet_pedigrees")
+}
+
+model PetTravelDocument {
+  id                  String   @id @default(cuid())
+  pet_id              String
+  owner_email         String
+  travel_type         String
+  origin_city         String?
+  destination_city    String
+  destination_country String?
+  departure_date      String
+  return_date         String?
+  carrier             String?
+  booking_ref         String?
+  document_url        String?
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([pet_id])
+  @@index([owner_email])
+  @@map("pet_travel_documents")
+}
