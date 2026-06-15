@@ -35,6 +35,7 @@ import providerRoutes from './routes/provider.js'
 import aiRoutes from './routes/ai.js'
 import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
+import communitiesRoutes from './routes/communities.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
@@ -86,6 +87,7 @@ const routes = [
   { prefix: '/api/ai', handler: aiRoutes },
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },
+  { prefix: '/api/communities', handler: communitiesRoutes },
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },

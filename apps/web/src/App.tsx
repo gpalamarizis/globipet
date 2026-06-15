@@ -24,6 +24,7 @@ const ServiceDetail   = lazy(() => import('@/pages/ServiceDetail'))
 const AiPetHealth     = lazy(() => import('@/pages/AiPetHealth'))
 const PetPassport     = lazy(() => import('@/pages/PetPassport'))
 const Playdates       = lazy(() => import('@/pages/Playdates'))
+const Communities     = lazy(() => import('@/pages/Communities'))
 const Telehealth      = lazy(() => import('@/pages/Telehealth'))
 const MyPets          = lazy(() => import('@/pages/MyPets'))
 const PetDetail       = lazy(() => import('@/pages/PetDetail'))
@@ -109,6 +110,7 @@ export default function App() {
                 <Route path="/ai-health"      element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
                 <Route path="/passport"       element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/playdates"      element={<PrivateRoute><Playdates /></PrivateRoute>} />
+                <Route path="/communities"   element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"     element={<PrivateRoute><Telehealth /></PrivateRoute>} />
                 <Route path="/my-pets"        element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"    element={<PrivateRoute><PetDetail /></PrivateRoute>} />

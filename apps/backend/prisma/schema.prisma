@@ -27,6 +27,9 @@ model User {
   updated_at    DateTime @updatedAt
   @@map("users")
   is_verified      Boolean   @default(false)
+  address          String?
+  latitude         Float?
+  longitude        Float?
 }
 
 model Pet {
@@ -607,3 +610,62 @@ model PlaydateInvitation {
   @@index([invitee_email])
   @@map("playdate_invitations")
 }
+
+model Community {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  name            String
+  description     String?
+  address         String?
+  city            String
+  latitude        Float
+  longitude       Float
+  radius_km       Float    @default(1.0)
+  image_url       String?
+  is_public       Boolean  @default(true)
+  member_count    Int      @default(1)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  members         CommunityMember[]
+  messages        CommunityMessage[]
+
+  @@index([city])
+  @@map("communities")
+}
+
+model CommunityMember {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  user_email    String
+  user_name     String
+  user_photo    String?
+  role          String    @default("member") // admin | member
+  joined_at     DateTime  @default(now())
+
+  @@unique([community_id, user_email])
+  @@index([user_email])
+  @@map("community_members")
+}
+
+model CommunityMessage {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  author_email  String
+  author_name   String
+  author_photo  String?
+  content       String?
+  image_url     String?
+  created_at    DateTime  @default(now())
+
+  @@index([community_id])
+  @@map("community_messages")
+}
+
+// NOTE: Also add these fields to the User model manually:
+// latitude  Float?
+// longitude Float?
+// address   String?
