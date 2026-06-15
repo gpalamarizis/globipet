@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, Stethoscope, MapPin, Shield, LogOut, Brain, BookOpen } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, Stethoscope, MapPin, Shield, LogOut, Brain, BookOpen, PawPrint } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -19,6 +19,7 @@ const navItems = [
   { path: '/services',    labelKey: 'nav.services',   icon: Scissors },
   { path: '/ai-health',   labelKey: 'nav.aiHealth',   icon: Brain },
   { path: '/passport',    labelKey: 'nav.passport',   icon: BookOpen },
+  { path: '/playdates',   labelKey: 'nav.playdates',  icon: PawPrint },
   { path: '/telehealth',  labelKey: 'nav.telehealth', icon: Stethoscope },
   { path: '/tracker',     labelKey: 'nav.petTracker', icon: MapPin },
   { path: '/insurance',   labelKey: 'nav.insurance',   icon: Shield },

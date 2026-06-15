@@ -560,3 +560,50 @@ model PetTravelDocument {
   @@index([owner_email])
   @@map("pet_travel_documents")
 }
+
+model PlaydateEvent {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  creator_photo   String?
+  title           String
+  description     String?
+  event_type      String   // walk | play | meetup | training | other
+  date            String
+  time            String
+  duration_minutes Int     @default(60)
+  location        String
+  city            String
+  latitude        Float?
+  longitude       Float?
+  max_participants Int     @default(10)
+  pet_types       String[] @default([])
+  is_public       Boolean  @default(true)
+  status          String   @default("active") // active | cancelled | completed
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  invitations     PlaydateInvitation[]
+
+  @@index([city])
+  @@index([creator_email])
+  @@map("playdate_events")
+}
+
+model PlaydateInvitation {
+  id            String   @id @default(cuid())
+  event_id      String
+  event         PlaydateEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  invitee_email String
+  invitee_name  String
+  invitee_photo String?
+  pet_name      String?
+  status        String   @default("pending") // pending | accepted | declined
+  message       String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([event_id, invitee_email])
+  @@index([invitee_email])
+  @@map("playdate_invitations")
+}
