@@ -12,6 +12,7 @@
     "generate": "prisma generate"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@aws-sdk/client-s3": "^3.1068.0",
     "@aws-sdk/s3-request-presigner": "^3.620.0",
     "@fastify/cors": "^9.0.1",

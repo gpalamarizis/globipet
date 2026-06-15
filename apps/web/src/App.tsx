@@ -21,6 +21,7 @@ const Marketplace     = lazy(() => import('@/pages/Marketplace'))
 const ProductDetail   = lazy(() => import('@/pages/ProductDetail'))
 const Services        = lazy(() => import('@/pages/Services'))
 const ServiceDetail   = lazy(() => import('@/pages/ServiceDetail'))
+const AiPetHealth     = lazy(() => import('@/pages/AiPetHealth'))
 const Telehealth      = lazy(() => import('@/pages/Telehealth'))
 const MyPets          = lazy(() => import('@/pages/MyPets'))
 const PetDetail       = lazy(() => import('@/pages/PetDetail'))
@@ -103,6 +104,7 @@ export default function App() {
                 <Route path="/breeds/:id"     element={<BreedDetail />} />
                 <Route path="/forum"          element={<Forum />} />
                 <Route path="/forum/:id"      element={<ForumTopic />} />
+                <Route path="/ai-health"      element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
                 <Route path="/telehealth"     element={<PrivateRoute><Telehealth /></PrivateRoute>} />
                 <Route path="/my-pets"        element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"    element={<PrivateRoute><PetDetail /></PrivateRoute>} />
