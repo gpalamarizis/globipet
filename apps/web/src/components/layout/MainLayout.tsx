@@ -62,15 +62,15 @@ export default function MainLayout() {
               <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto" />
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-0.5">
               {navItems.map(item => (
                 <Link key={item.path} to={item.path}
-                  className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                  className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                     location.pathname === item.path
                       ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   )}>
-                  <item.icon size={16} />
+                  <item.icon size={14} />
                   {t(item.labelKey)}
                 </Link>
               ))}
