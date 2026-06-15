@@ -93,12 +93,12 @@ export default function Services() {
       </div>
 
       {/* Type filter */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+      <div className="flex items-center gap-1.5 flex-wrap mb-4">
         {serviceTypeKeys.map((st) => (
           <button
             key={st.value}
             onClick={() => setType(st.value)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               type === st.value
                 ? 'bg-brand-900 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300'
