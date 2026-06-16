@@ -4,11 +4,8 @@ import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
-<<<<<<< HEAD
-=======
 import adminCatalogRoutes from './routes/admin-catalog.js'
 import insuranceRoutes from './routes/insurance.js'
->>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 
 // Routes
 import authRoutes from './routes/auth.js'
@@ -40,6 +37,8 @@ import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
 import communitiesRoutes from './routes/communities.js'
 import bulkImportRoutes from './routes/bulk-import.js'
+import packagesRoutes from './routes/packages.js'
+import catalogRoutes from './routes/catalog.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -85,8 +84,6 @@ const routes = [
   { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
-<<<<<<< HEAD
-=======
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },
   { prefix: '/api/communities', handler: communitiesRoutes },
@@ -94,7 +91,6 @@ const routes = [
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
   { prefix: '/api', handler: insuranceRoutes },
->>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 ]
 
 for (const { prefix, handler } of routes) {
@@ -107,4 +103,3 @@ app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOStrin
 const port = parseInt(process.env.PORT || '4000')
 await app.listen({ port, host: '0.0.0.0' })
 console.log(`🐾 GlobiPet API running on port ${port}`)
-"" 

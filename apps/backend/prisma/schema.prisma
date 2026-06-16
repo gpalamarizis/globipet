@@ -26,13 +26,10 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   @@map("users")
-<<<<<<< HEAD
-=======
   is_verified      Boolean   @default(false)
   address          String?
   latitude         Float?
   longitude        Float?
->>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
 }
 
 model Pet {
@@ -85,6 +82,7 @@ model Service {
   languages             String[]
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
+  packages              ServicePackage[]
   @@map("services")
 }
 
@@ -107,6 +105,7 @@ model Booking {
   review         String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+  packages       BookingPackage[]
   @@map("bookings")
 }
 
@@ -379,8 +378,6 @@ model TelehealthConsultation {
   created_at     DateTime @default(now())
   @@map("telehealth_consultations")
 }
-<<<<<<< HEAD
-=======
 model BookingPackage {
   id              String         @id @default(cuid())
   booking_id      String
@@ -394,10 +391,6 @@ model BookingPackage {
   @@index([booking_id])
   @@map("booking_packages")
 }
-// ============================================================
-// ADD THIS MODEL at the end of prisma/schema.prisma
-// (next to ServicePackage)
-// ============================================================
 
 model CatalogTemplate {
   id              String   @id @default(cuid())
@@ -420,8 +413,6 @@ model CatalogTemplate {
   @@index([category, group])
   @@map("catalog_templates")
 }
-
-// Πρόσθεσε στο τέλος του schema.prisma
 
 model InsuranceProvider {
   id          String   @id @default(cuid())
@@ -455,7 +446,6 @@ model InsurancePlan {
   price_annual          Float?
   currency              String   @default("EUR")
 
-  // Κάλυψη
   covers_accidents      Boolean  @default(true)
   covers_illness        Boolean  @default(true)
   covers_surgery        Boolean  @default(false)
@@ -464,19 +454,17 @@ model InsurancePlan {
   covers_liability      Boolean  @default(false)
   covers_death          Boolean  @default(false)
 
-  // Όρια
   annual_limit          Float?
   per_incident_limit    Float?
   deductible            Float?
-  reimbursement_percent Int?     // π.χ. 80 = 80%
+  reimbursement_percent Int?
   waiting_period_days   Int      @default(14)
 
-  // Κατάλληλο για
-  pet_types             String[] @default([])  // dog | cat | rabbit | bird
+  pet_types             String[] @default([])
   max_age_years         Int?
   min_age_months        Int?
 
-  features              String[] @default([])  // extra features as strings
+  features              String[] @default([])
   exclusions            String[] @default([])
 
   is_active             Boolean  @default(true)
@@ -490,7 +478,6 @@ model InsurancePlan {
   @@index([tier])
   @@map("insurance_plans")
 }
-
 
 model PetPedigree {
   id                  String   @id @default(cuid())
@@ -635,8 +622,21 @@ model CommunityMessage {
   @@map("community_messages")
 }
 
-// NOTE: Also add these fields to the User model manually:
-// latitude  Float?
-// longitude Float?
-// address   String?
->>>>>>> 8aecfb1b75bcd7922500d8027dcebbc2b1b9d2be
+model ServicePackage {
+  id              String   @id @default(cuid())
+  service_id      String
+  service         Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  price           Float
+  duration_minutes Int     @default(60)
+  is_active       Boolean  @default(true)
+  display_order   Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  bookings        BookingPackage[]
+
+  @@index([service_id])
+  @@map("service_packages")
+}
