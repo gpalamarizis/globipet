@@ -33,6 +33,8 @@ model User {
   ai_subscription_status  String    @default("none") // none | trial | active | expired
   ai_trial_started_at     DateTime?
   ai_subscription_plan_id String?
+  product_subscriptions   ProductSubscription[]
+  insurance_subscriptions UserInsuranceSubscription[]
 }
 
 model Pet {
@@ -129,8 +131,10 @@ model Product {
   discount_percentage Int?
   sale_price          Float?
   provider_email      String?
+  is_subscribable     Boolean  @default(false)
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
+  subscriptions       ProductSubscription[]
   @@map("products")
 }
 
@@ -476,6 +480,7 @@ model InsurancePlan {
 
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
+  user_subscriptions    UserInsuranceSubscription[]
 
   @@index([provider_id])
   @@index([tier])
@@ -642,6 +647,55 @@ model ServicePackage {
 
   @@index([service_id])
   @@map("service_packages")
+}
+
+model AppSetting {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model ProductSubscription {
+  id                      String    @id @default(cuid())
+  user_id                 String
+  user                    User      @relation(fields: [user_id], references: [id])
+  product_id              String
+  product                 Product   @relation(fields: [product_id], references: [id])
+  discount_percent        Float
+  monthly_price           Float
+  status                  String    @default("active") // active | paused | cancelled | payment_failed
+  stripe_customer_id      String?
+  stripe_subscription_id  String?   @unique
+  start_date              DateTime  @default(now())
+  end_date                DateTime?
+  next_delivery_date      DateTime?
+  deliveries_completed    Int       @default(0)
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([product_id])
+  @@map("product_subscriptions")
+}
+
+model UserInsuranceSubscription {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id])
+  plan_id     String
+  plan        InsurancePlan @relation(fields: [plan_id], references: [id])
+  pet_id      String?
+  status      String    @default("active") // active | cancelled | expired
+  started_at  DateTime  @default(now())
+  ends_at     DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([plan_id])
+  @@map("user_insurance_subscriptions")
 }
 
 model AiSubscriptionPlan {

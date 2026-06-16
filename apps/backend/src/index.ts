@@ -41,6 +41,10 @@ import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
 import { startAiTrialExpiryCron } from './lib/cron.js'
+import settingsRoutes from './routes/settings.js'
+import subscriptionsRoutes from './routes/subscriptions.js'
+import webhooksRoutes from './routes/webhooks.js'
+import adminSubscriptionsRoutes from './routes/admin-subscriptions.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -93,6 +97,10 @@ const routes = [
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
   { prefix: '/api/ai-subscriptions', handler: aiSubscriptionsRoutes },
+  { prefix: '/api/settings', handler: settingsRoutes },
+  { prefix: '/api/subscriptions', handler: subscriptionsRoutes },
+  { prefix: '/api/webhooks', handler: webhooksRoutes },
+  { prefix: '/api/admin/subscriptions', handler: adminSubscriptionsRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
 

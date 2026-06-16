@@ -52,6 +52,8 @@ const AdminDashboard    = lazy(() => import('@/pages/admin/AdminDashboard'))
 const AdminCatalogPage  = lazy(() => import('@/pages/admin/AdminCatalogPage'))
 const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage'))
 const AdminPackagesPage = lazy(() => import('@/pages/admin/AdminPackagesPage'))
+const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptionsPage'))
+const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 
 const queryClient = new QueryClient({
@@ -98,6 +100,7 @@ export default function App() {
                 <Route path="/social"          element={<Social />} />
                 <Route path="/marketplace"     element={<Marketplace />} />
                 <Route path="/marketplace/:id" element={<ProductDetail />} />
+                <Route path="/marketplace/:id/subscribe" element={<PrivateRoute><ProductSubscribe /></PrivateRoute>} />
                 <Route path="/services"        element={<Services />} />
                 <Route path="/services/:id"    element={<ServiceDetail />} />
                 <Route path="/events"          element={<Events />} />
@@ -128,6 +131,7 @@ export default function App() {
                 <Route path="/admin/catalog"   element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
                 <Route path="/admin/services"  element={<AdminRoute><AdminServicesPage /></AdminRoute>} />
                 <Route path="/admin/packages"  element={<AdminRoute><AdminPackagesPage /></AdminRoute>} />
+                <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptionsPage /></AdminRoute>} />
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
