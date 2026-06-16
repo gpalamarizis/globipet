@@ -9,6 +9,10 @@ import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 
+const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
+const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
+const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
+
 export default function Profile() {
   const { t } = useTranslation()
   const { user, updateUser, logout } = useAuthStore()
@@ -25,6 +29,8 @@ export default function Profile() {
     website: (user as any)?.website || '',
   })
 
+  const hasGoogleAuth = !!(user as any)?.google_id
+
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
     queryFn: () => api.get('/orders/my').then(r => r.data?.data ?? []),
@@ -36,6 +42,30 @@ export default function Profile() {
     queryFn: () => api.get('/bookings/my').then(r => r.data?.data ?? []),
     enabled: !!user,
   })
+
+  const { data: pets = [] } = useQuery({
+    queryKey: ['my-pets'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? []),
+    enabled: !!user,
+  })
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['my-reviews'],
+    queryFn: () => api.get('/reviews/my').then(r => r.data?.data ?? []).catch(() => []),
+    enabled: !!user,
+  })
+
+  const { data: loyalty } = useQuery({
+    queryKey: ['my-loyalty'],
+    queryFn: () => api.get('/loyalty').then(r => r.data?.data),
+    enabled: !!user,
+  })
+
+  const tier = loyalty?.tier || 'bronze'
+  const totalPoints = loyalty?.total_points ?? 0
+  const tierIdx = TIER_ORDER.indexOf(tier)
+  const nextTier = TIER_ORDER[tierIdx + 1]
+  const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
 
   const saveProfile = useMutation({
     mutationFn: () => api.put(`/users/${user?.id}`, form),
@@ -73,13 +103,14 @@ export default function Profile() {
     { id: 'bookings',      label: t('profile.tabs.bookings') },
   ]
 
+  // Achievements computed from real user data, not hardcoded
   const achievements = [
-    { icon: '🐾', title: 'Πρώτο Κατοικίδιο', desc: 'Προσθέσατε το πρώτο σας κατοικίδιο', unlocked: true },
-    { icon: '🛒', title: 'Πρώτη Αγορά', desc: 'Ολοκληρώσατε την πρώτη σας παραγγελία', unlocked: false },
-    { icon: '⭐', title: 'Super Reviewer', desc: 'Γράψατε 5 κριτικές', unlocked: false },
-    { icon: '📅', title: 'Τακτικός', desc: '10 κρατήσεις υπηρεσιών', unlocked: false },
-    { icon: '🏆', title: 'Loyalty Gold', desc: 'Φτάσατε Gold επίπεδο', unlocked: false },
-    { icon: '❤️', title: 'Pet Lover', desc: 'Προσθέσατε 3 κατοικίδια', unlocked: false },
+    { icon: '🐾', title: 'Πρώτο Κατοικίδιο', desc: 'Προσθέσατε το πρώτο σας κατοικίδιο', unlocked: pets.length >= 1 },
+    { icon: '🛒', title: 'Πρώτη Αγορά',       desc: 'Ολοκληρώσατε την πρώτη σας παραγγελία', unlocked: orders.length >= 1 },
+    { icon: '⭐', title: 'Super Reviewer',    desc: 'Γράψατε 5 κριτικές',          unlocked: reviews.length >= 5 },
+    { icon: '📅', title: 'Τακτικός',          desc: '10 κρατήσεις υπηρεσιών',      unlocked: bookings.length >= 10 },
+    { icon: '🏆', title: 'Loyalty Gold',      desc: 'Φτάσατε Gold επίπεδο',        unlocked: tier === 'gold' || tier === 'platinum' },
+    { icon: '❤️', title: 'Pet Lover',         desc: 'Προσθέσατε 3 κατοικίδια',     unlocked: pets.length >= 3 },
   ]
 
   if (!user) return (
@@ -184,7 +215,7 @@ export default function Profile() {
           { icon: Package,  label: t('profile.stats.orders'),       value: orders.length },
           { icon: Calendar, label: t('profile.stats.bookings'),     value: bookings.length },
           { icon: Award,    label: t('profile.stats.achievements'), value: achievements.filter(a => a.unlocked).length },
-          { icon: Star,     label: t('profile.stats.points'),       value: '0' },
+          { icon: Star,     label: t('profile.stats.points'),       value: totalPoints },
         ].map((s, i) => (
           <div key={i} className="card p-3 text-center">
             <s.icon size={16} className="mx-auto mb-1.5 text-gray-400" />
@@ -208,13 +239,14 @@ export default function Profile() {
       {/* Tab content */}
       {activeTab === 'overview' && (
         <div className="card p-5">
-          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — Bronze</h3>
+          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — {TIER_LABELS[tier] ?? tier}</h3>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
-            <div className="bg-orange-500 h-3 rounded-full" style={{ width: '15%' }} />
+            <div className="bg-orange-500 h-3 rounded-full"
+              style={{ width: nextThreshold ? `${Math.min(100, (totalPoints / nextThreshold) * 100)}%` : '100%' }} />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>0 {t('loyalty.points')}</span>
-            <span>500 για Silver</span>
+            <span>{totalPoints} {t('loyalty.points')}</span>
+            <span>{nextThreshold ? `${nextThreshold} για ${TIER_LABELS[nextTier]}` : 'Ανώτατο επίπεδο'}</span>
           </div>
         </div>
       )}
@@ -249,10 +281,12 @@ export default function Profile() {
         </div>
       )}
 
-      {/* Change Password */}
-      <div className="mt-6">
-        <ChangeMyPasswordCard />
-      </div>
+      {/* Change Password — only for users with an actual password (not Google sign-in) */}
+      {!hasGoogleAuth && (
+        <div className="mt-6">
+          <ChangeMyPasswordCard />
+        </div>
+      )}
 
       {/* Logout */}
       <button onClick={logout} className="w-full mt-6 flex items-center justify-center gap-2 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
