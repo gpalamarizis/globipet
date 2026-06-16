@@ -29,7 +29,7 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
   // Get notifications
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const notifications = await prisma.notification.findMany({
-      where: { user_id: (req.user as any).id },
+      where: { user_email: (req.user as any).email },
       orderBy: { created_at: 'desc' },
       take: 20,
     })
@@ -45,7 +45,7 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
   // Mark all as read
   app.patch('/read-all', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     await prisma.notification.updateMany({
-      where: { user_id: (req.user as any).id, is_read: false },
+      where: { user_email: (req.user as any).email, is_read: false },
       data: { is_read: true }
     })
     return { success: true }
@@ -53,12 +53,12 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
 
   // Send notification (internal)
   app.post('/send', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { user_id, title, message, type } = req.body as any
+    const { user_email, title, message, type } = req.body as any
     const notification = await prisma.notification.create({
-      data: { user_id, title, message, type: type || 'info' }
+      data: { user_email, title, message, type: type || 'info' }
     })
     // Push to WebSocket if connected
-    broadcastToUser(user_id, { type: 'notification', notification })
+    broadcastToUser(user_email, { type: 'notification', notification })
     return notification
   })
 }
