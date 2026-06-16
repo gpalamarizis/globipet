@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -1002,6 +1002,9 @@ export default function AdminDashboard() {
                 <button onClick={() => setActiveTab('insurance')} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <Shield size={15} className="text-gray-400"/> Ασφαλιστικές Εταιρείες <ChevronRight size={13} className="text-gray-400"/>
                 </button>
+                <Link to="/admin/subscriptions" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <Layers size={15} className="text-gray-400"/> Συνδρομές <ChevronRight size={13} className="text-gray-400"/>
+                </Link>
               </div>
             </div>
           </div>
