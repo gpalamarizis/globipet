@@ -136,7 +136,7 @@ export default function MainLayout() {
 
             {/* Logo */}
             <Link to="/" className="flex items-center shrink-0">
-              <img src="/logo.png" alt="GlobiPet" className="h-14 w-auto" />
+              <img src="/logo-clean.png" alt="GlobiPet" className="h-16 w-auto" />
             </Link>
 
             {/* Desktop nav */}
@@ -404,7 +404,7 @@ export default function MainLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 lg:col-span-1">
-              <img src="/logo.png" alt="GlobiPet" className="h-14 w-auto mb-3" />
+              <img src="/logo-clean.png" alt="GlobiPet" className="h-16 w-auto mb-3" />
               <p className="text-sm text-gray-500">{t('footer.slogan')}</p>
             </div>
             <div>
