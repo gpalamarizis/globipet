@@ -135,10 +135,11 @@ export default function MainLayout() {
           <div className="flex items-center justify-between h-16 gap-4">
 
             {/* Logo */}
-            <Link to="/" className="flex items-center shrink-0">
-              <div className="bg-white rounded-xl p-1.5 shadow-sm border border-gray-100">
-                <img src="/logo.png" alt="GlobiPet" className="h-8 w-auto" />
-              </div>
+            <Link to="/" className="flex items-center gap-1.5 shrink-0">
+              <PawPrint size={30} className="text-brand-900 dark:text-brand-400 -rotate-12 shrink-0" />
+              <span className="text-2xl font-display font-bold tracking-tight text-gray-900 dark:text-white">
+                globi<span className="text-brand-900 dark:text-brand-400">pet</span>
+              </span>
             </Link>
 
             {/* Desktop nav */}
@@ -406,7 +407,12 @@ export default function MainLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 lg:col-span-1">
-              <img src="/logo.png" alt="GlobiPet" className="h-10 w-auto mb-3 rounded-lg" />
+              <div className="flex items-center gap-1.5 mb-3">
+                <PawPrint size={26} className="text-amber-400 -rotate-12 shrink-0" />
+                <span className="text-xl font-display font-bold tracking-tight text-white">
+                  globi<span className="text-amber-400">pet</span>
+                </span>
+              </div>
               <p className="text-sm text-gray-500">{t('footer.slogan')}</p>
             </div>
             <div>
