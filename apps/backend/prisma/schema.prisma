@@ -30,6 +30,9 @@ model User {
   address          String?
   latitude         Float?
   longitude        Float?
+  ai_subscription_status  String    @default("none") // none | trial | active | expired
+  ai_trial_started_at     DateTime?
+  ai_subscription_plan_id String?
 }
 
 model Pet {
@@ -639,4 +642,30 @@ model ServicePackage {
 
   @@index([service_id])
   @@map("service_packages")
+}
+
+model AiSubscriptionPlan {
+  id                          String   @id @default(cuid())
+  name                        String
+  name_el                     String?
+  description                 String?
+  tier                        String   // free | basic | pro | premium
+  price_monthly                Float
+  price_annual                Float?
+  currency                    String   @default("EUR")
+  includes_ai_health           Boolean  @default(false)
+  includes_emotion_ai          Boolean  @default(false)
+  includes_wellness_tracker    Boolean  @default(false)
+  includes_telehealth          Boolean  @default(false)
+  telehealth_sessions_per_month Int?
+  max_pets                     Int?
+  features                    String[] @default([])
+  is_active                   Boolean  @default(true)
+  is_featured                 Boolean  @default(false)
+  display_order               Int      @default(0)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  @@index([tier])
+  @@map("ai_subscription_plans")
 }

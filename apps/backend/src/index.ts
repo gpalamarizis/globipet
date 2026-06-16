@@ -39,6 +39,8 @@ import communitiesRoutes from './routes/communities.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
+import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
+import { startAiTrialExpiryCron } from './lib/cron.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -90,12 +92,15 @@ const routes = [
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
+  { prefix: '/api/ai-subscriptions', handler: aiSubscriptionsRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
 
 for (const { prefix, handler } of routes) {
   await app.register(handler, { prefix })
 }
+
+startAiTrialExpiryCron()
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
