@@ -10,10 +10,13 @@ const { width } = Dimensions.get('window')
 const categories = [
   { emoji: '✂️', label: 'Grooming',     type: 'grooming' },
   { emoji: '🩺', label: 'Κτηνίατρος',  type: 'veterinary' },
-  { emoji: '🚶', label: 'Βόλτες',       type: 'walking' },
-  { emoji: '🏠', label: 'Pet Sitting',  type: 'pet_sitting' },
+  { emoji: '🚶', label: 'Βόλτα',        type: 'walking' },
+  { emoji: '🏠', label: 'Φιλοξενία',   type: 'pet_sitting' },
   { emoji: '🎓', label: 'Εκπαίδευση',  type: 'training' },
-  { emoji: '🚕', label: 'Pet Taxi',     type: 'pet_taxi' },
+  { emoji: '🚗', label: 'Μεταφορά',    type: 'pet_taxi' },
+  { emoji: '💻', label: 'Τηλειατρική', type: 'telehealth' },
+  { emoji: '💊', label: 'Φαρμακείο',   type: 'pharmacy' },
+  { emoji: '🛡️', label: 'Ασφάλεια',   type: 'insurance' },
 ]
 
 export default function HomeScreen() {
@@ -54,7 +57,7 @@ export default function HomeScreen() {
 
       {/* Categories */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Κατηγορίες</Text>
+        <Text style={styles.sectionTitle}>Υπηρεσίες</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
           {categories.map(cat => (
             <TouchableOpacity key={cat.type} style={styles.categoryItem}
