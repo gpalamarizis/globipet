@@ -1,0 +1,725 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  full_name     String
+  email         String   @unique
+  password_hash String?
+  google_id     String?  @unique
+  role          String   @default("user")
+  profile_photo String?
+  bio           String?
+  phone         String?
+  city          String?
+  country       String?
+  preferred_language String? @default("el")
+  website       String?
+  loyalty_tier  String   @default("bronze")
+  total_points  Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  @@map("users")
+  is_verified      Boolean   @default(false)
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  ai_subscription_status  String    @default("none") // none | trial | active | expired
+  ai_trial_started_at     DateTime?
+  ai_subscription_plan_id String?
+  product_subscriptions   ProductSubscription[]
+  insurance_subscriptions UserInsuranceSubscription[]
+}
+
+model Pet {
+  id                 String   @id @default(uuid())
+  owner_email        String
+  name               String
+  species            String
+  breed              String?
+  age                Float?
+  weight             Float?
+  gender             String?
+  color              String?
+  microchip_number   String?
+  vaccination_status String?
+  medical_conditions String[]
+  image_url          String?
+  is_lost            Boolean  @default(false)
+  last_seen_location String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  @@map("pets")
+}
+
+model Service {
+  id                    String   @id @default(uuid())
+  provider_email        String
+  provider_name         String
+  service_type          String
+  description           String
+  price                 Float
+  location              String?
+  city                  String
+  latitude              Float?
+  longitude             Float?
+  contact_phone         String?
+  contact_email         String?
+  available_days        Int[]
+  rating                Float    @default(0)
+  reviews_count         Int      @default(0)
+  image_url             String?
+  is_active             Boolean  @default(true)
+  reset_token           String?  
+  reset_token_expires   DateTime?
+  is_verified           Boolean  @default(false)
+  home_visits           Boolean  @default(false)
+  emergency_available   Boolean  @default(false)
+  years_experience      Int?
+  specializations       String[]
+  pet_types             String[]
+  languages             String[]
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  packages              ServicePackage[]
+  @@map("services")
+}
+
+model Booking {
+  id             String   @id @default(uuid())
+  service_id     String
+  provider_email String
+  provider_name  String
+  customer_email String
+  customer_name  String
+  pet_id         String?
+  pet_name       String?
+  booking_date   String
+  booking_time   String
+  duration       Int?
+  total_price    Float
+  status         String   @default("pending")
+  notes          String?
+  rating         Int?
+  review         String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  packages       BookingPackage[]
+  @@map("bookings")
+}
+
+model Product {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String
+  price               Float
+  category            String
+  brand               String?
+  image_url           String?
+  images              String[]
+  stock               Int      @default(0)
+  rating              Float    @default(0)
+  reviews_count       Int      @default(0)
+  target_species      String[]
+  is_featured         Boolean  @default(false)
+  discount_percentage Int?
+  sale_price          Float?
+  provider_email      String?
+  is_subscribable     Boolean  @default(false)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  subscriptions       ProductSubscription[]
+  @@map("products")
+}
+
+model Order {
+  id               String   @id @default(uuid())
+  user_email       String
+  user_name        String
+  items            Json[]
+  total_amount     Float
+  status           String   @default("pending")
+  shipping_address Json
+  payment_method   String?
+  payment_intent   String?
+  coupon_code      String?
+  discount_amount  Float?
+  notes            String?
+  tracking_number  String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  @@map("orders")
+}
+
+model CartItem {
+  id            String   @id @default(uuid())
+  user_email    String
+  product_id    String
+  product_name  String
+  product_price Float
+  product_image String?
+  quantity      Int      @default(1)
+  created_at    DateTime @default(now())
+  @@unique([user_email, product_id])
+  @@map("cart_items")
+}
+
+model Wishlist {
+  id            String   @id @default(uuid())
+  user_email    String
+  product_id    String
+  product_name  String
+  product_price Float
+  product_image String?
+  created_at    DateTime @default(now())
+  @@unique([user_email, product_id])
+  @@map("wishlist")
+}
+
+model Post {
+  id             String   @id @default(uuid())
+  author_email   String
+  author_name    String
+  author_photo   String?
+  content        String
+  image_url      String?
+  likes_count    Int      @default(0)
+  comments_count Int      @default(0)
+  tags           String[]
+  pet_id         String?
+  pet_name       String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  @@map("posts")
+}
+
+model Event {
+  id               String   @id @default(uuid())
+  title            String
+  description      String
+  event_type       String
+  date             String
+  end_date         String?
+  time             String
+  location         String
+  city             String
+  country          String
+  latitude         Float?
+  longitude        Float?
+  image_url        String?
+  capacity         Int?
+  registered_count Int      @default(0)
+  price            Float    @default(0)
+  currency         String   @default("EUR")
+  ticket_types     Json[]
+  organizer        String
+  organizer_email  String
+  pet_types        String[]
+  is_international Boolean  @default(false)
+  is_featured      Boolean  @default(false)
+  created_at       DateTime @default(now())
+  @@map("events")
+}
+
+model Breed {
+  id               String   @id @default(uuid())
+  name             String
+  name_el          String?
+  species          String
+  fci_number       String?
+  description      String
+  origin           String?
+  size             String
+  weight_min       Float?
+  weight_max       Float?
+  lifespan_min     Int?
+  lifespan_max     Int?
+  temperament      String[]
+  health_issues    String[]
+  pros             String[]
+  cons             String[]
+  grooming_needs   Int
+  exercise_needs   Int
+  trainability     Int
+  good_with_children Boolean @default(true)
+  good_with_pets   Boolean  @default(true)
+  apartment_friendly Boolean @default(false)
+  image_url        String?
+  popularity       Int      @default(0)
+  created_at       DateTime @default(now())
+  @@map("breeds")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  user_email String
+  title      String
+  message    String
+  type       String
+  is_read    Boolean  @default(false)
+  link       String?
+  created_at DateTime @default(now())
+  @@map("notifications")
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  service_id     String
+  provider_email String
+  customer_email String
+  customer_name  String
+  rating         Int
+  comment        String?
+  booking_id     String?
+  response       String?
+  response_date  DateTime?
+  created_at     DateTime @default(now())
+  @@map("reviews")
+}
+
+model HealthRecord {
+  id               String   @id @default(uuid())
+  pet_id           String
+  owner_email      String
+  record_type      String
+  title            String
+  description      String
+  date             String
+  vet_name         String?
+  clinic_name      String?
+  cost             Float?
+  next_appointment String?
+  attachments      String[]
+  created_at       DateTime @default(now())
+  @@map("health_records")
+}
+
+model Vaccination {
+  id                String   @id @default(uuid())
+  pet_id            String
+  owner_email       String
+  vaccine_name      String
+  vaccine_type      String
+  date_administered String
+  next_due_date     String?
+  vet_name          String?
+  is_overdue        Boolean  @default(false)
+  created_at        DateTime @default(now())
+  @@map("vaccinations")
+}
+
+model LoyaltyPoints {
+  id              String   @id @default(uuid())
+  user_email      String   @unique
+  total_points    Int      @default(0)
+  tier            String   @default("bronze")
+  lifetime_points Int      @default(0)
+  updated_at      DateTime @updatedAt
+  @@map("loyalty_points")
+}
+
+model Achievement {
+  id                String  @id @default(uuid())
+  code              String  @unique
+  name              String
+  name_el           String
+  description       String
+  icon              String
+  category          String
+  points            Int
+  rarity            String
+  requirement_type  String
+  requirement_value Int
+  @@map("achievements")
+}
+
+model ForumTopic {
+  id            String   @id @default(uuid())
+  author_email  String
+  author_name   String
+  title         String
+  content       String
+  category      String
+  tags          String[]
+  views_count   Int      @default(0)
+  replies_count Int      @default(0)
+  is_pinned     Boolean  @default(false)
+  is_solved     Boolean  @default(false)
+  created_at    DateTime @default(now())
+  @@map("forum_topics")
+}
+
+model PetLocation {
+  id          String   @id @default(uuid())
+  pet_id      String
+  owner_email String
+  latitude    Float
+  longitude   Float
+  status      String   @default("safe")
+  is_resolved Boolean  @default(false)
+  created_at  DateTime @default(now())
+  @@map("pet_locations")
+}
+
+model TelehealthConsultation {
+  id             String   @id @default(uuid())
+  provider_email String
+  provider_name  String
+  client_email   String
+  client_name    String
+  pet_id         String?
+  pet_name       String?
+  scheduled_date String
+  scheduled_time String
+  duration       Int
+  status         String   @default("scheduled")
+  meeting_url    String?
+  notes          String?
+  price          Float
+  created_at     DateTime @default(now())
+  @@map("telehealth_consultations")
+}
+model BookingPackage {
+  id              String         @id @default(cuid())
+  booking_id      String
+  booking         Booking        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  package_id      String
+  package         ServicePackage @relation(fields: [package_id], references: [id])
+  quantity        Int            @default(1)
+  price_snapshot  Float
+  name_snapshot   String
+
+  @@index([booking_id])
+  @@map("booking_packages")
+}
+
+model CatalogTemplate {
+  id              String   @id @default(cuid())
+  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | insurance | other
+  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
+  name            String
+  description     String?
+  size            String?  // small | medium | large | xlarge
+  pet_type        String?  // dog | cat | rabbit | bird | other
+  breed_group     String?
+  modality        String?  // in_clinic | home_visit | telehealth | emergency
+  suggested_duration_minutes Int @default(60)
+  is_addon        Boolean  @default(false)
+  is_active       Boolean  @default(true)
+  display_order   Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([category])
+  @@index([category, group])
+  @@map("catalog_templates")
+}
+
+model InsuranceProvider {
+  id          String   @id @default(cuid())
+  name        String
+  name_el     String?
+  logo_url    String?
+  website     String?
+  phone       String?
+  email       String?
+  description String?
+  is_active   Boolean  @default(true)
+  display_order Int    @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  plans       InsurancePlan[]
+
+  @@map("insurance_providers")
+}
+
+model InsurancePlan {
+  id                    String   @id @default(cuid())
+  provider_id           String
+  provider              InsuranceProvider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+
+  name                  String
+  name_el               String?
+  description           String?
+  tier                  String   // basic | standard | premium | comprehensive
+  price_monthly         Float
+  price_annual          Float?
+  currency              String   @default("EUR")
+
+  covers_accidents      Boolean  @default(true)
+  covers_illness        Boolean  @default(true)
+  covers_surgery        Boolean  @default(false)
+  covers_dental         Boolean  @default(false)
+  covers_preventive     Boolean  @default(false)
+  covers_liability      Boolean  @default(false)
+  covers_death          Boolean  @default(false)
+
+  annual_limit          Float?
+  per_incident_limit    Float?
+  deductible            Float?
+  reimbursement_percent Int?
+  waiting_period_days   Int      @default(14)
+
+  pet_types             String[] @default([])
+  max_age_years         Int?
+  min_age_months        Int?
+
+  features              String[] @default([])
+  exclusions            String[] @default([])
+
+  is_active             Boolean  @default(true)
+  is_featured           Boolean  @default(false)
+  display_order         Int      @default(0)
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  user_subscriptions    UserInsuranceSubscription[]
+
+  @@index([provider_id])
+  @@index([tier])
+  @@map("insurance_plans")
+}
+
+model PetPedigree {
+  id                  String   @id @default(cuid())
+  pet_id              String   @unique
+  owner_email         String
+  registration_number String?
+  kennel_club         String?
+  father_name         String?
+  mother_name         String?
+  breeder_name        String?
+  breeder_contact     String?
+  birth_certificate   String?
+  pedigree_document   String?
+  certifications      String[] @default([])
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@map("pet_pedigrees")
+}
+
+model PetTravelDocument {
+  id                  String   @id @default(cuid())
+  pet_id              String
+  owner_email         String
+  travel_type         String
+  origin_city         String?
+  destination_city    String
+  destination_country String?
+  departure_date      String
+  return_date         String?
+  carrier             String?
+  booking_ref         String?
+  document_url        String?
+  notes               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([pet_id])
+  @@index([owner_email])
+  @@map("pet_travel_documents")
+}
+
+model PlaydateEvent {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  creator_photo   String?
+  title           String
+  description     String?
+  event_type      String   // walk | play | meetup | training | other
+  date            String
+  time            String
+  duration_minutes Int     @default(60)
+  location        String
+  city            String
+  latitude        Float?
+  longitude       Float?
+  max_participants Int     @default(10)
+  pet_types       String[] @default([])
+  is_public       Boolean  @default(true)
+  status          String   @default("active") // active | cancelled | completed
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  invitations     PlaydateInvitation[]
+
+  @@index([city])
+  @@index([creator_email])
+  @@map("playdate_events")
+}
+
+model PlaydateInvitation {
+  id            String   @id @default(cuid())
+  event_id      String
+  event         PlaydateEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  invitee_email String
+  invitee_name  String
+  invitee_photo String?
+  pet_name      String?
+  status        String   @default("pending") // pending | accepted | declined
+  message       String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([event_id, invitee_email])
+  @@index([invitee_email])
+  @@map("playdate_invitations")
+}
+
+model Community {
+  id              String   @id @default(cuid())
+  creator_email   String
+  creator_name    String
+  name            String
+  description     String?
+  address         String?
+  city            String
+  latitude        Float
+  longitude       Float
+  radius_km       Float    @default(1.0)
+  image_url       String?
+  is_public       Boolean  @default(true)
+  member_count    Int      @default(1)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  members         CommunityMember[]
+  messages        CommunityMessage[]
+
+  @@index([city])
+  @@map("communities")
+}
+
+model CommunityMember {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  user_email    String
+  user_name     String
+  user_photo    String?
+  role          String    @default("member") // admin | member
+  joined_at     DateTime  @default(now())
+
+  @@unique([community_id, user_email])
+  @@index([user_email])
+  @@map("community_members")
+}
+
+model CommunityMessage {
+  id            String    @id @default(cuid())
+  community_id  String
+  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  author_email  String
+  author_name   String
+  author_photo  String?
+  content       String?
+  image_url     String?
+  created_at    DateTime  @default(now())
+
+  @@index([community_id])
+  @@map("community_messages")
+}
+
+model ServicePackage {
+  id              String   @id @default(cuid())
+  service_id      String
+  service         Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  price           Float
+  duration_minutes Int     @default(60)
+  is_active       Boolean  @default(true)
+  display_order   Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  bookings        BookingPackage[]
+
+  @@index([service_id])
+  @@map("service_packages")
+}
+
+model AppSetting {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model ProductSubscription {
+  id                      String    @id @default(cuid())
+  user_id                 String
+  user                    User      @relation(fields: [user_id], references: [id])
+  product_id              String
+  product                 Product   @relation(fields: [product_id], references: [id])
+  discount_percent        Float
+  monthly_price           Float
+  status                  String    @default("active") // active | paused | cancelled | payment_failed
+  stripe_customer_id      String?
+  stripe_subscription_id  String?   @unique
+  start_date              DateTime  @default(now())
+  end_date                DateTime?
+  next_delivery_date      DateTime?
+  deliveries_completed    Int       @default(0)
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([product_id])
+  @@map("product_subscriptions")
+}
+
+model UserInsuranceSubscription {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id])
+  plan_id     String
+  plan        InsurancePlan @relation(fields: [plan_id], references: [id])
+  pet_id      String?
+  status      String    @default("active") // active | cancelled | expired
+  started_at  DateTime  @default(now())
+  ends_at     DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([plan_id])
+  @@map("user_insurance_subscriptions")
+}
+
+model AiSubscriptionPlan {
+  id                          String   @id @default(cuid())
+  name                        String
+  name_el                     String?
+  description                 String?
+  tier                        String   // free | basic | pro | premium
+  price_monthly                Float
+  price_annual                Float?
+  currency                    String   @default("EUR")
+  includes_ai_health           Boolean  @default(false)
+  includes_emotion_ai          Boolean  @default(false)
+  includes_wellness_tracker    Boolean  @default(false)
+  includes_telehealth          Boolean  @default(false)
+  telehealth_sessions_per_month Int?
+  max_pets                     Int?
+  features                    String[] @default([])
+  is_active                   Boolean  @default(true)
+  is_featured                 Boolean  @default(false)
+  display_order               Int      @default(0)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  @@index([tier])
+  @@map("ai_subscription_plans")
+}

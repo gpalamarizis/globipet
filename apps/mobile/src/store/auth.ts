@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import { api } from '../lib/api'
+import { signInWithGoogle } from '../lib/googleAuth'
 
 interface User {
   id: string
@@ -16,6 +17,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<boolean>
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
   loadToken: () => Promise<void>
@@ -47,6 +49,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+    } catch (err) {
+      set({ isLoading: false })
+      throw err
+    }
+  },
+
+  // Returns true if signed in, false if user cancelled the Google flow
+  loginWithGoogle: async () => {
+    set({ isLoading: true })
+    try {
+      const googleResult = await signInWithGoogle()
+      if (!googleResult) {
+        set({ isLoading: false })
+        return false // user cancelled
+      }
+
+      const { data } = await api.post('/auth/google/mobile', {
+        access_token: googleResult.accessToken,
+        user: {
+          email: googleResult.user.email,
+          full_name: googleResult.user.name,
+          profile_photo: googleResult.user.photo,
+        },
+      })
+
+      await SecureStore.setItemAsync('token', data.token)
+      await SecureStore.setItemAsync('user', JSON.stringify(data.user))
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      return true
     } catch (err) {
       set({ isLoading: false })
       throw err

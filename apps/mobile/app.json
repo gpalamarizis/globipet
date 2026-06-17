@@ -39,13 +39,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-asset",
-      "expo-font"
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "googleWebClientId": "26367014154-8aqhrgd9l9nr6brcjimfgahnq095vpvu.apps.googleusercontent.com",
       "eas": {
         "projectId": "fb18039a-36c8-4c24-af71-6f4853701cf9"
       }

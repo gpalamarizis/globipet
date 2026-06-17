@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
+import { Eye, EyeOff } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 
 export default function LoginScreen() {
   const router = useRouter()
-  const { login, isLoading } = useAuthStore()
+  const { login, loginWithGoogle, isLoading } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Σφάλμα', 'Συμπληρώστε email και κωδικό'); return }
@@ -16,6 +19,18 @@ export default function LoginScreen() {
       router.replace('/(tabs)')
     } catch (err: any) {
       Alert.alert('Σφάλμα σύνδεσης', err.response?.data?.message || 'Λανθασμένα στοιχεία')
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+    try {
+      const signedIn = await loginWithGoogle()
+      if (signedIn) router.replace('/(tabs)')
+    } catch (err: any) {
+      Alert.alert('Σφάλμα σύνδεσης με Google', err.message || err.response?.data?.message || 'Κάτι πήγε στραβά')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -29,9 +44,21 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail}
             keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#9CA3AF" />
-          <TextInput style={styles.input} placeholder="Κωδικός" value={password} onChangeText={setPassword}
-            secureTextEntry placeholderTextColor="#9CA3AF" />
-          
+
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Κωδικός"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              placeholderTextColor="#9CA3AF"
+            />
+            <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(s => !s)}>
+              {showPassword ? <EyeOff size={18} color="#9CA3AF" /> : <Eye size={18} color="#9CA3AF" />}
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
             <Text style={styles.forgotLink}>Ξέχασα τον κωδικό</Text>
           </TouchableOpacity>
@@ -47,8 +74,11 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>🔵  Σύνδεση με Google</Text>
+          <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={googleLoading}>
+            {googleLoading
+              ? <ActivityIndicator color="#374151" />
+              : <Text style={styles.socialButtonText}>🔵  Σύνδεση με Google</Text>
+            }
           </TouchableOpacity>
         </View>
 
@@ -71,6 +101,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: '#6B7280', marginBottom: 32 },
   form: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
   input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12, color: '#111827' },
+  passwordWrapper: { position: 'relative', marginBottom: 12 },
+  passwordInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, paddingRight: 44, fontSize: 15, color: '#111827' },
+  eyeButton: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' },
   forgotLink: { textAlign: 'right', color: '#E65100', fontSize: 13, marginBottom: 16 },
   button: { backgroundColor: '#E65100', borderRadius: 12, padding: 16, alignItems: 'center' },
   buttonDisabled: { opacity: 0.6 },
