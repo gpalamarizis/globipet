@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { api } from '../../src/lib/api'
-import { useAuthStore } from '../../src/store/auth'
+import { api } from '../src/lib/api'
+import { useAuthStore } from '../src/store/auth'
 
 const STEPS = [
   { key: 'personal', title: 'Προσωπικά Στοιχεία', emoji: '👤' },
