@@ -41,8 +41,8 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 
     const userPrompt = `Ανάλυσε αυτή τη φωτογραφία ${analysis_type === 'skin' ? 'δέρματος' : 'ματιού'} κατοικίδιου ζώου${breed ? ` (ράτσα: ${breed})` : ''}${species ? ` (είδος: ${species})` : ''}.
 Αν χρειάζεται, ψάξε στο διαδίκτυο για να συγκρίνεις τα ευρήματα με δημόσιες κτηνιατρικές πηγές σχετικά με συνήθεις παθήσεις αυτής της ράτσας/είδους.
-Επέστρεψε ΜΟΝΟ JSON ως τελική απάντηση:
-{"severity":"low"|"medium"|"high","findings":[],"conditions":[],"comparison_sources":["σύντομη αναφορά πηγής 1","σύντομη αναφορά πηγής 2"],"recommendation":"","urgency":"","disclaimer":"Αυτή η ανάλυση είναι ενδεικτική και δεν υποκαθιστά την επίσκεψη σε κτηνίατρο."}`
+Επέστρεψε ΜΟΝΟ JSON ως τελική απάντηση. Τα "findings" και "conditions" πρέπει να είναι arrays από ΑΠΛΑ strings (όχι objects):
+{"severity":"low"|"medium"|"high","findings":["..."],"conditions":["..."],"comparison_sources":["σύντομη αναφορά πηγής 1","σύντομη αναφορά πηγής 2"],"recommendation":"","urgency":"","disclaimer":"Αυτή η ανάλυση είναι ενδεικτική και δεν υποκαθιστά την επίσκεψη σε κτηνίατρο."}`
 
     try {
       const response = await client.messages.create({

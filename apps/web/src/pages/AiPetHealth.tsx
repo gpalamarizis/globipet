@@ -9,11 +9,26 @@ type AnalysisType = 'skin' | 'eye'
 
 interface AnalysisResult {
   severity: 'low' | 'medium' | 'high'
-  findings: string[]
+  findings: any[]
   recommendation: string
   urgency: string
-  conditions: string[]
+  conditions: any[]
   disclaimer: string
+}
+
+// The AI sometimes returns richer objects (e.g. {name, probability}) instead of plain strings —
+// render whatever shape comes back without crashing React.
+function renderItem(item: any): string {
+  if (item == null) return ''
+  if (typeof item === 'string' || typeof item === 'number') return String(item)
+  if (typeof item === 'object') {
+    if (item.name) {
+      const prob = item.probability ? ` (${item.probability})` : ''
+      return `${item.name}${prob}`
+    }
+    return Object.values(item).filter(v => typeof v === 'string' || typeof v === 'number').join(' — ')
+  }
+  return String(item)
 }
 
 const analysisTypes = [
@@ -244,7 +259,7 @@ export default function AiPetHealth() {
                         {result.findings.map((f, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 shrink-0" />
-                            {f}
+                            {renderItem(f)}
                           </li>
                         ))}
                       </ul>
@@ -256,7 +271,7 @@ export default function AiPetHealth() {
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📋 Πιθανές Παθήσεις</h3>
                         <div className="flex flex-wrap gap-2">
                           {result.conditions.map((c, i) => (
-                            <span key={i} className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-full text-sm">{c}</span>
+                            <span key={i} className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-full text-sm">{renderItem(c)}</span>
                           ))}
                         </div>
                       </div>
