@@ -11,7 +11,14 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   }
 
   function parseJsonResponse(text: string) {
-    return JSON.parse(text.replace(/```json|```/g, '').trim())
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    // Claude sometimes adds a short lead-in/trailing note after using tools — extract just the {...} block
+    const firstBrace = cleaned.indexOf('{')
+    const lastBrace = cleaned.lastIndexOf('}')
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+      throw new Error('Δεν βρέθηκε έγκυρο JSON στην απάντηση του AI')
+    }
+    return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1))
   }
 
   const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const }
