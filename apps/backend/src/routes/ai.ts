@@ -21,6 +21,13 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     const { image_url, analysis_type, breed, species } = req.body as { image_url: string; analysis_type: 'skin' | 'eye'; breed?: string; species?: string }
     if (!image_url || !analysis_type) return reply.code(400).send({ message: 'Απαιτούνται image_url και analysis_type' })
 
+    // The /upload endpoint falls back to a base64 data: URI when no storage (R2) is configured.
+    // Claude's "url" image source can't fetch data: URIs — convert those to a base64 image block instead.
+    const dataUrlMatch = image_url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/)
+    const imageContent = dataUrlMatch
+      ? { type: 'image' as const, source: { type: 'base64' as const, media_type: dataUrlMatch[1] as any, data: dataUrlMatch[2] } }
+      : { type: 'image' as const, source: { type: 'url' as const, url: image_url } }
+
     const systemPrompt = analysis_type === 'skin'
       ? `Είσαι κτηνιατρικός βοηθός AI εξειδικευμένος στη δερματολογία ζώων συντροφιάς. Όταν χρειάζεται, αναζητάς στο διαδίκτυο αξιόπιστες κτηνιατρικές πηγές (π.χ. veterinary partner, merck vet manual, pet health sites) για να συγκρίνεις τα ευρήματα με γνωστές παθήσεις/φυσιολογικά πρότυπα της ράτσας. Πάντα απαντάς σε JSON και ΜΟΝΟ JSON στο τελικό σου μήνυμα, χωρίς markdown.`
       : `Είσαι κτηνιατρικός βοηθός AI εξειδικευμένος στην οφθαλμολογία ζώων συντροφιάς. Όταν χρειάζεται, αναζητάς στο διαδίκτυο αξιόπιστες κτηνιατρικές πηγές για να συγκρίνεις τα ευρήματα με γνωστές παθήσεις/φυσιολογικά πρότυπα της ράτσας. Πάντα απαντάς σε JSON και ΜΟΝΟ JSON στο τελικό σου μήνυμα, χωρίς markdown.`
@@ -36,7 +43,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
         max_tokens: 1536,
         system: systemPrompt,
         tools: [webSearchTool],
-        messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'url', url: image_url } }, { type: 'text', text: userPrompt }] }]
+        messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
       const text = extractFinalText(response.content as any[])
       return parseJsonResponse(text)
