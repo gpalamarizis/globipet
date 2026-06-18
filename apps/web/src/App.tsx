@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
+import AdminLayout from '@/components/layout/AdminLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
 const Home              = lazy(() => import('@/pages/Home'))
@@ -128,10 +129,6 @@ export default function App() {
                 <Route path="/orders"          element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"      element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
-                <Route path="/admin/catalog"   element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
-                <Route path="/admin/services"  element={<AdminRoute><AdminServicesPage /></AdminRoute>} />
-                <Route path="/admin/packages"  element={<AdminRoute><AdminPackagesPage /></AdminRoute>} />
-                <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptionsPage /></AdminRoute>} />
               </Route>
 
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
@@ -140,7 +137,14 @@ export default function App() {
                 <Route path="/provider/*"        element={<ProviderDashboard />} />
               </Route>
 
-              <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route path="/admin"               element={<AdminDashboard />} />
+                <Route path="/admin/catalog"       element={<AdminCatalogPage />} />
+                <Route path="/admin/services"      element={<AdminServicesPage />} />
+                <Route path="/admin/packages"      element={<AdminPackagesPage />} />
+                <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                <Route path="/admin/*"             element={<AdminDashboard />} />
+              </Route>
               <Route path="*"        element={<NotFound />} />
             </Routes>
           </Suspense>
