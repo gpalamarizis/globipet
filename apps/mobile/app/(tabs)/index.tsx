@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -39,11 +39,11 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>
+        <View style={styles.headerText}>
+          <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">
             {isAuthenticated ? `Γεια, ${user?.full_name?.split(' ')[0]}! 👋` : 'Καλώς ήρθατε! 🐾'}
           </Text>
-          <Text style={styles.subtitle}>Best care for the best human's friends</Text>
+          <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">Best care for the best human's friends</Text>
         </View>
         {isAuthenticated && user?.profile_photo && (
           <Image source={{ uri: user.profile_photo }} style={styles.avatar} />
@@ -146,9 +146,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60, backgroundColor: '#fff' },
+  headerText: { flex: 1, marginRight: 12 },
   greeting: { fontSize: 22, fontWeight: '700', color: '#111827' },
   subtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  avatar: { width: 44, height: 44, borderRadius: 22 },
+  avatar: { width: 44, height: 44, borderRadius: 22, flexShrink: 0 },
   searchBar: { margin: 16, backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   searchText: { color: '#9CA3AF', fontSize: 14 },
   section: { marginBottom: 8 },
