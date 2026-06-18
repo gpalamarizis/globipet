@@ -52,7 +52,7 @@ export default function Home() {
   ]
 
   const categories = [
-    { icon: Scissors,      label: 'Grooming',      type: 'grooming',    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
+    { icon: Scissors,      label: 'Περιποίηση',    type: 'grooming',    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
     { icon: Stethoscope,   label: 'Κτηνίατρος',    type: 'veterinary',  color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
     { emoji: '🚶',         label: 'Βόλτα',          type: 'walking',     color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
     { icon: HomeIcon,      label: 'Φιλοξενία',      type: 'pet_sitting', color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
@@ -212,7 +212,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-7">
             <div>
               <h2 className="section-title">Marketplace</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Τροφές, αξεσουάρ και φάρμακα με delivery</p>
+              <p className="text-sm text-gray-500 mt-0.5">Τροφές, παιχνίδια και αξεσουάρ με delivery</p>
             </div>
             <Link to="/marketplace" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
               Όλα <ArrowRight size={14} />

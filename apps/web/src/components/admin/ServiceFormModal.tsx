@@ -13,11 +13,11 @@ interface Props {
 
 const SERVICE_TYPES = [
   { value: 'veterinary',  label: 'Κτηνιατρείο 🩺' },
-  { value: 'grooming',    label: 'Grooming ✂️' },
+  { value: 'grooming',    label: 'Περιποίηση ✂️' },
   { value: 'training',    label: 'Εκπαίδευση 🎓' },
-  { value: 'pet_sitting', label: 'Pet Sitting 🏠' },
+  { value: 'pet_sitting', label: 'Φιλοξενία · Ιδιώτης 🏡' },
   { value: 'walking',     label: 'Βόλτα 🚶' },
-  { value: 'boarding',    label: 'Φιλοξενία 🛏️' },
+  { value: 'boarding',    label: 'Φιλοξενία · Ξενοδοχείο 🏨' },
   { value: 'pet_taxi',    label: 'Pet Taxi 🚕' },
   { value: 'photography', label: 'Φωτογράφηση 📸' },
   { value: 'pharmacy',    label: 'Φαρμακείο 💊' },

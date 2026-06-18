@@ -29,7 +29,7 @@ const MODALITY_LABELS: Record<string, string> = {
   in_clinic: 'Στο ιατρείο', home_visit: 'Κατ\' οίκον', telehealth: 'Τηλεσυμβ.', emergency: 'Έκτακτο'
 }
 const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  grooming:    { label: 'Grooming',           emoji: '✂️' },
+  grooming:    { label: 'Περιποίηση',         emoji: '✂️' },
   veterinary:  { label: 'Κτηνίατρος',          emoji: '🩺' },
   clinic:      { label: 'Κτηνιατρική κλινική', emoji: '🏥' },
   walking:     { label: 'Dog walking',         emoji: '🚶' },

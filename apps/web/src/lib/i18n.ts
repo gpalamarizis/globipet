@@ -72,9 +72,9 @@ const el = {
     homeVisits: 'Κατ\' οίκον',
     yearsExp: 'χρ εμπ.',
     types: {
-      veterinary: 'Κτηνίατρος', veterinary_clinic: 'Κλινική', grooming: 'Grooming',
-      training: 'Εκπαίδευση', pet_sitting: 'Pet Sitting', walking: 'Βόλτες',
-      boarding: 'Boarding', photography: 'Φωτογράφιση', pharmacy: 'Φαρμακείο',
+      veterinary: 'Κτηνίατρος', veterinary_clinic: 'Κλινική', grooming: 'Περιποίηση',
+      training: 'Εκπαίδευση', hosting: 'Φιλοξενία', pet_sitting: 'Ιδιώτης (Ημερήσια φύλαξη)', walking: 'Βόλτες',
+      boarding: 'Ξενοδοχείο Ζώων (Πολυήμερες διακοπές)', photography: 'Φωτογράφιση', pharmacy: 'Φαρμακείο',
       adoption: 'Υιοθεσία', shelter: 'Καταφύγιο', pet_taxi: 'Pet Taxi', other: 'Άλλο',
     },
   },
@@ -88,9 +88,7 @@ const el = {
     addToCart: 'Καλάθι',
     inCategory: 'σε',
     categories: {
-      all: 'Όλα', food: 'Τροφές', toys: 'Παιχνίδια', accessories: 'Αξεσουάρ',
-      health: 'Υγεία', grooming: 'Grooming', training: 'Εκπαίδευση',
-      housing: 'Κατοικία', other: 'Άλλα',
+      all: 'Όλα', food: 'Τροφές', toys: 'Παιχνίδια', accessories: 'Αξεσουάρ', other: 'Άλλα',
     },
     sort: {
       featured: 'Προτεινόμενα', price_asc: 'Τιμή: Χαμηλή → Υψηλή',
@@ -320,8 +318,8 @@ const en: typeof el = {
     results: 'results', homeVisits: 'Home visits', yearsExp: 'yrs exp.',
     types: {
       veterinary: 'Veterinary', veterinary_clinic: 'Clinic', grooming: 'Grooming',
-      training: 'Training', pet_sitting: 'Pet Sitting', walking: 'Walking',
-      boarding: 'Boarding', photography: 'Photography', pharmacy: 'Pharmacy',
+      training: 'Training', hosting: 'Boarding & Sitting', pet_sitting: 'Pet Sitting', walking: 'Walking',
+      boarding: 'Pet Hotel', photography: 'Photography', pharmacy: 'Pharmacy',
       adoption: 'Adoption', shelter: 'Shelter', pet_taxi: 'Pet Taxi', other: 'Other',
     },
   },
@@ -330,8 +328,7 @@ const en: typeof el = {
     searchPlaceholder: 'Search product...', noResults: 'No products found',
     noResultsDesc: 'Try different search terms', results: 'results', addToCart: 'Cart', inCategory: 'in',
     categories: {
-      all: 'All', food: 'Food', toys: 'Toys', accessories: 'Accessories',
-      health: 'Health', grooming: 'Grooming', training: 'Training', housing: 'Housing', other: 'Other',
+      all: 'All', food: 'Food', toys: 'Toys', accessories: 'Accessories', other: 'Other',
     },
     sort: {
       featured: 'Featured', price_asc: 'Price: Low → High',

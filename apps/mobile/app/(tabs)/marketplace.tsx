@@ -16,8 +16,8 @@ export default function MarketplaceScreen() {
     queryFn: () => api.get(`/products?category=${category !== 'all' ? category : ''}&search=${search}&limit=20`).then(r => r.data?.data ?? []),
   })
 
-  const categories = ['all','food','toys','accessories','health','grooming']
-  const catLabels: Record<string,string> = { all:'Όλα', food:'Τροφές', toys:'Παιχνίδια', accessories:'Αξεσουάρ', health:'Υγεία', grooming:'Grooming' }
+  const categories = ['all','food','toys','accessories']
+  const catLabels: Record<string,string> = { all:'Όλα', food:'Τροφές', toys:'Παιχνίδια', accessories:'Αξεσουάρ' }
 
   return (
     <View style={styles.container}>

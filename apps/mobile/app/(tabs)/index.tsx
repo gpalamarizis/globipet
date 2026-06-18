@@ -8,7 +8,7 @@ import { api } from '../../src/lib/api'
 const { width } = Dimensions.get('window')
 
 const categories = [
-  { emoji: '✂️', label: 'Grooming',     type: 'grooming' },
+  { emoji: '✂️', label: 'Περιποίηση',  type: 'grooming' },
   { emoji: '🩺', label: 'Κτηνίατρος',  type: 'veterinary' },
   { emoji: '🚶', label: 'Βόλτα',        type: 'walking' },
   { emoji: '🏠', label: 'Φιλοξενία',   type: 'pet_sitting' },

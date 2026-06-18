@@ -11,8 +11,8 @@ const typeColors: Record<string,string> = {
   pharmacy:'bg-indigo-100 text-indigo-700',
 }
 const typeLabels: Record<string,string> = {
-  veterinary:'Κτηνίατρος',grooming:'Grooming',training:'Εκπαίδευση',
-  pet_sitting:'Pet Sitting',walking:'Βόλτες',boarding:'Boarding',
+  veterinary:'Κτηνίατρος',grooming:'Περιποίηση',training:'Εκπαίδευση',
+  pet_sitting:'Φιλοξενία · Ιδιώτης',walking:'Βόλτες',boarding:'Φιλοξενία · Ξενοδοχείο',
   pet_taxi:'Pet Taxi',photography:'Φωτογράφιση',pharmacy:'Φαρμακείο',
   adoption:'Υιοθεσία',shelter:'Καταφύγιο',other:'Άλλο',
 }

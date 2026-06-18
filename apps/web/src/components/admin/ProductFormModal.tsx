@@ -15,10 +15,6 @@ const CATEGORIES = [
   { value: 'food',        label: 'Τροφές 🦴' },
   { value: 'toys',        label: 'Παιχνίδια 🎾' },
   { value: 'accessories', label: 'Αξεσουάρ 🎀' },
-  { value: 'health',      label: 'Υγεία 💊' },
-  { value: 'grooming',    label: 'Grooming ✂️' },
-  { value: 'training',    label: 'Εκπαίδευση 🎓' },
-  { value: 'housing',     label: 'Κατοικία 🏠' },
 ]
 
 const SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'fish', 'reptile', 'horse']

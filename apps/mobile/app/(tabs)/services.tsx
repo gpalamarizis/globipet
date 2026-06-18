@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { api } from '../../src/lib/api'
 
-const types = ['all','grooming','veterinary','walking','pet_sitting','training','boarding','pet_taxi']
-const typeLabels: Record<string,string> = { all:'Όλες', grooming:'Grooming', veterinary:'Κτηνίατρος', walking:'Βόλτες', pet_sitting:'Sitting', training:'Εκπαίδευση', boarding:'Boarding', pet_taxi:'Taxi' }
+const types = ['all','grooming','veterinary','walking','hosting','training','pet_taxi']
+const typeLabels: Record<string,string> = { all:'Όλες', grooming:'Περιποίηση', veterinary:'Κτηνίατρος', walking:'Βόλτες', hosting:'Φιλοξενία', pet_sitting:'Ιδιώτης', training:'Εκπαίδευση', boarding:'Ξενοδοχείο', pet_taxi:'Taxi' }
+const hostingSubTypes = ['pet_sitting','boarding']
 
 export default function ServicesScreen() {
   const router = useRouter()
@@ -26,12 +27,27 @@ export default function ServicesScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={{ paddingHorizontal: 16 }}>
-        {types.map(t => (
-          <TouchableOpacity key={t} style={[styles.filterChip, type === t && styles.filterChipActive]} onPress={() => setType(t)}>
-            <Text style={[styles.filterText, type === t && styles.filterTextActive]}>{typeLabels[t]}</Text>
-          </TouchableOpacity>
-        ))}
+        {types.map(t => {
+          const isHosting = t === 'hosting'
+          const isActive = isHosting ? (type === 'pet_sitting' || type === 'boarding') : type === t
+          return (
+            <TouchableOpacity key={t} style={[styles.filterChip, isActive && styles.filterChipActive]}
+              onPress={() => setType(isHosting ? ((type === 'pet_sitting' || type === 'boarding') ? type : 'pet_sitting') : t)}>
+              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>{typeLabels[t]}</Text>
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
+
+      {(type === 'pet_sitting' || type === 'boarding') && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.filters, { paddingTop: 0, paddingBottom: 10 }]} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {hostingSubTypes.map(t => (
+            <TouchableOpacity key={t} style={[styles.filterChip, { paddingVertical: 5 }, type === t && styles.filterChipActive]} onPress={() => setType(t)}>
+              <Text style={[styles.filterText, { fontSize: 12 }, type === t && styles.filterTextActive]}>{typeLabels[t]}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <FlatList data={services} keyExtractor={i => i.id}
         contentContainerStyle={{ padding: 16 }}

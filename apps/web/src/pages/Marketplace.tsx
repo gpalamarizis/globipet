@@ -14,10 +14,6 @@ const categoryKeys: { value: ProductCategory | 'all'; key: string; emoji: string
   { value: 'food',        key: 'food',        emoji: '🦴' },
   { value: 'toys',        key: 'toys',        emoji: '🎾' },
   { value: 'accessories', key: 'accessories', emoji: '🎀' },
-  { value: 'health',      key: 'health',      emoji: '💊' },
-  { value: 'grooming',    key: 'grooming',    emoji: '✂️' },
-  { value: 'training',    key: 'training',    emoji: '🎓' },
-  { value: 'housing',     key: 'housing',     emoji: '🏠' },
 ]
 
 const sortKeys = ['featured', 'price_asc', 'price_desc', 'rating', 'newest']

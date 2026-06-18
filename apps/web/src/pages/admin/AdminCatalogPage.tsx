@@ -27,7 +27,7 @@ const GROUP_META: Record<string, { label: string; emoji: string }> = {
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  grooming: { label: 'Grooming', emoji: '✂️' },
+  grooming: { label: 'Περιποίηση', emoji: '✂️' },
   veterinary: { label: 'Κτηνίατρος', emoji: '🩺' },
   clinic: { label: 'Κτηνιατρική κλινική', emoji: '🏥' },
   walking: { label: 'Dog walking', emoji: '🚶' },

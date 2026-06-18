@@ -10,17 +10,21 @@ import ServicesMap from '@/components/features/services/ServicesMap'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { Service, ServiceType } from '@/types'
 
-const serviceTypeKeys: { value: ServiceType | 'all'; key: string; emoji: string }[] = [
+const serviceTypeKeys: { value: ServiceType | 'all' | 'hosting'; key: string; emoji: string }[] = [
   { value: 'all',          key: 'all',         emoji: '🔍' },
   { value: 'veterinary',   key: 'veterinary',  emoji: '🩺' },
   { value: 'grooming',     key: 'grooming',    emoji: '✂️' },
   { value: 'training',     key: 'training',    emoji: '🎓' },
-  { value: 'pet_sitting',  key: 'pet_sitting', emoji: '🏠' },
+  { value: 'hosting',      key: 'hosting',     emoji: '🏠' },
   { value: 'walking',      key: 'walking',     emoji: '🚶' },
-  { value: 'boarding',     key: 'boarding',    emoji: '🛏️' },
   { value: 'pet_taxi',     key: 'pet_taxi',    emoji: '🚕' },
   { value: 'photography',  key: 'photography', emoji: '📸' },
   { value: 'pharmacy',     key: 'pharmacy',    emoji: '💊' },
+]
+
+const hostingSubTypes: { value: ServiceType; key: string; emoji: string }[] = [
+  { value: 'pet_sitting', key: 'pet_sitting', emoji: '🏡' },
+  { value: 'boarding',    key: 'boarding',    emoji: '🏨' },
 ]
 
 export default function Services() {
@@ -93,21 +97,46 @@ export default function Services() {
       </div>
 
       {/* Type filter */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-4">
-        {serviceTypeKeys.map((st) => (
-          <button
-            key={st.value}
-            onClick={() => setType(st.value)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-              type === st.value
-                ? 'bg-brand-900 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300'
-            }`}
-          >
-            <span>{st.emoji}</span>{getTypeLabel(st.key)}
-          </button>
-        ))}
+      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+        {serviceTypeKeys.map((st) => {
+          const isHosting = st.value === 'hosting'
+          const isActive = isHosting
+            ? (type === 'pet_sitting' || type === 'boarding')
+            : type === st.value
+          return (
+            <button
+              key={st.value}
+              onClick={() => setType(isHosting ? ((type === 'pet_sitting' || type === 'boarding') ? type : 'pet_sitting') : st.value)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                isActive
+                  ? 'bg-brand-900 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300'
+              }`}
+            >
+              <span>{st.emoji}</span>{getTypeLabel(st.key)}
+            </button>
+          )
+        })}
       </div>
+
+      {/* Φιλοξενία sub-options: ιδιώτης vs ξενοδοχείο */}
+      {(type === 'pet_sitting' || type === 'boarding') && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-4 pl-1">
+          {hostingSubTypes.map((sub) => (
+            <button
+              key={sub.value}
+              onClick={() => setType(sub.value)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
+                type === sub.value
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-orange-300'
+              }`}
+            >
+              <span>{sub.emoji}</span>{getTypeLabel(sub.key)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Quick filters */}
       <div className="flex items-center gap-3 mb-6">
