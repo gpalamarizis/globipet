@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
@@ -30,7 +30,7 @@ export default function Checkout() {
     queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
   })
 
-  const total = cartItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+  const total = cartItems.reduce((sum: number, item: any) => sum + ((item.product_price ?? item.price ?? 0) * item.quantity), 0)
   const shipping = total > 50 ? 0 : 3.99
   const grandTotal = total + shipping
 
@@ -235,13 +235,13 @@ export default function Checkout() {
             {cartItems.map((item: any) => (
               <div key={item.id} className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm shrink-0">
-                  {item.image ? <img src={item.image} alt="" className="w-full h-full object-cover rounded-lg"/> : '📦'}
+                  {(item.product_image ?? item.image) ? <img src={item.product_image ?? item.image} alt="" className="w-full h-full object-cover rounded-lg"/> : '📦'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.product_name ?? item.name}</p>
                   <p className="text-xs text-gray-500">x{item.quantity}</p>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.price * item.quantity).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">€{((item.product_price ?? item.price ?? 0) * item.quantity).toFixed(2)}</p>
               </div>
             ))}
           </div>
