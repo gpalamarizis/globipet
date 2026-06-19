@@ -55,17 +55,13 @@ export default function Checkout() {
 
       // If card payment, redirect to Viva Smart Checkout
       if (paymentMethod === 'card') {
-        try {
-          const { data: viva } = await api.post('/orders/viva/checkout', {
-            order_id: order.id,
-            total_amount: grandTotal,
-          })
-          if (viva.checkoutUrl) {
-            window.location.href = viva.checkoutUrl
-            return
-          }
-        } catch {
-          // Viva not configured (sandbox) — proceed to confirmation
+        const { data: viva } = await api.post('/orders/viva/checkout', {
+          order_id: order.id,
+          total_amount: grandTotal,
+        })
+        if (viva.checkoutUrl) {
+          window.location.href = viva.checkoutUrl
+          return
         }
       }
       return order
