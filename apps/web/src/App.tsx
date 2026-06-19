@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+﻿import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -20,6 +20,7 @@ const Services          = lazy(() => import('@/pages/Services'))
 const ServiceDetail     = lazy(() => import('@/pages/ServiceDetail'))
 const AiPetHealth       = lazy(() => import('@/pages/AiPetHealth'))
 const AiEmotion         = lazy(() => import('@/pages/AiEmotion'))
+const AiStoolUrine      = lazy(() => import('@/pages/AiStoolUrine'))
 const PetPassport       = lazy(() => import('@/pages/PetPassport'))
 const Playdates         = lazy(() => import('@/pages/Playdates'))
 const Communities       = lazy(() => import('@/pages/Communities'))
@@ -113,6 +114,7 @@ export default function App() {
                 <Route path="/insurance"       element={<Insurance />} />
                 <Route path="/ai-health"       element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
                 <Route path="/ai-emotion"      element={<PrivateRoute><AiEmotion /></PrivateRoute>} />
+                <Route path="/ai-stool-urine"  element={<PrivateRoute><AiStoolUrine /></PrivateRoute>} />
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />

@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import Anthropic from '@anthropic-ai/sdk'
 
 const aiRoutes: FastifyPluginAsync = async (app) => {
@@ -162,6 +162,96 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI emotion video error:', err)
+      return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
+    }
+  })
+  // Stool & Urine Analysis
+  app.post('/stool-urine', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const {
+      image_url,
+      sample_type,   // 'stool' | 'urine'
+      species,       // 'dog' | 'cat'
+      breed,
+      age_years,
+      weight_kg,
+      is_sterilized,
+      ate_from_street,
+      recent_medications,
+      diet_change,
+      last_normal_stool,
+      symptoms,      // free text
+      additional_notes,
+    } = req.body as any
+
+    if (!image_url || !sample_type || !species) {
+      return reply.code(400).send({ message: 'Απαιτούνται image_url, sample_type, species' })
+    }
+
+    const dataUrlMatch = image_url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/)
+    const imageContent = dataUrlMatch
+      ? { type: 'image' as const, source: { type: 'base64' as const, media_type: dataUrlMatch[1] as any, data: dataUrlMatch[2] } }
+      : { type: 'image' as const, source: { type: 'url' as const, url: image_url } }
+
+    const sampleEl = sample_type === 'stool' ? 'περιττώματα' : 'ούρα'
+    const speciesEl = species === 'dog' ? 'σκύλου' : 'γάτας'
+
+    const contextParts = [
+      `Είδος: ${speciesEl}`,
+      breed ? `Ράτσα: ${breed}` : null,
+      age_years != null ? `Ηλικία: ${age_years} έτη` : null,
+      weight_kg != null ? `Βάρος: ${weight_kg} kg` : null,
+      is_sterilized != null ? `Στείρωση: ${is_sterilized ? 'Ναι' : 'Όχι'}` : null,
+      ate_from_street ? `Έφαγε κάτι από τον δρόμο πρόσφατα: Ναι` : null,
+      recent_medications ? `Πρόσφατα φάρμακα/αντιπαρασιτικά: ${recent_medications}` : null,
+      diet_change ? `Αλλαγή διατροφής: ${diet_change}` : null,
+      last_normal_stool ? `Τελευταία φυσιολογικά περιττώματα: ${last_normal_stool}` : null,
+      symptoms ? `Συμπτώματα που παρατηρήθηκαν: ${symptoms}` : null,
+      additional_notes ? `Επιπλέον σημειώσεις: ${additional_notes}` : null,
+    ].filter(Boolean).join('\n')
+
+    const systemPrompt = `Είσαι κτηνιατρικός βοηθός AI εξειδικευμένος στη γαστρεντερολογία και ουρολογία ζώων συντροφιάς.
+Αναλύεις φωτογραφίες περιττωμάτων και ούρων σκύλων και γατών λαμβάνοντας υπόψη το ιστορικό του ζώου.
+Όταν χρειάζεται, αναζητάς σε αξιόπιστες κτηνιατρικές πηγές (Merck Vet Manual, VCA Hospitals, PetMD, WSAVA guidelines) για να συγκρίνεις τα ευρήματα.
+Απαντάς ΜΟΝΟ σε JSON και ΜΟΝΟ JSON στο τελικό σου μήνυμα, χωρίς markdown backticks.`
+
+    const userPrompt = `Ανάλυσε αυτή τη φωτογραφία ${sampleEl} ${speciesEl}.
+
+ΙΣΤΟΡΙΚΟ ΖΩΟΥ:
+${contextParts}
+
+Λάβε υπόψη όλο το ιστορικό κατά την ανάλυση (π.χ. αν έφαγε από τον δρόμο, αν είναι στείρο, αλλαγές διατροφής, φάρμακα).
+Αν χρειάζεται, ψάξε σε κτηνιατρικές πηγές για συχνές αιτίες και φυσιολογικό εύρος για αυτό το είδος/ράτσα/ηλικία.
+
+Επέστρεψε ΜΟΝΟ JSON με αυτή τη δομή:
+{
+  "sample_type": "${sample_type}",
+  "severity": "normal"|"mild"|"moderate"|"severe",
+  "color": "χρώμα δείγματος",
+  "consistency": "σύσταση (μόνο για περιττώματα)",
+  "findings": ["εύρημα 1 ως plain string", "εύρημα 2 ως plain string"],
+  "likely_causes": ["πιθανή αιτία 1", "πιθανή αιτία 2"],
+  "context_factors": ["πώς επηρεάζει το ιστορικό τα ευρήματα"],
+  "comparison_sources": ["σύντομη αναφορά πηγής"],
+  "recommendation": "σαφής σύσταση για τον ιδιοκτήτη",
+  "vet_urgency": "routine"|"within_48h"|"today"|"emergency",
+  "vet_urgency_el": "Τακτικό ραντεβού"|"Εντός 48 ωρών"|"Σήμερα"|"Άμεσα / Έκτακτο",
+  "home_care": ["τι μπορεί να κάνει ο ιδιοκτήτης στο σπίτι"],
+  "warning_signs": ["συμπτώματα που να οδηγούν αμέσως σε κτηνίατρο"],
+  "disclaimer": "Αυτή η ανάλυση είναι ενδεικτική και δεν υποκαθιστά την εξέταση από κτηνίατρο."
+}`
+
+    try {
+      const response = await client.messages.create({
+        model: 'claude-opus-4-5',
+        max_tokens: 2048,
+        system: systemPrompt,
+        tools: [webSearchTool],
+        messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
+      })
+      const text = extractFinalText(response.content as any[])
+      return parseJsonResponse(text)
+    } catch (err: any) {
+      console.error('AI stool/urine error:', err)
       return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
     }
   })
