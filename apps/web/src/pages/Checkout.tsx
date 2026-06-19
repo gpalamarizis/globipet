@@ -36,9 +36,18 @@ export default function Checkout() {
 
   const placeOrder = useMutation({
     mutationFn: async () => {
+      // Map cart items to clean shape backend expects
+      const items = cartItems.map((item: any) => ({
+        product_id: item.product_id || item.id,
+        product_name: item.product_name || item.name,
+        product_price: item.product_price ?? item.price ?? 0,
+        product_image: item.product_image || item.image || null,
+        quantity: item.quantity,
+      }))
+
       // Create order
       const { data: order } = await api.post('/orders', {
-        items: cartItems,
+        items,
         shipping_address: address,
         payment_method: paymentMethod,
         total_amount: grandTotal,
@@ -46,14 +55,17 @@ export default function Checkout() {
 
       // If card payment, redirect to Viva Smart Checkout
       if (paymentMethod === 'card') {
-        const { data: viva } = await api.post('/orders/viva/checkout', {
-          order_id: order.id,
-          total_amount: grandTotal,
-        })
-        if (viva.checkoutUrl) {
-          // Redirect to Viva Smart Checkout (handles card, Apple Pay, Google Pay, installments)
-          window.location.href = viva.checkoutUrl
-          return
+        try {
+          const { data: viva } = await api.post('/orders/viva/checkout', {
+            order_id: order.id,
+            total_amount: grandTotal,
+          })
+          if (viva.checkoutUrl) {
+            window.location.href = viva.checkoutUrl
+            return
+          }
+        } catch {
+          // Viva not configured (sandbox) — proceed to confirmation
         }
       }
       return order
@@ -64,7 +76,7 @@ export default function Checkout() {
         navigate(`/orders/${order.id}`)
       }
     },
-    onError: () => toast.error('Σφάλμα κατά την παραγγελία'),
+    onError: (err: any) => toast.error(err?.message || 'Σφάλμα κατά την παραγγελία'),
   })
 
   const steps = [

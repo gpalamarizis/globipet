@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 
@@ -32,7 +32,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         items: items.map((item: any) => ({
           product_id: item.product_id || item.id,
           name: item.product_name || item.name,
-          price: parseFloat(item.price || item.product_price),
+          price: parseFloat(item.product_price ?? item.price ?? 0),
           quantity: item.quantity,
           image: item.product_image || item.image || null,
         })),
