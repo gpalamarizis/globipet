@@ -29,13 +29,15 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       data: {
         user_email: email,
         user_name: full_name || email.split('@')[0],
-        items: items.map((item: any) => ({
-          product_id: item.product_id || item.id,
-          name: item.product_name || item.name,
-          price: parseFloat(item.product_price ?? item.price ?? 0),
-          quantity: item.quantity,
-          image: item.product_image || item.image || null,
-        })),
+        items: {
+          set: items.map((item: any) => ({
+            product_id: item.product_id || item.id,
+            name: item.product_name || item.name,
+            price: parseFloat(item.product_price ?? item.price ?? 0),
+            quantity: item.quantity,
+            image: item.product_image || item.image || null,
+          }))
+        },
         total_amount: parseFloat(total_amount),
         status: 'pending',
         payment_status: 'unpaid',
