@@ -1,5 +1,6 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { getCommissionRates, setCommissionRates } from '../lib/commission.js'
 
 const SETTING_KEY = 'food_subscription_discount_percent'
 
@@ -29,6 +30,23 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
       create: { key: SETTING_KEY, value: String(discount_percent) },
     })
     return reply.send({ data: { discount_percent: parseFloat(setting.value) } })
+  })
+  // GET /settings/commission-rates — admin only
+  app.get('/commission-rates', { preHandler: [(app as any).authenticate, isAdmin] }, async (req, reply) => {
+    const rates = await getCommissionRates()
+    return reply.send({ data: rates })
+  })
+
+  // PATCH /settings/commission-rates — admin only, partial update
+  app.patch('/commission-rates', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
+    const body = req.body as Record<string, number>
+    for (const [key, val] of Object.entries(body)) {
+      if (typeof val !== 'number' || val < 0 || val > 100) {
+        return reply.code(400).send({ message: `Μη έγκυρη τιμή για ${key}: πρέπει να είναι 0-100` })
+      }
+    }
+    const rates = await setCommissionRates(body)
+    return reply.send({ data: rates })
   })
 }
 

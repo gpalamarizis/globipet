@@ -1,7 +1,9 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
 import { broadcastToUser } from './notifications.js'
+import { calculateCommission } from '../lib/commission.js'
+import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscriptionFailedEmail } from '../lib/email.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 
@@ -35,19 +37,28 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 where: { stripe_subscription_id: subscription.id },
               })
               if (!existing) {
-                await prisma.productSubscription.create({
+                const product = await prisma.product.findUnique({ where: { id: meta.product_id } })
+                const { rate } = await calculateCommission(parseFloat(meta.monthly_price || '0'), product?.category || 'food')
+                const created = await prisma.productSubscription.create({
                   data: {
                     user_id: meta.user_id,
                     product_id: meta.product_id,
                     discount_percent: parseFloat(meta.discount_percent || '0'),
                     monthly_price: parseFloat(meta.monthly_price || '0'),
+                    commission_rate: rate,
                     status: 'active',
                     stripe_customer_id: session.customer as string,
                     stripe_subscription_id: subscription.id,
                     next_delivery_date: new Date(),
                     deliveries_completed: 0,
                   },
+                  include: { user: true, product: true },
                 })
+                sendSubscriptionStartedEmail(created.user.email, {
+                  customerName: created.user.full_name,
+                  productName: created.product.name,
+                  monthlyPrice: created.monthly_price,
+                }).catch(() => {})
               }
             }
           }
@@ -75,16 +86,30 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 },
               })
 
+              const rate = productSub.commission_rate ?? 10
+              const platformFee = Math.round(productSub.monthly_price * (rate / 100) * 100) / 100
+              const providerPayout = Math.round((productSub.monthly_price - platformFee) * 100) / 100
+              const providerEmail = (productSub.product as any).provider_email || null
+
               // Create the monthly delivery order
               await prisma.order.create({
                 data: {
                   user_email: productSub.user.email,
                   user_name: productSub.user.full_name,
-                  items: [{ product_id: productSub.product_id, name: productSub.product.name, price: productSub.monthly_price, quantity: 1 }],
+                  items: [{
+                    product_id: productSub.product_id, name: productSub.product.name, price: productSub.monthly_price, quantity: 1,
+                    category: productSub.product.category, provider_email: providerEmail,
+                    commission_rate: providerEmail ? rate : null,
+                    platform_fee: providerEmail ? platformFee : null,
+                    provider_payout: providerEmail ? providerPayout : null,
+                  }],
                   total_amount: productSub.monthly_price,
                   status: 'processing',
+                  payment_status: 'paid',
                   shipping_address: {},
                   payment_method: 'stripe_subscription',
+                  platform_fee_amount: providerEmail ? platformFee : null,
+                  provider_payout_amount: providerEmail ? providerPayout : null,
                   notes: `Αυτόματη μηνιαία παράδοση συνδρομής (παράδοση #${productSub.deliveries_completed + 1}/12)`,
                 },
               })
@@ -99,6 +124,24 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 },
               })
               broadcastToUser(productSub.user_id, { type: 'notification', notification })
+
+              sendSubscriptionRenewedEmail(productSub.user.email, {
+                customerName: productSub.user.full_name,
+                productName: productSub.product.name,
+                deliveryNumber: productSub.deliveries_completed + 1,
+              }).catch(() => {})
+
+              if (providerEmail) {
+                prisma.notification.create({
+                  data: {
+                    user_email: providerEmail,
+                    title: 'Νέα παράδοση συνδρομής',
+                    message: `${productSub.product.name} ×1 — αμοιβή ${providerPayout.toFixed(2)}€`,
+                    type: 'new_order',
+                    link: '/provider',
+                  },
+                }).then(n => broadcastToUser(providerEmail, { type: 'notification', notification: n })).catch(() => {})
+              }
             }
           }
           break
@@ -127,6 +170,11 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 },
               })
               broadcastToUser(productSub.user_id, { type: 'notification', notification })
+
+              sendSubscriptionFailedEmail(productSub.user.email, {
+                customerName: productSub.user.full_name,
+                productName: productSub.product.name,
+              }).catch(() => {})
             }
           }
           break

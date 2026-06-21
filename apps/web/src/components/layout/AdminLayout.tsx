@@ -1,5 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers } from 'lucide-react'
+﻿import { Outlet, Link, useLocation } from 'react-router-dom'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -8,6 +8,7 @@ const tabs = [
   { path: '/admin/services',     label: 'Υπηρεσίες',  icon: Building2 },
   { path: '/admin/packages',     label: 'Πακέτα',     icon: Package },
   { path: '/admin/subscriptions', label: 'Συνδρομές', icon: Layers },
+  { path: '/admin/commissions',  label: 'Προμήθειες', icon: Percent },
 ]
 
 export default function AdminLayout() {

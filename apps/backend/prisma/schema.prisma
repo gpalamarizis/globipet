@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider = "prisma-client-js"
 }
 
@@ -105,6 +105,10 @@ model Booking {
   duration       Int?
   total_price    Float
   status         String   @default("pending")
+  payment_status String   @default("unpaid")
+  commission_rate         Float?
+  platform_fee_amount     Float?
+  provider_payout_amount  Float?
   notes          String?
   rating         Int?
   review         String?
@@ -145,11 +149,15 @@ model Order {
   items            Json[]
   total_amount     Float
   status           String   @default("pending")
+  payment_status   String   @default("unpaid")
+  payment_ref      String?
   shipping_address Json
   payment_method   String?
   payment_intent   String?
   coupon_code      String?
   discount_amount  Float?
+  platform_fee_amount    Float?
+  provider_payout_amount Float?
   notes            String?
   tracking_number  String?
   created_at       DateTime @default(now())
@@ -375,13 +383,19 @@ model TelehealthConsultation {
   client_name    String
   pet_id         String?
   pet_name       String?
+  service_id     String?
   scheduled_date String
   scheduled_time String
   duration       Int
-  status         String   @default("scheduled")
+  status         String   @default("pending_payment")
+  payment_status String   @default("unpaid")
+  payment_ref    String?
   meeting_url    String?
   notes          String?
   price          Float
+  commission_rate         Float?
+  platform_fee_amount     Float?
+  provider_payout_amount  Float?
   created_at     DateTime @default(now())
   @@map("telehealth_consultations")
 }
@@ -665,6 +679,7 @@ model ProductSubscription {
   product                 Product   @relation(fields: [product_id], references: [id])
   discount_percent        Float
   monthly_price           Float
+  commission_rate         Float?
   status                  String    @default("active") // active | paused | cancelled | payment_failed
   stripe_customer_id      String?
   stripe_subscription_id  String?   @unique

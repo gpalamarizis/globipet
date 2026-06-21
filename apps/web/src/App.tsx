@@ -25,6 +25,7 @@ const PetPassport       = lazy(() => import('@/pages/PetPassport'))
 const Playdates         = lazy(() => import('@/pages/Playdates'))
 const Communities       = lazy(() => import('@/pages/Communities'))
 const Telehealth        = lazy(() => import('@/pages/Telehealth'))
+const TelehealthConfirmation = lazy(() => import('@/pages/TelehealthConfirmation'))
 const Insurance         = lazy(() => import('@/pages/Insurance'))
 const MyPets            = lazy(() => import('@/pages/MyPets'))
 const PetDetail         = lazy(() => import('@/pages/PetDetail'))
@@ -55,6 +56,7 @@ const AdminCatalogPage  = lazy(() => import('@/pages/admin/AdminCatalogPage'))
 const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage'))
 const AdminPackagesPage = lazy(() => import('@/pages/admin/AdminPackagesPage'))
 const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptionsPage'))
+const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 
@@ -119,6 +121,7 @@ export default function App() {
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"      element={<PrivateRoute><Telehealth /></PrivateRoute>} />
+                <Route path="/telehealth/:id/confirmation" element={<PrivateRoute><TelehealthConfirmation /></PrivateRoute>} />
                 <Route path="/my-pets"         element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"     element={<PrivateRoute><PetDetail /></PrivateRoute>} />
                 <Route path="/medical-center"  element={<PrivateRoute><PetMedicalCenter /></PrivateRoute>} />
@@ -145,6 +148,7 @@ export default function App() {
                 <Route path="/admin/services"      element={<AdminServicesPage />} />
                 <Route path="/admin/packages"      element={<AdminPackagesPage />} />
                 <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                <Route path="/admin/commissions"   element={<AdminCommissionsPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

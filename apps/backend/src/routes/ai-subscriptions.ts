@@ -1,5 +1,6 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { sendAiTrialStartedEmail } from '../lib/email.js'
 
 const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
 
@@ -48,8 +49,9 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const updated = await prisma.user.update({
       where: { id: userId },
       data: { ai_subscription_status: 'trial', ai_trial_started_at: new Date() },
-      select: { ai_subscription_status: true, ai_trial_started_at: true },
+      select: { ai_subscription_status: true, ai_trial_started_at: true, email: true, full_name: true },
     })
+    sendAiTrialStartedEmail(updated.email, { customerName: updated.full_name }).catch(() => {})
     return reply.send({ data: updated })
   })
 

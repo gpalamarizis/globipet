@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Viva.com (Viva Wallet) Smart Checkout integration helper.
  *
  * Flow:
@@ -92,6 +92,8 @@ interface CreatePaymentOrderParams {
   customerPhone?: string
   orderId: string         // our internal order id (stored in merchantTrns)
   description?: string
+  successUrl?: string     // override default /orders/:id/confirmation redirect
+  failureUrl?: string
 }
 
 /**
@@ -123,8 +125,8 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
     merchantTrns: params.orderId,  // our order id - comes back in webhook
     sourceCode: sourceCode,
     tags: ['globipet'],
-    successUrl: `${frontendUrl}/orders/${params.orderId}/confirmation`,
-    failureUrl: `${frontendUrl}/orders/${params.orderId}/confirmation`,
+    successUrl: params.successUrl || `${frontendUrl}/orders/${params.orderId}/confirmation`,
+    failureUrl: params.failureUrl || `${frontendUrl}/orders/${params.orderId}/confirmation`,
   }
 
   const res = await fetch(`${api}/checkout/v2/orders`, {

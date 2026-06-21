@@ -1,10 +1,9 @@
-﻿import type { FastifyPluginAsync } from 'fastify'
+﻿$root = "C:\gp"
+
+$f1 = @'
+import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
-import { calculateCommission } from '../lib/commission.js'
-import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email.js'
-import { broadcastToUser } from './notifications.js'
-import { markTelehealthPaid } from './telehealth.js'
 
 const ordersRoutes: FastifyPluginAsync = async (app) => {
 
@@ -29,61 +28,21 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     const { email, full_name } = req.user as any
     const { items, shipping_address, payment_method, total_amount } = req.body as any
 
-    // Look up products to enrich items with category + provider_email for commission calc
-    const productIds = items.map((i: any) => i.product_id || i.id).filter(Boolean)
-    const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
-    const productMap = new Map(products.map(p => [p.id, p]))
-
-    let totalPlatformFee = 0
-    let totalProviderPayout = 0
-
-    const enrichedItems = await Promise.all(items.map(async (item: any) => {
-      const productId = item.product_id || item.id
-      const product = productMap.get(productId)
-      const price = parseFloat(item.product_price ?? item.price ?? 0)
-      const quantity = item.quantity
-      const lineTotal = price * quantity
-      const category = product?.category || null
-      const providerEmail = product?.provider_email || null
-
-      let commission_rate: number | null = null
-      let platform_fee: number | null = null
-      let provider_payout: number | null = null
-
-      if (providerEmail) {
-        const c = await calculateCommission(lineTotal, category)
-        commission_rate = c.rate
-        platform_fee = c.platformFee
-        provider_payout = c.providerPayout
-        totalPlatformFee += c.platformFee
-        totalProviderPayout += c.providerPayout
-      }
-
-      return {
-        product_id: productId,
-        name: item.product_name || item.name,
-        price,
-        quantity,
-        image: item.product_image || item.image || null,
-        category,
-        provider_email: providerEmail,
-        commission_rate,
-        platform_fee,
-        provider_payout,
-      }
-    }))
-
     const order = await prisma.order.create({
       data: {
         user_email: email,
         user_name: full_name || email.split('@')[0],
-        items: enrichedItems,
+        items: items.map((item: any) => ({
+          product_id: item.product_id || item.id,
+          name: item.product_name || item.name,
+          price: parseFloat(item.product_price ?? item.price ?? 0),
+          quantity: item.quantity,
+          image: item.product_image || item.image || null,
+        })),
         total_amount: parseFloat(total_amount),
         status: 'pending',
         shipping_address: shipping_address,
         payment_method,
-        platform_fee_amount: totalPlatformFee > 0 ? Math.round(totalPlatformFee * 100) / 100 : null,
-        provider_payout_amount: totalProviderPayout > 0 ? Math.round(totalProviderPayout * 100) / 100 : null,
       }
     })
     // Clear cart
@@ -122,58 +81,6 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  // Fires once when an order transitions to paid: buyer confirmation email +
-  // provider new-order email/in-app notification (per distinct provider in items).
-  async function firePaidSideEffects(orderId: string) {
-    try {
-      const order = await prisma.order.findUnique({ where: { id: orderId } })
-      if (!order) return
-
-      const items = order.items as any[]
-
-      sendOrderConfirmedEmail(order.user_email, {
-        orderId: order.id,
-        customerName: order.user_name,
-        items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
-        total: order.total_amount,
-      }).catch(() => {})
-
-      // Group payout by provider
-      const byProvider = new Map<string, { payout: number; itemNames: string[] }>()
-      for (const i of items) {
-        if (!i.provider_email) continue
-        const entry = byProvider.get(i.provider_email) || { payout: 0, itemNames: [] }
-        entry.payout += i.provider_payout || 0
-        entry.itemNames.push(`${i.name} ×${i.quantity}`)
-        byProvider.set(i.provider_email, entry)
-      }
-
-      for (const [providerEmail, info] of byProvider.entries()) {
-        const provider = await prisma.user.findUnique({ where: { email: providerEmail } })
-        sendProviderNewOrderEmail(providerEmail, {
-          providerName: provider?.full_name || providerEmail.split('@')[0],
-          orderId: order.id,
-          productName: info.itemNames.join(', '),
-          quantity: 1,
-          payoutAmount: Math.round(info.payout * 100) / 100,
-        }).catch(() => {})
-
-        const notification = await prisma.notification.create({
-          data: {
-            user_email: providerEmail,
-            title: 'Νέα παραγγελία προϊόντος',
-            message: `${info.itemNames.join(', ')} — αμοιβή ${(Math.round(info.payout * 100) / 100).toFixed(2)}€`,
-            type: 'new_order',
-            link: '/provider',
-          },
-        })
-        broadcastToUser(providerEmail, { type: 'notification', notification })
-      }
-    } catch (err: any) {
-      console.error('firePaidSideEffects error:', err)
-    }
-  }
-
   // Viva webhook - payment confirmation (PUBLIC - no auth)
   app.post('/viva/webhook', async (req: any, reply) => {
     try {
@@ -188,22 +95,14 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         const statusId = eventData.StatusId          // 'F' = Finished
 
         if (merchantTrns && statusId === 'F') {
-          const updated = await prisma.order.updateMany({
-            where: { id: merchantTrns, payment_status: { not: 'paid' } },
+          await prisma.order.update({
+            where: { id: merchantTrns },
             data: {
               status: 'confirmed',
               payment_status: 'paid',
               payment_ref: String(transactionId),
             },
-          }).catch(() => null)
-          if (updated && updated.count > 0) {
-            await firePaidSideEffects(merchantTrns)
-          } else {
-            // Not an order — try telehealth (same shared webhook URL handles both)
-            await markTelehealthPaid(merchantTrns, String(transactionId)).catch((err) => {
-              console.error('markTelehealthPaid fallback error:', err)
-            })
-          }
+          }).catch(() => {})
         }
       }
       return reply.code(200).send({ received: true })
@@ -236,13 +135,10 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (transaction_id) {
         const transaction = await getVivaTransaction(transaction_id)
         if (transaction.statusId === 'F') {
-          const updated = await prisma.order.updateMany({
-            where: { id: order_id, payment_status: { not: 'paid' } },
+          await prisma.order.update({
+            where: { id: order_id },
             data: { status: 'confirmed', payment_status: 'paid', payment_ref: String(transaction_id) },
           })
-          if (updated.count > 0) {
-            await firePaidSideEffects(order_id)
-          }
           return { paid: true, order_id }
         }
       }
@@ -266,3 +162,6 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 }
 
 export default ordersRoutes
+'@
+Set-Content -Path (Join-Path $root "apps\backend\src\routes\orders.ts") -Value $f1 -Encoding UTF8 -NoNewline
+Write-Host "OK: orders.ts"
