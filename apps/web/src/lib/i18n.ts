@@ -1,6 +1,7 @@
 ﻿import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import { detectAndApplyGeoLanguage } from './geoLocale'
 
 const el = {
   nav: {
@@ -1163,9 +1164,18 @@ i18n
     defaultNS: 'translation',
     interpolation: { escapeValue: false },
     detection: {
-      order: ['localStorage', 'navigator'],
+      // Only ever trust a previously-saved manual choice on first paint.
+      // Geo-IP detection (via Cloudflare, see geoLocale.ts) runs right after init
+      // for first-time visitors and overrides this with their real country's language.
+      // Deliberately NOT using 'navigator' here — browser/OS locale is unreliable
+      // and unrelated to where the visitor actually is.
+      order: ['localStorage'],
       caches: ['localStorage'],
     },
   })
+
+// Auto-detect language from visitor's real country (geo-IP via Cloudflare) for
+// first-time visitors only — never overrides a manually-chosen language.
+detectAndApplyGeoLanguage(i18n)
 
 export default i18n
