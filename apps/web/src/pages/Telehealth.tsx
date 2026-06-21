@@ -159,7 +159,7 @@ export default function Telehealth() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-40" onClick={() => setSelectedVet(null)} />
             <motion.div initial={{ opacity: 0, y: 20, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-md mx-auto card p-6 shadow-2xl">
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-md mx-auto card p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold">
