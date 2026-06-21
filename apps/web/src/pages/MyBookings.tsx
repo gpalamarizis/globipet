@@ -147,11 +147,11 @@ export default function MyBookings() {
 
       <AnimatePresence>
         {reviewBooking && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40" onClick={() => setReviewBooking(null)} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4" onClick={() => setReviewBooking(null)}>
             <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-sm mx-auto card p-6 max-h-[90vh] overflow-y-auto">
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm mx-auto card p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-900 dark:text-white">{t('bookingsExtra.reviewTitle')}</h3>
                 <button onClick={() => setReviewBooking(null)} className="btn-ghost p-2"><X size={16}/></button>
@@ -173,7 +173,7 @@ export default function MyBookings() {
                 </button>
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
