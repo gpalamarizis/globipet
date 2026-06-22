@@ -740,3 +740,213 @@ model AiSubscriptionPlan {
   @@index([tier])
   @@map("ai_subscription_plans")
 }
+
+// ─── Full Veterinary Medical Record Models ────────────────────────
+
+model PetMedication {
+  id            String   @id @default(uuid())
+  pet_id        String
+  owner_email   String
+  name          String
+  active_ingredient String?
+  dosage        String
+  frequency     String
+  route         String?     // oral, injection, topical, eye_drops, ear_drops
+  start_date    String
+  end_date      String?
+  is_active     Boolean  @default(true)
+  prescribed_by String?
+  clinic_name   String?
+  reason        String?
+  side_effects  String?
+  notes         String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  @@index([pet_id])
+  @@map("pet_medications")
+}
+
+model PetLabResult {
+  id           String   @id @default(uuid())
+  pet_id       String
+  owner_email  String
+  result_type  String   // blood_count, biochemistry, urine, fecal, biopsy, culture, hormone, serology, other
+  title        String
+  date         String
+  lab_name     String?
+  vet_name     String?
+  clinic_name  String?
+  findings     String?
+  is_abnormal  Boolean  @default(false)
+  file_urls    String[]
+  notes        String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  @@index([pet_id])
+  @@map("pet_lab_results")
+}
+
+model PetImaging {
+  id           String   @id @default(uuid())
+  pet_id       String
+  owner_email  String
+  imaging_type String   // xray, ultrasound, ct, mri, endoscopy, echocardiogram, other
+  body_region  String?
+  date         String
+  vet_name     String?
+  clinic_name  String?
+  findings     String?
+  report       String?
+  file_urls    String[]
+  notes        String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  @@index([pet_id])
+  @@map("pet_imaging")
+}
+
+model PetSurgery {
+  id            String   @id @default(uuid())
+  pet_id        String
+  owner_email   String
+  procedure     String
+  category      String?  // orthopedic, soft_tissue, dental, ophthalmic, neurological, reproductive, other
+  date          String
+  surgeon_name  String?
+  clinic_name   String?
+  anesthesia    String?  // general, local, sedation
+  duration_min  Int?
+  complications String?
+  outcome       String?
+  follow_up     String?
+  stitches_removed String?
+  cost          Float?
+  file_urls     String[]
+  notes         String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  @@index([pet_id])
+  @@map("pet_surgeries")
+}
+
+model PetAllergy {
+  id             String   @id @default(uuid())
+  pet_id         String
+  owner_email    String
+  allergen       String
+  allergen_type  String   // food, medication, environmental, insect, contact, other
+  reaction       String?
+  severity       String   @default("moderate")  // mild, moderate, severe, anaphylactic
+  diagnosed_date String?
+  diagnosed_by   String?
+  treatment      String?
+  notes          String?
+  created_at     DateTime @default(now())
+  @@index([pet_id])
+  @@map("pet_allergies")
+}
+
+model PetChronicCondition {
+  id             String   @id @default(uuid())
+  pet_id         String
+  owner_email    String
+  condition      String
+  icd_code       String?
+  diagnosed_date String?
+  diagnosed_by   String?
+  clinic_name    String?
+  status         String   @default("active")  // active, managed, resolved
+  treatment_plan String?
+  monitoring     String?
+  notes          String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  @@index([pet_id])
+  @@map("pet_chronic_conditions")
+}
+
+model PetDentalRecord {
+  id           String   @id @default(uuid())
+  pet_id       String
+  owner_email  String
+  procedure    String   // cleaning, extraction, xray, filling, root_canal, orthodontic, other
+  date         String
+  vet_name     String?
+  clinic_name  String?
+  teeth_treated String?
+  findings     String?
+  grade        String?  // Stage 1-4 periodontal disease
+  next_due     String?
+  cost         Float?
+  file_urls    String[]
+  notes        String?
+  created_at   DateTime @default(now())
+  @@index([pet_id])
+  @@map("pet_dental_records")
+}
+
+model PetWeightRecord {
+  id          String   @id @default(uuid())
+  pet_id      String
+  owner_email String
+  weight_kg   Float
+  bcs         Int?     // Body Condition Score 1-9
+  date        String
+  vet_name    String?
+  notes       String?
+  created_at  DateTime @default(now())
+  @@index([pet_id])
+  @@map("pet_weight_records")
+}
+
+model PetGeneticTest {
+  id              String   @id @default(uuid())
+  pet_id          String
+  owner_email     String
+  test_name       String
+  provider        String?  // e.g. Embark, Wisdom Panel
+  date            String
+  results         String?
+  breeds_detected String[]
+  conditions_found String[]
+  file_urls       String[]
+  notes           String?
+  created_at      DateTime @default(now())
+  @@index([pet_id])
+  @@map("pet_genetic_tests")
+}
+
+model PetVitalSigns {
+  id              String   @id @default(uuid())
+  pet_id          String
+  owner_email     String
+  date            String
+  temperature_c   Float?
+  heart_rate      Int?
+  respiratory_rate Int?
+  weight_kg       Float?
+  blood_pressure  String?
+  capillary_refill String?
+  vet_name        String?
+  notes           String?
+  created_at      DateTime @default(now())
+  @@index([pet_id])
+  @@map("pet_vital_signs")
+}
+
+model PetPassportAccess {
+  id             String    @id @default(uuid())
+  pet_id         String
+  owner_email    String
+  provider_email String
+  provider_name  String
+  reason         String?
+  status         String    @default("pending")  // pending, approved, revoked
+  granted_at     DateTime?
+  expires_at     DateTime?
+  created_at     DateTime  @default(now())
+  @@unique([pet_id, provider_email])
+  @@index([pet_id])
+  @@index([provider_email])
+  @@map("pet_passport_access")
+}
