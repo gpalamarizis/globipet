@@ -28,7 +28,7 @@ const TABS = [
   { id: 'genetic',    label: 'Γενετικές',       icon: Dna },
   { id: 'vitals',     label: 'Ζωτικά',          icon: Activity },
   { id: 'pedigree',   label: 'Pedigree',        icon: Award },
-  { id: 'travel',     label: 'Ταξίδια',         icon: Plane },
+  { id: 'travel',     label: 'Διαβατήριο',      icon: Plane },
   { id: 'access',     label: 'Πρόσβαση',        icon: Users },
 ]
 
@@ -189,7 +189,7 @@ export default function PetPassport() {
             <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"><BookOpen size={20} className="text-orange-600" /></div>
             <div>
               <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Ιατρικός Φάκελος</h1>
-              <p className="text-sm text-gray-500">Πλήρες ιστορικό υγείας κατοικιδίου</p>
+              <p className="text-sm text-gray-500">Πλήρες ιστορικό υγείας & διαβατήριο κατοικιδίου</p>
             </div>
           </div>
           {activePetId && (
@@ -480,11 +480,54 @@ export default function PetPassport() {
               </div>
             )}
 
-            {/* ── TRAVEL ── */}
+            {/* ── TRAVEL / PASSPORT ── */}
             {activeTab === 'travel' && (
               <>
-                <button onClick={() => openModal('travel', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Ταξίδι</button>
-                {(p.travelDocs || []).length === 0 ? <EmptyState label="Προσθήκη ταξιδίου" onAdd={() => openModal('travel', {})} /> :
+                {/* Info banner */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                  <div className="card p-4 border-l-4 border-blue-500">
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🇬🇷 Εσωτερικό Ταξίδι</p>
+                    <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                      <li>✅ Μικροτσίπ (ISO 11784/11785)</li>
+                      <li>✅ Εμβόλιο Λύσσας σε ισχύ</li>
+                      <li>✅ Βιβλιάριο υγείας</li>
+                      <li>✅ Κτηνιατρικό πιστοποιητικό</li>
+                    </ul>
+                  </div>
+                  <div className="card p-4 border-l-4 border-orange-500">
+                    <p className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">🌍 Διεθνές Ταξίδι (ΕΕ)</p>
+                    <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                      <li>✅ EU Pet Passport</li>
+                      <li>✅ Μικροτσίπ πριν τον εμβολιασμό</li>
+                      <li>✅ Εμβόλιο Λύσσας (21+ ημέρες)</li>
+                      <li>✅ Τίτλοι αντισωμάτων (εκτός ΕΕ)</li>
+                      <li>✅ Θεράπευση Echinococcus (σκύλοι)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Passport checklist status */}
+                {passport && (
+                  <div className="card p-4 mb-4 bg-gray-50 dark:bg-gray-800/50">
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3">📋 Κατάσταση Εγγράφων</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { label: 'Μικροτσίπ', ok: !!(pet as any)?.microchip },
+                        { label: 'Εμβόλιο Λύσσας', ok: (passport.vaccinations || []).some((v: any) => v.vaccine_type === 'rabies' && (!v.next_due_date || new Date(v.next_due_date) > new Date())) },
+                        { label: 'Εξέταση SNAP', ok: (passport.healthRecords || []).length > 0 },
+                        { label: 'Ταξιδιωτικά Έγγραφα', ok: (passport.travelDocs || []).length > 0 },
+                      ].map(({ label, ok }) => (
+                        <div key={label} className={cn('flex items-center gap-2 p-2 rounded-lg', ok ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20')}>
+                          <span>{ok ? '✅' : '❌'}</span>
+                          <span className={ok ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={() => openModal('travel', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Ταξίδι / Έγγραφο</button>
+                {(p.travelDocs || []).length === 0 ? <EmptyState label="Προσθήκη ταξιδιού" onAdd={() => openModal('travel', {})} /> :
                   (p.travelDocs || []).map((t: any) => (
                     <RecordCard key={t.id} title={`${t.origin_city || ''} → ${t.destination_city}`} subtitle={`${t.travel_type} · ${t.carrier || ''}`} date={t.departure_date} onDelete={() => travel.remove.mutate(t.id)}>
                       <Field label="Χώρα" value={t.destination_country} /><Field label="Επιστροφή" value={t.return_date} /><Field label="Κωδικός" value={t.booking_ref} />
