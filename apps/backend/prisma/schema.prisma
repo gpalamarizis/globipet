@@ -85,6 +85,8 @@ model Service {
   specializations       String[]
   pet_types             String[]
   languages             String[]
+  is_available_now      Boolean  @default(false)
+  available_since       DateTime?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
   packages              ServicePackage[]

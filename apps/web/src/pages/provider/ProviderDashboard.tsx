@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -480,6 +480,23 @@ export default function ProviderDashboard() {
     enabled: !!user,
   })
 
+  // Availability for telehealth
+  const { data: myServices = [] } = useQuery({
+    queryKey: ['my-vet-services'],
+    queryFn: () => api.get('/services/my').then(r => (r.data?.data ?? []).filter((s: any) => s.service_type === 'veterinary')),
+    enabled: !!user,
+  })
+  const isVet = myServices.length > 0
+  const isAvailableNow = myServices.some((s: any) => s.is_available_now)
+
+  const toggleAvailability = useMutation({
+    mutationFn: (is_available: boolean) => api.patch('/telehealth/availability', { is_available }),
+    onSuccess: (_, is_available) => {
+      toast.success(is_available ? '🟢 Είστε πλέον διαθέσιμος για τηλεϊατρική' : '⚫ Απενεργοποιήσατε τη διαθεσιμότητα')
+    },
+    onError: () => toast.error('Σφάλμα αλλαγής διαθεσιμότητας'),
+  })
+
   const tabs = [
     { id: 'overview',  label: 'Επισκόπηση', icon: TrendingUp },
     { id: 'services',  label: 'Υπηρεσίες',  icon: Scissors },
@@ -491,14 +508,33 @@ export default function ProviderDashboard() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-900 font-bold text-lg shrink-0">
-          {getInitials(user?.full_name || 'P')}
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-900 font-bold text-lg shrink-0">
+            {getInitials(user?.full_name || 'P')}
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Dashboard Παρόχου</h1>
+            <p className="text-sm text-gray-500">{user?.full_name} · {user?.email}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Dashboard Παρόχου</h1>
-          <p className="text-sm text-gray-500">{user?.full_name} · {user?.email}</p>
-        </div>
+
+        {/* Telehealth availability toggle — only shown to vets */}
+        {isVet && (
+          <button
+            onClick={() => toggleAvailability.mutate(!isAvailableNow)}
+            disabled={toggleAvailability.isPending}
+            className={cn(
+              'flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border-2',
+              isAvailableNow
+                ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-green-400'
+            )}>
+            <Video size={16} />
+            <span className={cn('w-2 h-2 rounded-full', isAvailableNow ? 'bg-white animate-pulse' : 'bg-gray-400')} />
+            {isAvailableNow ? 'Διαθέσιμος για Τηλεϊατρική' : 'Εκτός Τηλεϊατρικής'}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}

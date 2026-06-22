@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 
 // WebSocket clients map
@@ -64,6 +64,13 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
 }
 
 export function broadcastToUser(userId: string, data: any) {
+  if (userId === '__all__') {
+    // Broadcast to every connected client (used for vet availability changes)
+    for (const socket of clients.values()) {
+      if (socket.readyState === 1) socket.send(JSON.stringify(data))
+    }
+    return
+  }
   const socket = clients.get(userId)
   if (socket && socket.readyState === 1) {
     socket.send(JSON.stringify(data))

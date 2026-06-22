@@ -42,12 +42,23 @@ export async function markTelehealthPaid(consultationId: string, transactionId: 
   prisma.notification.create({
     data: {
       user_email: consultation.provider_email,
-      title: 'Νέα συνεδρία τηλεϊατρικής',
-      message: `${consultation.client_name} · ${consultation.scheduled_date} ${consultation.scheduled_time} · αμοιβή ${(consultation.provider_payout_amount || 0).toFixed(2)}€`,
-      type: 'new_telehealth',
-      link: '/provider',
+      title: '🔔 Ασθενής σε περιμένει!',
+      message: `${consultation.client_name} πλήρωσε και σε περιμένει για τηλεϊατρική · ${consultation.scheduled_date} ${consultation.scheduled_time}`,
+      type: 'incoming_call',
+      link: `/provider/telehealth/${consultation.id}`,
     },
-  }).then(notification => broadcastToUser(consultation.provider_email, { type: 'notification', notification })).catch(() => {})
+  }).then(notification => {
+    // Standard notification push
+    broadcastToUser(consultation.provider_email, { type: 'notification', notification })
+    // Also send dedicated incoming_call event so provider UI can show a prominent alert
+    broadcastToUser(consultation.provider_email, {
+      type: 'incoming_call',
+      consultation_id: consultation.id,
+      client_name: consultation.client_name,
+      pet_name: consultation.pet_name,
+      meeting_url: consultation.meeting_url,
+    })
+  }).catch(() => {})
 
   return true
 }
@@ -59,6 +70,42 @@ export async function findTelehealthById(id: string) {
 }
 
 const routes: FastifyPluginAsync = async (app) => {
+
+  // GET /telehealth/available-now — public, returns vets currently online
+  app.get('/available-now', async (_req, reply) => {
+    const vets = await prisma.service.findMany({
+      where: { service_type: 'veterinary', is_active: true, is_available_now: true },
+      orderBy: { available_since: 'asc' },
+    })
+    return reply.send({ data: vets })
+  })
+
+  // PATCH /telehealth/availability — provider toggles their own availability
+  app.patch('/availability', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const { is_available } = req.body as { is_available: boolean }
+
+    const updated = await prisma.service.updateMany({
+      where: { provider_email: email, service_type: 'veterinary' },
+      data: {
+        is_available_now: is_available,
+        available_since: is_available ? new Date() : null,
+      },
+    })
+
+    if (updated.count === 0) {
+      return reply.code(404).send({ message: 'Δεν βρέθηκε κτηνιατρική υπηρεσία για αυτόν τον πάροχο' })
+    }
+
+    // Broadcast availability change so telehealth page updates in real-time
+    broadcastToUser('__all__', {
+      type: 'vet_availability_change',
+      provider_email: email,
+      is_available_now: is_available,
+    })
+
+    return reply.send({ ok: true, is_available_now: is_available })
+  })
 
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
