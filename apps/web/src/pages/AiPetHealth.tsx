@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Upload, X, Stethoscope, Eye, Microscope, AlertTriangle, CheckCircle, Loader2, ChevronRight } from 'lucide-react'
+import { Camera, Upload, X, Stethoscope, Eye, Microscope, AlertTriangle, CheckCircle, Loader2, ChevronRight, FlaskConical, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { api, uploadFile } from '@/lib/api'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
-type AnalysisType = 'skin' | 'eye'
+type AnalysisType = 'skin' | 'eye' | 'stool_urine'
 
 interface AnalysisResult {
   severity: 'low' | 'medium' | 'high'
@@ -48,6 +50,14 @@ const analysisTypes = [
     color: 'blue',
     examples: ['Ερυθρότητα / Φλεγμονή', 'Έκκριση', 'Θολερότητα', 'Οίδημα βλεφάρου', 'Κερατίτιδα'],
   },
+  {
+    id: 'stool_urine' as AnalysisType,
+    icon: FlaskConical,
+    title: 'Ούρα & Περιττώματα',
+    description: 'AI ανάλυση δείγματος με πλήρες ιστορικό ζώου',
+    color: 'teal',
+    examples: ['Αίμα στα κόπρανα', 'Διάρροια', 'Σκούρα ούρα', 'Αλλαγή χρώματος', 'Ασυνήθιστη σύσταση'],
+  },
 ]
 
 export default function AiPetHealth() {
@@ -55,11 +65,13 @@ export default function AiPetHealth() {
   const [analysisType, setAnalysisType] = useState<AnalysisType | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const navigate = useNavigate()
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSelectType = (type: AnalysisType) => {
+    if (type === 'stool_urine') { navigate('/ai-stool-urine'); return }
     setAnalysisType(type)
     setStep('upload')
   }
@@ -125,12 +137,12 @@ export default function AiPetHealth() {
           {/* Step 1: Select type */}
           {step === 'select' && (
             <motion.div key="select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 {analysisTypes.map(type => (
                   <button key={type.id} onClick={() => handleSelectType(type.id)}
                     className="bg-white dark:bg-gray-900 rounded-2xl p-6 text-left border-2 border-transparent hover:border-orange-400 transition-all shadow-sm hover:shadow-md group">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${type.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900/20' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
-                      <type.icon size={24} className={type.color === 'orange' ? 'text-orange-500' : 'text-blue-500'} />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${type.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900/20' : type.color === 'teal' ? 'bg-teal-100 dark:bg-teal-900/20' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
+                      <type.icon size={24} className={type.color === 'orange' ? 'text-orange-500' : type.color === 'teal' ? 'text-teal-500' : 'text-blue-500'} />
                     </div>
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{type.title}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{type.description}</p>
