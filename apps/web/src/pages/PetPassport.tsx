@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   BookOpen, Syringe, Stethoscope, Award, Plane, Plus, X, Trash2,
-  Pill, FlaskConical, Scan, Scissors, AlertTriangle, Heart, Tooth,
-  Weight, Dna, Activity, Shield, FileDown, Users, Edit2, ChevronDown, ExternalLink
+  Pill, FlaskConical, ScanLine, Scissors, AlertTriangle, Heart, Smile,
+  Scale, Dna, Activity, Shield, FileDown, Users, Edit2, ChevronDown, ExternalLink
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -19,12 +19,12 @@ const TABS = [
   { id: 'health',     label: 'Εξετάσεις',       icon: Stethoscope },
   { id: 'meds',       label: 'Φάρμακα',         icon: Pill },
   { id: 'lab',        label: 'Εργαστήριο',      icon: FlaskConical },
-  { id: 'imaging',    label: 'Απεικονιστικές',  icon: Scan },
+  { id: 'imaging',    label: 'Απεικονιστικές',  icon: ScanLine },
   { id: 'surgery',    label: 'Χειρουργεία',     icon: Scissors },
   { id: 'allergies',  label: 'Αλλεργίες',       icon: AlertTriangle },
   { id: 'chronic',    label: 'Χρόνιες Παθήσεις',icon: Heart },
-  { id: 'dental',     label: 'Οδοντιατρικά',    icon: Tooth },
-  { id: 'weight',     label: 'Βάρος',           icon: Weight },
+  { id: 'dental',     label: 'Οδοντιατρικά',    icon: Smile },
+  { id: 'weight',     label: 'Βάρος',           icon: Scale },
   { id: 'genetic',    label: 'Γενετικές',       icon: Dna },
   { id: 'vitals',     label: 'Ζωτικά',          icon: Activity },
   { id: 'pedigree',   label: 'Pedigree',        icon: Award },
