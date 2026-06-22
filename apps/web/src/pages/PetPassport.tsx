@@ -203,10 +203,10 @@ export default function PetPassport() {
 
         {/* Pet selector */}
         {pets.length > 1 && (
-          <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2 mb-5">
             {pets.map((p: any) => (
               <button key={p.id} onClick={() => setSelectedPetId(p.id)}
-                className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all shrink-0',
+                className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
                   activePetId === p.id ? 'bg-brand-900 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300')}>
                 <span>{speciesEmoji[p.species] || '🐾'}</span>{p.name}
               </button>
@@ -239,10 +239,10 @@ export default function PetPassport() {
             )}
 
             {/* Tabs */}
-            <div className="flex gap-1 overflow-x-auto pb-2 mb-5">
+            <div className="flex flex-wrap gap-1 mb-5">
               {TABS.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0',
+                  className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all',
                     activeTab === tab.id ? 'bg-brand-900 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400')}>
                   <tab.icon size={13} />{tab.label}
                 </button>

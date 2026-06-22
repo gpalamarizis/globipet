@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Search, Filter, SlidersHorizontal, Grid, List, ChevronDown } from 'lucide-react'
@@ -85,12 +85,12 @@ export default function Marketplace() {
       </div>
 
       {/* Category pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         {categoryKeys.map((cat) => (
           <button
             key={cat.value}
             onClick={() => { setCategory(cat.value); setPage(1) }}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
               category === cat.value
                 ? 'bg-brand-900 text-white shadow-sm'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300'

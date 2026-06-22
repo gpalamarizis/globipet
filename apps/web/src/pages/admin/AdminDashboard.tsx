@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers } from 'lucide-react'
@@ -949,10 +949,10 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-1 mb-6">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id as Tab)}
-            className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all shrink-0',
+            className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
               activeTab === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
             <tab.icon size={15} />
             {tab.label}

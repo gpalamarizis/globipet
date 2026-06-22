@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -119,10 +119,10 @@ export default function AdminCatalogPage() {
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-2 mb-6 mt-6 overflow-x-auto pb-2">
+      <div className="flex flex-wrap gap-2 mb-6 mt-6">
         {Object.entries(CATEGORY_LABELS).map(([key, val]) => (
           <button key={key} onClick={() => setSelectedCategory(key)}
-            className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border-2 flex items-center gap-2',
+            className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 flex items-center gap-2',
               selectedCategory === key
                 ? 'border-brand-900 bg-brand-50 text-brand-900'
                 : 'border-gray-200 hover:border-gray-300 text-gray-600')}>

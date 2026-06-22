@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -148,13 +148,13 @@ export default function ProviderPackagesPage() {
       </div>
 
       {services.length > 1 && (
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex flex-wrap gap-2 mb-6">
           {services.map((s: any) => {
             const cat = CATEGORY_LABELS[s.category] || CATEGORY_LABELS.other
             const isActive = (selectedServiceId || services[0]?.id) === s.id
             return (
               <button key={s.id} onClick={() => setSelectedServiceId(s.id)}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border-2 flex items-center gap-2',
+                className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 flex items-center gap-2',
                   isActive ? 'border-brand-900 bg-brand-50 text-brand-900' : 'border-gray-200 hover:border-gray-300 text-gray-600')}>
                 <span>{cat.emoji}</span>
                 <span>{s.title}</span>
