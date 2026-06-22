@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react'
+﻿﻿import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -6,7 +6,7 @@ import {
   Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart,
   Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar,
   MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen,
-  Building2, MoreHorizontal, Video, FileText, Dna
+  Building2, MoreHorizontal, Video, FileText, Dna, Scale
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -30,6 +30,7 @@ const servicesDropdown = [
   { path: '/tracker',    labelKey: 'nav.petTracker', icon: MapPin,      color: 'text-red-500' },
   { path: '/ai-health',  labelKey: 'nav.aiHealth',   icon: Brain,       color: 'text-purple-500' },
   { path: '/ai-emotion', labelKey: 'nav.aiEmotion',  icon: Heart,       color: 'text-pink-500' },
+  { path: '/legal',      labelKey: 'nav.legal',      icon: Scale,       color: 'text-indigo-500' },
 ]
 
 const communityDropdown = [

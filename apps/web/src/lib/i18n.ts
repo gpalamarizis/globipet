@@ -13,7 +13,7 @@ const el = {
     provider: 'Πάροχος', providerDashboard: 'Dashboard Παρόχου',
     providerTools: 'Εργαλεία Παρόχου', admin: 'Admin', login: 'Σύνδεση',
     logout: 'Αποσύνδεση', breeds: 'Ράτσες', insurance: 'Ασφάλιση',
-    aiHealth: 'AI Υγεία', aiEmotion: 'AI Emotion', aiStoolUrine: 'AI Ούρα & Περιττώματα', passport: 'Ιατρικός Φάκελος', playdates: 'Playdates', communities: 'Κοινότητες',
+    aiHealth: 'AI Υγεία', aiEmotion: 'AI Emotion', aiStoolUrine: 'AI Ούρα & Περιττώματα', passport: 'Ιατρικός Φάκελος', playdates: 'Playdates', communities: 'Κοινότητες', legal: 'Νομική Υποστήριξη',
   },
   auth: {
     login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση',
@@ -277,7 +277,7 @@ const en: typeof el = {
     provider: 'Provider', providerDashboard: 'Provider Dashboard',
     providerTools: 'Provider Tools', admin: 'Admin', login: 'Login',
     logout: 'Logout', breeds: 'Breeds', insurance: 'Insurance',
-    aiHealth: 'AI Health', aiEmotion: 'AI Emotion', aiStoolUrine: 'AI Stool & Urine', passport: 'Medical Record', playdates: 'Playdates', communities: 'Communities',
+    aiHealth: 'AI Health', aiEmotion: 'AI Emotion', aiStoolUrine: 'AI Stool & Urine', passport: 'Medical Record', playdates: 'Playdates', communities: 'Communities', legal: 'Legal Support',
   },
   auth: {
     login: 'Login', register: 'Register', logout: 'Logout',
@@ -497,7 +497,7 @@ const es: typeof el = {
     provider: 'Proveedor', providerDashboard: 'Panel Proveedor',
     providerTools: 'Herramientas', admin: 'Admin', login: 'Iniciar sesión',
     logout: 'Cerrar sesión', breeds: 'Razas', insurance: 'Seguro',
-    aiHealth: 'Salud AI', aiEmotion: 'AI Emoción', aiStoolUrine: 'AI Orina & Heces', passport: 'Historia Clínica', playdates: 'Playdates', communities: 'Comunidades',
+    aiHealth: 'Salud AI', aiEmotion: 'AI Emoción', aiStoolUrine: 'AI Orina & Heces', passport: 'Historia Clínica', playdates: 'Playdates', communities: 'Comunidades', legal: 'Asesoría Legal',
   },
   auth: {
     login: 'Iniciar sesión', register: 'Registrarse', logout: 'Cerrar sesión',
@@ -718,7 +718,7 @@ const fr: typeof el = {
     provider: 'Prestataire', providerDashboard: 'Tableau de bord',
     providerTools: 'Outils', admin: 'Admin', login: 'Connexion',
     logout: 'Déconnexion', breeds: 'Races', insurance: 'Assurance',
-    aiHealth: 'Santé IA', aiEmotion: 'Émotion IA', aiStoolUrine: 'IA Urines & Selles', passport: 'Dossier Médical', playdates: 'Playdates', communities: 'Communautés',
+    aiHealth: 'Santé IA', aiEmotion: 'Émotion IA', aiStoolUrine: 'IA Urines & Selles', passport: 'Dossier Médical', playdates: 'Playdates', communities: 'Communautés', legal: 'Soutien Juridique',
   },
   auth: {
     login: 'Connexion', register: "S'inscrire", logout: 'Déconnexion',
@@ -939,7 +939,7 @@ const zh: typeof el = {
     provider: '服务商', providerDashboard: '服务商面板',
     providerTools: '工具', admin: '管理员', login: '登录',
     logout: '退出', breeds: '品种', insurance: '保险',
-    aiHealth: 'AI健康', aiEmotion: 'AI情感', aiStoolUrine: 'AI尿液&粪便', passport: '医疗档案', playdates: '玩耍约会', communities: '社区',
+    aiHealth: 'AI健康', aiEmotion: 'AI情感', aiStoolUrine: 'AI尿液&粪便', passport: '医疗档案', playdates: '玩耍约会', communities: '社区', legal: '法律支持',
   },
   auth: {
     login: '登录', register: '注册', logout: '退出',
