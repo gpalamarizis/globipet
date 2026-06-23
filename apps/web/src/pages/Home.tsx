@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill } from 'lucide-react'
@@ -83,7 +83,7 @@ export default function Home() {
             <Zap size={11} /> #1 Pet Super-App
           </div>
           <h1 className="text-4xl lg:text-[54px] font-display font-bold tracking-tight leading-[1.1] text-gray-900 dark:text-white mb-4 max-w-3xl mx-auto">
-            Η καλύτερη φροντίδα για τους{' '}
+            <span className="text-brand-900 dark:text-brand-400">Η καλύτερη</span> φροντίδα για τους{' '}
             <span className="text-brand-900 dark:text-brand-400">καλύτερους φίλους</span> σου
           </h1>
         </motion.div>
