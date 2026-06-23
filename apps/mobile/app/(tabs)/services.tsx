@@ -1,12 +1,23 @@
 ﻿import { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { api } from '../../src/lib/api'
 
-const types = ['all','grooming','veterinary','walking','hosting','training','pet_taxi']
-const typeLabels: Record<string,string> = { all:'Όλες', grooming:'Περιποίηση', veterinary:'Κτηνίατρος', walking:'Βόλτες', hosting:'Φιλοξενία', pet_sitting:'Ιδιώτης', training:'Εκπαίδευση', boarding:'Ξενοδοχείο', pet_taxi:'Taxi' }
-const hostingSubTypes = ['pet_sitting','boarding']
+const O = '#E65100'
+
+const SERVICE_TYPES = [
+  { id: 'all',         label: 'Όλες',         emoji: '🐾' },
+  { id: 'grooming',    label: 'Περιποίηση',   emoji: '✂️' },
+  { id: 'veterinary',  label: 'Κτηνίατρος',  emoji: '🩺' },
+  { id: 'walking',     label: 'Βόλτες',       emoji: '🚶' },
+  { id: 'pet_sitting', label: 'Φιλοξενία',    emoji: '🏠' },
+  { id: 'training',    label: 'Εκπαίδευση',   emoji: '🎓' },
+  { id: 'pet_taxi',    label: 'Taxi',          emoji: '🚗' },
+  { id: 'photography', label: 'Φωτογράφηση',  emoji: '📸' },
+  { id: 'pharmacy',    label: 'Φαρμακείο',    emoji: '💊' },
+  { id: 'legal',       label: 'Νομικά',        emoji: '⚖️' },
+]
 
 export default function ServicesScreen() {
   const router = useRouter()
@@ -15,86 +26,120 @@ export default function ServicesScreen() {
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['services', type, search],
-    queryFn: () => api.get(`/services?type=${type !== 'all' ? type : ''}&search=${search}&limit=20`).then(r => r.data?.data ?? []),
+    queryFn: () => api.get(`/services?${type !== 'all' ? `service_type=${type}&` : ''}search=${search}&limit=30`).then(r => r.data?.data ?? []),
   })
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Υπηρεσίες</Text>
-        <TextInput style={styles.search} placeholder="🔍  Αναζήτηση..." value={search}
-          onChangeText={setSearch} placeholderTextColor="#9CA3AF" />
+    <View style={s.container}>
+      {/* Header */}
+      <View style={s.header}>
+        <Text style={s.title}>Υπηρεσίες</Text>
+        <View style={s.searchRow}>
+          <Text style={s.searchIcon}>🔍</Text>
+          <TextInput style={s.search} placeholder="Αναζήτηση..." value={search}
+            onChangeText={setSearch} placeholderTextColor="#9CA3AF" />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}><Text style={s.clearBtn}>✕</Text></TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={{ paddingHorizontal: 16 }}>
-        {types.map(t => {
-          const isHosting = t === 'hosting'
-          const isActive = isHosting ? (type === 'pet_sitting' || type === 'boarding') : type === t
-          return (
-            <TouchableOpacity key={t} style={[styles.filterChip, isActive && styles.filterChipActive]}
-              onPress={() => setType(isHosting ? ((type === 'pet_sitting' || type === 'boarding') ? type : 'pet_sitting') : t)}>
-              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>{typeLabels[t]}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-
-      {(type === 'pet_sitting' || type === 'boarding') && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.filters, { paddingTop: 0, paddingBottom: 10 }]} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {hostingSubTypes.map(t => (
-            <TouchableOpacity key={t} style={[styles.filterChip, { paddingVertical: 5 }, type === t && styles.filterChipActive]} onPress={() => setType(t)}>
-              <Text style={[styles.filterText, { fontSize: 12 }, type === t && styles.filterTextActive]}>{typeLabels[t]}</Text>
+      {/* Category filter — wrap, no scroll */}
+      <View style={s.filterContainer}>
+        <View style={s.filterWrap}>
+          {SERVICE_TYPES.map(t => (
+            <TouchableOpacity key={t.id} style={[s.chip, type === t.id && s.chipActive]}
+              onPress={() => setType(t.id)}>
+              <Text style={s.chipEmoji}>{t.emoji}</Text>
+              <Text style={[s.chipText, type === t.id && s.chipTextActive]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      )}
+        </View>
+      </View>
 
-      <FlatList data={services} keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: 16 }}
+      {/* Results */}
+      <FlatList
+        data={services}
+        keyExtractor={i => i.id}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <Text style={s.emptyEmoji}>{isLoading ? '⏳' : '🔍'}</Text>
+            <Text style={s.emptyText}>{isLoading ? 'Φόρτωση...' : 'Δεν βρέθηκαν υπηρεσίες'}</Text>
+          </View>
+        }
         renderItem={({ item }: any) => (
-          <TouchableOpacity style={styles.card} onPress={() => router.push(`/services/${item.id}`)}>
-            <View style={styles.cardAvatar}>
-              <Text style={styles.cardAvatarText}>{item.name?.[0] || '🐾'}</Text>
+          <TouchableOpacity style={s.card} onPress={() => router.push(`/services/${item.id}` as any)} activeOpacity={0.7}>
+            {/* Avatar / photo */}
+            <View style={s.avatar}>
+              {item.image_url
+                ? <Image source={{ uri: item.image_url }} style={s.avatarImg} />
+                : <Text style={s.avatarEmoji}>
+                    {item.service_type === 'grooming' ? '✂️' : item.service_type === 'veterinary' ? '🩺' :
+                     item.service_type === 'walking' ? '🚶' : item.service_type === 'training' ? '🎓' :
+                     item.service_type === 'pet_taxi' ? '🚗' : '🐾'}
+                  </Text>
+              }
             </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={styles.cardType}>{item.type} · {item.duration_minutes} λεπτά</Text>
-              <Text style={styles.cardRating}>⭐ {item.rating || '5.0'} · {item.reviews_count || 0} κριτικές</Text>
+            {/* Info */}
+            <View style={s.info}>
+              <Text style={s.name} numberOfLines={1}>{item.provider_name}</Text>
+              <Text style={s.sub} numberOfLines={1}>
+                {SERVICE_TYPES.find(t => t.id === item.service_type)?.label || item.service_type}
+                {item.city ? ` · ${item.city}` : ''}
+              </Text>
+              <View style={s.ratingRow}>
+                <Text style={s.star}>⭐</Text>
+                <Text style={s.rating}>{item.rating?.toFixed(1) || '5.0'}</Text>
+                <Text style={s.ratingCount}>({item.reviews_count || 0})</Text>
+              </View>
             </View>
-            <View style={styles.cardRight}>
-              <Text style={styles.cardPrice}>€{item.price}</Text>
-              <TouchableOpacity style={styles.bookBtn}>
-                <Text style={styles.bookBtnText}>Κράτηση</Text>
-              </TouchableOpacity>
+            {/* Price + book */}
+            <View style={s.right}>
+              <Text style={s.price}>€{item.price}</Text>
+              <View style={s.bookBtn}>
+                <Text style={s.bookText}>Κράτηση</Text>
+              </View>
             </View>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Δεν βρέθηκαν υπηρεσίες</Text>}
       />
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#fff', paddingTop: 60, paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 12 },
-  search: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#111827' },
-  filters: { backgroundColor: '#fff', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F3F4F6', marginRight: 8 },
-  filterChipActive: { backgroundColor: '#E65100' },
-  filterText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
-  filterTextActive: { color: '#fff', fontWeight: '700' },
-  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  cardAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  cardAvatarText: { fontSize: 20, fontWeight: '700', color: '#E65100' },
-  cardContent: { flex: 1 },
-  cardName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  cardType: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
-  cardRating: { fontSize: 12, color: '#6B7280' },
-  cardRight: { alignItems: 'flex-end', justifyContent: 'space-between' },
-  cardPrice: { fontSize: 15, fontWeight: '700', color: '#E65100' },
-  bookBtn: { backgroundColor: '#E65100', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 6 },
-  bookBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 40 },
+  header: { backgroundColor: '#fff', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 10 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
+  searchIcon: { fontSize: 15, marginRight: 8 },
+  search: { flex: 1, fontSize: 14, color: '#111827' },
+  clearBtn: { color: '#9CA3AF', fontSize: 16, paddingLeft: 8 },
+  filterContainer: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  filterWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F3F4F6' },
+  chipActive: { backgroundColor: O },
+  chipEmoji: { fontSize: 13 },
+  chipText: { fontSize: 12, color: '#374151', fontWeight: '600' },
+  chipTextActive: { color: '#fff' },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
+  avatar: { width: 52, height: 52, borderRadius: 14, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', flexShrink: 0 },
+  avatarImg: { width: 52, height: 52, borderRadius: 14 },
+  avatarEmoji: { fontSize: 22 },
+  info: { flex: 1, minWidth: 0 },
+  name: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
+  sub: { fontSize: 12, color: '#6B7280', marginBottom: 3 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  star: { fontSize: 11 },
+  rating: { fontSize: 12, fontWeight: '700', color: '#111827' },
+  ratingCount: { fontSize: 11, color: '#9CA3AF' },
+  right: { alignItems: 'flex-end', gap: 6, flexShrink: 0 },
+  price: { fontSize: 15, fontWeight: '800', color: O },
+  bookBtn: { backgroundColor: O, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  bookText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyEmoji: { fontSize: 40, marginBottom: 10 },
+  emptyText: { color: '#9CA3AF', fontSize: 15 },
 })

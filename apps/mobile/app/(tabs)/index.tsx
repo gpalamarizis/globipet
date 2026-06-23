@@ -1,184 +1,202 @@
 ﻿import { useEffect } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, TextInput } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
 
-const { width } = Dimensions.get('window')
+const O = '#E65100'
 
-const categories = [
-  { emoji: '✂️', label: 'Περιποίηση',  type: 'grooming' },
-  { emoji: '🩺', label: 'Κτηνίατρος',  type: 'veterinary' },
-  { emoji: '🚶', label: 'Βόλτα',        type: 'walking' },
-  { emoji: '🏠', label: 'Φιλοξενία',   type: 'pet_sitting' },
-  { emoji: '🎓', label: 'Εκπαίδευση',  type: 'training' },
-  { emoji: '🚗', label: 'Μεταφορά',    type: 'pet_taxi' },
-  { emoji: '💻', label: 'Τηλειατρική', type: 'telehealth' },
-  { emoji: '💊', label: 'Φαρμακείο',   type: 'pharmacy' },
-  { emoji: '🛡️', label: 'Ασφάλεια',   type: 'insurance' },
+const QUICK_ACTIONS = [
+  { emoji: '✂️', label: 'Περιποίηση',  route: '/(tabs)/services', type: 'grooming' },
+  { emoji: '🩺', label: 'Κτηνίατρος', route: '/(tabs)/services', type: 'veterinary' },
+  { emoji: '🚶', label: 'Βόλτες',      route: '/(tabs)/services', type: 'walking' },
+  { emoji: '🏠', label: 'Φιλοξενία',  route: '/(tabs)/services', type: 'pet_sitting' },
+  { emoji: '💊', label: 'Φαρμακείο',  route: '/(tabs)/services', type: 'pharmacy' },
+  { emoji: '🎓', label: 'Εκπαίδευση', route: '/(tabs)/services', type: 'training' },
+  { emoji: '🚗', label: 'Pet Taxi',   route: '/(tabs)/services', type: 'pet_taxi' },
+  { emoji: '⚖️', label: 'Νομικά',     route: '/legal', type: 'legal' },
+  { emoji: '💻', label: 'Τηλεϊατρική',route: '/telehealth', type: 'telehealth' },
+  { emoji: '🛡️', label: 'Ασφάλιση',  route: '/insurance', type: 'insurance' },
+  { emoji: '🧠', label: 'AI Υγεία',   route: '/ai-health', type: 'ai' },
+  { emoji: '📋', label: 'Φάκελος',    route: '/passport', type: 'passport' },
 ]
 
 export default function HomeScreen() {
   const router = useRouter()
   const { user, isAuthenticated, loadToken } = useAuthStore()
-
   useEffect(() => { loadToken() }, [])
 
-  const { data: services } = useQuery({
+  const { data: services = [] } = useQuery({
     queryKey: ['featured-services'],
-    queryFn: () => api.get('/services?limit=4').then(r => r.data?.data ?? []),
+    queryFn: () => api.get('/services?limit=6').then(r => r.data?.data ?? []),
   })
 
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ['featured-products'],
-    queryFn: () => api.get('/products?limit=4').then(r => r.data?.data ?? []),
+    queryFn: () => api.get('/products?featured=true&limit=4').then(r => r.data?.data ?? []),
   })
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">
-            {isAuthenticated ? `Γεια, ${user?.full_name?.split(' ')[0]}! 👋` : 'Καλώς ήρθατε! 🐾'}
-          </Text>
-          <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">Best care for the best human's friends</Text>
+      <View style={s.header}>
+        <View style={s.headerTop}>
+          <View style={s.logoBox}>
+            <Image source={require('../../assets/icon.png')} style={s.logo} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.greeting} numberOfLines={1}>
+              {isAuthenticated ? `Γεια, ${user?.full_name?.split(' ')[0]}! 👋` : 'Καλώς ήρθατε! 🐾'}
+            </Text>
+            <Text style={s.tagline}>Best care for the best friends</Text>
+          </View>
+          {isAuthenticated && user?.profile_photo && (
+            <Image source={{ uri: user.profile_photo }} style={s.avatar} />
+          )}
         </View>
-        {isAuthenticated && user?.profile_photo && (
-          <Image source={{ uri: user.profile_photo }} style={styles.avatar} />
-        )}
+
+        {/* Search */}
+        <TouchableOpacity style={s.searchBar} onPress={() => router.push('/(tabs)/services' as any)}>
+          <Text style={s.searchIcon}>🔍</Text>
+          <Text style={s.searchPlaceholder}>Αναζήτηση υπηρεσίας ή παρόχου...</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Search bar */}
-      <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/services')}>
-        <Text style={styles.searchText}>🔍  Αναζήτηση υπηρεσίας...</Text>
-      </TouchableOpacity>
-
-      {/* Categories */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Υπηρεσίες</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-          {categories.map(cat => (
-            <TouchableOpacity key={cat.type} style={styles.categoryItem}
-              onPress={() => router.push(`/services?type=${cat.type}`)}>
-              <View style={styles.categoryIcon}>
-                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+      {/* Quick actions grid — 4 per row, wrap */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Υπηρεσίες</Text>
+        <View style={s.actionGrid}>
+          {QUICK_ACTIONS.map(a => (
+            <TouchableOpacity key={a.type} style={s.actionItem}
+              onPress={() => router.push(a.route as any)} activeOpacity={0.7}>
+              <View style={s.actionIcon}>
+                <Text style={s.actionEmoji}>{a.emoji}</Text>
               </View>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
+              <Text style={s.actionLabel} numberOfLines={1}>{a.label}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
-      {/* Featured Services */}
-      {services?.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Κορυφαίοι Πάροχοι</Text>
-            <TouchableOpacity onPress={() => router.push('/services')}>
-              <Text style={styles.seeAll}>Όλοι →</Text>
+      {/* Featured services */}
+      {services.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Κορυφαίοι Πάροχοι</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/services' as any)}>
+              <Text style={s.seeAll}>Όλοι →</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {services.map((service: any) => (
-              <TouchableOpacity key={service.id} style={styles.serviceCard}
-                onPress={() => router.push(`/services/${service.id}`)}>
-                <View style={styles.serviceAvatar}>
-                  <Text style={styles.serviceAvatarText}>{service.name?.[0] || '🐾'}</Text>
-                </View>
-                <Text style={styles.serviceName} numberOfLines={1}>{service.name}</Text>
-                <Text style={styles.serviceType}>{service.type}</Text>
-                <Text style={styles.servicePrice}>€{service.price}/ώρα</Text>
-                <Text style={styles.serviceRating}>⭐ {service.rating || '5.0'}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {services.slice(0, 4).map((sv: any) => (
+            <TouchableOpacity key={sv.id} style={s.serviceCard}
+              onPress={() => router.push(`/services/${sv.id}` as any)} activeOpacity={0.7}>
+              <View style={s.serviceAvatar}>
+                {sv.image_url
+                  ? <Image source={{ uri: sv.image_url }} style={s.serviceAvatarImg} />
+                  : <Text style={s.serviceAvatarEmoji}>🐾</Text>}
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.serviceName} numberOfLines={1}>{sv.provider_name}</Text>
+                <Text style={s.serviceSub} numberOfLines={1}>{sv.service_type} · {sv.city}</Text>
+                <Text style={s.serviceRating}>⭐ {sv.rating?.toFixed(1) || '5.0'} · {sv.reviews_count || 0} κριτικές</Text>
+              </View>
+              <Text style={s.servicePrice}>€{sv.price}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
 
-      {/* Featured Products */}
-      {products?.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Κατάστημα</Text>
-            <TouchableOpacity onPress={() => router.push('/marketplace')}>
-              <Text style={styles.seeAll}>Όλα →</Text>
+      {/* Featured products */}
+      {products.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Προτεινόμενα Προϊόντα</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)}>
+              <Text style={s.seeAll}>Όλα →</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.productsGrid}>
-            {products.map((product: any) => (
-              <TouchableOpacity key={product.id} style={styles.productCard}
-                onPress={() => router.push(`/marketplace/${product.id}`)}>
-                <View style={styles.productImage}>
-                  {product.images?.[0]
-                    ? <Image source={{ uri: product.images[0] }} style={styles.productImg} />
-                    : <Text style={{ fontSize: 32 }}>📦</Text>
-                  }
+          <View style={s.productGrid}>
+            {products.slice(0, 4).map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.productCard}
+                onPress={() => router.push(`/products/${p.id}` as any)} activeOpacity={0.7}>
+                <View style={s.productImg}>
+                  {p.image_url
+                    ? <Image source={{ uri: p.image_url }} style={s.productImgSrc} />
+                    : <Text style={{ fontSize: 28 }}>🛍️</Text>}
                 </View>
-                <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-                <Text style={styles.productPrice}>€{product.price}</Text>
+                <Text style={s.productName} numberOfLines={2}>{p.name}</Text>
+                <Text style={s.productPrice}>€{p.price}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
 
-      {/* CTA for non-auth */}
+      {/* Not logged in banner */}
       {!isAuthenticated && (
-        <View style={styles.ctaSection}>
-          <Text style={styles.ctaTitle}>Εγγραφείτε δωρεάν</Text>
-          <Text style={styles.ctaSubtitle}>Διαχειριστείτε τα κατοικίδιά σας, κάντε κρατήσεις και πολλά άλλα</Text>
-          <TouchableOpacity style={styles.ctaButton} onPress={() => router.push('/auth/register')}>
-            <Text style={styles.ctaButtonText}>Δημιουργία λογαριασμού</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ctaSecondary} onPress={() => router.push('/auth/login')}>
-            <Text style={styles.ctaSecondaryText}>Έχω ήδη λογαριασμό</Text>
-          </TouchableOpacity>
+        <View style={s.authBanner}>
+          <Text style={s.authTitle}>Ξεκινήστε Σήμερα 🐾</Text>
+          <Text style={s.authSub}>Εγγραφείτε δωρεάν και διαχειριστείτε όλα όσα χρειάζεται το κατοικίδιό σας</Text>
+          <View style={s.authBtns}>
+            <TouchableOpacity style={s.authLoginBtn} onPress={() => router.push('/auth/login' as any)}>
+              <Text style={s.authLoginText}>Σύνδεση</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.authRegisterBtn} onPress={() => router.push('/auth/register' as any)}>
+              <Text style={s.authRegisterText}>Εγγραφή</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
-
-      <View style={{ height: 40 }} />
     </ScrollView>
   )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60, backgroundColor: '#fff' },
-  headerText: { flex: 1, marginRight: 12 },
-  greeting: { fontSize: 22, fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  avatar: { width: 44, height: 44, borderRadius: 22, flexShrink: 0 },
-  searchBar: { margin: 16, backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  searchText: { color: '#9CA3AF', fontSize: 14 },
-  section: { marginBottom: 8 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111827', paddingHorizontal: 16, marginTop: 20, marginBottom: 12 },
-  seeAll: { fontSize: 13, color: '#E65100', fontWeight: '600' },
-  categoriesScroll: { paddingLeft: 16 },
-  categoryItem: { alignItems: 'center', marginRight: 16, width: 72 },
-  categoryIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  categoryEmoji: { fontSize: 24 },
-  categoryLabel: { fontSize: 11, color: '#374151', textAlign: 'center', fontWeight: '500' },
-  serviceCard: { width: 160, backgroundColor: '#fff', borderRadius: 16, padding: 14, marginLeft: 16, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
-  serviceAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  serviceAvatarText: { fontSize: 20, fontWeight: '700', color: '#E65100' },
-  serviceName: { fontSize: 13, fontWeight: '600', color: '#111827', marginBottom: 2 },
-  serviceType: { fontSize: 11, color: '#6B7280', marginBottom: 4 },
-  servicePrice: { fontSize: 13, fontWeight: '700', color: '#E65100', marginBottom: 2 },
+  header: { backgroundColor: '#fff', paddingTop: 52, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  logoBox: { width: 40, height: 40, borderRadius: 10, overflow: 'hidden', flexShrink: 0 },
+  logo: { width: 40, height: 40 },
+  greeting: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  tagline: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
+  avatar: { width: 36, height: 36, borderRadius: 18, flexShrink: 0 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 8 },
+  searchIcon: { fontSize: 15 },
+  searchPlaceholder: { fontSize: 14, color: '#9CA3AF' },
+  section: { marginTop: 16, paddingHorizontal: 16 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 10 },
+  seeAll: { fontSize: 13, color: O, fontWeight: '600' },
+  // Quick actions - 4 per row
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  actionItem: { width: '22%', alignItems: 'center' },
+  actionIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
+  actionEmoji: { fontSize: 22 },
+  actionLabel: { fontSize: 10, color: '#374151', fontWeight: '600', textAlign: 'center' },
+  // Service cards
+  serviceCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3, gap: 10 },
+  serviceAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  serviceAvatarImg: { width: 44, height: 44 },
+  serviceAvatarEmoji: { fontSize: 20 },
+  serviceName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
+  serviceSub: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
   serviceRating: { fontSize: 11, color: '#6B7280' },
-  productsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12 },
-  productCard: { width: (width - 48) / 2, backgroundColor: '#fff', borderRadius: 16, padding: 12, margin: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
-  productImage: { height: 100, borderRadius: 12, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' },
-  productImg: { width: '100%', height: '100%' },
-  productName: { fontSize: 12, color: '#111827', fontWeight: '500', marginBottom: 4 },
-  productPrice: { fontSize: 14, fontWeight: '700', color: '#E65100' },
-  ctaSection: { margin: 16, backgroundColor: '#E65100', borderRadius: 20, padding: 24 },
-  ctaTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 },
-  ctaSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 20, lineHeight: 20 },
-  ctaButton: { backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 },
-  ctaButtonText: { color: '#E65100', fontWeight: '700', fontSize: 15 },
-  ctaSecondary: { alignItems: 'center', padding: 8 },
-  ctaSecondaryText: { color: 'rgba(255,255,255,0.9)', fontSize: 13 },
+  servicePrice: { fontSize: 15, fontWeight: '800', color: O, flexShrink: 0 },
+  // Product grid - 2 per row
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  productCard: { width: '47%', backgroundColor: '#fff', borderRadius: 14, padding: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 },
+  productImg: { width: '100%', height: 100, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' },
+  productImgSrc: { width: '100%', height: 100 },
+  productName: { fontSize: 12, fontWeight: '600', color: '#111827', marginBottom: 4 },
+  productPrice: { fontSize: 14, fontWeight: '800', color: O },
+  // Auth banner
+  authBanner: { margin: 16, backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 },
+  authTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 6 },
+  authSub: { fontSize: 13, color: '#6B7280', lineHeight: 20, marginBottom: 16 },
+  authBtns: { flexDirection: 'row', gap: 10 },
+  authLoginBtn: { flex: 1, borderWidth: 1.5, borderColor: O, borderRadius: 12, padding: 12, alignItems: 'center' },
+  authLoginText: { color: O, fontWeight: '700' },
+  authRegisterBtn: { flex: 1, backgroundColor: O, borderRadius: 12, padding: 12, alignItems: 'center' },
+  authRegisterText: { color: '#fff', fontWeight: '700' },
 })
