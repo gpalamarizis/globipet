@@ -1,15 +1,16 @@
 ﻿import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Layout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { path: '/admin',               label: 'Επισκόπηση', icon: LayoutDashboard, exact: true },
-  { path: '/admin/catalog',       label: 'Κατάλογος',  icon: BookOpen },
-  { path: '/admin/services',      label: 'Υπηρεσίες',  icon: Building2 },
-  { path: '/admin/packages',      label: 'Πακέτα',     icon: Package },
-  { path: '/admin/subscriptions', label: 'Συνδρομές',  icon: Layers },
-  { path: '/admin/commissions',   label: 'Προμήθειες', icon: Percent },
-  { path: '/admin/messages',      label: 'Μηνύματα',   icon: Mail },
+  { path: '/admin',               label: 'Επισκόπηση',  icon: LayoutDashboard, exact: true },
+  { path: '/admin/catalog',       label: 'Κατάλογος',   icon: BookOpen },
+  { path: '/admin/services',      label: 'Υπηρεσίες',   icon: Building2 },
+  { path: '/admin/packages',      label: 'Πακέτα',      icon: Package },
+  { path: '/admin/subscriptions', label: 'Συνδρομές',   icon: Layers },
+  { path: '/admin/commissions',   label: 'Προμήθειες',  icon: Percent },
+  { path: '/admin/messages',      label: 'Μηνύματα',    icon: Mail },
+  { path: '/admin/content',       label: 'Περιεχόμενο', icon: Layout },
 ]
 
 export default function AdminLayout() {

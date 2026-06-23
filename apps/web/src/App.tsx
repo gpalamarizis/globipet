@@ -59,6 +59,7 @@ const AdminPackagesPage = lazy(() => import('@/pages/admin/AdminPackagesPage'))
 const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptionsPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
 const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'))
+const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 
@@ -153,6 +154,7 @@ export default function App() {
                 <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
                 <Route path="/admin/commissions"   element={<AdminCommissionsPage />} />
                 <Route path="/admin/messages"      element={<AdminMessagesPage />} />
+                <Route path="/admin/content"       element={<AdminContentPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

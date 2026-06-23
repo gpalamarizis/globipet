@@ -26,6 +26,14 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCity, setSearchCity] = useState('')
 
+  const { data: content } = useQuery({
+    queryKey: ['content-home'],
+    queryFn: () => api.get('/settings/content/home').then(r => r.data?.data ?? {}),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const c = content || {}
+
   const { data: featuredProducts, isLoading: loadingProducts } = useQuery({
     queryKey: ['featured-products'],
     queryFn: () => api.get('/products?featured=true&limit=4').then(r => r.data),
@@ -45,10 +53,10 @@ export default function Home() {
   }
 
   const stats = [
-    { value: '50K+',  label: 'Χρήστες' },
-    { value: '2K+',   label: 'Πάροχοι' },
-    { value: '120K+', label: 'Κατοικίδια' },
-    { value: '4.9★',  label: 'Βαθμολογία' },
+    { value: c.stat_users || '50K+',     label: c.stat_users_label || 'Χρήστες' },
+    { value: c.stat_providers || '2K+',  label: c.stat_providers_label || 'Πάροχοι' },
+    { value: c.stat_pets || '120K+',     label: c.stat_pets_label || 'Κατοικίδια' },
+    { value: c.stat_rating || '4.9★',   label: c.stat_rating_label || 'Βαθμολογία' },
   ]
 
   const categories = [
@@ -80,11 +88,11 @@ export default function Home() {
       <section className="bg-white dark:bg-gray-900 pt-16 pb-20 px-4 text-center overflow-hidden">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
-            <Zap size={11} /> #1 Pet Super-App
+            <Zap size={11} /> {c.tagline || '#1 Pet Super-App'}
           </div>
           <h1 className="text-4xl lg:text-[54px] font-display font-bold tracking-tight leading-[1.1] text-gray-900 dark:text-white mb-4 max-w-3xl mx-auto">
-            <span className="text-brand-900 dark:text-brand-400">Η καλύτερη</span> φροντίδα για τους{' '}
-            <span className="text-brand-900 dark:text-brand-400">καλύτερους φίλους</span> σου
+            <span className="text-brand-900 dark:text-brand-400">{c.hero_title_1 || 'Η καλύτερη'}</span> φροντίδα για τους{' '}
+            <span className="text-brand-900 dark:text-brand-400">{c.hero_title_2 || 'καλύτερους φίλους'}</span> σου
           </h1>
         </motion.div>
 
