@@ -85,80 +85,84 @@ export default function Home() {
       `}</style>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-gray-900 pt-16 pb-20 px-4 text-center overflow-hidden">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
-            <Zap size={11} /> {c.tagline || '#1 Pet Super-App'}
-          </div>
-          <h1 className="text-4xl lg:text-[54px] font-display font-bold tracking-tight leading-[1.1] text-gray-900 dark:text-white mb-4 max-w-3xl mx-auto">
-            <span className="text-brand-900 dark:text-brand-400">{c.hero_title_1 || 'Η καλύτερη'}</span> φροντίδα για τους{' '}
-            <span className="text-brand-900 dark:text-brand-400">{c.hero_title_2 || 'καλύτερους φίλους'}</span> σου
-          </h1>
-        </motion.div>
+      <section className="bg-white dark:bg-gray-900 pt-12 pb-16 px-4 overflow-hidden">
+        <div className="max-w-6xl mx-auto">
 
-        {/* Multilingual motto ticker */}
-        <div className="overflow-hidden w-full my-5 h-6">
-          <div className="gp-ticker flex gap-14 whitespace-nowrap">
-            {mottoItems.map((text, i) => (
-              <span key={i} className="text-[13px] text-gray-400 dark:text-gray-600 flex items-center gap-2.5 flex-shrink-0">
-                <span className="w-1 h-1 rounded-full bg-brand-900 dark:bg-brand-400 inline-block flex-shrink-0" />
-                {text}
-              </span>
-            ))}
-          </div>
+          {/* Top bar: AI Powered left | badges right */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between mb-8 flex-wrap gap-3">
+            {/* Left: AI Powered */}
+            <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md">
+              <span className="text-base">🧠</span> AI Powered Pet Platform
+            </div>
+            {/* Right: badges */}
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-full">
+                <Zap size={11} /> #1 Pet Super-App
+              </div>
+              <p className="text-[11px] text-gray-400 text-right max-w-[280px] leading-snug">
+                fewer apps → lower search friction → higher trust + better health outcomes → increased provider business
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Title — smaller */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-center mb-8">
+            <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Η <span className="text-brand-900 dark:text-brand-400 font-bold">καλύτερη</span> φροντίδα για τους{' '}
+              <span className="text-brand-900 dark:text-brand-400 font-bold">καλύτερους</span> φίλους σου
+            </h1>
+          </motion.div>
+
+          {/* Search bar */}
+          <motion.form onSubmit={handleSearch}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto mb-14">
+            <div className="flex items-center gap-2.5 flex-1 px-3">
+              <Search size={15} className="text-gray-400 shrink-0" />
+              <input type="text" placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 border-l border-gray-100 dark:border-gray-700">
+              <MapPin size={13} className="text-gray-400 shrink-0" />
+              <input type="text" placeholder="Πόλη" value={searchCity} onChange={e => setSearchCity(e.target.value)}
+                className="w-24 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
+            </div>
+            <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
+          </motion.form>
+
+          {/* Featured services 2×2 grid with photos (Rover-style) */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι υπηρεσίες μας</h2>
+            <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+              {[
+                { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική', sub: 'Βιντεοκλήση με κτηνίατρο', bg: 'from-blue-400 to-blue-600', img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
+                { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',    sub: 'Ανάλυση φωτογραφίας', bg: 'from-purple-400 to-purple-600', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
+                { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος', sub: 'Πλήρες ιστορικό υγείας', bg: 'from-orange-400 to-orange-600', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
+                { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',   sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-400 to-green-600', img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
+              ].map((item, i) => (
+                <Link key={item.path} to={item.path}
+                  className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
+                  <img src={item.img} alt={item.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={e => { (e.target as any).style.display = 'none' }} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
+                  <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                    <span className="text-2xl mb-1">{item.emoji}</span>
+                    <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
+                    <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
         </div>
-
-        {/* Search bar */}
-        <motion.form
-          onSubmit={handleSearch}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto"
-        >
-          <div className="flex items-center gap-2.5 flex-1 px-3">
-            <Search size={15} className="text-gray-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
-            />
-          </div>
-          <div className="hidden sm:flex items-center gap-2 px-3 border-l border-gray-100 dark:border-gray-700">
-            <MapPin size={13} className="text-gray-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Πόλη"
-              value={searchCity}
-              onChange={e => setSearchCity(e.target.value)}
-              className="w-24 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
-            />
-          </div>
-          <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
-        </motion.form>
       </section>
 
-      {/* ── STATS ────────────────────────────────────────── */}
-      <div className="border-y border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="page-container">
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800">
-            {stats.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 + 0.2 }}
-                className="py-5 text-center"
-              >
-                <p className="text-2xl font-display font-bold text-gray-900 dark:text-white tracking-tight">{s.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* ── STATS REMOVED ── */}
+
 
       {/* ── CATEGORIES ───────────────────────────────────── */}
       <section className="py-12 bg-white dark:bg-gray-900">
