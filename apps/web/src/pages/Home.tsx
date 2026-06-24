@@ -85,94 +85,100 @@ export default function Home() {
       `}</style>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-gray-900 overflow-hidden">
-        <div className="flex min-h-[420px]">
+      <section className="bg-gray-50 dark:bg-gray-950 px-4 pt-4 pb-0">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex gap-4 min-h-[420px]">
 
-          {/* LEFT 50% — dark navy panel */}
-          <div className="w-1/2 bg-[#0F2A3F] flex flex-col items-center justify-center px-8 py-12 relative">
-            <img src="/logo-clean.png" alt="GlobiPet" className="h-24 w-auto mb-6 brightness-0 invert" />
-            <h1 className="text-2xl lg:text-3xl font-display font-semibold text-white/90 text-center leading-snug">
-              Η <span className="text-brand-400 font-bold">καλύτερη</span> φροντίδα για τους{' '}
-              <span className="text-brand-400 font-bold">καλύτερους</span> φίλους σου
-            </h1>
-          </div>
-
-          {/* RIGHT 50% — badges */}
-          <div className="w-1/2 flex flex-col justify-center px-8 py-12 gap-6 bg-white dark:bg-gray-900">
-
-            {/* AI Powered — smaller, 2 lines */}
-            <div className="inline-flex items-start gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-bold px-4 py-2.5 rounded-2xl shadow-md self-start leading-tight">
-              <span className="text-lg shrink-0">🧠</span>
-              <span>AI Powered<br/>Pet Platform</span>
-            </div>
-
-            {/* #1 Pet Super-App — BIG */}
-            <div>
-              <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 font-black px-5 py-3 rounded-2xl text-2xl lg:text-3xl">
-                <Zap size={22} /> #1 Pet Super-App
+            {/* LEFT BOX — navy */}
+            <div className="flex-1 bg-[#0F2A3F] rounded-3xl px-10 py-12 flex flex-col items-center justify-center gap-5">
+              <p className="text-xs font-bold text-brand-900 tracking-widest uppercase">⚡ AI POWERED</p>
+              <h1 className="text-3xl lg:text-4xl font-display font-bold text-white text-center leading-snug">
+                Ο γιατρός του κατοικιδίου σου<br/>είναι πάντα <span className="text-yellow-400">διαθέσιμος</span>
+              </h1>
+              <p className="text-sm text-white/60 text-center leading-relaxed max-w-sm">
+                Ανάλυση συμπτωμάτων, health tracking, emotion detection και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {['AI Health Check', 'Emotion Detector', 'Wellness Tracker', 'Τηλεϊατρική 24/7'].map(b => (
+                  <span key={b} className="bg-white/10 text-white text-xs px-3 py-1.5 rounded-full">{b}</span>
+                ))}
+              </div>
+              <div className="flex gap-3 mt-2">
+                <Link to="/register" className="bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm px-6 py-3 rounded-xl transition-colors">Δοκίμασε δωρεάν</Link>
+                <Link to="/services" className="bg-transparent border border-white/30 text-white font-medium text-sm px-6 py-3 rounded-xl hover:bg-white/10 transition-colors">Μάθε περισσότερα</Link>
               </div>
             </div>
 
-            {/* Value chain — BIG */}
-            <p className="text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 leading-relaxed">
-              fewer apps →<br/>
-              lower search friction →<br/>
-              higher trust + better health outcomes →<br/>
-              increased provider business
-            </p>
-          </div>
-        </div>
+            {/* RIGHT BOX — white with navy border */}
+            <div className="flex-1 bg-white dark:bg-gray-900 border-[2.5px] border-[#0F2A3F] rounded-3xl px-10 py-12 flex flex-col justify-center gap-7">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-sm px-5 py-3 rounded-2xl self-start">
+                🧠 AI Powered Pet Platform
+              </div>
+              <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 font-black text-2xl lg:text-3xl px-6 py-4 rounded-2xl self-start">
+                <Zap size={24} /> #1 Pet Super-App
+              </div>
+              <p className="text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 leading-loose">
+                fewer apps →<br/>
+                lower search friction →<br/>
+                higher trust + better health outcomes →<br/>
+                increased provider business
+              </p>
+            </div>
 
-        {/* Search bar — full width below */}
-        <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-6">
-          <motion.form onSubmit={handleSearch}
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto">
-            <div className="flex items-center gap-2.5 flex-1 px-3">
-              <Search size={15} className="text-gray-400 shrink-0" />
-              <input type="text" placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
-                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
-            </div>
-            <div className="hidden sm:flex items-center gap-2 px-3 border-l border-gray-100 dark:border-gray-700">
-              <MapPin size={13} className="text-gray-400 shrink-0" />
-              <input type="text" placeholder="Πόλη" value={searchCity} onChange={e => setSearchCity(e.target.value)}
-                className="w-24 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
-            </div>
-            <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
-          </motion.form>
-        </div>
-
-        {/* Featured services 2×2 grid */}
-        <div className="px-4 py-10 bg-white dark:bg-gray-900">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι κύριες υπηρεσίες μας</h2>
-            <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {[
-                { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',   img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
-                { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700',img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
-                { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700',img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
-                { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',  img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
-              ].map(item => (
-                <Link key={item.path} to={item.path}
-                  className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
-                  <img src={item.img} alt={item.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={e => { (e.target as any).style.display = 'none' }} />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                    <span className="text-2xl mb-1">{item.emoji}</span>
-                    <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
-                    <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
+      {/* Search bar */}
+      <div className="bg-gray-50 dark:bg-gray-950 px-4 py-6">
+        <motion.form onSubmit={handleSearch}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto">
+          <div className="flex items-center gap-2.5 flex-1 px-3">
+            <Search size={15} className="text-gray-400 shrink-0" />
+            <input type="text" placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
+          </div>
+          <div className="hidden sm:flex items-center gap-2 px-3 border-l border-gray-100 dark:border-gray-700">
+            <MapPin size={13} className="text-gray-400 shrink-0" />
+            <input type="text" placeholder="Πόλη" value={searchCity} onChange={e => setSearchCity(e.target.value)}
+              className="w-24 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
+          </div>
+          <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
+        </motion.form>
+      </div>
+
+      {/* Featured services 2×2 grid */}
+      <div className="px-4 py-8 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι κύριες υπηρεσίες μας</h2>
+          <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+            {[
+              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',      sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
+              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',          sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
+              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος', sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
+              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',         sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
+            ].map(item => (
+              <Link key={item.path} to={item.path}
+                className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
+                <img src={item.img} alt={item.title}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  onError={e => { (e.target as any).style.display = 'none' }} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
+                <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                  <span className="text-2xl mb-1">{item.emoji}</span>
+                  <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
+                  <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ── STATS REMOVED ── */}
+
 
 
 
