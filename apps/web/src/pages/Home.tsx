@@ -85,40 +85,49 @@ export default function Home() {
       `}</style>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-gray-900 pt-12 pb-16 px-4 overflow-hidden">
-        <div className="max-w-6xl mx-auto">
+      <section className="bg-white dark:bg-gray-900 overflow-hidden">
+        <div className="flex min-h-[420px]">
 
-          {/* Top bar: AI Powered left | badges right */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between mb-8 flex-wrap gap-3">
-            {/* Left: AI Powered */}
-            <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md">
-              <span className="text-base">🧠</span> AI Powered Pet Platform
-            </div>
-            {/* Right: badges */}
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-full">
-                <Zap size={11} /> #1 Pet Super-App
-              </div>
-              <p className="text-[11px] text-gray-400 text-right max-w-[280px] leading-snug">
-                fewer apps → lower search friction → higher trust + better health outcomes → increased provider business
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Title — smaller */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="text-center mb-8">
-            <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Η <span className="text-brand-900 dark:text-brand-400 font-bold">καλύτερη</span> φροντίδα για τους{' '}
-              <span className="text-brand-900 dark:text-brand-400 font-bold">καλύτερους</span> φίλους σου
+          {/* LEFT 50% — dark navy panel */}
+          <div className="w-1/2 bg-[#0F2A3F] flex flex-col items-center justify-center px-8 py-12 relative">
+            <img src="/logo-clean.png" alt="GlobiPet" className="h-24 w-auto mb-6 brightness-0 invert" />
+            <h1 className="text-2xl lg:text-3xl font-display font-semibold text-white/90 text-center leading-snug">
+              Η <span className="text-brand-400 font-bold">καλύτερη</span> φροντίδα για τους{' '}
+              <span className="text-brand-400 font-bold">καλύτερους</span> φίλους σου
             </h1>
-          </motion.div>
+          </div>
 
-          {/* Search bar */}
+          {/* RIGHT 50% — badges */}
+          <div className="w-1/2 flex flex-col justify-center px-8 py-12 gap-6 bg-white dark:bg-gray-900">
+
+            {/* AI Powered — smaller, 2 lines */}
+            <div className="inline-flex items-start gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-bold px-4 py-2.5 rounded-2xl shadow-md self-start leading-tight">
+              <span className="text-lg shrink-0">🧠</span>
+              <span>AI Powered<br/>Pet Platform</span>
+            </div>
+
+            {/* #1 Pet Super-App — BIG */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 text-brand-900 dark:text-brand-400 font-black px-5 py-3 rounded-2xl text-2xl lg:text-3xl">
+                <Zap size={22} /> #1 Pet Super-App
+              </div>
+            </div>
+
+            {/* Value chain — BIG */}
+            <p className="text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 leading-relaxed">
+              fewer apps →<br/>
+              lower search friction →<br/>
+              higher trust + better health outcomes →<br/>
+              increased provider business
+            </p>
+          </div>
+        </div>
+
+        {/* Search bar — full width below */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-6">
           <motion.form onSubmit={handleSearch}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto mb-14">
+            className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto">
             <div className="flex items-center gap-2.5 flex-1 px-3">
               <Search size={15} className="text-gray-400 shrink-0" />
               <input type="text" placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
@@ -132,17 +141,19 @@ export default function Home() {
             </div>
             <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
           </motion.form>
+        </div>
 
-          {/* Featured services 2×2 grid with photos (Rover-style) */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι υπηρεσίες μας</h2>
+        {/* Featured services 2×2 grid */}
+        <div className="px-4 py-10 bg-white dark:bg-gray-900">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι κύριες υπηρεσίες μας</h2>
             <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
               {[
-                { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική', sub: 'Βιντεοκλήση με κτηνίατρο', bg: 'from-blue-400 to-blue-600', img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
-                { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',    sub: 'Ανάλυση φωτογραφίας', bg: 'from-purple-400 to-purple-600', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
-                { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος', sub: 'Πλήρες ιστορικό υγείας', bg: 'from-orange-400 to-orange-600', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
-                { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',   sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-400 to-green-600', img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
-              ].map((item, i) => (
+                { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',   img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
+                { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700',img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
+                { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700',img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
+                { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',  img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
+              ].map(item => (
                 <Link key={item.path} to={item.path}
                   className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
                   <img src={item.img} alt={item.title}
@@ -157,11 +168,12 @@ export default function Home() {
                 </Link>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ── STATS REMOVED ── */}
+
 
 
       {/* ── CATEGORIES ───────────────────────────────────── */}
