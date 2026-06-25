@@ -123,18 +123,19 @@ export default function Home() {
         </motion.form>
       </div>
 
-      {/* Featured services 2×2 grid */}
+      {/* Featured services 2×3 grid */}
       <div className="px-4 py-8 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Οι κύριες υπηρεσίες μας</h2>
-          <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
-              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',      sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
-              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',          sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
-              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος', sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
-              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',         sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
+              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
+              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
+              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
+              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
+              { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80' },
+              { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&q=80' },
             ].map(item => (
-              <Link key={item.path} to={item.path}
+              <Link key={item.path + item.title} to={item.path}
                 className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
                 <img src={item.img} alt={item.title}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -161,7 +162,7 @@ export default function Home() {
         <div className="page-container">
           <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="section-title">Υπηρεσίες</h2>
+              <h2 className="section-title">Μάθε τις υπηρεσίες μας...</h2>
               <p className="text-sm text-gray-500 mt-0.5">Βρες τον καλύτερο πάροχο κοντά σου</p>
             </div>
             <Link to="/services" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">

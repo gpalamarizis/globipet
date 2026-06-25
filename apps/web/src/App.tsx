@@ -62,6 +62,7 @@ const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
+const AboutPage         = lazy(() => import('@/pages/AboutPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false } },
@@ -158,6 +159,7 @@ export default function App() {
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />
+              <Route path="/about"   element={<AboutPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
