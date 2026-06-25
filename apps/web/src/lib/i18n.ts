@@ -150,7 +150,7 @@ const el = {
     explore: 'Εξερεύνηση', support: 'Υποστήριξη', legal: 'Νομικά',
     contact: 'Επικοινωνία', faq: 'FAQ', help: 'Βοήθεια',
     terms: 'Όροι Χρήσης', privacy: 'Απόρρητο', cookies: 'Cookies',
-    allRights: 'Με επιφύλαξη παντός δικαιώματος.',
+    allRights: 'Με επιφύλαξη παντός δικαιώματος.', aboutUs: 'Ποιοί Είμαστε',
   },
   common: {
     loading: 'Φόρτωση...', error: 'Σφάλμα', save: 'Αποθήκευση',
@@ -376,7 +376,7 @@ const en: typeof el = {
     explore: 'Explore', support: 'Support', legal: 'Legal',
     contact: 'Contact', faq: 'FAQ', help: 'Help',
     terms: 'Terms of Service', privacy: 'Privacy Policy', cookies: 'Cookies',
-    allRights: 'All rights reserved.',
+    allRights: 'All rights reserved.', aboutUs: 'About Us',
   },
   common: {
     loading: 'Loading...', error: 'Error', save: 'Save',
@@ -597,7 +597,7 @@ const es: typeof el = {
     explore: 'Explorar', support: 'Soporte', legal: 'Legal',
     contact: 'Contacto', faq: 'FAQ', help: 'Ayuda',
     terms: 'Términos', privacy: 'Privacidad', cookies: 'Cookies',
-    allRights: 'Todos los derechos reservados.',
+    allRights: 'Todos los derechos reservados.', aboutUs: 'Quiénes Somos',
   },
   common: {
     loading: 'Cargando...', error: 'Error', save: 'Guardar',
@@ -747,7 +747,7 @@ const fr: typeof el = {
     explore: 'Explorer', users: 'Propriétaires', pets: 'Animaux', rating: 'Note', security: 'Sécurité',
     socialFeed: 'Social Feed', socialDesc: 'Partagez des moments',
     marketplaceTitle: 'Boutique', marketplaceDesc: 'Nourriture, jouets et accessoires',
-    servicesTitle: 'Services', servicesDesc: 'Vétérinaires, toilettage et dressage',
+    servicesTitle: 'Découvrez nos services...', servicesDesc: 'Vétérinaires, toilettage et dressage',
     eventsTitle: 'Événements', eventsDesc: 'Expositions et compétitions',
     findPet: 'GPS Tracker', findPetDesc: 'Retrouvez votre animal', aiPowered: 'Propulsé par IA',
   },
@@ -818,7 +818,7 @@ const fr: typeof el = {
     explore: 'Explorer', support: 'Support', legal: 'Légal',
     contact: 'Contact', faq: 'FAQ', help: 'Aide',
     terms: 'Conditions', privacy: 'Confidentialité', cookies: 'Cookies',
-    allRights: 'Tous droits réservés.',
+    allRights: 'Tous droits réservés.', aboutUs: 'Qui Sommes-Nous',
   },
   common: {
     loading: 'Chargement...', error: 'Erreur', save: 'Enregistrer',
@@ -1039,7 +1039,7 @@ const zh: typeof el = {
     explore: '探索', support: '支持', legal: '法律',
     contact: '联系', faq: '常见问题', help: '帮助',
     terms: '服务条款', privacy: '隐私政策', cookies: 'Cookies',
-    allRights: '版权所有。',
+    allRights: '版权所有。', aboutUs: '关于我们',
   },
   common: {
     loading: '加载中...', error: '错误', save: '保存',

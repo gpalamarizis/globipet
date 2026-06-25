@@ -281,7 +281,7 @@ export default function MainLayout() {
             <div>
               <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.support')}</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link to="/about" className="hover:text-white transition-colors">Ποιοί Είμαστε</Link></li>
+                <li><Link to="/about" className="hover:text-white transition-colors">{t('footer.aboutUs')}</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">{t('footer.help')}</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">{t('footer.faq')}</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">{t('footer.contact')}</a></li>

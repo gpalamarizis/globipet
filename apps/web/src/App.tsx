@@ -105,6 +105,7 @@ export default function App() {
 
               <Route element={<MainLayout />}>
                 <Route path="/"                element={<Home />} />
+                <Route path="/about"           element={<AboutPage />} />
                 <Route path="/social"          element={<Social />} />
                 <Route path="/marketplace"     element={<Marketplace />} />
                 <Route path="/marketplace/:id" element={<ProductDetail />} />
@@ -157,7 +158,6 @@ export default function App() {
                 <Route path="/admin/messages"      element={<AdminMessagesPage />} />
                 <Route path="/admin/content"       element={<AdminContentPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
-                <Route path="/about"               element={<AboutPage />} />
               </Route>
               <Route path="*"        element={<NotFound />} />
             </Routes>
