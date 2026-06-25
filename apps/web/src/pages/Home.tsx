@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill } from 'lucide-react'
@@ -6,19 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
-import EventCard from '@/components/features/events/EventCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-
-const MOTTO = [
-  'Η καλύτερη εφαρμογή κατοικιδίων στον κόσμο',
-  'The best pet app in the world',
-  'La meilleure app pour animaux de compagnie',
-  'Die beste Haustier-App der Welt',
-  'La migliore app per animali domestici',
-  'La mejor app del mundo para mascotas',
-  'Najlepsza aplikacja dla zwierząt na świecie',
-  'En iyi evcil hayvan uygulaması',
-]
 
 export default function Home() {
   const { t } = useTranslation()
@@ -42,11 +30,6 @@ export default function Home() {
     queryKey: ['featured-services'],
     queryFn: () => api.get('/services?limit=4').then(r => r.data),
   })
-  const { data: upcomingEvents, isLoading: loadingEvents } = useQuery({
-    queryKey: ['upcoming-events'],
-    queryFn: () => api.get('/events?upcoming=true&limit=3').then(r => r.data),
-  })
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     navigate(`/services?q=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(searchCity)}`)
@@ -72,18 +55,9 @@ export default function Home() {
   ]
 
   // Duplicate for seamless loop
-  const mottoItems = [...MOTTO, ...MOTTO]
 
   return (
     <div className="pb-20 lg:pb-0">
-      <style>{`
-        @keyframes gp-ticker {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .gp-ticker { animation: gp-ticker 24s linear infinite; }
-      `}</style>
-
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="bg-gray-50 dark:bg-gray-950 px-4 pt-4 pb-0">
         <div className="max-w-7xl mx-auto">
@@ -215,26 +189,6 @@ export default function Home() {
       </section>
 
       {/* ── FEATURED SERVICES ────────────────────────────── */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-950">
-        <div className="page-container">
-          <div className="flex items-center justify-between mb-7">
-            <div>
-              <h2 className="section-title">Κορυφαίοι Πάροχοι</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Επαληθευμένοι, αξιολογημένοι από την κοινότητα</p>
-            </div>
-            <Link to="/services" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
-              Όλοι <ArrowRight size={14} />
-            </Link>
-          </div>
-          {loadingServices
-            ? <div className="flex justify-center py-12"><LoadingSpinner /></div>
-            : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {featuredServices?.data?.map((service: any) => (
-                  <ServiceCard key={service.id} service={service} />
-                ))}
-              </div>}
-        </div>
-      </section>
 
       {/* ── MARKETPLACE ──────────────────────────────────── */}
       <section className="py-12 bg-white dark:bg-gray-900">
@@ -302,24 +256,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── EVENTS (conditional) ─────────────────────────── */}
-      {!loadingEvents && upcomingEvents?.data?.length > 0 && (
-        <section className="py-12 bg-gray-50 dark:bg-gray-950">
-          <div className="page-container">
-            <div className="flex items-center justify-between mb-7">
-              <h2 className="section-title">{t('home.upcomingEvents')}</h2>
-              <Link to="/events" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
-                {t('home.allEvents')} <ArrowRight size={14} />
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcomingEvents.data.map((event: any) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── AI BANNER ────────────────────────────────────── */}
       <section className="py-12 bg-white dark:bg-gray-900">
