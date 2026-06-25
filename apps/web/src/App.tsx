@@ -157,9 +157,9 @@ export default function App() {
                 <Route path="/admin/messages"      element={<AdminMessagesPage />} />
                 <Route path="/admin/content"       element={<AdminContentPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
+                <Route path="/about"               element={<AboutPage />} />
               </Route>
               <Route path="*"        element={<NotFound />} />
-              <Route path="/about"   element={<AboutPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
