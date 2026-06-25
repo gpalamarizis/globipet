@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
@@ -11,6 +12,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 export default function Home() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCity, setSearchCity] = useState('')
 
@@ -191,7 +193,8 @@ export default function Home() {
 
       {/* ── FEATURED SERVICES ────────────────────────────── */}
 
-      {/* ── MARKETPLACE ──────────────────────────────────── */}
+      {/* ── MARKETPLACE (logged in only) ──────────────────── */}
+      {isAuthenticated && (
       <section className="py-12 bg-white dark:bg-gray-900">
         <div className="page-container">
           <div className="flex items-center justify-between mb-7">
@@ -256,43 +259,10 @@ export default function Home() {
               </div>}
         </div>
       </section>
+      )}
 
 
       {/* ── AI BANNER ────────────────────────────────────── */}
-      <section className="py-12 bg-white dark:bg-gray-900">
-        <div className="page-container">
-          <div className="rounded-3xl bg-gray-950 p-8 lg:p-12 text-white overflow-hidden relative">
-            <div className="absolute right-[-40px] top-[-40px] w-52 h-52 rounded-full border border-gray-800 pointer-events-none" />
-            <div className="absolute right-8 top-5 w-32 h-32 rounded-full border border-gray-800 pointer-events-none" />
-            <div className="relative">
-              <p className="text-[11px] font-bold text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <Zap size={11} className="text-amber-400" /> AI Powered
-              </p>
-              <h2 className="text-2xl lg:text-4xl font-display font-bold mb-4 leading-tight">
-                Ο γιατρός του κατοικίδιού σου<br />
-                είναι πάντα <span className="text-amber-400">διαθέσιμος</span>
-              </h2>
-              <p className="text-gray-400 mb-7 max-w-md text-sm leading-relaxed">
-                Ανάλυση συμπτωμάτων, health tracking, emotion detection και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-8">
-                {['🧠 AI Health Check', '😊 Emotion Detector', '📊 Wellness Tracker', '🩺 Τηλειατρική 24/7'].map(f => (
-                  <span key={f} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300">{f}</span>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Link to="/ai-health" className="bg-amber-400 text-gray-900 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-300 transition-colors">
-                  Δοκίμασε δωρεάν
-                </Link>
-                <Link to="/medical-center" className="text-white border border-gray-700 text-sm font-medium px-5 py-2.5 rounded-xl hover:border-gray-500 transition-colors">
-                  Μάθε περισσότερα
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── FOOTER CTA ───────────────────────────────────── */}
       <section className="bg-brand-900 py-16 px-4 text-center text-white">
         <h2 className="text-3xl font-display font-bold tracking-tight mb-3">Ξεκίνα δωρεάν σήμερα</h2>
