@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill } from 'lucide-react'
@@ -8,6 +8,40 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+
+function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: number, suffix: string, label: string, color: string, decimals?: number }) {
+  const [current, setCurrent] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+  const [started, setStarted] = useState(false)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !started) {
+        setStarted(true)
+        const duration = 1500
+        const steps = 60
+        const stepValue = value / steps
+        let i = 0
+        const timer = setInterval(() => {
+          i++
+          setCurrent(Math.min(stepValue * i, value))
+          if (i >= steps) clearInterval(timer)
+        }, duration / steps)
+      }
+    }, { threshold: 0.3 })
+    if (ref.current) observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [value, started])
+
+  const displayValue = decimals > 0 ? current.toFixed(decimals) : Math.floor(current).toLocaleString('el-GR')
+  return (
+    <div ref={ref} className="text-center">
+      <p className={`text-2xl md:text-3xl font-black ${color}`}>{displayValue}{suffix}</p>
+      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+    </div>
+  )
+}
 
 export default function Home() {
   const { t } = useTranslation()
@@ -105,6 +139,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── TRUST BAR (animated stats) ───────────────────── */}
+      <section className="bg-white dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800 py-6 px-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { value: 50000, suffix: '+', label: 'Ιδιοκτήτες', color: 'text-brand-900' },
+            { value: 2000,  suffix: '+', label: 'Πάροχοι',    color: 'text-purple-600' },
+            { value: 120000, suffix: '+', label: 'Κατοικίδια', color: 'text-orange-600' },
+            { value: 4.9,   suffix: '★', label: 'Βαθμολογία',  color: 'text-amber-500', decimals: 1 },
+          ].map(stat => (
+            <AnimatedStat key={stat.label} {...stat} />
+          ))}
+        </div>
+      </section>
+
       {/* Search bar */}
       <div className="bg-gray-50 dark:bg-gray-950 px-4 py-6">
         <motion.form onSubmit={handleSearch}
@@ -130,15 +178,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
-              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=400&q=80' },
-              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80' },
-              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=400&q=80' },
-              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&q=80' },
-              { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80' },
-              { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&q=80' },
+              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=600&q=80' },
+              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80' },
+              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80' },
+              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
+              { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600&q=80' },
+              { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
             ].map(item => (
               <Link key={item.path + item.title} to={item.path}
-                className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block">
+                className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                 <img src={item.img} alt={item.title}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   onError={e => { (e.target as any).style.display = 'none' }} />
