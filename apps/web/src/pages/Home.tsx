@@ -62,7 +62,7 @@ export default function Home() {
     <div className="pb-20 lg:pb-0">
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="bg-gray-50 dark:bg-gray-950 px-4 pt-4 pb-0">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto" style={{ maxWidth: '1075px' }}>
           <div className="flex gap-4 min-h-[420px]">
 
             {/* LEFT BOX — navy */}
