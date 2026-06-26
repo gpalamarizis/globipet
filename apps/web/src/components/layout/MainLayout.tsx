@@ -6,8 +6,9 @@ import {
   Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart,
   Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar,
   MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen,
-  Building2, MoreHorizontal, Video, FileText, Dna, Scale
+  Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon
 } from 'lucide-react'
+import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -94,6 +95,22 @@ function NavDropdown({ label, icon: Icon, items }: { label: string; icon: any; i
 }
 
 // ─── Main Layout ─────────────────────────────────────────────────
+function ThemeToggle() {
+  const { theme, toggleTheme } = useThemeStore()
+  const isDark = theme === 'dark'
+  return (
+    <button
+      onClick={toggleTheme}
+      className="btn-ghost p-2.5 relative group"
+      aria-label={isDark ? 'Light mode' : 'Dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}>
+      {isDark
+        ? <Sun size={18} className="text-yellow-400 group-hover:rotate-45 transition-transform duration-300" />
+        : <Moon size={18} className="text-gray-600 group-hover:-rotate-12 transition-transform duration-300" />}
+    </button>
+  )
+}
+
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()
@@ -163,8 +180,10 @@ export default function MainLayout() {
             <div className="flex items-center gap-1.5">
               <LanguageSelector />
 
+              <ThemeToggle />
+
               <button className="btn-ghost p-2.5 hidden sm:flex">
-                <Search size={18} className="text-gray-500" />
+                <Search size={18} className="text-gray-500 dark:text-gray-400" />
               </button>
 
               {isAuthenticated && (

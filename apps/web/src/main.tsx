@@ -48,4 +48,15 @@ const handleOAuthToken = () => {
 
 handleOAuthToken()
 
+// Apply theme before React renders to prevent flash of light mode
+try {
+  const stored = localStorage.getItem('globipet-theme')
+  if (stored) {
+    const { state } = JSON.parse(stored)
+    if (state?.theme === 'dark' || (state?.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+    }
+  }
+} catch {}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(<App />)
