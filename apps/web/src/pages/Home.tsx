@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill } from 'lucide-react'
+import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
@@ -46,7 +46,7 @@ function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: nu
 export default function Home() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCity, setSearchCity] = useState('')
 
@@ -65,6 +65,20 @@ export default function Home() {
   const { data: featuredServices, isLoading: loadingServices } = useQuery({
     queryKey: ['featured-services'],
     queryFn: () => api.get('/services?limit=4').then(r => r.data),
+  })
+
+  // Personalized data for logged-in users
+  const { data: myPets } = useQuery({
+    queryKey: ['my-pets-home'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  const { data: nextBooking } = useQuery({
+    queryKey: ['my-next-booking'],
+    queryFn: () => api.get('/bookings/me?upcoming=true&limit=1').then(r => r.data?.data?.[0] ?? null),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
   })
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -157,6 +171,96 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── PERSONALIZED WELCOME (logged-in only) ──────────── */}
+      {isAuthenticated && user && (
+        <section className="bg-gradient-to-br from-yellow-50 via-orange-50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 px-4 py-8 border-b border-gray-100 dark:border-gray-800">
+          <div className="max-w-6xl mx-auto">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-3xl">👋</span>
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
+                    Καλώς ήρθες πίσω, <span className="text-brand-900 dark:text-yellow-400">{user.full_name?.split(' ')[0] || 'φίλε'}</span>!
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Δες τι έχει σήμερα για σένα και τα κατοικίδιά σου</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {/* Next booking card */}
+                <Link to={nextBooking ? `/bookings/${nextBooking.id}` : '/services'}
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                      <Calendar size={20} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">Επόμενο ραντεβού</h3>
+                  {nextBooking ? (
+                    <>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || 'Ραντεβού'}</p>
+                      <p className="text-xs text-brand-900 dark:text-yellow-400 font-semibold mt-1">
+                        {new Date(nextBooking.start_time).toLocaleDateString('el-GR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Δεν έχεις προγραμματισμένο ραντεβού. Κάνε κράτηση τώρα!</p>
+                  )}
+                </Link>
+
+                {/* My pets card */}
+                <Link to="/pets"
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                      <PawPrint size={20} className="text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">Τα κατοικίδιά μου</h3>
+                  {myPets && myPets.length > 0 ? (
+                    <>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {myPets.length} {myPets.length === 1 ? 'κατοικίδιο' : 'κατοικίδια'} εγγεγραμμένα
+                      </p>
+                      <div className="flex -space-x-2 mt-2">
+                        {myPets.slice(0, 4).map((pet: any, i: number) => (
+                          <div key={pet.id} className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-100 to-brand-300 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-brand-900"
+                            style={{ zIndex: 4 - i }}>
+                            {pet.name?.[0] || '?'}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Πρόσθεσε το πρώτο σου κατοικίδιο για να ξεκινήσεις!</p>
+                  )}
+                </Link>
+
+                {/* Quick AI check card */}
+                <Link to="/ai-health"
+                  className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-700 dark:to-indigo-800 rounded-2xl p-5 text-white hover:shadow-xl transition-all group relative overflow-hidden">
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <Brain size={20} className="text-white" />
+                      </div>
+                      <ArrowRight size={16} className="text-white/80 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <h3 className="font-bold text-sm mb-1">AI Health Check</h3>
+                    <p className="text-xs text-white/80">Γρήγορος έλεγχος υγείας με τεχνητή νοημοσύνη</p>
+                  </div>
+                </Link>
+
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── TRUST BAR (animated stats) ───────────────────── */}
       <section className="bg-white dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800 py-6 px-4">
