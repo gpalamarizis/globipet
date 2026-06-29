@@ -108,9 +108,7 @@ export default function Home() {
 
   return (
     <div className="pb-20 lg:pb-0">      {/* ── HERO with cinematic video ─────────────────────── */}
-      <section className="relative bg-gray-950 px-4 pt-4 pb-0">
-        <div className="mx-auto" style={{ maxWidth: '1075px' }}>
-          <div className="relative rounded-3xl overflow-hidden min-h-[480px] lg:min-h-[560px]">
+      <section className="relative h-[480px] lg:h-[560px] overflow-hidden">
 
             {/* Video background */}
             <video
@@ -167,8 +165,6 @@ export default function Home() {
               </motion.div>
 
             </div>
-          </div>
-        </div>
       </section>
 
       {/* ── PERSONALIZED WELCOME (logged-in only) ──────────── */}
