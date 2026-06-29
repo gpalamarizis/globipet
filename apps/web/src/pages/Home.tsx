@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { ProductGridSkeleton } from '@/components/ui/Skeleton'
 
 
 function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: number, suffix: string, label: string, color: string, decimals?: number }) {
@@ -307,19 +308,25 @@ export default function Home() {
               { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
               { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600&q=80' },
               { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
-            ].map(item => (
-              <Link key={item.path + item.title} to={item.path}
-                className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                <img src={item.img} alt={item.title}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={e => { (e.target as any).style.display = 'none' }} />
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
-                <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                  <span className="text-2xl mb-1">{item.emoji}</span>
-                  <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
-                  <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
-                </div>
-              </Link>
+            ].map((item, idx) => (
+              <motion.div key={item.path + item.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.5, delay: idx * 0.1, ease: 'easeOut' }}>
+                <Link to={item.path}
+                  className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                  <img src={item.img} alt={item.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={e => { (e.target as any).style.display = 'none' }} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
+                  <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                    <span className="text-2xl mb-1">{item.emoji}</span>
+                    <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
+                    <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
+                  </div>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -378,7 +385,7 @@ export default function Home() {
             </Link>
           </div>
           {loadingProducts
-            ? <div className="flex justify-center py-12"><LoadingSpinner /></div>
+            ? <ProductGridSkeleton count={4} />
             : <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Featured product — first result */}
                 {featuredProducts?.data?.[0] && (
