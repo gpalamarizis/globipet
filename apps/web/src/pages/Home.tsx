@@ -118,8 +118,11 @@ export default function Home() {
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/40 via-black/25 to-black/60" />
+
             {/* Content overlay */}
-            <div className="relative z-10 min-h-[480px] lg:min-h-[560px] flex flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="relative z-[2] h-full flex flex-col items-center justify-center px-6 py-12 text-center">
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
