@@ -109,61 +109,11 @@ export default function Home() {
   return (
     <div className="pb-20 lg:pb-0">      {/* ── HERO with cinematic video ─────────────────────── */}
       <section className="relative h-[480px] lg:h-[560px] overflow-hidden">
-
-            {/* Video background */}
             <video
               autoPlay muted loop playsInline
-              poster="/videos/hero-1-poster.jpg"
               className="absolute inset-0 w-full h-full object-cover">
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
-
-            {/* Dark gradient overlay */}
-            <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/40 via-black/25 to-black/60" />
-
-            {/* Content overlay */}
-            <div className="relative z-[2] h-full flex flex-col items-center justify-center px-6 py-12 text-center">
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
-                className="inline-flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/30 rounded-full px-4 py-2 mb-6">
-                <Zap size={14} className="text-yellow-400" />
-                <p className="text-xs font-bold text-yellow-400 tracking-widest uppercase">AI Powered Pet Platform</p>
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }}
-                className="text-4xl lg:text-6xl font-display font-black text-white leading-tight max-w-3xl drop-shadow-2xl">
-                Ο γιατρός του κατοικιδίου σου<br/>είναι πάντα <span className="text-yellow-400">διαθέσιμος</span>
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.8 }}
-                className="text-base lg:text-lg text-white/90 mt-6 max-w-2xl leading-relaxed drop-shadow-lg">
-                Ανάλυση συμπτωμάτων, health tracking, emotion detection και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.8 }}
-                className="flex flex-wrap gap-2 justify-center mt-8">
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">AI Health Check</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Emotion Detector</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Wellness Tracker</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Τηλεϊατρική 24-7</span>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 0.8 }}
-                className="flex gap-3 mt-10 flex-wrap justify-center">
-                <Link to="/register" className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
-                  Δοκίμασε δωρεάν
-                </Link>
-                <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
-                  Μάθε περισσότερα
-                </Link>
-              </motion.div>
-
-            </div>
       </section>
 
       {/* ── PERSONALIZED WELCOME (logged-in only) ──────────── */}
