@@ -109,9 +109,8 @@ export default function Home() {
 
   return (
     <div className="pb-20 lg:pb-0">      {/* ── HERO with cinematic video ─────────────────────── */}
-      <section className="relative bg-gray-950 px-4 pt-4 pb-0">
-        <div className="mx-auto" style={{ maxWidth: '1075px' }}>
-          <div className="relative rounded-3xl overflow-hidden min-h-[480px] lg:min-h-[560px]">
+      <section className="relative">
+        <div className="relative h-[480px] lg:h-[560px] overflow-hidden">
 
             {/* Video background */}
             <video
@@ -127,7 +126,7 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
             {/* Content overlay */}
-            <div className="relative z-10 min-h-[480px] lg:min-h-[560px] flex flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12 text-center">
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
@@ -168,8 +167,28 @@ export default function Home() {
                 </Link>
               </motion.div>
 
+              {/* Trust signals */}
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4, duration: 0.8 }}
+                className="flex flex-wrap items-center justify-center gap-4 mt-8 pt-6 border-t border-white/20">
+                <span className="flex items-center gap-1.5 text-white/70 text-xs font-medium">
+                  <span className="text-green-400">✓</span> 2.000+ Επαληθευμένοι Πάροχοι
+                </span>
+                <span className="w-px h-4 bg-white/20 hidden sm:block" />
+                <span className="flex items-center gap-1.5 text-white/70 text-xs font-medium">
+                  <span className="text-green-400">✓</span> Ασφαλισμένες Κρατήσεις
+                </span>
+                <span className="w-px h-4 bg-white/20 hidden sm:block" />
+                <span className="flex items-center gap-1.5 text-white/70 text-xs font-medium">
+                  <span className="text-green-400">✓</span> 24/7 Υποστήριξη
+                </span>
+                <span className="w-px h-4 bg-white/20 hidden sm:block" />
+                <span className="flex items-center gap-1.5 text-white/70 text-xs font-medium">
+                  <span className="text-yellow-400">★</span> 4.9/5 από 12.000+ αξιολογήσεις
+                </span>
+              </motion.div>
+
             </div>
-          </div>
         </div>
       </section>
 
@@ -297,33 +316,94 @@ export default function Home() {
         </motion.form>
       </div>
 
-      {/* Featured services 2×3 grid */}
-      <div className="px-4 py-8 bg-gray-50 dark:bg-gray-950">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-            {[
-              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=600&q=80' },
-              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80' },
-              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80' },
-              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
-              { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600&q=80' },
-              { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
-            ].map((item, idx) => (
+      {/* ── SERVICE CARDS 2×3 ─────────────────────────────── */}
+      <div className="px-4 py-10 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-display font-bold text-gray-900 dark:text-white">Υπηρεσίες για κάθε ανάγκη</h2>
+            <Link to="/services" className="text-sm text-brand-900 dark:text-brand-400 font-medium flex items-center gap-1 hover:gap-2 transition-all">
+              Όλες <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {([
+              {
+                path: '/telehealth',
+                title: 'Τηλεϊατρική',
+                sub: 'Βιντεοκλήση με κτηνίατρο',
+                bg: 'from-blue-600 to-cyan-500',
+                img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=600&q=80',
+                badge: '24/7',
+              },
+              {
+                path: '/ai-health',
+                title: 'AI Υγεία',
+                sub: 'Έλεγχος από φωτογραφία',
+                bg: 'from-violet-600 to-purple-500',
+                img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80',
+                badge: 'AI',
+              },
+              {
+                path: '/services?type=grooming',
+                title: 'Grooming',
+                sub: 'Επαγγελματική περιποίηση',
+                bg: 'from-pink-500 to-rose-500',
+                img: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&q=80',
+                badge: null,
+              },
+              {
+                path: '/services?type=veterinary',
+                title: 'Κτηνίατρος',
+                sub: 'Εξέταση & πρόληψη',
+                bg: 'from-emerald-500 to-green-600',
+                img: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=600&q=80',
+                badge: null,
+              },
+              {
+                path: '/passport',
+                title: 'Ιατρικός Φάκελος',
+                sub: 'Πλήρες ιστορικό υγείας',
+                bg: 'from-amber-500 to-orange-500',
+                img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80',
+                badge: null,
+              },
+              {
+                path: '/legal',
+                title: 'Νομική Υποστήριξη',
+                sub: 'AI νομικός σύμβουλος',
+                bg: 'from-slate-600 to-indigo-600',
+                img: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80',
+                badge: 'Νέο',
+              },
+            ] as const).map((item, idx) => (
               <motion.div key={item.path + item.title}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ duration: 0.5, delay: idx * 0.1, ease: 'easeOut' }}>
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: idx * 0.07, ease: 'easeOut' }}>
                 <Link to={item.path}
                   className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                  <img loading="lazy" decoding="async" src={item.img} alt={item.title}
+                  {/* Photo */}
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={item.img}
+                    alt={item.title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    onError={e => { (e.target as any).style.display = 'none' }} />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                  {/* Gradient overlay */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-75 group-hover:opacity-65 transition-opacity duration-300`} />
+                  {/* Badge */}
+                  {item.badge && (
+                    <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {item.badge}
+                    </div>
+                  )}
+                  {/* Text */}
                   <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                    <span className="text-2xl mb-1">{item.emoji}</span>
-                    <p className="text-white font-bold text-lg leading-tight">{item.title}</p>
-                    <p className="text-white/80 text-xs mt-0.5">{item.sub}</p>
+                    <p className="text-white font-bold text-base lg:text-lg leading-tight drop-shadow">{item.title}</p>
+                    <p className="text-white/80 text-xs mt-0.5 drop-shadow">{item.sub}</p>
                   </div>
                 </Link>
               </motion.div>
@@ -365,7 +445,6 @@ export default function Home() {
                 </Link>
               </motion.div>
             ))}
-          </div>
         </div>
       </section>
 
