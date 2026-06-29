@@ -113,7 +113,7 @@ export default function Home() {
             <video
               autoPlay muted loop playsInline
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
-              <source src="https://globipet.com/videos/hero-1.mp4" type="video/mp4" />
+              <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.55) 100%)', zIndex: 1 }} />
