@@ -122,8 +122,7 @@ export default function Home() {
             </video>
 
             {/* Dark gradient overlay for readability */}
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
             {/* Content overlay */}
             <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12 text-center">
