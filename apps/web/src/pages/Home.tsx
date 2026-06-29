@@ -104,10 +104,6 @@ export default function Home() {
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
-            {/* Dark gradient overlay for readability */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/70" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
             {/* Content overlay */}
             <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12 text-center">
 
@@ -151,8 +147,6 @@ export default function Home() {
               </motion.div>
 
             </div>
-          </div>
-        </div>
       </section>
 
       {/* ── TRUST BAR (animated stats) ───────────────────── */}
