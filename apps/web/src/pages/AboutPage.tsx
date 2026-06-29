@@ -46,7 +46,7 @@ function FounderCard({ founder }: { founder: typeof FOUNDERS[0] }) {
       className="card p-6 text-center">
       <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 bg-gray-100">
         {!imgError
-          ? <img src={founder.photo} alt={founder.name} className="w-full h-full object-cover"
+          ? <img loading="lazy" decoding="async" src={founder.photo} alt={founder.name} className="w-full h-full object-cover"
               onError={() => setImgError(true)} />
           : <div className="w-full h-full flex items-center justify-center bg-brand-50">
               <span className="text-3xl font-bold text-brand-900">{founder.name[0]}</span>
@@ -73,7 +73,7 @@ export default function AboutPage() {
       <section className="bg-[#0F2A3F] text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <img src="/logo-clean.png" alt="GlobiPet" className="h-16 w-auto mx-auto mb-6 brightness-0 invert" />
+            <img loading="lazy" decoding="async" src="/logo-clean.png" alt="GlobiPet" className="h-16 w-auto mx-auto mb-6 brightness-0 invert" />
             <h1 className="text-4xl lg:text-5xl font-display font-black mb-4">
               Ποιοί Είμαστε
             </h1>
@@ -128,7 +128,7 @@ export default function AboutPage() {
               <motion.div key={service.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                 className="card overflow-hidden">
                 <div className="h-40 overflow-hidden">
-                  <img src={service.img} alt={service.title} className="w-full h-full object-cover" />
+                  <img loading="lazy" decoding="async" src={service.img} alt={service.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5">
                   <div className={`w-10 h-10 rounded-xl ${service.color} flex items-center justify-center mb-3`}>

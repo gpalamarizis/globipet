@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
+import PetQuickWidget from '@/components/layout/PetQuickWidget'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
 
@@ -272,8 +273,11 @@ export default function MainLayout() {
         </div>
       </header>
 
+      {/* ── A11Y: Skip to main content ─────────────────────── */}
+      <a href="#main-content" className="skip-link">Μετάβαση στο περιεχόμενο</a>
+
       {/* ── MAIN CONTENT (extra bottom padding on mobile for tab bar) ── */}
-      <main className="flex-1 pb-20 lg:pb-0">
+      <main id="main-content" className="flex-1 pb-20 lg:pb-0">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
@@ -285,6 +289,9 @@ export default function MainLayout() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* ── Floating Pet Quick Actions Widget ──────────────────── */}
+      <PetQuickWidget />
 
       {/* ── FOOTER (desktop only) ──────────────────────────────── */}
       <footer className="hidden lg:block bg-gray-900 text-gray-400 py-12 mt-16">

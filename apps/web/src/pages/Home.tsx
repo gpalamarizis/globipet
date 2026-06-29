@@ -116,6 +116,7 @@ export default function Home() {
             {/* Video background */}
             <video
               autoPlay muted loop playsInline
+              aria-hidden="true"
               poster="/videos/hero-1-poster.jpg"
               className="absolute inset-0 w-full h-full object-cover">
               <source src="/videos/hero-1.mp4" type="video/mp4" media="(min-width: 768px)" />
@@ -316,7 +317,7 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: idx * 0.1, ease: 'easeOut' }}>
                 <Link to={item.path}
                   className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                  <img src={item.img} alt={item.title}
+                  <img loading="lazy" decoding="async" src={item.img} alt={item.title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     onError={e => { (e.target as any).style.display = 'none' }} />
                   <div className={`absolute inset-0 bg-gradient-to-br ${item.bg} opacity-70 group-hover:opacity-60 transition-opacity`} />
@@ -394,7 +395,7 @@ export default function Home() {
                     className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-6 flex items-center gap-6 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors"
                   >
                     {featuredProducts.data[0].imageUrl
-                      ? <img src={featuredProducts.data[0].imageUrl} alt={featuredProducts.data[0].name} className="w-24 h-24 object-contain rounded-xl flex-shrink-0" />
+                      ? <img loading="lazy" decoding="async" src={featuredProducts.data[0].imageUrl} alt={featuredProducts.data[0].name} className="w-24 h-24 object-contain rounded-xl flex-shrink-0" />
                       : <div className="w-24 h-24 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
                           <ShoppingBag size={32} className="text-brand-900 dark:text-brand-400" />
                         </div>}
@@ -422,7 +423,7 @@ export default function Home() {
                       className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center gap-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
                       {product.imageUrl
-                        ? <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-contain rounded-lg flex-shrink-0" />
+                        ? <img loading="lazy" decoding="async" src={product.imageUrl} alt={product.name} className="w-12 h-12 object-contain rounded-lg flex-shrink-0" />
                         : <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                             <ShoppingBag size={18} className="text-gray-400" />
                           </div>}
