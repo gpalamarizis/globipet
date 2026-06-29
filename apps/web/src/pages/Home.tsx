@@ -117,8 +117,7 @@ export default function Home() {
               autoPlay muted loop playsInline
               poster="/videos/hero-1-poster.jpg"
               className="absolute inset-0 w-full h-full object-cover">
-              <source src="/videos/hero-1.mp4" type="video/mp4" media="(min-width: 768px)" />
-              <source src="/videos/hero-1-mobile.mp4" type="video/mp4" />
+              <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
             {/* Dark gradient overlay for readability */}
