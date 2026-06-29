@@ -63,6 +63,10 @@ const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage')
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
+const HelpPage          = lazy(() => import('@/pages/HelpPage'))
+const FaqPage           = lazy(() => import('@/pages/FaqPage'))
+const ContactPage       = lazy(() => import('@/pages/ContactPage'))
+const LegalPage         = lazy(() => import('@/pages/LegalPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false } },
@@ -106,6 +110,12 @@ export default function App() {
               <Route element={<MainLayout />}>
                 <Route path="/"                element={<Home />} />
                 <Route path="/about"           element={<AboutPage />} />
+                <Route path="/help"            element={<HelpPage />} />
+                <Route path="/faq"             element={<FaqPage />} />
+                <Route path="/contact"         element={<ContactPage />} />
+                <Route path="/terms"           element={<LegalPage variant="terms" />} />
+                <Route path="/privacy"         element={<LegalPage variant="privacy" />} />
+                <Route path="/cookies"         element={<LegalPage variant="cookies" />} />
                 <Route path="/social"          element={<Social />} />
                 <Route path="/marketplace"     element={<Marketplace />} />
                 <Route path="/marketplace/:id" element={<ProductDetail />} />

@@ -317,17 +317,17 @@ export default function MainLayout() {
               <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.support')}</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/about" className="hover:text-white transition-colors">{t('footer.aboutUs')}</Link></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.help')}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.faq')}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.contact')}</a></li>
+                <li><Link to="/help" className="hover:text-white transition-colors">{t('footer.help')}</Link></li>
+                <li><Link to="/faq" className="hover:text-white transition-colors">{t('footer.faq')}</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">{t('footer.contact')}</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.legal')}</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.terms')}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.privacy')}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t('footer.cookies')}</a></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">{t('footer.terms')}</Link></li>
+                <li><Link to="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link></li>
+                <li><Link to="/cookies" className="hover:text-white transition-colors">{t('footer.cookies')}</Link></li>
               </ul>
             </div>
           </div>
