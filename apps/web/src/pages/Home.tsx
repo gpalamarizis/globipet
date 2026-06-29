@@ -118,10 +118,6 @@ export default function Home() {
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
-            {/* Dark gradient overlay for readability */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/70" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
             {/* Content overlay */}
             <div className="relative z-10 min-h-[480px] lg:min-h-[560px] flex flex-col items-center justify-center px-6 py-12 text-center">
 
