@@ -5,13 +5,36 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Star, MapPin, Clock, Phone, Shield, Check,
-  Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap
+  Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap,
+  Stethoscope, Scissors, GraduationCap, Footprints, Building2, Car, Camera, Pill, PawPrint,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+// #6: illustration fallback per service type (instead of one generic 🐾 emoji)
+const typeIllustration: Record<string, { Icon: typeof Stethoscope, bg: string, fg: string }> = {
+  veterinary:  { Icon: Stethoscope,   bg: 'bg-red-50 dark:bg-red-900/15',       fg: 'text-red-400 dark:text-red-500' },
+  grooming:    { Icon: Scissors,      bg: 'bg-purple-50 dark:bg-purple-900/15', fg: 'text-purple-400 dark:text-purple-500' },
+  training:    { Icon: GraduationCap, bg: 'bg-blue-50 dark:bg-blue-900/15',     fg: 'text-blue-400 dark:text-blue-500' },
+  pet_sitting: { Icon: Home,          bg: 'bg-green-50 dark:bg-green-900/15',   fg: 'text-green-400 dark:text-green-500' },
+  walking:     { Icon: Footprints,    bg: 'bg-yellow-50 dark:bg-yellow-900/15', fg: 'text-yellow-500 dark:text-yellow-500' },
+  boarding:    { Icon: Building2,     bg: 'bg-orange-50 dark:bg-orange-900/15', fg: 'text-orange-400 dark:text-orange-500' },
+  pet_taxi:    { Icon: Car,           bg: 'bg-teal-50 dark:bg-teal-900/15',     fg: 'text-teal-400 dark:text-teal-500' },
+  photography: { Icon: Camera,        bg: 'bg-pink-50 dark:bg-pink-900/15',     fg: 'text-pink-400 dark:text-pink-500' },
+  pharmacy:    { Icon: Pill,          bg: 'bg-indigo-50 dark:bg-indigo-900/15', fg: 'text-indigo-400 dark:text-indigo-500' },
+}
+const defaultIllustration = { Icon: PawPrint, bg: 'bg-gray-50 dark:bg-gray-800', fg: 'text-gray-300 dark:text-gray-600' }
+
+// Local label fallback so a missing/incomplete i18n key never shows the raw key to the user
+const typeLabels: Record<string,string> = {
+  veterinary:'Κτηνίατρος', grooming:'Περιποίηση', training:'Εκπαίδευση',
+  pet_sitting:'Φιλοξενία · Ιδιώτης', walking:'Βόλτες', boarding:'Φιλοξενία · Ξενοδοχείο',
+  pet_taxi:'Pet Taxi', photography:'Φωτογράφιση', pharmacy:'Φαρμακείο',
+  adoption:'Υιοθεσία', shelter:'Καταφύγιο', other:'Άλλο',
+}
 
 export default function ServiceDetail() {
   const { id } = useParams()
@@ -91,6 +114,8 @@ export default function ServiceDetail() {
     : service.rating || 0
 
   const canBook = isAuthenticated && selectedDate && selectedTime
+  const illustration = typeIllustration[service.service_type] || defaultIllustration
+  const { Icon: TypeIcon, bg: illuBg, fg: illuFg } = illustration
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-5xl mx-auto">
@@ -102,7 +127,7 @@ export default function ServiceDetail() {
         <ChevronRight size={13} />
         <Link to="/services" className="hover:text-brand-900">{t('nav.services')}</Link>
         <ChevronRight size={13} />
-        <span className="text-gray-900 dark:text-white truncate max-w-[200px]">{service.name}</span>
+        <span className="text-gray-900 dark:text-white truncate max-w-[200px]">{service.provider_name}</span>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -112,8 +137,8 @@ export default function ServiceDetail() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="aspect-video rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
             {service.image_url
-              ? <img src={service.image_url} alt={service.name} className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center text-8xl">🐾</div>
+              ? <img src={service.image_url} alt={service.provider_name} className="w-full h-full object-cover" />
+              : <div className={cn('w-full h-full flex items-center justify-center', illuBg)}><TypeIcon size={72} className={illuFg} strokeWidth={1.5} /></div>
             }
           </motion.div>
 
@@ -122,14 +147,14 @@ export default function ServiceDetail() {
             {/* Type badge */}
             <div className="flex items-center gap-2 mb-3">
               <span className="badge bg-brand-50 text-brand-900 dark:bg-brand-900/20 text-xs capitalize">
-                {t(`services.types.${service.type}` as any) || service.type}
+                {t(`services.types.${service.service_type}` as any, { defaultValue: typeLabels[service.service_type] || service.service_type })}
               </span>
               {service.is_verified && (
                 <span className="flex items-center gap-1 badge bg-green-50 text-green-700 dark:bg-green-900/20 text-xs">
                   <BadgeCheck size={11} /> {t('services.verified')}
                 </span>
               )}
-              {service.is_emergency && (
+              {service.emergency_available && (
                 <span className="badge bg-red-50 text-red-600 dark:bg-red-900/20 text-xs">
                   <Zap size={11} className="inline mr-1" />{t('services.emergency')}
                 </span>
@@ -137,7 +162,7 @@ export default function ServiceDetail() {
             </div>
 
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-2">
-              {service.name}
+              {service.provider_name}
             </h1>
 
             {/* Rating */}
