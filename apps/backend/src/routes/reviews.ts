@@ -22,7 +22,7 @@ const routes: FastifyPluginAsync = async (app) => {
     // Update service rating
     const reviews = await prisma.review.findMany({ where: { service_id }, select: { rating: true } })
     const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
-    await prisma.service.update({ where: { id: service_id }, data: { rating: avg, review_count: reviews.length } })
+    await prisma.service.update({ where: { id: service_id }, data: { rating: avg, reviews_count: reviews.length } })
     return reply.code(201).send({ data: review })
   })
 

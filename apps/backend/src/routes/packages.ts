@@ -11,8 +11,9 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
     })
     const grouped: Record<string, any[]> = {}
     for (const pkg of packages) {
-      if (!grouped[pkg.group]) grouped[pkg.group] = []
-      grouped[pkg.group].push(pkg)
+      const key = pkg.group || 'other'
+      if (!grouped[key]) grouped[key] = []
+      grouped[key].push(pkg)
     }
     return { data: packages, grouped }
   })
@@ -53,6 +54,11 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ message: 'Λείπει category ή title' })
       }
 
+      const requestingUser = await prisma.user.findUnique({ where: { email: userEmail } })
+      if (!requestingUser) {
+        return reply.code(404).send({ message: 'Χρήστης δεν βρέθηκε' })
+      }
+
       // Look up the templates from DB
       let templatePackages: any[] = []
       if (Array.isArray(packages_with_prices) && packages_with_prices.length > 0) {
@@ -86,6 +92,8 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         const service = await tx.service.create({
           data: {
             provider_email: userEmail,
+            provider_name: requestingUser.full_name,
+            service_type: category,
             category,
             title,
             description: description || null,
@@ -114,8 +122,7 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         })
       })
 
-      const user = await prisma.user.findUnique({ where: { email: userEmail } })
-      if (user && user.role === 'user') {
+      if (requestingUser.role === 'user') {
         await prisma.user.update({ where: { email: userEmail }, data: { role: 'service_provider' } })
       }
 

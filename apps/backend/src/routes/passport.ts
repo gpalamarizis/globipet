@@ -103,7 +103,7 @@ const routes: FastifyPluginAsync = async (app) => {
     <h1>🐾 Ιατρικός Φάκελος</h1>
     <div class="pet-info">
       <strong>${pet.name}</strong> &nbsp;|&nbsp; ${pet.species || ''} ${pet.breed || ''}<br>
-      Γέννηση: ${pet.birthday || 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${pet.gender || '-'}<br>
+      Ηλικία: ${pet.age != null ? pet.age + ' έτη' : 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${pet.gender || '-'}<br>
       Αρ. Μικροτσίπ: ${(pet as any).microchip || '-'}<br>
       Ιδιοκτήτης: ${email}
     </div>

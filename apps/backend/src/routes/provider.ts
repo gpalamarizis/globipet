@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 
 const providerRoutes: FastifyPluginAsync = async (app) => {
-  app.addHook('preHandler', async (req, reply) => {
+  app.addHook('preHandler', async (req: any, reply) => {
     try {
       await (app as any).authenticate(req, reply)
       const user = req.user as any
@@ -16,34 +16,41 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
 
   // Provider stats
   app.get('/stats', async (req: any) => {
-    const providerId = (req.user as any).id
+    const providerEmail = (req.user as any).email
+
     const [bookings, services, reviews] = await Promise.all([
-      prisma.booking.count({ where: { provider_id: providerId } }),
-      prisma.service.count({ where: { provider_id: providerId } }),
-      prisma.review.findMany({ where: { provider_id: providerId }, select: { rating: true } }),
+      prisma.booking.count({ where: { provider_email: providerEmail } }),
+      prisma.service.count({ where: { provider_email: providerEmail } }),
+      prisma.review.findMany({ where: { provider_email: providerEmail }, select: { rating: true } }),
     ])
+
     const revenueData = await prisma.booking.aggregate({
-      where: { provider_id: providerId, status: 'completed' },
+      where: { provider_email: providerEmail, status: 'completed' },
       _sum: { total_price: true }
     })
+
     const avgRating = reviews.length > 0
-      ? (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
       : null
 
+    const products = await prisma.product.count({ where: { provider_email: providerEmail } })
+
     return {
-      bookings, services,
+      bookings,
+      services,
       revenue: revenueData._sum.total_price?.toFixed(2) ?? '0',
       rating: avgRating ? `${avgRating} ★` : '—',
-      products: await prisma.product.count({ where: { provider_id: providerId } }),
+      products,
     }
   })
 
   // Provider bookings
   app.get('/bookings', async (req: any) => {
+    const providerEmail = (req.user as any).email
     const bookings = await prisma.booking.findMany({
-      where: { provider_id: (req.user as any).id },
-      orderBy: { scheduled_at: 'asc' },
-      include: { service: true, user: { select: { full_name: true, email: true, phone: true } } },
+      where: { provider_email: providerEmail },
+      orderBy: { booking_date: 'asc' },
+      include: { service: true },
     })
     return { data: bookings }
   })
@@ -52,7 +59,7 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
   app.patch('/bookings/:id', async (req: any) => {
     const booking = await prisma.booking.update({
       where: { id: req.params.id },
-      data: { status: (req.body as any).status }
+      data: { status: req.body.status }
     })
     return booking
   })
