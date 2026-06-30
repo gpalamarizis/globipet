@@ -110,15 +110,26 @@ export default function Home() {
     <div className="pb-20 lg:pb-0">      {/* ── HERO with cinematic video ─────────────────────── */}
       <section style={{ position: 'relative', height: '560px', overflow: 'hidden' }}>
 
+            {/* Mobile: lightweight poster image as hero (69 KB) → massive LCP win */}
+            <img
+              src="/videos/hero-1-poster.jpg"
+              alt=""
+              fetchPriority="high"
+              width={768}
+              height={560}
+              className="lg:hidden"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+
+            {/* Desktop: cinematic video */}
             <video
-              className="hero-video"
+              className="hero-video hidden lg:block"
               autoPlay muted loop playsInline
               preload="auto"
               poster="/videos/hero-1-poster.jpg"
               width={1920}
               height={560}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
-              <source src="/videos/hero-1-mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
