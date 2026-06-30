@@ -111,6 +111,7 @@ export default function Home() {
       <section style={{ position: 'relative', height: '560px', overflow: 'hidden' }}>
 
             <video
+              className="hero-video"
               autoPlay muted loop playsInline
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
               <source src="/videos/hero-1.mp4" type="video/mp4" />
