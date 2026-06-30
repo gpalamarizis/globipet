@@ -118,6 +118,7 @@ export default function Home() {
               width={1920}
               height={560}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
+              <source src="/videos/hero-1-mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
               <source src="/videos/hero-1.mp4" type="video/mp4" />
             </video>
 
