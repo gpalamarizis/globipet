@@ -69,23 +69,27 @@ function NavDropdown({ label, icon: Icon, items }: { label: string; icon: any; i
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(o => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
         className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
           isActive || open
             ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-        <Icon size={14} />
+        <Icon size={14} aria-hidden="true" />
         {label}
-        <ChevronDown size={12} className={cn('transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={12} aria-hidden="true" className={cn('transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 z-50">
+        <div role="menu" className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 z-50">
           {items.map(item => (
             <Link key={item.path} to={item.path} onClick={() => setOpen(false)}
+              role="menuitem"
+              aria-current={location.pathname === item.path ? 'page' : undefined}
               className={cn('flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                 location.pathname === item.path
                   ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 font-medium'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')}>
-              <item.icon size={16} className={item.color} />
+              <item.icon size={16} className={item.color} aria-hidden="true" />
               {t(item.labelKey)}
             </Link>
           ))}
@@ -132,6 +136,20 @@ export default function MainLayout() {
 
   useEffect(() => { setUserMenuOpen(false); setMoreOpen(false) }, [location.pathname])
 
+  // A11Y: close menus on ESC key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false)
+        setMoreOpen(false)
+        setNotifOpen(false)
+        setCartOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
+
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cart'],
     queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
@@ -162,14 +180,15 @@ export default function MainLayout() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-0.5">
+            <nav className="hidden lg:flex items-center gap-0.5" aria-label="Κύρια πλοήγηση">
               {simpleNavItems.map(item => (
                 <Link key={item.path} to={item.path}
+                  aria-current={location.pathname === item.path ? 'page' : undefined}
                   className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                     location.pathname === item.path
                       ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-                  <item.icon size={14} />
+                  <item.icon size={14} aria-hidden="true" />
                   {t(item.labelKey)}
                 </Link>
               ))}
@@ -183,20 +202,23 @@ export default function MainLayout() {
 
               <ThemeToggle />
 
-              <button className="btn-ghost p-2.5 hidden sm:flex">
-                <Search size={18} className="text-gray-500 dark:text-gray-400" />
+              <button className="btn-ghost p-2.5 hidden sm:flex" aria-label="Αναζήτηση">
+                <Search size={18} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
               </button>
 
               {isAuthenticated && (
                 <>
-                  <button onClick={() => setNotifOpen(!notifOpen)} className="btn-ghost p-2.5 relative">
-                    <Bell size={18} className="text-gray-500" />
-                    {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+                  <button onClick={() => setNotifOpen(!notifOpen)} className="btn-ghost p-2.5 relative"
+                    aria-label={`Ειδοποιήσεις${notifications.length > 0 ? ` (${notifications.length} μη αναγνωσμένες)` : ''}`}
+                    aria-expanded={notifOpen}>
+                    <Bell size={18} className="text-gray-500" aria-hidden="true" />
+                    {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
                   </button>
-                  <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative">
-                    <ShoppingCart size={18} className="text-gray-500" />
+                  <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative"
+                    aria-label={`Καλάθι${cartItems.length > 0 ? ` (${cartItems.length} αντικείμενα)` : ''}`}>
+                    <ShoppingCart size={18} className="text-gray-500" aria-hidden="true" />
                     {cartItems.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center" aria-hidden="true">
                         {cartItems.length}
                       </span>
                     )}
@@ -205,6 +227,9 @@ export default function MainLayout() {
                   {/* User menu (desktop) */}
                   <div className="hidden lg:block relative" ref={userMenuRef}>
                     <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      aria-haspopup="true"
+                      aria-expanded={userMenuOpen}
+                      aria-label="Μενού χρήστη"
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {user?.profile_photo
@@ -338,24 +363,27 @@ export default function MainLayout() {
       </footer>
 
       {/* ── MOBILE BOTTOM TAB BAR ─────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom" aria-label="Πλοήγηση κινητού">
         <div className="flex items-center justify-around px-2 py-2">
           {bottomTabs.map(tab => {
             const isActive = tab.path === '/' ? location.pathname === '/' : location.pathname.startsWith(tab.path)
             return (
               <Link key={tab.path} to={tab.path}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all min-w-0',
                   isActive ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
-                <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} aria-hidden="true" />
                 <span className="text-[10px] font-medium truncate max-w-[56px]">{t(tab.labelKey)}</span>
               </Link>
             )
           })}
           {/* Περισσότερα */}
           <button onClick={() => setMoreOpen(true)}
+            aria-label="Περισσότερες επιλογές"
+            aria-expanded={moreOpen}
             className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all',
               moreOpen ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
-            <MoreHorizontal size={22} strokeWidth={1.8} />
+            <MoreHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />
             <span className="text-[10px] font-medium">Περισσότερα</span>
           </button>
         </div>
@@ -366,8 +394,12 @@ export default function MainLayout() {
         {moreOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-black/40 z-50" onClick={() => setMoreOpen(false)} />
+              className="lg:hidden fixed inset-0 bg-black/40 z-50" onClick={() => setMoreOpen(false)}
+              aria-hidden="true" />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Περισσότερες επιλογές"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[90vh] overflow-y-auto">

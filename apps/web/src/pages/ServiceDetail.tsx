@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import {
   ArrowLeft, Star, MapPin, Clock, Phone, Shield, Check,
   Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap,
@@ -77,8 +78,18 @@ export default function ServiceDetail() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      // #5: confetti celebration on successful booking (respects reduced motion)
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (!prefersReducedMotion) {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#E65100', '#FFD60A', '#FF9800', '#1565C0'],
+        })
+      }
       toast.success('✅ ' + t('bookings.status.confirmed'))
-      navigate('/bookings')
+      setTimeout(() => navigate('/bookings'), 600)
     },
     onError: () => toast.error(t('common.error')),
   })
@@ -205,9 +216,11 @@ export default function ServiceDetail() {
 
           {/* Tabs */}
           <div ref={bookingRef} className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex">
+            <div className="flex" role="tablist" aria-label="Λεπτομέρειες υπηρεσίας">
               {(['about', 'reviews', 'booking'] as const).map(t_ => (
                 <button key={t_} onClick={() => setTab(t_)}
+                  role="tab"
+                  aria-selected={tab === t_}
                   className={cn('px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px',
                     tab === t_
                       ? 'border-brand-900 text-brand-900'
@@ -404,7 +417,7 @@ export default function ServiceDetail() {
               {t('services.bookNow')}
             </button>
 
-            <button className="btn-secondary w-full flex items-center justify-center gap-2">
+            <button className="btn-secondary w-full flex items-center justify-center gap-2" aria-label="Κοινοποίηση υπηρεσίας">
               <Share2 size={16} />
               Share
             </button>

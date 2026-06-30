@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import ServicesMap from '@/components/features/services/ServicesMap'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { Service, ServiceType } from '@/types'
 
 const serviceTypeKeys: { value: ServiceType | 'all' | 'hosting'; key: string; emoji: string }[] = [
@@ -84,15 +84,19 @@ export default function Services() {
             onChange={(e) => setCity(e.target.value)}
           />
         </div>
-        <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden" role="group" aria-label="Προβολή">
           <button
             onClick={() => setViewMode('list')}
+            aria-label="Προβολή λίστας"
+            aria-pressed={viewMode === 'list'}
             className={`px-3 py-2 text-sm transition-colors ${viewMode === 'list' ? 'bg-brand-900 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-          ><List size={16} /></button>
+          ><List size={16} aria-hidden="true" /></button>
           <button
             onClick={() => setViewMode('map')}
+            aria-label="Προβολή χάρτη"
+            aria-pressed={viewMode === 'map'}
             className={`px-3 py-2 text-sm transition-colors ${viewMode === 'map' ? 'bg-brand-900 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-          ><Map size={16} /></button>
+          ><Map size={16} aria-hidden="true" /></button>
         </div>
       </div>
 
@@ -170,7 +174,7 @@ export default function Services() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-24"><LoadingSpinner /></div>
+        <LoadingSkeleton variant="card" count={8} />
       ) : viewMode === 'map' ? (
         <ServicesMap services={data?.data ?? []} />
       ) : (

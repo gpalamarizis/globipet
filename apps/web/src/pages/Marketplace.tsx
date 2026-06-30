@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/features/marketplace/ProductCard'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { Product, ProductCategory } from '@/types'
 
 const categoryKeys: { value: ProductCategory | 'all'; key: string; emoji: string }[] = [
@@ -72,15 +72,19 @@ export default function Marketplace() {
         >
           {sortKeys.map(k => <option key={k} value={k}>{t(`marketplace.sort.${k}`)}</option>)}
         </select>
-        <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-xl p-1">
+        <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-xl p-1" role="group" aria-label="Προβολή">
           <button
+            aria-label="Προβολή πλέγματος"
+            aria-pressed={viewMode === 'grid'}
             className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             onClick={() => setViewMode('grid')}
-          ><Grid size={16} /></button>
+          ><Grid size={16} aria-hidden="true" /></button>
           <button
+            aria-label="Προβολή λίστας"
+            aria-pressed={viewMode === 'list'}
             className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             onClick={() => setViewMode('list')}
-          ><List size={16} /></button>
+          ><List size={16} aria-hidden="true" /></button>
         </div>
       </div>
 
@@ -112,7 +116,7 @@ export default function Marketplace() {
 
       {/* Products grid */}
       {isLoading ? (
-        <div className="flex justify-center py-24"><LoadingSpinner /></div>
+        <LoadingSkeleton variant={viewMode === 'grid' ? 'card' : 'list-row'} count={viewMode === 'grid' ? 8 : 5} />
       ) : (
         <>
           <motion.div

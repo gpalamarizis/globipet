@@ -21,16 +21,30 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // #12: target modern browsers — smaller bundle, less polyfill weight
+    target: 'es2020',
+    minify: 'esbuild',
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
+        // #12: granular vendor chunk split so cache stays warm across deploys
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['framer-motion', 'lucide-react'],
-          query: ['@tanstack/react-query'],
-          maps: ['react-leaflet', 'leaflet'],
-          charts: ['recharts']
-        }
-      }
-    }
-  }
+          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+          'vendor-motion':   ['framer-motion'],
+          'vendor-icons':    ['lucide-react'],
+          'vendor-query':    ['@tanstack/react-query'],
+          'vendor-maps':     ['react-leaflet', 'leaflet'],
+          'vendor-charts':   ['recharts'],
+          'vendor-xlsx':     ['xlsx'],
+          'vendor-confetti': ['canvas-confetti'],
+          'vendor-i18n':     ['react-i18next', 'i18next'],
+          'vendor-toast':    ['react-hot-toast'],
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+  },
 })

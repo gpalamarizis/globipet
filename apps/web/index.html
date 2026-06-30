@@ -10,6 +10,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://images.unsplash.com" />
 
+    <!-- #12: preload critical hero video — speeds up LCP on homepage -->
+    <link rel="preload" as="video" href="/videos/hero-1.mp4" type="video/mp4" />
+
+    <!-- #12: preload primary font stylesheet (parallel with HTML parse, not blocked by JS) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'" />
+
     <meta name="description" content="GlobiPet — Η #1 πλατφόρμα για κατοικίδια. Υπηρεσίες, κατάστημα, τηλεϊατρική, GPS tracker και κοινότητα." />
     <meta name="keywords" content="κατοικίδια, pet, grooming, κτηνίατρος, pet sitting, pet taxi, GPS tracker" />
     <!-- Open Graph -->
