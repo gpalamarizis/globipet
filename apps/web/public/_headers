@@ -1,17 +1,52 @@
+# Hashed build assets — immutable, cache forever (1 year)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /*.js
   Cache-Control: public, max-age=31536000, immutable
 
 /*.css
   Cache-Control: public, max-age=31536000, immutable
 
+# Images — cache 30 days (filenames don't change but content might)
+/*.png
+  Cache-Control: public, max-age=2592000
+
+/*.jpg
+  Cache-Control: public, max-age=2592000
+
+/*.jpeg
+  Cache-Control: public, max-age=2592000
+
+/*.webp
+  Cache-Control: public, max-age=2592000
+
+/*.avif
+  Cache-Control: public, max-age=2592000
+
+/*.svg
+  Cache-Control: public, max-age=2592000
+
+/*.ico
+  Cache-Control: public, max-age=2592000
+
+# Fonts — cache 1 year (very rarely change)
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+
+# Videos — cache 30 days
 /videos/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=2592000
   Accept-Ranges: bytes
   Content-Type: video/mp4
 
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
+# Security headers for everything else
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
