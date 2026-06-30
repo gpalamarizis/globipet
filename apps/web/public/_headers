@@ -40,9 +40,10 @@
 /*.ttf
   Cache-Control: public, max-age=31536000, immutable
 
-# Videos — cache 30 days
+# Videos — cache 30 days (browser + Cloudflare CDN)
 /videos/*
-  Cache-Control: public, max-age=2592000
+  Cache-Control: public, max-age=2592000, immutable
+  CDN-Cache-Control: public, max-age=2592000
   Accept-Ranges: bytes
   Content-Type: video/mp4
 
