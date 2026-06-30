@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint } from 'lucide-react'
+import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
@@ -158,6 +158,23 @@ export default function Home() {
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
                   Μάθε περισσότερα
                 </Link>
+              </motion.div>
+
+              {/* #4: trust signals */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3, duration: 0.8 }}
+                className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-6 text-white/80 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-yellow-400" />Πιστοποιημένοι πάροχοι
+                </span>
+                <span className="hidden sm:inline text-white/30">·</span>
+                <span className="flex items-center gap-1.5">
+                  <Star size={14} className="text-yellow-400 fill-yellow-400" />4.9 μέση βαθμολογία
+                </span>
+                <span className="hidden sm:inline text-white/30">·</span>
+                <span className="flex items-center gap-1.5">
+                  <Lock size={14} className="text-yellow-400" />Ασφαλείς πληρωμές
+                </span>
               </motion.div>
 
             </div>

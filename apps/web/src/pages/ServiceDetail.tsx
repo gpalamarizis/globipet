@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,14 @@ export default function ServiceDetail() {
   const [selectedTime, setSelectedTime] = useState('')
   const [tab, setTab] = useState<'about' | 'reviews' | 'booking'>('about')
   const [bookingNote, setBookingNote] = useState('')
+  const [showNotes, setShowNotes] = useState(false)
+  const bookingRef = useRef<HTMLDivElement>(null)
+
+  const goToBooking = () => {
+    if (!isAuthenticated) { navigate('/auth'); return }
+    setTab('booking')
+    setTimeout(() => bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
 
   const { data: service, isLoading } = useQuery({
     queryKey: ['service', id],
@@ -171,7 +179,7 @@ export default function ServiceDetail() {
           </motion.div>
 
           {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-700">
+          <div ref={bookingRef} className="border-b border-gray-200 dark:border-gray-700">
             <div className="flex">
               {(['about', 'reviews', 'booking'] as const).map(t_ => (
                 <button key={t_} onClick={() => setTab(t_)}
@@ -314,18 +322,28 @@ export default function ServiceDetail() {
                     </div>
                   )}
 
-                  {/* Notes */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                      {t('bookingsExtra.commentPlaceholder')}
-                    </label>
-                    <textarea
-                      value={bookingNote}
-                      onChange={e => setBookingNote(e.target.value)}
-                      placeholder={t('bookingsExtra.commentPlaceholder')}
-                      className="input w-full h-24 resize-none"
-                    />
-                  </div>
+                  {/* Notes — collapsed by default to keep the flow short */}
+                  {showNotes ? (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                        {t('bookingsExtra.commentPlaceholder')}
+                      </label>
+                      <textarea
+                        autoFocus
+                        value={bookingNote}
+                        onChange={e => setBookingNote(e.target.value)}
+                        placeholder={t('bookingsExtra.commentPlaceholder')}
+                        className="input w-full h-24 resize-none"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowNotes(true)}
+                      className="text-sm text-brand-900 dark:text-brand-400 font-medium hover:underline">
+                      + Προσθήκη σημείωσης (προαιρετικό)
+                    </button>
+                  )}
 
                   <button
                     onClick={() => bookService.mutate()}
@@ -355,7 +373,7 @@ export default function ServiceDetail() {
             )}
 
             <button
-              onClick={() => isAuthenticated ? setTab('booking') : navigate('/auth')}
+              onClick={goToBooking}
               className="btn-primary w-full mb-3 flex items-center justify-center gap-2">
               <Calendar size={16} />
               {t('services.bookNow')}
@@ -389,6 +407,20 @@ export default function ServiceDetail() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* #10: mobile sticky booking bar — 1-tap access, no scroll/tab hunting */}
+      <div className="lg:hidden fixed bottom-20 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-3 shadow-card-hover">
+        <div>
+          <p className="text-xs text-gray-500">Τιμή</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">
+            {service.price ? formatCurrency(service.price) : t('common.free')}
+          </p>
+        </div>
+        <button onClick={goToBooking} className="btn-primary flex-1 max-w-[200px] flex items-center justify-center gap-2 py-3">
+          <Calendar size={16} />
+          {t('services.bookNow')}
+        </button>
       </div>
     </div>
   )
