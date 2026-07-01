@@ -79,6 +79,13 @@ const el = {
       adoption: 'Υιοθεσία', shelter: 'Καταφύγιο', pet_taxi: 'Pet Taxi', other: 'Άλλο',
     },
   },
+  serviceDetailExtra: {
+    about: 'Σχετικά', date: 'Ημερομηνία', time: 'Ώρα', duration: 'Διάρκεια', location: 'Τοποθεσία',
+    share: 'Κοινοποίηση', perHour: '/ ώρα', perSession: '/ συνεδρία',
+    noDescription: 'Δεν υπάρχει διαθέσιμη περιγραφή.', noReviews: 'Δεν υπάρχουν κριτικές ακόμα.',
+    price: 'Τιμή', addNote: '+ Προσθήκη σημείωσης (προαιρετικό)',
+    tabsAriaLabel: 'Λεπτομέρειες υπηρεσίας', shareAriaLabel: 'Κοινοποίηση υπηρεσίας',
+  },
   marketplace: {
     title: 'Κατάστημα',
     subtitle: 'Τρόφιμα, παιχνίδια, αξεσουάρ και πολλά ακόμα',
@@ -469,6 +476,13 @@ const en: typeof el = {
       adoption: 'Adoption', shelter: 'Shelter', pet_taxi: 'Pet Taxi', other: 'Other',
     },
   },
+  serviceDetailExtra: {
+    about: 'About', date: 'Date', time: 'Time', duration: 'Duration', location: 'Location',
+    share: 'Share', perHour: '/ hour', perSession: '/ session',
+    noDescription: 'No description available.', noReviews: 'No reviews yet.',
+    price: 'Price', addNote: '+ Add note (optional)',
+    tabsAriaLabel: 'Service details', shareAriaLabel: 'Share service',
+  },
   marketplace: {
     title: 'Marketplace', subtitle: 'Food, toys, accessories and more',
     searchPlaceholder: 'Search product...', noResults: 'No products found',
@@ -829,10 +843,17 @@ const es: typeof el = {
     results: 'resultados', homeVisits: 'Visitas a domicilio', yearsExp: 'años exp.',
     types: {
       veterinary: 'Veterinario', veterinary_clinic: 'Clínica', grooming: 'Peluquería',
-      training: 'Entrenamiento', pet_sitting: 'Cuidado', walking: 'Paseos',
+      training: 'Entrenamiento', hosting: 'Alojamiento', pet_sitting: 'Cuidado', walking: 'Paseos',
       boarding: 'Hospedaje', photography: 'Fotografía', pharmacy: 'Farmacia',
       adoption: 'Adopción', shelter: 'Refugio', pet_taxi: 'Pet Taxi', other: 'Otro',
     },
+  },
+  serviceDetailExtra: {
+    about: 'Acerca de', date: 'Fecha', time: 'Hora', duration: 'Duración', location: 'Ubicación',
+    share: 'Compartir', perHour: '/ hora', perSession: '/ sesión',
+    noDescription: 'No hay descripción disponible.', noReviews: 'Aún no hay reseñas.',
+    price: 'Precio', addNote: '+ Añadir nota (opcional)',
+    tabsAriaLabel: 'Detalles del servicio', shareAriaLabel: 'Compartir servicio',
   },
   marketplace: {
     title: 'Tienda', subtitle: 'Comida, juguetes, accesorios y más',
@@ -1195,10 +1216,17 @@ const fr: typeof el = {
     results: 'résultats', homeVisits: 'Visites à domicile', yearsExp: 'ans exp.',
     types: {
       veterinary: 'Vétérinaire', veterinary_clinic: 'Clinique', grooming: 'Toilettage',
-      training: 'Dressage', pet_sitting: 'Garde', walking: 'Promenades',
+      training: 'Dressage', hosting: 'Hébergement', pet_sitting: 'Garde', walking: 'Promenades',
       boarding: 'Pension', photography: 'Photographie', pharmacy: 'Pharmacie',
       adoption: 'Adoption', shelter: 'Refuge', pet_taxi: 'Pet Taxi', other: 'Autre',
     },
+  },
+  serviceDetailExtra: {
+    about: 'À propos', date: 'Date', time: 'Heure', duration: 'Durée', location: 'Lieu',
+    share: 'Partager', perHour: '/ heure', perSession: '/ séance',
+    noDescription: 'Aucune description disponible.', noReviews: 'Aucun avis pour le moment.',
+    price: 'Prix', addNote: '+ Ajouter une note (optionnel)',
+    tabsAriaLabel: 'Détails du service', shareAriaLabel: 'Partager le service',
   },
   marketplace: {
     title: 'Boutique', subtitle: 'Nourriture, jouets, accessoires et plus',
@@ -1561,10 +1589,17 @@ const zh: typeof el = {
     results: '个结果', homeVisits: '上门服务', yearsExp: '年经验',
     types: {
       veterinary: '兽医', veterinary_clinic: '诊所', grooming: '美容',
-      training: '培训', pet_sitting: '寄养', walking: '遛狗',
+      training: '培训', hosting: '寄养寄宿', pet_sitting: '寄养', walking: '遛狗',
       boarding: '寄宿', photography: '摄影', pharmacy: '药房',
       adoption: '领养', shelter: '收容所', pet_taxi: '宠物出租车', other: '其他',
     },
+  },
+  serviceDetailExtra: {
+    about: '关于', date: '日期', time: '时间', duration: '时长', location: '地点',
+    share: '分享', perHour: '/ 小时', perSession: '/ 次',
+    noDescription: '暂无描述。', noReviews: '暂无评价。',
+    price: '价格', addNote: '+ 添加备注（可选）',
+    tabsAriaLabel: '服务详情', shareAriaLabel: '分享服务',
   },
   marketplace: {
     title: '商店', subtitle: '食品、玩具、配件等',

@@ -216,7 +216,7 @@ export default function ServiceDetail() {
 
           {/* Tabs */}
           <div ref={bookingRef} className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex" role="tablist" aria-label="Λεπτομέρειες υπηρεσίας">
+            <div className="flex" role="tablist" aria-label={t('serviceDetailExtra.tabsAriaLabel')}>
               {(['about', 'reviews', 'booking'] as const).map(t_ => (
                 <button key={t_} onClick={() => setTab(t_)}
                   role="tab"
@@ -225,7 +225,7 @@ export default function ServiceDetail() {
                     tab === t_
                       ? 'border-brand-900 text-brand-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700')}>
-                  {t_ === 'about' ? 'About'
+                  {t_ === 'about' ? t('serviceDetailExtra.about')
                    : t_ === 'reviews' ? t('common.reviews')
                    : t('services.bookNow')}
                 </button>
@@ -236,7 +236,7 @@ export default function ServiceDetail() {
           {tab === 'about' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                {service.description || 'No description available.'}
+                {service.description || t('serviceDetailExtra.noDescription')}
               </p>
 
               {/* Provider info */}
@@ -279,7 +279,7 @@ export default function ServiceDetail() {
               {reviews.length === 0 ? (
                 <div className="text-center py-12">
                   <Star size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500">No reviews yet.</p>
+                  <p className="text-gray-500">{t('serviceDetailExtra.noReviews')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -319,7 +319,7 @@ export default function ServiceDetail() {
                   {/* Date picker */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                      <Calendar size={14} className="inline mr-1.5" />Date
+                      <Calendar size={14} className="inline mr-1.5" />{t('serviceDetailExtra.date')}
                     </label>
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                       {dates.map(d => {
@@ -344,7 +344,7 @@ export default function ServiceDetail() {
                   {selectedDate && (
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                        <Clock size={14} className="inline mr-1.5" />Time
+                        <Clock size={14} className="inline mr-1.5" />{t('serviceDetailExtra.time')}
                       </label>
                       <div className="grid grid-cols-5 gap-2">
                         {timeSlots.map(time => (
@@ -379,7 +379,7 @@ export default function ServiceDetail() {
                       type="button"
                       onClick={() => setShowNotes(true)}
                       className="text-sm text-brand-900 dark:text-brand-400 font-medium hover:underline">
-                      + Προσθήκη σημείωσης (προαιρετικό)
+                      {t('serviceDetailExtra.addNote')}
                     </button>
                   )}
 
@@ -404,10 +404,10 @@ export default function ServiceDetail() {
               {service.price ? formatCurrency(service.price) : t('common.free')}
             </div>
             {service.price_per === 'hour' && (
-              <p className="text-sm text-gray-500 mb-4">/ hour</p>
+              <p className="text-sm text-gray-500 mb-4">{t('serviceDetailExtra.perHour')}</p>
             )}
             {service.price_per === 'session' && (
-              <p className="text-sm text-gray-500 mb-4">/ session</p>
+              <p className="text-sm text-gray-500 mb-4">{t('serviceDetailExtra.perSession')}</p>
             )}
 
             <button
@@ -417,22 +417,22 @@ export default function ServiceDetail() {
               {t('services.bookNow')}
             </button>
 
-            <button className="btn-secondary w-full flex items-center justify-center gap-2" aria-label="Κοινοποίηση υπηρεσίας">
+            <button className="btn-secondary w-full flex items-center justify-center gap-2" aria-label={t('serviceDetailExtra.shareAriaLabel')}>
               <Share2 size={16} />
-              Share
+              {t('serviceDetailExtra.share')}
             </button>
 
             {/* Quick info */}
             <div className="mt-4 space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
               {service.duration && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Duration</span>
+                  <span className="text-gray-500">{t('serviceDetailExtra.duration')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{service.duration} min</span>
                 </div>
               )}
               {service.city && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Location</span>
+                  <span className="text-gray-500">{t('serviceDetailExtra.location')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{service.city}</span>
                 </div>
               )}
@@ -450,7 +450,7 @@ export default function ServiceDetail() {
       {/* #10: mobile sticky booking bar — 1-tap access, no scroll/tab hunting */}
       <div className="lg:hidden fixed bottom-20 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-3 shadow-card-hover">
         <div>
-          <p className="text-xs text-gray-500">Τιμή</p>
+          <p className="text-xs text-gray-500">{t('serviceDetailExtra.price')}</p>
           <p className="text-lg font-bold text-gray-900 dark:text-white">
             {service.price ? formatCurrency(service.price) : t('common.free')}
           </p>
