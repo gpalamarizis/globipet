@@ -38,7 +38,7 @@ export default function Marketplace() {
         min_price: priceRange[0] || undefined,
         max_price: priceRange[1] < 500 ? priceRange[1] : undefined,
         page,
-        limit: 12,
+        limit: 24,
       }
     }).then(r => r.data),
   })
@@ -121,9 +121,9 @@ export default function Marketplace() {
         <>
           <motion.div
             layout
-            className={`grid gap-4 ${
+            className={`grid gap-3 ${
               viewMode === 'grid'
-                ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
                 : 'grid-cols-1'
             }`}
           >

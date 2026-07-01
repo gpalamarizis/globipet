@@ -72,28 +72,28 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         {product.is_featured && <div className="absolute top-2 right-2 badge bg-brand-900 text-white">⭐</div>}
       </Link>
 
-      <div className="p-3">
+      <div className="p-2">
         <Link to={`/marketplace/${product.id}`}>
-          <p className="font-semibold text-sm text-gray-900 dark:text-white hover:text-brand-900 line-clamp-2 leading-snug">{product.name}</p>
+          <p className="font-medium text-xs text-gray-900 dark:text-white hover:text-brand-900 line-clamp-2 leading-snug">{product.name}</p>
         </Link>
-        {product.brand && <p className="text-xs text-gray-400 mt-0.5">{product.brand}</p>}
-        <div className="flex items-center gap-1 mt-1">
-          <Star size={11} className="text-yellow-400 fill-yellow-400"/>
-          <span className="text-xs text-gray-500">{product.rating} ({product.reviews_count})</span>
+        {product.brand && <p className="text-[10px] text-gray-400 mt-0.5">{product.brand}</p>}
+        <div className="flex items-center gap-0.5 mt-1">
+          <Star size={9} className="text-yellow-400 fill-yellow-400"/>
+          <span className="text-[10px] text-gray-500">{product.rating} ({product.reviews_count})</span>
         </div>
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center justify-between mt-2">
           <div>
-            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(product.sale_price || product.price)}</p>
-            {product.sale_price && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
+            <p className="font-bold text-xs text-gray-900 dark:text-white">{formatCurrency(product.sale_price || product.price)}</p>
+            {product.sale_price && <p className="text-[10px] text-gray-400 line-through">{formatCurrency(product.price)}</p>}
           </div>
           <div className="flex gap-1">
             {isAuthenticated && (
-              <button onClick={() => toggleWishlist.mutate()} className={cn('p-2 rounded-lg transition-colors', inWishlist ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-                <Heart size={15} fill={inWishlist ? 'currentColor' : 'none'}/>
+              <button onClick={() => toggleWishlist.mutate()} className={cn('p-1.5 rounded-lg transition-colors', inWishlist ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
+                <Heart size={13} fill={inWishlist ? 'currentColor' : 'none'}/>
               </button>
             )}
-            <button onClick={() => isAuthenticated ? addToCart.mutate() : null} disabled={addToCart.isPending || product.stock === 0} className="p-2 rounded-lg bg-brand-900 text-white hover:bg-brand-800 transition-colors disabled:opacity-50">
-              <ShoppingCart size={15}/>
+            <button onClick={() => isAuthenticated ? addToCart.mutate() : null} disabled={addToCart.isPending || product.stock === 0} className="p-1.5 rounded-lg bg-brand-900 text-white hover:bg-brand-800 transition-colors disabled:opacity-50">
+              <ShoppingCart size={13}/>
             </button>
           </div>
         </div>
