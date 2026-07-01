@@ -8,3 +8,5 @@ dist/
 .env
 .expo/
 credentials/
+
+apps/web/vite.config.js
