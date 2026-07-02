@@ -86,6 +86,53 @@ const el = {
     price: 'Τιμή', addNote: '+ Προσθήκη σημείωσης (προαιρετικό)',
     tabsAriaLabel: 'Λεπτομέρειες υπηρεσίας', shareAriaLabel: 'Κοινοποίηση υπηρεσίας',
   },
+  about: {
+    title: 'Ποιοί Είμαστε',
+    hero: 'Το GlobiPet είναι το πρώτο ολοκληρωμένο Pet Super-App στην Ευρώπη — μία πλατφόρμα για όλες τις ανάγκες του κατοικιδίου σας και του ιδιοκτήτη του.',
+    mission: {
+      title: 'Η Αποστολή μας',
+      pets:      { title: 'Για τα κατοικίδια',   text: 'Καλύτερη υγεία, φροντίδα και ποιότητα ζωής για κάθε ζώο συντροφιάς.' },
+      owners:    { title: 'Για τους ιδιοκτήτες', text: 'Λιγότερη αναζήτηση, λιγότερο άγχος, περισσότερος χρόνος για τους αγαπημένους σας.' },
+      providers: { title: 'Για τους παρόχους',   text: 'Ψηφιακά εργαλεία, νέους πελάτες και αυξημένο εισόδημα για κάθε επαγγελματία.' },
+    },
+    founders: {
+      title: 'Οι Ιδρυτές',
+      subtitle: 'Η ομάδα πίσω από το GlobiPet',
+      roles: { ceo: 'CEO & Συνιδρυτής', cto: 'CTO & Συνιδρύτρια', coo: 'COO & Συνιδρυτής' },
+      bios: {
+        palamarizis: 'Μηχανολόγος Μηχανικός ΕΜΠ με 20+ χρόνια εμπειρία σε ψηφιακή διακυβέρνηση και τεχνολογία. Πρώην CIO Ελληνικής Κυβέρνησης.',
+        topalidou:   'Full-stack developer και αρχιτέκτονας συστημάτων. Εξειδίκευση σε AI, mobile applications και cloud infrastructure.',
+        rallis:      'Ειδικός σε επιχειρηματική ανάπτυξη και διαχείριση λειτουργιών. Εμπειρία σε startups και scale-ups στην Ευρώπη.',
+      },
+    },
+    services: {
+      title: 'Οι Υπηρεσίες μας',
+      subtitle: 'Ένα πλήρες οικοσύστημα για κατοικίδια και ιδιοκτήτες',
+      items: {
+        telehealth:  { title: 'Τηλεϊατρική',       desc: 'Βιντεοκλήση με εξειδικευμένο κτηνίατρο οποιαδήποτε στιγμή. Άμεση πρόσβαση σε επαγγελματική φροντίδα χωρίς αναμονή.' },
+        aiHealth:    { title: 'AI Υγεία',          desc: 'Ανάλυση φωτογραφιών δέρματος, ματιών και περιττωμάτων με τεχνητή νοημοσύνη. Έγκαιρη ανίχνευση προβλημάτων υγείας.' },
+        medicalFile: { title: 'Ιατρικός Φάκελος',  desc: 'Πλήρες ψηφιακό ιστορικό υγείας — εμβόλια, εξετάσεις, φάρμακα, χειρουργεία. Διαθέσιμο οποτεδήποτε, παντού.' },
+        services:    { title: 'Υπηρεσίες',         desc: 'Grooming, εκπαίδευση, βόλτες, φιλοξενία, pet taxi — χιλιάδες επαληθευμένοι πάροχοι σε όλη την Ελλάδα.' },
+        legal:       { title: 'Νομική Υποστήριξη', desc: 'AI νομικός σύμβουλος για θέματα κατοικιδίων βασισμένος στην ελληνική νομοθεσία (Ν.4830/2021). Σύνδεση με εξειδικευμένους δικηγόρους.' },
+        marketplace: { title: 'Marketplace',       desc: 'Ηλεκτρονικό κατάστημα με τροφές, παιχνίδια, αξεσουάρ και φάρμακα. Γρήγορη παράδοση σε ολόκληρη την Ελλάδα.' },
+        tracker:     { title: 'GPS Tracker',       desc: 'Ζωντανή παρακολούθηση τοποθεσίας κατοικιδίου. Σύνδεση με δημοφιλείς trackers όπως Tractive και Weenect.' },
+        insurance:   { title: 'Ασφάλιση',          desc: 'Ολοκληρωμένα πλάνα ασφάλισης κατοικιδίων. Κάλυψη κτηνιατρικών εξόδων, χειρουργείων και επειγόντων.' },
+        community:   { title: 'Κοινότητα',         desc: 'Playdates, κοινότητες ιδιοκτητών, social feed και events. Συνδέσου με χιλιάδες φιλόζωους σε ολόκληρη την Ελλάδα.' },
+      },
+    },
+    stats: {
+      title: 'GlobiPet σε αριθμούς',
+      users: 'Χρήστες', providers: 'Πάροχοι', pets: 'Κατοικίδια', rating: 'Βαθμολογία',
+    },
+  },
+  providerLayout: {
+    overview: 'Επισκόπηση', services: 'Υπηρεσίες', bookings: 'Κρατήσεις',
+    marketing: 'Marketing', clients: 'Πελάτες',
+  },
+  adminLayout: {
+    overview: 'Επισκόπηση', catalog: 'Κατάλογος', services: 'Υπηρεσίες',
+    packages: 'Πακέτα', subscriptions: 'Συνδρομές', commissions: 'Προμήθειες', messages: 'Μηνύματα',
+  },
   marketplace: {
     title: 'Κατάστημα',
     subtitle: 'Τρόφιμα, παιχνίδια, αξεσουάρ και πολλά ακόμα',
@@ -483,6 +530,53 @@ const en: typeof el = {
     price: 'Price', addNote: '+ Add note (optional)',
     tabsAriaLabel: 'Service details', shareAriaLabel: 'Share service',
   },
+  about: {
+    title: 'Who We Are',
+    hero: 'GlobiPet is the first comprehensive Pet Super-App in Europe — a single platform for every need of your pet and its owner.',
+    mission: {
+      title: 'Our Mission',
+      pets:      { title: 'For pets',      text: 'Better health, care and quality of life for every companion animal.' },
+      owners:    { title: 'For owners',    text: 'Less searching, less stress, more time for your loved ones.' },
+      providers: { title: 'For providers', text: 'Digital tools, new customers and higher income for every professional.' },
+    },
+    founders: {
+      title: 'The Founders',
+      subtitle: 'The team behind GlobiPet',
+      roles: { ceo: 'CEO & Co-Founder', cto: 'CTO & Co-Founder', coo: 'COO & Co-Founder' },
+      bios: {
+        palamarizis: 'Mechanical Engineer (NTUA) with 20+ years in digital governance and technology. Former CIO of the Greek Government.',
+        topalidou:   'Full-stack developer and systems architect. Specialization in AI, mobile applications and cloud infrastructure.',
+        rallis:      'Business development and operations specialist. Experience with startups and scale-ups across Europe.',
+      },
+    },
+    services: {
+      title: 'Our Services',
+      subtitle: 'A complete ecosystem for pets and owners',
+      items: {
+        telehealth:  { title: 'Telehealth',       desc: 'Video call with a qualified vet anytime. Instant access to professional care without waiting.' },
+        aiHealth:    { title: 'AI Health',        desc: 'AI analysis of skin, eye and stool photos. Early detection of health issues.' },
+        medicalFile: { title: 'Medical Records',  desc: 'Full digital health history — vaccines, tests, medications, surgeries. Available anytime, anywhere.' },
+        services:    { title: 'Services',         desc: 'Grooming, training, walks, hosting, pet taxi — thousands of verified providers across Greece.' },
+        legal:       { title: 'Legal Support',    desc: 'AI legal advisor for pet matters based on Greek law (Law 4830/2021). Connect with specialized lawyers.' },
+        marketplace: { title: 'Marketplace',      desc: 'Online store with food, toys, accessories and medications. Fast delivery across Greece.' },
+        tracker:     { title: 'GPS Tracker',      desc: 'Live pet location tracking. Integration with popular trackers such as Tractive and Weenect.' },
+        insurance:   { title: 'Insurance',        desc: 'Comprehensive pet insurance plans. Coverage for vet costs, surgeries and emergencies.' },
+        community:   { title: 'Community',        desc: 'Playdates, owner communities, social feed and events. Connect with thousands of pet lovers across Greece.' },
+      },
+    },
+    stats: {
+      title: 'GlobiPet in numbers',
+      users: 'Users', providers: 'Providers', pets: 'Pets', rating: 'Rating',
+    },
+  },
+  providerLayout: {
+    overview: 'Overview', services: 'Services', bookings: 'Bookings',
+    marketing: 'Marketing', clients: 'Clients',
+  },
+  adminLayout: {
+    overview: 'Overview', catalog: 'Catalog', services: 'Services',
+    packages: 'Packages', subscriptions: 'Subscriptions', commissions: 'Commissions', messages: 'Messages',
+  },
   marketplace: {
     title: 'Marketplace', subtitle: 'Food, toys, accessories and more',
     searchPlaceholder: 'Search product...', noResults: 'No products found',
@@ -854,6 +948,53 @@ const es: typeof el = {
     noDescription: 'No hay descripción disponible.', noReviews: 'Aún no hay reseñas.',
     price: 'Precio', addNote: '+ Añadir nota (opcional)',
     tabsAriaLabel: 'Detalles del servicio', shareAriaLabel: 'Compartir servicio',
+  },
+  about: {
+    title: 'Quiénes Somos',
+    hero: 'GlobiPet es la primera Super-App para mascotas integral de Europa — una única plataforma para todas las necesidades de tu mascota y su dueño.',
+    mission: {
+      title: 'Nuestra Misión',
+      pets:      { title: 'Para las mascotas',    text: 'Mejor salud, cuidado y calidad de vida para cada animal de compañía.' },
+      owners:    { title: 'Para los dueños',      text: 'Menos búsquedas, menos estrés, más tiempo para tus seres queridos.' },
+      providers: { title: 'Para los proveedores', text: 'Herramientas digitales, nuevos clientes e ingresos más altos para cada profesional.' },
+    },
+    founders: {
+      title: 'Los Fundadores',
+      subtitle: 'El equipo detrás de GlobiPet',
+      roles: { ceo: 'CEO y Cofundador', cto: 'CTO y Cofundadora', coo: 'COO y Cofundador' },
+      bios: {
+        palamarizis: 'Ingeniero Mecánico (NTUA) con más de 20 años en gobernanza digital y tecnología. Ex CIO del Gobierno Griego.',
+        topalidou:   'Desarrolladora full-stack y arquitecta de sistemas. Especialización en IA, aplicaciones móviles e infraestructura en la nube.',
+        rallis:      'Especialista en desarrollo de negocio y operaciones. Experiencia en startups y scale-ups en Europa.',
+      },
+    },
+    services: {
+      title: 'Nuestros Servicios',
+      subtitle: 'Un ecosistema completo para mascotas y dueños',
+      items: {
+        telehealth:  { title: 'Telesalud',        desc: 'Videollamada con un veterinario cualificado en cualquier momento. Acceso inmediato a atención profesional sin esperas.' },
+        aiHealth:    { title: 'Salud con IA',     desc: 'Análisis de fotos de piel, ojos y heces con inteligencia artificial. Detección temprana de problemas de salud.' },
+        medicalFile: { title: 'Historial Médico', desc: 'Historial de salud digital completo: vacunas, análisis, medicamentos, cirugías. Disponible en cualquier momento y lugar.' },
+        services:    { title: 'Servicios',        desc: 'Peluquería, entrenamiento, paseos, alojamiento, pet taxi: miles de proveedores verificados en toda Grecia.' },
+        legal:       { title: 'Asesoría Legal',   desc: 'Asesor legal con IA para asuntos de mascotas basado en la ley griega (Ley 4830/2021). Conexión con abogados especializados.' },
+        marketplace: { title: 'Marketplace',      desc: 'Tienda online con comida, juguetes, accesorios y medicamentos. Entrega rápida en toda Grecia.' },
+        tracker:     { title: 'GPS Tracker',      desc: 'Seguimiento en vivo de la ubicación de la mascota. Integración con trackers populares como Tractive y Weenect.' },
+        insurance:   { title: 'Seguro',           desc: 'Planes integrales de seguro para mascotas. Cobertura de gastos veterinarios, cirugías y urgencias.' },
+        community:   { title: 'Comunidad',        desc: 'Playdates, comunidades de dueños, feed social y eventos. Conecta con miles de amantes de mascotas en toda Grecia.' },
+      },
+    },
+    stats: {
+      title: 'GlobiPet en números',
+      users: 'Usuarios', providers: 'Proveedores', pets: 'Mascotas', rating: 'Valoración',
+    },
+  },
+  providerLayout: {
+    overview: 'Resumen', services: 'Servicios', bookings: 'Reservas',
+    marketing: 'Marketing', clients: 'Clientes',
+  },
+  adminLayout: {
+    overview: 'Resumen', catalog: 'Catálogo', services: 'Servicios',
+    packages: 'Paquetes', subscriptions: 'Suscripciones', commissions: 'Comisiones', messages: 'Mensajes',
   },
   marketplace: {
     title: 'Tienda', subtitle: 'Comida, juguetes, accesorios y más',
@@ -1228,6 +1369,53 @@ const fr: typeof el = {
     price: 'Prix', addNote: '+ Ajouter une note (optionnel)',
     tabsAriaLabel: 'Détails du service', shareAriaLabel: 'Partager le service',
   },
+  about: {
+    title: 'Qui Sommes-Nous',
+    hero: "GlobiPet est la première Super-App complète pour animaux de compagnie en Europe — une plateforme unique pour tous les besoins de votre animal et de son propriétaire.",
+    mission: {
+      title: 'Notre Mission',
+      pets:      { title: 'Pour les animaux',       text: 'Meilleure santé, meilleurs soins et meilleure qualité de vie pour chaque animal de compagnie.' },
+      owners:    { title: 'Pour les propriétaires', text: 'Moins de recherches, moins de stress, plus de temps pour vos proches.' },
+      providers: { title: 'Pour les prestataires',  text: 'Outils numériques, nouveaux clients et revenus accrus pour chaque professionnel.' },
+    },
+    founders: {
+      title: 'Les Fondateurs',
+      subtitle: "L'équipe derrière GlobiPet",
+      roles: { ceo: 'CEO et Co-Fondateur', cto: 'CTO et Co-Fondatrice', coo: 'COO et Co-Fondateur' },
+      bios: {
+        palamarizis: "Ingénieur en génie mécanique (NTUA), 20+ ans d'expérience en gouvernance numérique et technologie. Ancien CIO du gouvernement grec.",
+        topalidou:   'Développeuse full-stack et architecte de systèmes. Spécialisation en IA, applications mobiles et infrastructure cloud.',
+        rallis:      'Spécialiste du développement commercial et de la gestion des opérations. Expérience dans les startups et scale-ups en Europe.',
+      },
+    },
+    services: {
+      title: 'Nos Services',
+      subtitle: 'Un écosystème complet pour animaux et propriétaires',
+      items: {
+        telehealth:  { title: 'Télésanté',         desc: "Appel vidéo avec un vétérinaire qualifié à tout moment. Accès immédiat à des soins professionnels sans attente." },
+        aiHealth:    { title: 'Santé IA',          desc: "Analyse par IA des photos de peau, yeux et selles. Détection précoce des problèmes de santé." },
+        medicalFile: { title: 'Dossier Médical',   desc: "Historique de santé numérique complet — vaccins, examens, médicaments, chirurgies. Disponible à tout moment, partout." },
+        services:    { title: 'Services',          desc: "Toilettage, dressage, promenades, garde, pet taxi — des milliers de prestataires vérifiés dans toute la Grèce." },
+        legal:       { title: 'Support Juridique', desc: "Conseiller juridique IA pour les questions liées aux animaux, basé sur la loi grecque (loi 4830/2021). Mise en relation avec des avocats spécialisés." },
+        marketplace: { title: 'Marketplace',       desc: "Boutique en ligne avec nourriture, jouets, accessoires et médicaments. Livraison rapide dans toute la Grèce." },
+        tracker:     { title: 'Traceur GPS',       desc: "Suivi en direct de la position de l'animal. Intégration avec des traceurs populaires comme Tractive et Weenect." },
+        insurance:   { title: 'Assurance',         desc: "Plans d'assurance complets pour animaux. Couverture des frais vétérinaires, chirurgies et urgences." },
+        community:   { title: 'Communauté',        desc: "Playdates, communautés de propriétaires, fil social et événements. Rejoignez des milliers d'amis des animaux dans toute la Grèce." },
+      },
+    },
+    stats: {
+      title: 'GlobiPet en chiffres',
+      users: 'Utilisateurs', providers: 'Prestataires', pets: 'Animaux', rating: 'Note',
+    },
+  },
+  providerLayout: {
+    overview: "Aperçu", services: 'Services', bookings: 'Réservations',
+    marketing: 'Marketing', clients: 'Clients',
+  },
+  adminLayout: {
+    overview: "Aperçu", catalog: 'Catalogue', services: 'Services',
+    packages: 'Forfaits', subscriptions: 'Abonnements', commissions: 'Commissions', messages: 'Messages',
+  },
   marketplace: {
     title: 'Boutique', subtitle: 'Nourriture, jouets, accessoires et plus',
     searchPlaceholder: 'Rechercher un produit...', noResults: 'Aucun produit trouvé',
@@ -1600,6 +1788,53 @@ const zh: typeof el = {
     noDescription: '暂无描述。', noReviews: '暂无评价。',
     price: '价格', addNote: '+ 添加备注（可选）',
     tabsAriaLabel: '服务详情', shareAriaLabel: '分享服务',
+  },
+  about: {
+    title: '关于我们',
+    hero: 'GlobiPet 是欧洲首个综合宠物超级应用 — 满足您宠物及其主人所有需求的统一平台。',
+    mission: {
+      title: '我们的使命',
+      pets:      { title: '为宠物',   text: '为每一只陪伴动物提供更好的健康、护理和生活质量。' },
+      owners:    { title: '为主人',   text: '减少搜寻，减少压力，让您有更多时间陪伴所爱之人。' },
+      providers: { title: '为服务商', text: '为每一位专业人士提供数字化工具、新客户和更高收入。' },
+    },
+    founders: {
+      title: '创始人',
+      subtitle: 'GlobiPet 背后的团队',
+      roles: { ceo: '首席执行官兼联合创始人', cto: '首席技术官兼联合创始人', coo: '首席运营官兼联合创始人' },
+      bios: {
+        palamarizis: '雅典国立技术大学机械工程师，拥有 20 多年数字治理与技术经验。曾任希腊政府首席信息官。',
+        topalidou:   '全栈开发者与系统架构师。专注于人工智能、移动应用和云基础设施。',
+        rallis:      '业务发展与运营管理专家。在欧洲初创企业和高成长公司中拥有丰富经验。',
+      },
+    },
+    services: {
+      title: '我们的服务',
+      subtitle: '为宠物和主人打造的完整生态系统',
+      items: {
+        telehealth:  { title: '远程医疗', desc: '随时与合格兽医进行视频通话。无需等待即可获得专业护理。' },
+        aiHealth:    { title: 'AI 健康',  desc: '通过人工智能分析皮肤、眼睛和粪便照片。早期发现健康问题。' },
+        medicalFile: { title: '医疗档案', desc: '完整的数字健康历史 — 疫苗、检查、药物、手术。随时随地可用。' },
+        services:    { title: '服务',     desc: '美容、培训、遛狗、寄养、宠物出租车 — 遍布希腊的数千家经过验证的服务商。' },
+        legal:       { title: '法律支持', desc: '基于希腊法律（4830/2021 号法律）的宠物事务 AI 法律顾问。对接专业律师。' },
+        marketplace: { title: '在线商城', desc: '在线商店，提供食品、玩具、配件和药物。全希腊快速配送。' },
+        tracker:     { title: 'GPS 追踪', desc: '实时宠物位置追踪。集成 Tractive 和 Weenect 等流行追踪器。' },
+        insurance:   { title: '保险',     desc: '全面的宠物保险方案。涵盖兽医费用、手术和紧急情况。' },
+        community:   { title: '社区',     desc: 'Playdates、主人社区、社交动态和活动。与遍布希腊的数千名宠物爱好者互动。' },
+      },
+    },
+    stats: {
+      title: 'GlobiPet 数据',
+      users: '用户', providers: '服务商', pets: '宠物', rating: '评分',
+    },
+  },
+  providerLayout: {
+    overview: '概览', services: '服务', bookings: '预订',
+    marketing: '营销', clients: '客户',
+  },
+  adminLayout: {
+    overview: '概览', catalog: '目录', services: '服务',
+    packages: '套餐', subscriptions: '订阅', commissions: '佣金', messages: '消息',
   },
   marketplace: {
     title: '商店', subtitle: '食品、玩具、配件等',
