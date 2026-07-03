@@ -1,21 +1,36 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Shield, Check, X, Phone, Globe, ChevronDown, ChevronUp, Star } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-const TIER_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  basic:         { label: 'Βασικό',         color: '#374151', bg: '#F3F4F6' },
-  standard:      { label: 'Standard',        color: '#1E40AF', bg: '#DBEAFE' },
-  premium:       { label: 'Premium',         color: '#6D28D9', bg: '#EDE9FE' },
-  comprehensive: { label: 'Ολοκληρωμένο',   color: '#065F46', bg: '#D1FAE5' },
+const TIER_KEYS: Record<string, { labelKey: string; color: string; bg: string }> = {
+  basic:         { labelKey: 'insurance.tiers.basic',         color: '#374151', bg: '#F3F4F6' },
+  standard:      { labelKey: 'insurance.tiers.standard',      color: '#1E40AF', bg: '#DBEAFE' },
+  premium:       { labelKey: 'insurance.tiers.premium',       color: '#6D28D9', bg: '#EDE9FE' },
+  comprehensive: { labelKey: 'insurance.tiers.comprehensive', color: '#065F46', bg: '#D1FAE5' },
 }
 
-const PET_TYPE_LABELS: Record<string, string> = {
-  dog: '🐕 Σκύλος', cat: '🐈 Γάτα', rabbit: '🐇 Κουνέλι', bird: '🦜 Πτηνό',
+const PET_TYPE_KEYS: Record<string, { labelKey: string; emoji: string }> = {
+  dog:    { labelKey: 'insurance.petTypes.dog',    emoji: '🐕' },
+  cat:    { labelKey: 'insurance.petTypes.cat',    emoji: '🐈' },
+  rabbit: { labelKey: 'insurance.petTypes.rabbit', emoji: '🐇' },
+  bird:   { labelKey: 'insurance.petTypes.bird',   emoji: '🦜' },
 }
+
+const COVERAGE_CHIPS = [
+  { key: 'covers_accidents',  labelKey: 'insurance.coverage.accidents' },
+  { key: 'covers_illness',    labelKey: 'insurance.coverage.illness' },
+  { key: 'covers_surgery',    labelKey: 'insurance.coverage.surgery' },
+  { key: 'covers_dental',     labelKey: 'insurance.coverage.dental' },
+  { key: 'covers_preventive', labelKey: 'insurance.coverage.preventive' },
+  { key: 'covers_liability',  labelKey: 'insurance.coverage.liability' },
+  { key: 'covers_death',      labelKey: 'insurance.coverage.death' },
+]
 
 export default function Insurance() {
+  const { t } = useTranslation()
   const [petType, setPetType] = useState('')
   const [tier, setTier] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -41,40 +56,45 @@ export default function Insurance() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
-          <Shield size={28} className="text-brand-900"/> Ασφάλιση Κατοικιδίου
+          <Shield size={28} className="text-brand-900"/> {t('insurance.title')}
         </h1>
-        <p className="text-gray-500">Συγκρίνετε πλάνα ασφάλισης από τις κορυφαίες ασφαλιστικές εταιρείες</p>
+        <p className="text-gray-500">{t('insurance.subtitle')}</p>
       </div>
 
       {/* Filters */}
       <div className="card p-4 mb-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Τύπος κατοικιδίου</label>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('insurance.filters.petType')}</label>
             <select className="input text-sm" value={petType} onChange={e => setPetType(e.target.value)}>
-              <option value="">Όλα</option>
-              {Object.entries(PET_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              <option value="">{t('insurance.filters.allPets')}</option>
+              {Object.entries(PET_TYPE_KEYS).map(([k, v]) => (
+                <option key={k} value={k}>{v.emoji} {t(v.labelKey)}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Κατηγορία</label>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('insurance.filters.tier')}</label>
             <select className="input text-sm" value={tier} onChange={e => setTier(e.target.value)}>
-              <option value="">Όλες</option>
-              {Object.entries(TIER_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              <option value="">{t('insurance.filters.allTiers')}</option>
+              {Object.entries(TIER_KEYS).map(([k, v]) => (
+                <option key={k} value={k}>{t(v.labelKey)}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Μέγιστη μηνιαία τιμή (€)</label>
-            <input className="input text-sm" type="number" placeholder="π.χ. 30" value={maxPrice} onChange={e => setMaxPrice(e.target.value)}/>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('insurance.filters.maxPrice')}</label>
+            <input className="input text-sm" type="number" placeholder={t('insurance.filters.maxPricePlaceholder')}
+              value={maxPrice} onChange={e => setMaxPrice(e.target.value)}/>
           </div>
           <div className="flex flex-col justify-end gap-2">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={coversSurgery} onChange={e => setCoversSurgery(e.target.checked)} className="rounded"/>
-              Κάλυψη χειρουργείου
+              {t('insurance.filters.coversSurgery')}
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={coversDental} onChange={e => setCoversDental(e.target.checked)} className="rounded"/>
-              Κάλυψη οδοντιατρείου
+              {t('insurance.filters.coversDental')}
             </label>
           </div>
         </div>
@@ -86,20 +106,20 @@ export default function Insurance() {
       ) : plans.length === 0 ? (
         <div className="text-center py-20">
           <Shield size={48} className="mx-auto text-gray-200 mb-4"/>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Δεν βρέθηκαν πλάνα</p>
-          <p className="text-gray-500 text-sm">Δοκιμάστε διαφορετικά φίλτρα</p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('insurance.noPlans')}</p>
+          <p className="text-gray-500 text-sm">{t('insurance.noPlansDesc')}</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">{plans.length} πλάνα διαθέσιμα</p>
+          <p className="text-sm text-gray-500">{plans.length} {t('insurance.plansAvailable')}</p>
           {plans.map((plan: any) => {
-            const tier = TIER_LABELS[plan.tier] || TIER_LABELS.basic
+            const tierInfo = TIER_KEYS[plan.tier] || TIER_KEYS.basic
             const isExpanded = expandedPlan === plan.id
             return (
               <div key={plan.id} className={cn('card overflow-hidden', plan.is_featured && 'ring-2 ring-brand-900')}>
                 {plan.is_featured && (
                   <div className="bg-brand-900 text-white text-xs font-bold px-4 py-1 flex items-center gap-1">
-                    <Star size={11} fill="white"/> Προτεινόμενο
+                    <Star size={11} fill="white"/> {t('insurance.featured')}
                   </div>
                 )}
                 <div className="p-5">
@@ -115,35 +135,27 @@ export default function Insurance() {
                       <div>
                         <p className="text-xs text-gray-500">{plan.provider?.name_el || plan.provider?.name}</p>
                         <h3 className="font-bold text-gray-900 dark:text-white">{plan.name_el || plan.name}</h3>
-                        <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: tier.bg, color: tier.color }}>
-                          {tier.label}
+                        <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: tierInfo.bg, color: tierInfo.color }}>
+                          {t(tierInfo.labelKey)}
                         </span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-2xl font-black text-brand-900">€{plan.price_monthly}<span className="text-sm font-normal text-gray-500">/μήνα</span></p>
+                      <p className="text-2xl font-black text-brand-900">€{plan.price_monthly}<span className="text-sm font-normal text-gray-500">/{t('insurance.perMonth')}</span></p>
                       {plan.price_annual && (
-                        <p className="text-xs text-gray-500">€{plan.price_annual}/χρόνο</p>
+                        <p className="text-xs text-gray-500">€{plan.price_annual}/{t('insurance.perYear')}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Coverage chips */}
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {[
-                      { key: 'covers_accidents',  label: 'Ατυχήματα' },
-                      { key: 'covers_illness',    label: 'Ασθένεια' },
-                      { key: 'covers_surgery',    label: 'Χειρουργείο' },
-                      { key: 'covers_dental',     label: 'Οδοντιατρείο' },
-                      { key: 'covers_preventive', label: 'Πρόληψη' },
-                      { key: 'covers_liability',  label: 'Αστική ευθύνη' },
-                      { key: 'covers_death',      label: 'Θάνατος' },
-                    ].map(({ key, label }) => (
+                    {COVERAGE_CHIPS.map(({ key, labelKey }) => (
                       <span key={key} className={cn(
                         'flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium',
                         plan[key] ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400 line-through'
                       )}>
-                        {plan[key] ? <Check size={11}/> : <X size={11}/>} {label}
+                        {plan[key] ? <Check size={11}/> : <X size={11}/>} {t(labelKey)}
                       </span>
                     ))}
                   </div>
@@ -151,44 +163,44 @@ export default function Insurance() {
                   {/* Expand button */}
                   <button onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
                     className="mt-4 flex items-center gap-1 text-sm text-brand-900 font-medium hover:underline">
-                    {isExpanded ? <><ChevronUp size={16}/> Λιγότερα</> : <><ChevronDown size={16}/> Περισσότερες λεπτομέρειες</>}
+                    {isExpanded ? <><ChevronUp size={16}/> {t('insurance.showLess')}</> : <><ChevronDown size={16}/> {t('insurance.showMore')}</>}
                   </button>
 
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {plan.annual_limit && (
                         <div>
-                          <p className="text-xs text-gray-500">Ετήσιο όριο</p>
+                          <p className="text-xs text-gray-500">{t('insurance.details.annualLimit')}</p>
                           <p className="font-semibold text-gray-900 dark:text-white">€{plan.annual_limit.toLocaleString()}</p>
                         </div>
                       )}
                       {plan.deductible && (
                         <div>
-                          <p className="text-xs text-gray-500">Απαλλαγή</p>
+                          <p className="text-xs text-gray-500">{t('insurance.details.deductible')}</p>
                           <p className="font-semibold text-gray-900 dark:text-white">€{plan.deductible}</p>
                         </div>
                       )}
                       {plan.reimbursement_percent && (
                         <div>
-                          <p className="text-xs text-gray-500">Αποζημίωση</p>
+                          <p className="text-xs text-gray-500">{t('insurance.details.reimbursement')}</p>
                           <p className="font-semibold text-gray-900 dark:text-white">{plan.reimbursement_percent}%</p>
                         </div>
                       )}
                       {plan.waiting_period_days && (
                         <div>
-                          <p className="text-xs text-gray-500">Περίοδος αναμονής</p>
-                          <p className="font-semibold text-gray-900 dark:text-white">{plan.waiting_period_days} ημέρες</p>
+                          <p className="text-xs text-gray-500">{t('insurance.details.waitingPeriod')}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{plan.waiting_period_days} {t('insurance.details.days')}</p>
                         </div>
                       )}
                       {plan.max_age_years && (
                         <div>
-                          <p className="text-xs text-gray-500">Μέγιστη ηλικία</p>
-                          <p className="font-semibold text-gray-900 dark:text-white">{plan.max_age_years} χρόνια</p>
+                          <p className="text-xs text-gray-500">{t('insurance.details.maxAge')}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{plan.max_age_years} {t('insurance.details.years')}</p>
                         </div>
                       )}
                       {plan.features?.length > 0 && (
                         <div className="col-span-full">
-                          <p className="text-xs text-gray-500 mb-2">Πρόσθετα οφέλη</p>
+                          <p className="text-xs text-gray-500 mb-2">{t('insurance.details.extraBenefits')}</p>
                           <div className="flex flex-wrap gap-1">
                             {plan.features.map((f: string, i: number) => (
                               <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{f}</span>
@@ -204,7 +216,7 @@ export default function Insurance() {
                     {plan.provider?.website && (
                       <a href={plan.provider.website} target="_blank" rel="noopener noreferrer"
                         className="btn-primary flex-1 text-center text-sm flex items-center justify-center gap-2">
-                        <Globe size={15}/> Αίτηση ασφάλισης
+                        <Globe size={15}/> {t('insurance.applyCta')}
                       </a>
                     )}
                     {plan.provider?.phone && (

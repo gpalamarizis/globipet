@@ -62,7 +62,7 @@ export default function ContactPage() {
                 <MapPin size={20} className="text-orange-600 dark:text-orange-400" />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('contact.address')}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Αθήνα, Ελλάδα</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('contact.addressValue')}</p>
             </div>
           </div>
 

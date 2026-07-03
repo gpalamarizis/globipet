@@ -72,15 +72,15 @@ export default function Marketplace() {
         >
           {sortKeys.map(k => <option key={k} value={k}>{t(`marketplace.sort.${k}`)}</option>)}
         </select>
-        <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-xl p-1" role="group" aria-label="Προβολή">
+        <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-xl p-1" role="group" aria-label={t('marketplace.viewMode')}>
           <button
-            aria-label="Προβολή πλέγματος"
+            aria-label={t('marketplace.viewGrid')}
             aria-pressed={viewMode === 'grid'}
             className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             onClick={() => setViewMode('grid')}
           ><Grid size={16} aria-hidden="true" /></button>
           <button
-            aria-label="Προβολή λίστας"
+            aria-label={t('marketplace.viewList')}
             aria-pressed={viewMode === 'list'}
             className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             onClick={() => setViewMode('list')}

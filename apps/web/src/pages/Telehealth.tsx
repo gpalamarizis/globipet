@@ -1,6 +1,7 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Video, Clock, Star, Search, Shield, Award, X, Lock, Zap, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
@@ -12,6 +13,7 @@ import toast from 'react-hot-toast'
 type Tab = 'now' | 'scheduled'
 
 export default function Telehealth() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
@@ -22,14 +24,12 @@ export default function Telehealth() {
   const [bookingTime, setBookingTime] = useState('')
   const [selectedPetId, setSelectedPetId] = useState('')
 
-  // Available now
   const { data: availableVets = [], isLoading: loadingNow } = useQuery({
     queryKey: ['telehealth-available-now'],
     queryFn: () => api.get('/telehealth/available-now').then(r => r.data?.data ?? []),
-    refetchInterval: 30_000, // re-poll every 30s
+    refetchInterval: 30_000,
   })
 
-  // All vets for scheduled tab
   const { data: allVets = [], isLoading: loadingAll } = useQuery({
     queryKey: ['telehealth-vets'],
     queryFn: () => api.get('/services?service_type=veterinary&limit=24').then(r => r.data?.data ?? []),
@@ -42,7 +42,6 @@ export default function Telehealth() {
     enabled: isAuthenticated,
   })
 
-  // Real-time availability updates via WebSocket
   const wsLastMsg = useWsStore?.((s: any) => s.lastMessage)
   useEffect(() => {
     if (wsLastMsg?.type === 'vet_availability_change') {
@@ -59,7 +58,7 @@ export default function Telehealth() {
 
   const bookConsultation = useMutation({
     mutationFn: async () => {
-      if (!selectedVet) throw new Error('Δεν επιλέχθηκε κτηνίατρος')
+      if (!selectedVet) throw new Error(t('telehealth.errors.noVetSelected'))
       const pet = pets.find((p: any) => p.id === selectedPetId)
       const isNow = tab === 'now'
       const now = new Date()
@@ -79,11 +78,11 @@ export default function Telehealth() {
     onSuccess: (data) => {
       if (data.checkoutUrl) window.location.href = data.checkoutUrl
     },
-    onError: (err: any) => toast.error(err?.message || 'Σφάλμα κατά την κράτηση'),
+    onError: (err: any) => toast.error(err?.message || t('telehealth.errors.bookingFailed')),
   })
 
   const openBooking = (vet: any) => {
-    if (!isAuthenticated) { toast.error('Συνδεθείτε για να κλείσετε ραντεβού'); return }
+    if (!isAuthenticated) { toast.error(t('telehealth.errors.loginRequired')); return }
     setSelectedVet(vet)
     if (tab === 'scheduled') {
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
@@ -106,7 +105,7 @@ export default function Telehealth() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{vet.provider_name}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{vet.specializations?.[0] || 'Γενική Κτηνιατρική'}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{vet.specializations?.[0] || t('telehealth.generalVet')}</p>
           <div className="flex items-center gap-1 mt-1">
             <Star size={11} className="text-yellow-500 fill-yellow-500" />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{vet.rating || 0}</span>
@@ -118,9 +117,9 @@ export default function Telehealth() {
 
       <div className="flex items-center justify-between mb-4 text-xs text-gray-500">
         {vet.is_available_now
-          ? <span className="flex items-center gap-1 text-green-600 font-medium"><span className="w-1.5 h-1.5 bg-green-500 rounded-full" />Διαθέσιμος τώρα</span>
-          : <span>{vet.years_experience || 0} χρόνια εμπειρία</span>}
-        <span className="font-semibold text-gray-900 dark:text-white">€{vet.price}/συνεδρία</span>
+          ? <span className="flex items-center gap-1 text-green-600 font-medium"><span className="w-1.5 h-1.5 bg-green-500 rounded-full" />{t('telehealth.availableNow')}</span>
+          : <span>{vet.years_experience || 0} {t('telehealth.yearsExperience')}</span>}
+        <span className="font-semibold text-gray-900 dark:text-white">€{vet.price}/{t('telehealth.perSession')}</span>
       </div>
 
       <button onClick={() => openBooking(vet)}
@@ -128,7 +127,7 @@ export default function Telehealth() {
           vet.is_available_now
             ? 'bg-green-600 text-white hover:bg-green-700'
             : 'bg-blue-600 text-white hover:bg-blue-700')}>
-        {vet.is_available_now ? <><Zap size={13} /> Κάλεσε Τώρα</> : <><Calendar size={13} /> Κλείσε Ραντεβού</>}
+        {vet.is_available_now ? <><Zap size={13} /> {t('telehealth.callNow')}</> : <><Calendar size={13} /> {t('telehealth.bookAppointment')}</>}
       </button>
     </motion.div>
   )
@@ -142,8 +141,8 @@ export default function Telehealth() {
               <Video size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Τηλεϊατρική</h1>
-              <p className="text-sm text-gray-500">Βιντεοκλήση με εξειδικευμένο κτηνίατρο — πληρωμή πριν τη συνεδρία</p>
+              <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('telehealth.title')}</h1>
+              <p className="text-sm text-gray-500">{t('telehealth.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -151,9 +150,9 @@ export default function Telehealth() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { icon: Zap, label: 'Διαθέσιμοι τώρα', value: String(availableVets.length), color: 'text-green-600' },
-            { icon: Clock, label: 'Διάρκεια', value: '30 λεπτά', color: 'text-blue-600' },
-            { icon: Shield, label: 'Πληρωμή', value: 'Viva Wallet', color: 'text-orange-600' },
+            { icon: Zap,    label: t('telehealth.stats.availableNow'), value: String(availableVets.length), color: 'text-green-600' },
+            { icon: Clock,  label: t('telehealth.stats.duration'),     value: t('telehealth.stats.durationValue'), color: 'text-blue-600' },
+            { icon: Shield, label: t('telehealth.stats.payment'),      value: 'Viva Wallet', color: 'text-orange-600' },
           ].map((stat, i) => (
             <div key={i} className="card p-4 text-center">
               <stat.icon size={20} className={cn('mx-auto mb-2', stat.color)} />
@@ -169,7 +168,7 @@ export default function Telehealth() {
             className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all',
               tab === 'now' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
             <Zap size={15} className={availableVets.length > 0 ? 'text-green-500' : ''} />
-            Διαθέσιμοι Τώρα
+            {t('telehealth.tabs.now')}
             {availableVets.length > 0 && (
               <span className="bg-green-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{availableVets.length}</span>
             )}
@@ -177,14 +176,14 @@ export default function Telehealth() {
           <button onClick={() => setTab('scheduled')}
             className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all',
               tab === 'scheduled' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-            <Calendar size={15} /> Προγραμματισμένη
+            <Calendar size={15} /> {t('telehealth.tabs.scheduled')}
           </button>
         </div>
 
         {/* Search */}
         <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 mb-5">
           <Search size={16} className="text-gray-400 shrink-0" />
-          <input type="text" placeholder="Αναζήτηση κτηνιάτρου..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder={t('telehealth.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" />
         </div>
 
@@ -192,17 +191,17 @@ export default function Telehealth() {
         {tab === 'now' && !isLoading && filtered.length === 0 && (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">🩺</p>
-            <p className="font-semibold text-gray-900 dark:text-white mb-1">Κανένας κτηνίατρος διαθέσιμος αυτή τη στιγμή</p>
-            <p className="text-sm text-gray-500 mb-4">Η λίστα ενημερώνεται κάθε 30 δευτερόλεπτα αυτόματα</p>
+            <p className="font-semibold text-gray-900 dark:text-white mb-1">{t('telehealth.noVetsNow')}</p>
+            <p className="text-sm text-gray-500 mb-4">{t('telehealth.noVetsNowDesc')}</p>
             <button onClick={() => setTab('scheduled')} className="btn-primary text-sm px-5 py-2.5">
-              Κλείσε Προγραμματισμένο Ραντεβού
+              {t('telehealth.bookScheduled')}
             </button>
           </div>
         )}
 
         {/* Vet grid */}
         {(isLoading) ? (
-          <div className="text-center py-16 text-gray-400">Φόρτωση...</div>
+          <div className="text-center py-16 text-gray-400">{t('telehealth.loading')}</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((vet: any) => <VetCard key={vet.id} vet={vet} />)}
@@ -212,7 +211,7 @@ export default function Telehealth() {
         {tab === 'scheduled' && !isLoading && filtered.length === 0 && (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="font-semibold text-gray-900 dark:text-white">Δεν βρέθηκαν κτηνίατροι</p>
+            <p className="font-semibold text-gray-900 dark:text-white">{t('telehealth.noVetsFound')}</p>
           </div>
         )}
       </div>
@@ -239,9 +238,9 @@ export default function Telehealth() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white">{selectedVet.provider_name}</p>
-                    <p className="text-sm text-gray-500">{selectedVet.specializations?.[0] || 'Γενική Κτηνιατρική'}</p>
+                    <p className="text-sm text-gray-500">{selectedVet.specializations?.[0] || t('telehealth.generalVet')}</p>
                     {selectedVet.is_available_now && (
-                      <p className="text-xs text-green-600 font-medium mt-0.5">● Διαθέσιμος τώρα</p>
+                      <p className="text-xs text-green-600 font-medium mt-0.5">● {t('telehealth.availableNow')}</p>
                     )}
                   </div>
                 </div>
@@ -252,18 +251,18 @@ export default function Telehealth() {
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl mb-4 flex items-center gap-3">
                   <Zap size={20} className="text-green-600 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-green-700 dark:text-green-400">Άμεση Κλήση</p>
-                    <p className="text-xs text-green-600">Μόλις ολοκληρωθεί η πληρωμή, ο κτηνίατρος λαμβάνει ειδοποίηση και εισέρχεται στη βιντεοκλήση.</p>
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-400">{t('telehealth.modal.instantCall')}</p>
+                    <p className="text-xs text-green-600">{t('telehealth.modal.instantCallDesc')}</p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3 mb-5">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Ημερομηνία</label>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.date')}</label>
                     <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="input w-full text-sm" min={new Date().toISOString().split('T')[0]} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Ώρα</label>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.time')}</label>
                     <input type="time" value={bookingTime} onChange={e => setBookingTime(e.target.value)} className="input w-full text-sm" />
                   </div>
                 </div>
@@ -271,9 +270,9 @@ export default function Telehealth() {
 
               {pets.length > 0 && (
                 <div className="mb-4">
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Κατοικίδιο (προαιρετικό)</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.petLabel')}</label>
                   <select value={selectedPetId} onChange={e => setSelectedPetId(e.target.value)} className="input w-full text-sm">
-                    <option value="">— Επίλεξε —</option>
+                    <option value="">— {t('telehealth.modal.selectPet')} —</option>
                     {pets.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
@@ -281,22 +280,24 @@ export default function Telehealth() {
 
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-4 flex items-center gap-2">
                 <Lock size={13} className="text-blue-600 shrink-0" />
-                <span className="text-xs text-blue-600">Ασφαλής πληρωμή μέσω Viva Wallet. Η κλήση ξεκλειδώνει μετά την επιβεβαίωση.</span>
+                <span className="text-xs text-blue-600">{t('telehealth.modal.securePaymentNote')}</span>
               </div>
 
               <div className="flex justify-between items-center mb-4">
-                <span className="text-sm text-gray-500">Κόστος συνεδρίας</span>
+                <span className="text-sm text-gray-500">{t('telehealth.modal.sessionCost')}</span>
                 <span className="font-bold text-lg text-gray-900 dark:text-white">€{selectedVet.price}</span>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setSelectedVet(null)} className="btn-secondary flex-1">Άκυρο</button>
+                <button onClick={() => setSelectedVet(null)} className="btn-secondary flex-1">{t('telehealth.modal.cancel')}</button>
                 <button onClick={() => bookConsultation.mutate()}
                   disabled={(tab === 'scheduled' && (!bookingDate || !bookingTime)) || bookConsultation.isPending}
                   className={cn('flex-1 flex items-center justify-center gap-2 rounded-xl font-semibold text-sm py-2.5 text-white transition-all disabled:opacity-50',
                     tab === 'now' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700')}>
                   {tab === 'now' ? <Zap size={14}/> : <Lock size={14}/>}
-                  {bookConsultation.isPending ? 'Επεξεργασία...' : tab === 'now' ? 'Πλήρωσε & Κάλεσε Τώρα' : 'Πλήρωσε & Κλείσε'}
+                  {bookConsultation.isPending
+                    ? t('telehealth.modal.processing')
+                    : tab === 'now' ? t('telehealth.modal.payAndCall') : t('telehealth.modal.payAndBook')}
                 </button>
               </div>
             </motion.div>
