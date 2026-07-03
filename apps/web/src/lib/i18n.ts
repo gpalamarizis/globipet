@@ -143,7 +143,8 @@ const el = {
     addToCart: 'Καλάθι',
     inCategory: 'σε',
     categories: {
-      all: 'Όλα', food: 'Τροφές', toys: 'Παιχνίδια', accessories: 'Αξεσουάρ', other: 'Άλλα',
+      all: 'Όλα', food: 'Τροφές', toys: 'Παιχνίδια', accessories: 'Αξεσουάρ',
+      health: 'Υγεία', grooming: 'Περιποίηση', training: 'Εκπαίδευση', housing: 'Στέγαση', other: 'Άλλα',
     },
     sort: {
       featured: 'Προτεινόμενα', price_asc: 'Τιμή: Χαμηλή → Υψηλή',
@@ -582,7 +583,8 @@ const en: typeof el = {
     searchPlaceholder: 'Search product...', noResults: 'No products found',
     noResultsDesc: 'Try different search terms', results: 'results', addToCart: 'Cart', inCategory: 'in',
     categories: {
-      all: 'All', food: 'Food', toys: 'Toys', accessories: 'Accessories', other: 'Other',
+      all: 'All', food: 'Food', toys: 'Toys', accessories: 'Accessories',
+      health: 'Health', grooming: 'Grooming', training: 'Training', housing: 'Housing', other: 'Other',
     },
     sort: {
       featured: 'Featured', price_asc: 'Price: Low → High',
