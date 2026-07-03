@@ -14,17 +14,78 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  // GET /admin/subscriptions/ai
+  // ══════════════════════════════════════════════════════
+  // AI SUBSCRIPTIONS
+  // ══════════════════════════════════════════════════════
+
+  // GET /admin/subscriptions/ai — list all users with AI subscription, with plan info
   app.get('/ai', async (req, reply) => {
     const users = await prisma.user.findMany({
       where: { ai_subscription_status: { not: 'none' } },
-      select: { id: true, full_name: true, email: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
+      select: {
+        id: true, full_name: true, email: true,
+        ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true,
+      },
       orderBy: { ai_trial_started_at: 'desc' },
     })
-    return reply.send({ data: users })
+
+    // Join plan data manually (no relation defined on User → AiSubscriptionPlan)
+    const planIds = users.map(u => u.ai_subscription_plan_id).filter(Boolean) as string[]
+    const plans = planIds.length
+      ? await prisma.aiSubscriptionPlan.findMany({
+          where: { id: { in: planIds } },
+          select: { id: true, name: true, name_el: true, price_monthly: true,
+            includes_ai_health: true, includes_emotion_ai: true,
+            includes_wellness_tracker: true, includes_telehealth: true },
+        })
+      : []
+    const planMap = new Map(plans.map(p => [p.id, p]))
+
+    const enriched = users.map(u => {
+      const plan = u.ai_subscription_plan_id ? planMap.get(u.ai_subscription_plan_id) : null
+      // Calculate trial_days_left if in trial
+      let trial_days_left: number | null = null
+      if (u.ai_subscription_status === 'trial' && u.ai_trial_started_at) {
+        const elapsed = (Date.now() - new Date(u.ai_trial_started_at).getTime()) / (1000 * 60 * 60 * 24)
+        trial_days_left = Math.max(0, Math.ceil(30 - elapsed))
+      }
+      return { ...u, plan, trial_days_left }
+    })
+
+    return reply.send({ data: enriched })
   })
 
-  // GET /admin/subscriptions/food
+  // PATCH /admin/subscriptions/ai/:user_id — admin changes user's AI subscription status/plan
+  app.patch('/ai/:user_id', async (req: any, reply) => {
+    const b = req.body ?? {}
+    const data: any = {}
+    if ('ai_subscription_status' in b) {
+      const valid = ['none','trial','active','expired']
+      if (!valid.includes(b.ai_subscription_status)) {
+        return reply.code(400).send({ message: 'Μη έγκυρη κατάσταση' })
+      }
+      data.ai_subscription_status = b.ai_subscription_status
+      // If moving to 'trial', reset the trial start date
+      if (b.ai_subscription_status === 'trial') data.ai_trial_started_at = new Date()
+    }
+    if ('ai_subscription_plan_id' in b) {
+      data.ai_subscription_plan_id = b.ai_subscription_plan_id || null
+    }
+    if (Object.keys(data).length === 0) {
+      return reply.code(400).send({ message: 'Καμία αλλαγή' })
+    }
+    const updated = await prisma.user.update({
+      where: { id: req.params.user_id },
+      data,
+      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
+    })
+    return reply.send({ data: updated })
+  })
+
+  // ══════════════════════════════════════════════════════
+  // FOOD SUBSCRIPTIONS
+  // ══════════════════════════════════════════════════════
+
   app.get('/food', async (req, reply) => {
     const subs = await prisma.productSubscription.findMany({
       include: {
@@ -36,7 +97,6 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: subs })
   })
 
-  // PATCH /admin/subscriptions/food/:id — admin can pause/cancel/reactivate
   app.patch('/food/:id', async (req: any, reply) => {
     const { status } = req.body as { status: string }
     const updated = await prisma.productSubscription.update({
@@ -46,7 +106,10 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: updated })
   })
 
-  // GET /admin/subscriptions/insurance
+  // ══════════════════════════════════════════════════════
+  // INSURANCE SUBSCRIPTIONS
+  // ══════════════════════════════════════════════════════
+
   app.get('/insurance', async (req, reply) => {
     const subs = await prisma.userInsuranceSubscription.findMany({
       include: {
@@ -58,7 +121,6 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: subs })
   })
 
-  // POST /admin/subscriptions/insurance — admin manually registers a user's insurance plan
   app.post('/insurance', async (req: any, reply) => {
     const { user_id, plan_id, pet_id } = req.body as any
     if (!user_id || !plan_id) return reply.code(400).send({ message: 'user_id και plan_id απαιτούνται' })
@@ -68,7 +130,6 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ data: sub })
   })
 
-  // PATCH /admin/subscriptions/insurance/:id
   app.patch('/insurance/:id', async (req: any, reply) => {
     const { status } = req.body as { status: string }
     const updated = await prisma.userInsuranceSubscription.update({
@@ -78,12 +139,15 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: updated })
   })
 
-  // GET /admin/subscriptions/overview — unified table across all subscription types
+  // ══════════════════════════════════════════════════════
+  // OVERVIEW (unified across all subscription types)
+  // ══════════════════════════════════════════════════════
+
   app.get('/overview', async (req, reply) => {
     const [aiUsers, foodSubs, insuranceSubs] = await Promise.all([
       prisma.user.findMany({
         where: { ai_subscription_status: { not: 'none' } },
-        select: { id: true, full_name: true, email: true, ai_subscription_status: true, ai_trial_started_at: true },
+        select: { id: true, full_name: true, email: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
       }),
       prisma.productSubscription.findMany({
         include: { user: { select: { full_name: true, email: true } }, product: { select: { name: true } } },
@@ -93,15 +157,28 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
       }),
     ])
 
+    // Enrich AI users with plan names
+    const planIds = aiUsers.map(u => u.ai_subscription_plan_id).filter(Boolean) as string[]
+    const plans = planIds.length
+      ? await prisma.aiSubscriptionPlan.findMany({
+          where: { id: { in: planIds } },
+          select: { id: true, name: true, name_el: true },
+        })
+      : []
+    const planMap = new Map(plans.map(p => [p.id, p]))
+
     const rows = [
-      ...aiUsers.map(u => ({
-        type: 'ai',
-        user_name: u.full_name,
-        user_email: u.email,
-        plan_name: 'AI Health',
-        status: u.ai_subscription_status,
-        started_at: u.ai_trial_started_at,
-      })),
+      ...aiUsers.map(u => {
+        const plan = u.ai_subscription_plan_id ? planMap.get(u.ai_subscription_plan_id) : null
+        return {
+          type: 'ai',
+          user_name: u.full_name,
+          user_email: u.email,
+          plan_name: plan?.name_el || plan?.name || 'AI Health',
+          status: u.ai_subscription_status,
+          started_at: u.ai_trial_started_at,
+        }
+      }),
       ...foodSubs.map(s => ({
         type: 'food',
         user_name: s.user.full_name,

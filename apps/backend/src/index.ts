@@ -45,6 +45,7 @@ import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
 import adminSubscriptionsRoutes from './routes/admin-subscriptions.js'
+import adminAiPlansRoutes from './routes/ai-plans-admin.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -101,6 +102,7 @@ const routes = [
   { prefix: '/api/subscriptions', handler: subscriptionsRoutes },
   { prefix: '/api/webhooks', handler: webhooksRoutes },
   { prefix: '/api/admin/subscriptions', handler: adminSubscriptionsRoutes },
+  { prefix: '/api/admin/ai-plans', handler: adminAiPlansRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
 

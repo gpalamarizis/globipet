@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Layers, Brain, Package, Shield, Settings2, Check, X } from 'lucide-react'
+import { Layers, Brain, Package, Shield, Settings2, Check, X, Edit2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -28,6 +28,7 @@ export default function AdminSubscriptionsPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const queryClient = useQueryClient()
   const [discountInput, setDiscountInput] = useState<string>('')
+  const [editingAiUser, setEditingAiUser] = useState<any>(null)
 
   const { data: discountSetting } = useQuery({
     queryKey: ['food-subscription-discount'],
@@ -67,12 +68,31 @@ export default function AdminSubscriptionsPage() {
     enabled: activeTab === 'insurance',
   })
 
+  // For the AI edit modal — fetch available plans
+  const { data: aiPlans = [] } = useQuery({
+    queryKey: ['admin-ai-plans-list'],
+    queryFn: () => api.get('/admin/ai-plans').then(r => r.data?.data ?? []),
+    enabled: !!editingAiUser,
+  })
+
   const updateFoodStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/admin/subscriptions/food/${id}`, { status }),
     onSuccess: () => {
       toast.success('Ενημερώθηκε')
       queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-food'] })
     },
+  })
+
+  const updateAiUser = useMutation({
+    mutationFn: ({ user_id, ai_subscription_status, ai_subscription_plan_id }: any) =>
+      api.patch(`/admin/subscriptions/ai/${user_id}`, { ai_subscription_status, ai_subscription_plan_id }),
+    onSuccess: () => {
+      toast.success('Ενημερώθηκε')
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-ai'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-overview'] })
+      setEditingAiUser(null)
+    },
+    onError: () => toast.error('Σφάλμα ενημέρωσης'),
   })
 
   const StatusBadge = ({ status }: { status: string }) => (
@@ -162,13 +182,20 @@ export default function AdminSubscriptionsPage() {
         )
       )}
 
-      {/* AI tab */}
+      {/* AI tab — enhanced with plan info + actions */}
       {activeTab === 'ai' && (
         loadingAi ? <div className="flex justify-center py-12"><LoadingSpinner /></div> : (
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800 text-left text-xs text-gray-500">
-                <tr><th className="p-3">Χρήστης</th><th className="p-3">Κατάσταση</th><th className="p-3">Trial από</th></tr>
+                <tr>
+                  <th className="p-3">Χρήστης</th>
+                  <th className="p-3">Πλάνο</th>
+                  <th className="p-3">Κατάσταση</th>
+                  <th className="p-3">Trial από</th>
+                  <th className="p-3">Ημέρες trial</th>
+                  <th className="p-3">Ενέργειες</th>
+                </tr>
               </thead>
               <tbody>
                 {aiUsers?.map((u: any) => (
@@ -177,12 +204,37 @@ export default function AdminSubscriptionsPage() {
                       <p className="font-medium text-gray-900 dark:text-white">{u.full_name}</p>
                       <p className="text-xs text-gray-500">{u.email}</p>
                     </td>
+                    <td className="p-3">
+                      {u.plan ? (
+                        <div>
+                          <p className="font-medium">{u.plan.name_el || u.plan.name}</p>
+                          <p className="text-xs text-gray-400">€{u.plan.price_monthly}/μήνα</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="p-3"><StatusBadge status={u.ai_subscription_status} /></td>
                     <td className="p-3 text-gray-500">{u.ai_trial_started_at ? new Date(u.ai_trial_started_at).toLocaleDateString('el-GR') : '—'}</td>
+                    <td className="p-3">
+                      {u.trial_days_left !== null && u.ai_subscription_status === 'trial' ? (
+                        <span className={cn('text-xs font-semibold',
+                          u.trial_days_left > 7 ? 'text-green-600' :
+                          u.trial_days_left > 0 ? 'text-amber-600' : 'text-red-600')}>
+                          {u.trial_days_left} μέρες
+                        </span>
+                      ) : <span className="text-xs text-gray-400">—</span>}
+                    </td>
+                    <td className="p-3">
+                      <button onClick={() => setEditingAiUser(u)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Επεξεργασία">
+                        <Edit2 size={13} className="text-gray-500" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {aiUsers?.length === 0 && (
-                  <tr><td colSpan={3} className="p-8 text-center text-gray-500">Κανένας χρήστης δεν έχει ενεργοποιήσει AI trial/συνδρομή</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">Κανένας χρήστης δεν έχει ενεργοποιήσει AI trial/συνδρομή</td></tr>
                 )}
               </tbody>
             </table>
@@ -264,6 +316,63 @@ export default function AdminSubscriptionsPage() {
             </table>
           </div>
         )
+      )}
+
+      {/* AI User Edit Modal */}
+      {editingAiUser && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setEditingAiUser(null)}>
+          <div className="w-full max-w-md card p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Επεξεργασία AI Συνδρομής</h2>
+              <button onClick={() => setEditingAiUser(null)} className="btn-ghost p-2"><X size={18} /></button>
+            </div>
+
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <p className="font-medium text-sm text-gray-900 dark:text-white">{editingAiUser.full_name}</p>
+              <p className="text-xs text-gray-500">{editingAiUser.email}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Κατάσταση</label>
+                <select className="input text-sm" value={editingAiUser.ai_subscription_status}
+                  onChange={e => setEditingAiUser({ ...editingAiUser, ai_subscription_status: e.target.value })}>
+                  <option value="none">Κανένα</option>
+                  <option value="trial">Trial (30 μέρες)</option>
+                  <option value="active">Ενεργό</option>
+                  <option value="expired">Έληξε</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Πλάνο</label>
+                <select className="input text-sm" value={editingAiUser.ai_subscription_plan_id || ''}
+                  onChange={e => setEditingAiUser({ ...editingAiUser, ai_subscription_plan_id: e.target.value || null })}>
+                  <option value="">— Χωρίς πλάνο —</option>
+                  {aiPlans.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name_el || p.name} — €{p.price_monthly}/μήνα
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setEditingAiUser(null)} className="btn-secondary flex-1">Ακύρωση</button>
+              <button onClick={() => updateAiUser.mutate({
+                  user_id: editingAiUser.id,
+                  ai_subscription_status: editingAiUser.ai_subscription_status,
+                  ai_subscription_plan_id: editingAiUser.ai_subscription_plan_id,
+                })}
+                disabled={updateAiUser.isPending}
+                className="btn-primary flex-1">
+                {updateAiUser.isPending ? '...' : 'Αποθήκευση'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

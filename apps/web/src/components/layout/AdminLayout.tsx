@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -10,6 +10,7 @@ const tabs = [
   { path: '/admin/services',      labelKey: 'adminLayout.services',      icon: Building2 },
   { path: '/admin/packages',      labelKey: 'adminLayout.packages',      icon: Package },
   { path: '/admin/subscriptions', labelKey: 'adminLayout.subscriptions', icon: Layers },
+  { path: '/admin/ai-plans',      labelKey: 'adminLayout.aiPlans',       icon: Brain },
   { path: '/admin/commissions',   labelKey: 'adminLayout.commissions',   icon: Percent },
   { path: '/admin/messages',      labelKey: 'adminLayout.messages',      icon: Mail },
 ]

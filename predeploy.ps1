@@ -1,18 +1,15 @@
-# predeploy.ps1 - GlobiPet deploy helper (ASCII-safe)
+# predeploy.ps1 - GlobiPet deploy helper (ASCII-safe, warning-tolerant)
 # Usage:  .\predeploy.ps1 "<commit message>"
-# Example: .\predeploy.ps1 "fix: header spacing on mobile"
-#
-# What it does:
-#  1. Cleans stale compiled .js/.jsx files that shadow .ts/.tsx (Cloudflare shadow issue)
-#  2. Runs vite build TWICE (workflow rule) - both must pass
-#  3. If both passed: git add + commit + push
 
 param(
     [Parameter(Mandatory=$true, HelpMessage="Commit message")]
     [string]$Message
 )
 
-$ErrorActionPreference = "Stop"
+# IMPORTANT: do NOT set ErrorActionPreference=Stop globally.
+# vite/esbuild write warnings to stderr, and PowerShell mistakes them for errors.
+# We check $LASTEXITCODE explicitly after each native command instead.
+
 $repoRoot = "C:\gp"
 $webDir   = "C:\gp\apps\web"
 
@@ -52,14 +49,14 @@ if ($shadowed.Count -eq 0) {
         $rel = $f.FullName.Substring("$repoRoot\".Length)
         Write-Host "    $rel"
         git rm --cached -- $rel 2>$null | Out-Null
-        Remove-Item $f.FullName -Force
+        Remove-Item $f.FullName -Force -ErrorAction SilentlyContinue
         $mapFile = $f.FullName + ".map"
-        if (Test-Path $mapFile) { Remove-Item $mapFile -Force }
+        if (Test-Path $mapFile) { Remove-Item $mapFile -Force -ErrorAction SilentlyContinue }
     }
     Write-Ok "Removed and untracked from git"
 }
 
-# Also check apps/web root for config-level shadows (like vite.config.js)
+# Config-level shadows in apps/web root
 $configShadows = Get-ChildItem $webDir -File -Include *.js -ErrorAction SilentlyContinue |
     Where-Object {
         (Test-Path ($_.FullName -replace '\.js$','.ts')) -and
@@ -70,27 +67,27 @@ if ($configShadows.Count -gt 0) {
     foreach ($f in $configShadows) {
         Write-Host "    $($f.Name)"
         git rm --cached -- "apps/web/$($f.Name)" 2>$null | Out-Null
-        Remove-Item $f.FullName -Force
+        Remove-Item $f.FullName -Force -ErrorAction SilentlyContinue
     }
 }
 
-# STEP 2: vite build x2
+# STEP 2: vite build x2 - merge stderr into stdout so PowerShell does not throw on warnings
 Set-Location $webDir
 
 Write-Step "STEP 2a: vite build (1st pass)"
-$build1 = & npm run build 2>&1
-$build1 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Err "First vite build failed. Fix the errors above and re-run."
+cmd /c "npm run build 2>&1"
+$exit1 = $LASTEXITCODE
+if ($exit1 -ne 0) {
+    Write-Err "First vite build failed (exit code $exit1). Fix the errors above and re-run."
     exit 1
 }
 Write-Ok "First build passed"
 
 Write-Step "STEP 2b: vite build (2nd pass)"
-$build2 = & npm run build 2>&1
-$build2 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Err "Second vite build failed. Fix the errors above and re-run."
+cmd /c "npm run build 2>&1"
+$exit2 = $LASTEXITCODE
+if ($exit2 -ne 0) {
+    Write-Err "Second vite build failed (exit code $exit2). Fix the errors above and re-run."
     exit 1
 }
 Write-Ok "Second build passed"
@@ -101,8 +98,10 @@ Set-Location $repoRoot
 Write-Step "STEP 3: git add + commit + push"
 
 git add .
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "git add failed"; exit 1
+}
 
-# Check if there is anything to commit
 $status = git status --porcelain
 if ([string]::IsNullOrWhiteSpace($status)) {
     Write-Warn "Nothing to commit - working tree clean. Skipping push."
