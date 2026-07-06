@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -77,6 +78,12 @@ export default function Home() {
   const { data: nextBooking } = useQuery({
     queryKey: ['my-next-booking'],
     queryFn: () => api.get('/bookings/me?upcoming=true&limit=1').then(r => r.data?.data?.[0] ?? null),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  const { data: aiStatus } = useQuery<any>({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
     enabled: isAuthenticated,
     staleTime: 60_000,
   })
@@ -168,7 +175,7 @@ export default function Home() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 0.8 }}
                 className="flex gap-3 mt-10 flex-wrap justify-center">
-                <Link to="/register" className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
+                <Link to="/trial" className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
                   {t('home.hero.tryFree')}
                 </Link>
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
@@ -201,6 +208,35 @@ export default function Home() {
         <section className="bg-gradient-to-br from-yellow-50 via-orange-50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 px-4 py-8 border-b border-gray-100 dark:border-gray-800">
           <div className="max-w-6xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              {/* AI trial countdown banner (shown only if user is in trial) */}
+              {aiStatus?.ai_subscription_status === 'trial' && aiStatus.trial_days_left !== null && (
+                <Link to="/pricing" className={cn(
+                  'flex items-center gap-3 mb-4 p-3 rounded-2xl border transition-all hover:shadow-md',
+                  aiStatus.trial_days_left > 7 ? 'bg-green-50 dark:bg-green-900/20 border-green-200'
+                  : aiStatus.trial_days_left > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200')}>
+                  <span className="text-2xl">🎁</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {t('home.trialBanner.title', { days: aiStatus.trial_days_left })}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {t('home.trialBanner.subtitle', { plan: aiStatus.plan?.name_el || aiStatus.plan?.name || 'AI' })}
+                    </p>
+                  </div>
+                  <ArrowRight size={16} className="text-gray-400" />
+                </Link>
+              )}
+              {aiStatus?.ai_subscription_status === 'expired' && (
+                <Link to="/pricing" className="flex items-center gap-3 mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-2xl hover:shadow-md transition-all">
+                  <span className="text-2xl">⚠️</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{t('home.trialBanner.expiredTitle')}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{t('home.trialBanner.expiredSubtitle')}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-gray-400" />
+                </Link>
+              )}
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">👋</span>
                 <div>

@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/auth'
 import { Eye, EyeOff } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { api } from '@/lib/api'
 
 export default function Register() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/'
+  const trialPlanId = searchParams.get('plan')
   const { register, isLoading } = useAuthStore()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -26,7 +30,18 @@ export default function Register() {
     }
     try {
       await register({ full_name: fullName, email, password, role })
-      navigate('/')
+      // If user came from /trial, auto-start the AI trial with the chosen plan
+      if (redirectTo === '/trial' && trialPlanId) {
+        try {
+          await api.post('/ai-subscriptions/start-trial', { plan_id: trialPlanId })
+          toast.success(t('trial.started'))
+          navigate('/')
+          return
+        } catch {
+          // Fall through — the /trial page will let them retry manually
+        }
+      }
+      navigate(redirectTo)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err.message || t('common.error'))
     }

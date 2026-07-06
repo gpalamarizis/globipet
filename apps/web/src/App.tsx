@@ -11,6 +11,7 @@ import AuthLayout from '@/components/layout/AuthLayout'
 import ProviderLayout from '@/components/layout/ProviderLayout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
+import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
 
 const Home              = lazy(() => import('@/pages/Home'))
 const Social            = lazy(() => import('@/pages/Social'))
@@ -58,6 +59,8 @@ const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage'))
 const AdminPackagesPage = lazy(() => import('@/pages/admin/AdminPackagesPage'))
 const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptionsPage'))
 const AdminAiPlansPage    = lazy(() => import('@/pages/admin/AdminAiPlansPage'))
+const TrialPage           = lazy(() => import('@/pages/TrialPage'))
+const PricingPage         = lazy(() => import('@/pages/PricingPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
 const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'))
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
@@ -130,9 +133,11 @@ export default function App() {
                 <Route path="/forum"           element={<Forum />} />
                 <Route path="/forum/:id"       element={<ForumTopic />} />
                 <Route path="/insurance"       element={<Insurance />} />
-                <Route path="/ai-health"       element={<PrivateRoute><AiPetHealth /></PrivateRoute>} />
-                <Route path="/ai-emotion"      element={<PrivateRoute><AiEmotion /></PrivateRoute>} />
-                <Route path="/ai-stool-urine"  element={<PrivateRoute><AiStoolUrine /></PrivateRoute>} />
+                <Route path="/ai-health"       element={<PrivateRoute><AiFeatureGuard><AiPetHealth /></AiFeatureGuard></PrivateRoute>} />
+                <Route path="/ai-emotion"      element={<PrivateRoute><AiFeatureGuard><AiEmotion /></AiFeatureGuard></PrivateRoute>} />
+                <Route path="/ai-stool-urine"  element={<PrivateRoute><AiFeatureGuard><AiStoolUrine /></AiFeatureGuard></PrivateRoute>} />
+                <Route path="/trial"           element={<TrialPage />} />
+                <Route path="/pricing"         element={<PricingPage />} />
                 <Route path="/legal"           element={<PetLegal />} />
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />

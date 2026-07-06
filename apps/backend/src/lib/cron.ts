@@ -6,12 +6,12 @@ export function startAiTrialExpiryCron() {
   // Runs once a day at 09:00 server time
   cron.schedule('0 9 * * *', async () => {
     try {
-      const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
       const expiredTrialUsers = await prisma.user.findMany({
         where: {
           ai_subscription_status: 'trial',
-          ai_trial_started_at: { lte: fifteenDaysAgo },
+          ai_trial_started_at: { lte: thirtyDaysAgo },
         },
         select: { id: true, email: true, full_name: true },
       })
@@ -25,10 +25,10 @@ export function startAiTrialExpiryCron() {
         const notification = await prisma.notification.create({
           data: {
             user_email: user.email,
-            title: 'Η δωρεάν δοκιμή AI Health έληξε',
-            message: 'Οι 15 δωρεάν ημέρες σου στο AI Health ολοκληρώθηκαν. Συνδρομήσε για να συνεχίσεις να έχεις πρόσβαση στις λειτουργίες AI υγείας.',
+            title: 'Η δωρεάν δοκιμή AI έληξε',
+            message: 'Οι 30 δωρεάν ημέρες σου στο GlobiPet AI ολοκληρώθηκαν. Επίλεξε ένα πλάνο για να συνεχίσεις να έχεις πρόσβαση στις υπηρεσίες AI.',
             type: 'ai_trial_expired',
-            link: '/medical-center',
+            link: '/pricing',
           },
         })
 
