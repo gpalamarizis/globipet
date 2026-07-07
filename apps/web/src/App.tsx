@@ -12,6 +12,7 @@ import ProviderLayout from '@/components/layout/ProviderLayout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
+import CookieBanner from '@/components/CookieBanner'
 
 const Home              = lazy(() => import('@/pages/Home'))
 const Social            = lazy(() => import('@/pages/Social'))
@@ -61,6 +62,9 @@ const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptio
 const AdminAiPlansPage    = lazy(() => import('@/pages/admin/AdminAiPlansPage'))
 const TrialPage           = lazy(() => import('@/pages/TrialPage'))
 const PricingPage         = lazy(() => import('@/pages/PricingPage'))
+const PrivacyPolicyPage   = lazy(() => import('@/pages/PrivacyPolicyPage'))
+const TermsOfServicePage  = lazy(() => import('@/pages/TermsOfServicePage'))
+const CookiePreferencesPage = lazy(() => import('@/pages/CookiePreferencesPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
 const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'))
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
@@ -138,6 +142,9 @@ export default function App() {
                 <Route path="/ai-stool-urine"  element={<PrivateRoute><AiFeatureGuard><AiStoolUrine /></AiFeatureGuard></PrivateRoute>} />
                 <Route path="/trial"           element={<TrialPage />} />
                 <Route path="/pricing"         element={<PricingPage />} />
+                <Route path="/privacy"         element={<PrivacyPolicyPage />} />
+                <Route path="/terms"           element={<TermsOfServicePage />} />
+                <Route path="/cookies"         element={<CookiePreferencesPage />} />
                 <Route path="/legal"           element={<PetLegal />} />
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
@@ -181,6 +188,7 @@ export default function App() {
           </Suspense>
         </BrowserRouter>
 
+        <CookieBanner />
         <Toaster position="top-right" toastOptions={{
           duration: 4000,
           style: { borderRadius: '12px', background: '#1a1a1a', color: '#fff', fontSize: '14px' },

@@ -1,5 +1,33 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { randomBytes } from 'crypto'
+
+/**
+ * Allowed MIME types and their expected magic bytes (file signatures).
+ * A client-provided MIME type is untrusted — we ALSO verify the actual file
+ * signature to prevent MIME spoofing attacks (e.g. .exe renamed to .jpg).
+ */
+const ALLOWED_TYPES: Record<string, { ext: string; magic: number[][] }> = {
+  'image/jpeg': { ext: 'jpg', magic: [[0xFF, 0xD8, 0xFF]] },
+  'image/png':  { ext: 'png', magic: [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]] },
+  'image/webp': { ext: 'webp', magic: [[0x52, 0x49, 0x46, 0x46]] }, // RIFF, WEBP checked after
+  'image/gif':  { ext: 'gif', magic: [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]] },
+  'application/pdf': { ext: 'pdf', magic: [[0x25, 0x50, 0x44, 0x46]] },
+}
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const ALLOWED_FOLDERS = ['uploads', 'pets', 'services', 'products', 'avatars', 'medical', 'reviews', 'community', 'ai-uploads']
+
+function verifyMagicBytes(mime: string, body: Buffer): boolean {
+  const spec = ALLOWED_TYPES[mime]
+  if (!spec) return false
+  return spec.magic.some(sig => sig.every((byte, i) => body[i] === byte))
+}
+
+function sanitizeFolder(folder: string): string {
+  if (!folder || typeof folder !== 'string') return 'uploads'
+  return ALLOWED_FOLDERS.includes(folder) ? folder : 'uploads'
+}
 
 const uploadRoutes: FastifyPluginAsync = async (app) => {
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -7,12 +35,32 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
       const data = await req.file()
       if (!data) return reply.code(400).send({ message: 'Δεν βρέθηκε αρχείο' })
 
+      // Read into buffer with size guard
       const chunks: Buffer[] = []
-      for await (const chunk of data.file) chunks.push(chunk)
+      let total = 0
+      for await (const chunk of data.file) {
+        total += chunk.length
+        if (total > MAX_FILE_SIZE) {
+          return reply.code(413).send({ message: 'Το αρχείο είναι πολύ μεγάλο (max 5MB)' })
+        }
+        chunks.push(chunk)
+      }
       const body = Buffer.concat(chunks)
 
-      if (body.length > 5 * 1024 * 1024) {
-        return reply.code(400).send({ message: 'Το αρχείο είναι πολύ μεγάλο (max 5MB)' })
+      // 1) MIME whitelist check
+      const mime = data.mimetype
+      if (!ALLOWED_TYPES[mime]) {
+        return reply.code(400).send({ message: 'Μη επιτρεπόμενος τύπος αρχείου' })
+      }
+
+      // 2) Magic byte verification (defense against MIME spoofing)
+      if (!verifyMagicBytes(mime, body)) {
+        return reply.code(400).send({ message: 'Το αρχείο δεν αντιστοιχεί στον δηλωμένο τύπο' })
+      }
+
+      // 3) Additional WEBP verification (magic bytes only cover RIFF, we need WEBP marker at byte 8-11)
+      if (mime === 'image/webp' && body.slice(8, 12).toString('ascii') !== 'WEBP') {
+        return reply.code(400).send({ message: 'Το αρχείο δεν είναι έγκυρο WebP' })
       }
 
       const accountId = process.env.CF_R2_ACCOUNT_ID
@@ -23,7 +71,7 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
 
       if (!accountId || !bucketName || !accessKeyId || !secretAccessKey) {
         const base64 = body.toString('base64')
-        const dataUrl = `data:${data.mimetype};base64,${base64}`
+        const dataUrl = `data:${mime};base64,${base64}`
         return { url: dataUrl, key: `base64-${Date.now()}` }
       }
 
@@ -34,15 +82,19 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
         forcePathStyle: true,
       })
 
-      const folder = (req.query as any).folder || 'uploads'
-      const ext = data.filename.split('.').pop()
-      const key = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      // 4) Sanitize folder (prevent path traversal)
+      const folder = sanitizeFolder((req.query as any).folder)
+
+      // 5) Generate safe filename — use enforced extension from whitelist, NOT client filename
+      const ext = ALLOWED_TYPES[mime].ext
+      const randomId = randomBytes(16).toString('hex')
+      const key = `${folder}/${Date.now()}-${randomId}.${ext}`
 
       await s3.send(new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
         Body: body,
-        ContentType: data.mimetype,
+        ContentType: mime,
       }))
 
       const url = publicUrl ? `${publicUrl}/${key}` : `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${key}`
@@ -50,7 +102,7 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
 
     } catch (err: any) {
       console.error('Upload error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα κατά το upload: ' + err.message })
+      return reply.code(500).send({ message: 'Σφάλμα κατά το upload' })
     }
   })
 }

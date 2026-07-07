@@ -258,9 +258,12 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   app.post('/forgot-password', async (req: any, reply) => {
     const { email } = req.body as any
     const user = await prisma.user.findUnique({ where: { email } })
+    // Always return success message to prevent user enumeration
     if (!user) return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
 
-    const token = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    // Cryptographically secure token (256 bits of entropy) instead of Math.random
+    const { randomBytes } = await import('crypto')
+    const token = randomBytes(32).toString('hex')
     const expires = new Date(Date.now() + 3600000) // 1 hour
 
     await prisma.user.update({
@@ -340,6 +343,10 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   // Reset password
   app.post('/reset-password', async (req: any, reply) => {
     const { token, password } = req.body as any
+    if (!token || !password) return reply.code(400).send({ message: 'Λείπουν στοιχεία' })
+    if (typeof password !== 'string' || password.length < 8) {
+      return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
+    }
     const user = await prisma.user.findFirst({
       where: { reset_token: token, reset_token_expires: { gt: new Date() } }
     })

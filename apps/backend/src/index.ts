@@ -46,17 +46,68 @@ import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
 import adminSubscriptionsRoutes from './routes/admin-subscriptions.js'
 import adminAiPlansRoutes from './routes/ai-plans-admin.js'
+import userRightsRoutes from './routes/user-rights.js'
+import userConsentsRoutes from './routes/user-consents.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
-// Plugins
-await app.register(helmet, { contentSecurityPolicy: false })
-await app.register(cors, {
-  origin: ['https://globipet.com', 'https://www.globipet.com', 'https://globipet.pages.dev', 'http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
+// ─── JWT secret hardening ─────────────────────────────
+// Refuse to start in production without a strong secret (min 32 chars, no default fallback)
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-min-32-chars-here!!')
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET must be set and at least 32 characters long')
+  process.exit(1)
+}
+
+// ─── Security headers via helmet ──────────────────────
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com', 'https://www.googletagmanager.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      connectSrc: ["'self'", 'https://api.anthropic.com', 'https://api.stripe.com', 'https://api.resend.com', 'https://*.r2.cloudflarestorage.com'],
+      frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 })
-await app.register(jwt, { secret: process.env.JWT_SECRET || 'dev-secret-min-32-chars-here!!' })
-await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
+
+// ─── CORS with strict origin whitelist ─────────────────
+const ALLOWED_ORIGINS = [
+  'https://globipet.com', 'https://www.globipet.com',
+  'https://globipet.pages.dev',
+  'http://localhost:5173', 'http://localhost:3000',
+]
+await app.register(cors, {
+  origin: (origin, cb) => {
+    // Allow same-origin (no origin header) and whitelisted origins
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+    return cb(new Error('Not allowed by CORS'), false)
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+})
+
+await app.register(jwt, { secret: JWT_SECRET })
+
+// ─── Rate limiting: generic default + strict for auth ───
+await app.register(rateLimit, {
+  max: 200,               // generic ceiling per IP per window
+  timeWindow: '1 minute',
+  errorResponseBuilder: (_req, ctx) => ({
+    statusCode: 429,
+    message: `Πολλά αιτήματα. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 1000)} δευτερόλεπτα.`,
+  }),
+})
 await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } })
 
 // Auth decorator
@@ -103,6 +154,8 @@ const routes = [
   { prefix: '/api/webhooks', handler: webhooksRoutes },
   { prefix: '/api/admin/subscriptions', handler: adminSubscriptionsRoutes },
   { prefix: '/api/admin/ai-plans', handler: adminAiPlansRoutes },
+  { prefix: '/api/user-rights', handler: userRightsRoutes },
+  { prefix: '/api/user-consents', handler: userConsentsRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
 

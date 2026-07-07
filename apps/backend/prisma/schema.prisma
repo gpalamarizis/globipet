@@ -36,6 +36,8 @@ model User {
   reset_token_expires   DateTime?
   product_subscriptions   ProductSubscription[]
   insurance_subscriptions UserInsuranceSubscription[]
+  consents               UserConsent[]
+  deletion_requests      AccountDeletionRequest[]
   @@map("users")
 }
 
@@ -962,4 +964,49 @@ model PetPassportAccess {
   @@index([pet_id])
   @@index([provider_email])
   @@map("pet_passport_access")
+}
+// ═══════════════════════════════════════════════════════
+// GDPR — User consent tracking (Article 7 audit trail)
+// ═══════════════════════════════════════════════════════
+model UserConsent {
+  id                String   @id @default(cuid())
+  user_id           String?
+  cookie_id         String?
+  necessary         Boolean  @default(true)
+  analytics         Boolean  @default(false)
+  marketing         Boolean  @default(false)
+  functional        Boolean  @default(false)
+  terms_accepted    Boolean  @default(false)
+  privacy_accepted  Boolean  @default(false)
+  source            String   @default("cookie_banner")
+  ip_address        String?
+  user_agent        String?
+  created_at        DateTime @default(now())
+
+  user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([cookie_id])
+  @@index([created_at])
+  @@map("user_consents")
+}
+
+// ═══════════════════════════════════════════════════════
+// GDPR — Account deletion requests (Article 17, 30-day grace period)
+// ═══════════════════════════════════════════════════════
+model AccountDeletionRequest {
+  id             String    @id @default(cuid())
+  user_id        String
+  reason         String?
+  status         String    @default("pending")
+  scheduled_for  DateTime
+  cancelled_at   DateTime?
+  executed_at    DateTime?
+  created_at     DateTime  @default(now())
+
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status, scheduled_for])
+  @@map("account_deletion_requests")
 }
