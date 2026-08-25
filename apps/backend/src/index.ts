@@ -40,7 +40,7 @@ import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
-import { startAiTrialExpiryCron } from './lib/cron.js'
+import { startAiTrialExpiryCron, startAccountDeletionCron } from './lib/cron.js'
 import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
@@ -110,6 +110,40 @@ await app.register(rateLimit, {
 })
 await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } })
 
+// ─── Αυστηρά όρια στα ευαίσθητα endpoints ───────────────
+// Το γενικό όριο των 200/λεπτό δεν προστατεύει από brute force σε
+// login / register / forgot-password. Εδώ ορίζονται ανά διαδρομή.
+const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
+  '/api/auth/login':           { max: 8,  window: '15 minutes' },
+  '/api/auth/register':        { max: 5,  window: '1 hour' },
+  '/api/auth/forgot-password': { max: 4,  window: '1 hour' },
+  '/api/auth/reset-password':  { max: 6,  window: '1 hour' },
+  '/api/auth/google/mobile':   { max: 20, window: '15 minutes' },
+  '/api/user-rights/export':   { max: 5,  window: '1 hour' },
+}
+
+app.addHook('onRoute', (route) => {
+  const rule = STRICT_LIMITS[route.url]
+  if (!rule) return
+  route.config = {
+    ...(route.config || {}),
+    rateLimit: {
+      max: rule.max,
+      timeWindow: rule.window,
+      // Το κλειδί περιλαμβάνει και το email όπου υπάρχει, ώστε επίθεση από
+      // πολλές IP σε έναν λογαριασμό να μετράει επίσης.
+      keyGenerator: (req: any) => {
+        const email = (req.body && (req.body as any).email) || ''
+        return `${req.ip}:${String(email).toLowerCase().slice(0, 80)}`
+      },
+      errorResponseBuilder: (_req: any, ctx: any) => ({
+        statusCode: 429,
+        message: `Πολλές προσπάθειες. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 60000)} λεπτά.`,
+      }),
+    },
+  }
+})
+
 // Auth decorator
 app.decorate('authenticate', async (req: any, reply: any) => {
   try { await req.jwtVerify() } catch { reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' }) }
@@ -164,6 +198,7 @@ for (const { prefix, handler } of routes) {
 }
 
 startAiTrialExpiryCron()
+startAccountDeletionCron()   // GDPR Άρθρο 17 — εκτέλεση αιτημάτων διαγραφής
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
