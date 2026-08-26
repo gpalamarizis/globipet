@@ -42,7 +42,7 @@ const privacyEl: LegalDoc = {
       body:
         'Υπεύθυνος επεξεργασίας είναι η OB.AN ΜΟΝΟΠΡΟΣΩΠΗ ΙΔΙΩΤΙΚΗ ΚΕΦΑΛΑΙΟΥΧΙΚΗ ΕΤΑΙΡΕΙΑ, ' +
         'με ΑΦΜ 802501406, που λειτουργεί την πλατφόρμα με την εμπορική ονομασία GlobiPet.\n\n' +
-        'Για κάθε θέμα προστασίας δεδομένων: privacy@globipet.com\n\n' +
+        'Για κάθε θέμα προστασίας δεδομένων: legal@globipet.com\n\n' +
         'Δεν έχει οριστεί Υπεύθυνος Προστασίας Δεδομένων. Η ανάγκη ορισμού επανεξετάζεται ' +
         'καθώς μεγαλώνει η πλατφόρμα.',
     },
@@ -139,7 +139,7 @@ const privacyEl: LegalDoc = {
         'Φορητότητα — άρθρο 20: το ίδιο αρχείο, σε μορφή που διαβάζεται από άλλο σύστημα.\n\n' +
         'Ανάκληση συγκατάθεσης — άρθρο 7 παρ. 3: από τις προτιμήσεις cookies και τις ' +
         'ρυθμίσεις λογαριασμού.\n\n' +
-        'Εναντίωση — άρθρο 21 και Περιορισμός — άρθρο 18: με αίτημα στο privacy@globipet.com.\n\n' +
+        'Εναντίωση — άρθρο 21 και Περιορισμός — άρθρο 18: με αίτημα στο legal@globipet.com.\n\n' +
         'Απαντάμε εντός ενός μήνα. Αν το αίτημα είναι σύνθετο, μπορεί να παραταθεί κατά ' +
         'δύο μήνες, και θα σε ενημερώσουμε.\n\n' +
         'Έχεις επίσης δικαίωμα καταγγελίας στην Αρχή Προστασίας Δεδομένων Προσωπικού ' +
@@ -195,7 +195,7 @@ const privacyEl: LegalDoc = {
     {
       title: '15. Επικοινωνία',
       body:
-        'Για κάθε ερώτημα ή άσκηση δικαιώματος: privacy@globipet.com\n\n' +
+        'Για κάθε ερώτημα ή άσκηση δικαιώματος: legal@globipet.com\n\n' +
         'OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. · ΑΦΜ 802501406',
     },
   ],
@@ -334,7 +334,7 @@ const termsEl: LegalDoc = {
       title: '15. Επικοινωνία',
       body:
         'OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. · ΑΦΜ 802501406\n\n' +
-        'support@globipet.com',
+        'legal@globipet.com',
     },
   ],
 }
@@ -354,7 +354,7 @@ const privacyEn: LegalDoc = {
       body:
         'The data controller is OB.AN SINGLE MEMBER PRIVATE COMPANY, VAT 802501406, ' +
         'operating the platform under the trade name GlobiPet.\n\n' +
-        'For any data protection matter: privacy@globipet.com\n\n' +
+        'For any data protection matter: legal@globipet.com\n\n' +
         'No Data Protection Officer has been appointed. The need for one is reassessed as ' +
         'the platform grows.',
     },
@@ -443,7 +443,7 @@ const privacyEn: LegalDoc = {
         'cancel within that period.\n\n' +
         'Portability — Article 20: the same file, in a machine-readable format.\n\n' +
         'Withdraw consent — Article 7(3): from cookie preferences and account settings.\n\n' +
-        'Object — Article 21 and Restrict — Article 18: email privacy@globipet.com.\n\n' +
+        'Object — Article 21 and Restrict — Article 18: email legal@globipet.com.\n\n' +
         'We respond within one month, extendable by two months for complex requests, with ' +
         'notice to you.\n\n' +
         'You may also lodge a complaint with the Hellenic Data Protection Authority, ' +
@@ -495,7 +495,7 @@ const privacyEn: LegalDoc = {
     {
       title: '15. Contact',
       body:
-        'For any question or to exercise a right: privacy@globipet.com\n\n' +
+        'For any question or to exercise a right: legal@globipet.com\n\n' +
         'OB.AN Single Member P.C. · VAT 802501406',
     },
   ],
@@ -627,7 +627,7 @@ const termsEn: LegalDoc = {
       title: '15. Contact',
       body:
         'OB.AN Single Member P.C. · VAT 802501406\n\n' +
-        'support@globipet.com',
+        'legal@globipet.com',
     },
   ],
 }
