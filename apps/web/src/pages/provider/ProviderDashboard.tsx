@@ -2,15 +2,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
+import ProviderStaffPage from './ProviderStaffPage'
 
-type Tab = 'overview' | 'services' | 'products' | 'bookings' | 'calendar' | 'import'
+type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import'
 
 // ─── Import Tab ───────────────────────────────────────────────────
 function ImportTab() {
@@ -500,6 +501,7 @@ export default function ProviderDashboard() {
   const tabs = [
     { id: 'overview',  label: 'Επισκόπηση', icon: TrendingUp },
     { id: 'services',  label: 'Υπηρεσίες',  icon: Scissors },
+    { id: 'staff',     label: 'Γιατροί',    icon: Stethoscope },
     { id: 'products',  label: 'Προϊόντα',   icon: Package },
     { id: 'bookings',  label: 'Κρατήσεις',  icon: Clock },
     { id: 'calendar',  label: 'Ημερολόγιο', icon: Calendar },
@@ -549,6 +551,9 @@ export default function ProviderDashboard() {
         ))}
       </div>
 
+      {/* Γιατροί & προσωπικό */}
+      {activeTab === 'staff' && <ProviderStaffPage />}
+
       {/* Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -574,6 +579,7 @@ export default function ProviderDashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { label: 'Προσθήκη υπηρεσίας', tab: 'services' as Tab, icon: Scissors },
+                { label: 'Γιατροί & προσωπικό', tab: 'staff' as Tab, icon: Stethoscope },
                 { label: 'Προσθήκη προϊόντος', tab: 'products' as Tab, icon: Package },
                 { label: 'Import από Excel', tab: 'import' as Tab, icon: FileSpreadsheet },
                 { label: 'Κρατήσεις', tab: 'bookings' as Tab, icon: Clock },

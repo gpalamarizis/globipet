@@ -22,6 +22,18 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
+  // Οι υπηρεσίες του συνδεδεμένου παρόχου.
+  // ΠΡΟΣΟΧΗ: πρέπει να δηλώνεται ΠΡΙΝ από το '/:id', αλλιώς το parametric
+  // route πιάνει το "my" ως αναγνωριστικό υπηρεσίας.
+  app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const email = (req.user as any).email
+    const data = await prisma.service.findMany({
+      where: { provider_email: email },
+      orderBy: { created_at: 'desc' },
+    })
+    return { data, total: data.length }
+  })
+
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const service = await prisma.service.findUniqueOrThrow({ where: { id: req.params.id } })
@@ -33,11 +45,32 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     return prisma.service.create({ data: { ...req.body, provider_email: email, provider_name: req.body.provider_name || full_name } })
   })
 
-  app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    return prisma.service.update({ where: { id: req.params.id }, data: req.body })
+  // Επιβεβαιώνει ότι η υπηρεσία ανήκει στον συνδεδεμένο χρήστη.
+  // Χωρίς αυτό, οποιοσδήποτε συνδεδεμένος μπορούσε να αλλάξει ή να
+  // διαγράψει υπηρεσία άλλου παρόχου.
+  async function assertOwner(req: any, reply: any) {
+    const user = req.user as any
+    const svc = await prisma.service.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, provider_email: true },
+    })
+    if (!svc) { reply.code(404).send({ message: 'Η υπηρεσία δεν βρέθηκε' }); return null }
+    if (svc.provider_email !== user.email && user.role !== 'admin') {
+      reply.code(403).send({ message: 'Η υπηρεσία δεν σου ανήκει' }); return null
+    }
+    return svc
+  }
+
+  app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
+    if (!(await assertOwner(req, reply))) return
+    const data = { ...req.body }
+    delete data.provider_email        // δεν αλλάζει ιδιοκτήτη
+    delete data.id
+    return prisma.service.update({ where: { id: req.params.id }, data })
   })
 
-  app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+  app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
+    if (!(await assertOwner(req, reply))) return
     await prisma.service.delete({ where: { id: req.params.id } }); return { success: true }
   })
 }
