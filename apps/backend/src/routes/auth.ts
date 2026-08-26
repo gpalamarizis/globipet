@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import prisma from '../lib/prisma.js'
+import { audit } from '../lib/audit.js'
 
 const authRoutes: FastifyPluginAsync = async (app) => {
 
@@ -62,6 +63,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     })
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
+    audit({ ...req, user: { id: user.id, email: user.email, role: user.role } },
+          { action: 'create', resource: 'user', resourceId: user.id,
+            subjectEmail: user.email, metadata: { role: user.role, via: 'register' } })
     return { user: userSafe, token }
   })
 
@@ -69,9 +73,22 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   app.post('/login', async (req, reply) => {
     const { email, password } = req.body as any
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || !user.password_hash) return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
+    if (!user || !user.password_hash) {
+      // Καταγράφεται και η αποτυχία: επαναλαμβανόμενες προσπάθειες σε έναν
+      // λογαριασμό είναι το πρώτο σημάδι επίθεσης.
+      audit(req, { action: 'login_failed', resource: 'user', subjectEmail: email,
+                   outcome: 'denied', metadata: { reason: 'unknown_account' } })
+      return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
+    }
     const valid = await bcrypt.compare(password, user.password_hash)
-    if (!valid) return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
+    if (!valid) {
+      audit(req, { action: 'login_failed', resource: 'user', resourceId: user.id,
+                   subjectEmail: email, outcome: 'denied',
+                   metadata: { reason: 'wrong_password' } })
+      return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
+    }
+    audit({ ...req, user: { id: user.id, email: user.email, role: user.role } },
+          { action: 'login', resource: 'user', resourceId: user.id, subjectEmail: user.email })
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
     return { user: userSafe, token }
@@ -359,6 +376,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       where: { id: user.id },
       data: { reset_token: tokenHash, reset_token_expires: expires }
     })
+    audit(req, { action: 'password_reset_request', resource: 'user',
+                 resourceId: user.id, subjectEmail: user.email })
 
     const RESEND_KEY = process.env.RESEND_API_KEY
     const APP_URL = process.env.APP_URL || 'https://globipet.com'
@@ -450,6 +469,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       where: { id: user.id },
       data: { password_hash, reset_token: null, reset_token_expires: null }
     })
+    audit(req, { action: 'password_reset', resource: 'user',
+                 resourceId: user.id, subjectEmail: user.email })
     return { message: 'Ο κωδικός άλλαξε επιτυχώς' }
   })
 

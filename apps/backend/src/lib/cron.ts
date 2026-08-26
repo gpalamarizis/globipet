@@ -1,5 +1,6 @@
 import cron from 'node-cron'
 import prisma from './prisma.js'
+import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
 
 export function startAiTrialExpiryCron() {
@@ -168,9 +169,18 @@ export function startAccountDeletionCron() {
 
           // 5) Το αίτημα διαγράφεται μαζί με τον χρήστη (onDelete: Cascade),
           //    οπότε δεν χρειάζεται update εδώ.
+          // Η οριστική διαγραφή είναι η πιο μη αναστρέψιμη ενέργεια της
+          // πλατφόρμας. Η καταγραφή επιβιώνει του χρήστη — γι' αυτό
+          // κρατάμε το email ως κείμενο, όχι ως ξένο κλειδί.
+          auditSystem({ action: 'deletion_executed', resource: 'user',
+                        resourceId: userId, subjectEmail: email,
+                        metadata: counts })
           console.log(`   ✓ ${userId} διαγράφηκε — ${JSON.stringify(counts)}`)
 
         } catch (err: any) {
+          auditSystem({ action: 'deletion_executed', resource: 'user',
+                        resourceId: userId, subjectEmail: email,
+                        outcome: 'error', errorMessage: err?.message })
           console.error(`   ✗ ${userId} απέτυχε: ${err?.message}`)
           await prisma.accountDeletionRequest.update({
             where: { id: req.id },

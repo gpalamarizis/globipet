@@ -34,6 +34,7 @@ import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
 import staffRoutes from './routes/staff.js'
 import specialtiesRoutes from './routes/specialties.js'
+import auditRoutes from './routes/audit.js'
 import aiRoutes from './routes/ai.js'
 import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
@@ -179,6 +180,7 @@ const routes = [
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/staff', handler: staffRoutes },
   { prefix: '/api/specialties', handler: specialtiesRoutes },
+  { prefix: '/api/audit', handler: auditRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },

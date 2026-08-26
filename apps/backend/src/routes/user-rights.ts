@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { audit } from '../lib/audit.js'
 
 /**
  * User Rights router — GDPR Άρθρα 15-22
@@ -163,6 +164,12 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
         : { complete: true },
     }
 
+    // Το export είναι η ενέργεια με τη μεγαλύτερη έκθεση: ένα αρχείο με
+    // ΟΛΑ τα δεδομένα του χρήστη. Καταγράφεται πάντα.
+    audit(req, { action: 'export', resource: 'user_data', resourceId: userId,
+                 subjectEmail: key,
+                 metadata: { groups: Object.keys(data), complete: problems.length === 0 } })
+
     reply.header('Content-Type', 'application/json; charset=utf-8')
     reply.header('Content-Disposition',
       `attachment; filename="globipet-data-export-${userId}-${Date.now()}.json"`)
@@ -191,6 +198,10 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       },
     })
 
+    audit(req, { action: 'deletion_requested', resource: 'user',
+                 resourceId: userId, subjectEmail: (req.user as any).email,
+                 metadata: { scheduled_for: scheduledFor.toISOString() } })
+
     return {
       data: {
         request_id: request.id,
@@ -214,6 +225,8 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       where: { id: pending.id },
       data: { status: 'cancelled', cancelled_at: new Date() },
     })
+    audit(req, { action: 'deletion_cancelled', resource: 'user',
+                 resourceId: userId, subjectEmail: (req.user as any).email })
     return { message: 'Το αίτημα διαγραφής ακυρώθηκε' }
   })
 
@@ -255,6 +268,10 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       data,
       select: USER_SELECT,
     })
+    // Ονόματα πεδίων μόνο — ποτέ οι νέες τιμές.
+    audit(req, { action: 'update', resource: 'user', resourceId: userId,
+                 subjectEmail: (req.user as any).email,
+                 metadata: { fields: Object.keys(data) } })
     return { data: updated }
   })
 }
