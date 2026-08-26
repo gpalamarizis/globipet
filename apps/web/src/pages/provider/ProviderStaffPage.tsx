@@ -62,7 +62,7 @@ export default function ProviderStaffPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Staff | null>(null)
   const [form, setForm] = useState<any>(EMPTY)
-  const [specInput, setSpecInput] = useState('')
+  const [specOpen, setSpecOpen] = useState(false)
   const [pricesFor, setPricesFor] = useState<Staff | null>(null)
   const [linkFor, setLinkFor] = useState<Staff | null>(null)
   const [linkEmail, setLinkEmail] = useState('')
@@ -85,6 +85,17 @@ export default function ProviderStaffPage() {
   })
 
   const [draft, setDraft] = useState<Record<string, { price: string; duration: string }>>({})
+
+  // Ο τύπος της υπηρεσίας καθορίζει ποιες ειδικότητες προσφέρονται.
+  const currentServiceType =
+    services.find((s: any) => s.id === form.service_id)?.service_type || ''
+
+  const { data: specGroups = {} } = useQuery<Record<string, any[]>>({
+    queryKey: ['specialties', currentServiceType],
+    queryFn: () => api.get(`/specialties?category=${currentServiceType}`)
+      .then(r => r.data?.groups ?? {}),
+    enabled: !!currentServiceType,
+  })
 
   // ── Ενέργειες ──────────────────────────────────────────────────────
   const save = useMutation({
@@ -139,7 +150,7 @@ export default function ProviderStaffPage() {
   const openNew = () => {
     setEditing(null)
     setForm({ ...EMPTY, service_id: services[0]?.id || '' })
-    setSpecInput(''); setShowForm(true)
+    setSpecOpen(false); setShowForm(true)
   }
 
   const openEdit = (s: Staff) => {
@@ -149,15 +160,18 @@ export default function ProviderStaffPage() {
       specialties: s.specialties || [],
       languages: s.languages || [],
     })
-    setSpecInput(''); setShowForm(true)
+    setSpecOpen(false); setShowForm(true)
   }
 
-  const addSpec = () => {
-    const v = specInput.trim()
-    if (!v) return
-    if ((form.specialties || []).includes(v)) { setSpecInput(''); return }
-    setForm({ ...form, specialties: [...(form.specialties || []), v] })
-    setSpecInput('')
+  // Οι ειδικότητες ΕΠΙΛΕΓΟΝΤΑΙ από τη βάση — ποτέ ελεύθερο κείμενο.
+  // Με πληκτρολόγηση, «Χειρουργική» και «χειρουργικη» γίνονται δύο τιμές
+  // και η αναζήτηση παύει να βρίσκει σωστά αποτελέσματα.
+  const toggleSpec = (name: string) => {
+    const cur: string[] = form.specialties || []
+    setForm({
+      ...form,
+      specialties: cur.includes(name) ? cur.filter(x => x !== name) : [...cur, name],
+    })
   }
 
   const submit = (e: React.FormEvent) => {
@@ -349,25 +363,69 @@ export default function ProviderStaffPage() {
                 </div>
 
                 <div>
-                  <label className="label">Ειδικότητες</label>
-                  <div className="flex gap-2">
-                    <input className="input flex-1" placeholder="π.χ. Χειρουργική"
-                      value={specInput} onChange={e => setSpecInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSpec() } }} />
-                    <button type="button" onClick={addSpec} className="btn-secondary px-4">Προσθήκη</button>
-                  </div>
+                  <label className="label">
+                    Ειδικότητες
+                    {(form.specialties || []).length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-gray-500">
+                        {form.specialties.length} επιλεγμένες
+                      </span>
+                    )}
+                  </label>
+
                   {(form.specialties || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <div className="flex flex-wrap gap-1.5 mb-2">
                       {form.specialties.map((sp: string) => (
                         <span key={sp} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-900 dark:text-brand-200">
                           {sp}
-                          <button type="button"
-                            onClick={() => setForm({ ...form, specialties: form.specialties.filter((x: string) => x !== sp) })}>
-                            <X size={11} />
-                          </button>
+                          <button type="button" onClick={() => toggleSpec(sp)}><X size={11} /></button>
                         </span>
                       ))}
                     </div>
+                  )}
+
+                  {!currentServiceType ? (
+                    <p className="text-xs text-gray-500 py-2">
+                      Επίλεξε πρώτα υπηρεσία για να εμφανιστούν οι ειδικότητες.
+                    </p>
+                  ) : Object.keys(specGroups).length === 0 ? (
+                    <p className="text-xs text-gray-500 py-2">
+                      Δεν βρέθηκαν ειδικότητες για αυτόν τον τύπο υπηρεσίας.
+                    </p>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => setSpecOpen(!specOpen)}
+                        className="btn-secondary w-full text-sm justify-center">
+                        {specOpen ? 'Κλείσιμο λίστας' : 'Επιλογή ειδικοτήτων'}
+                      </button>
+                      {specOpen && (
+                        <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                          {Object.entries(specGroups).map(([grp, items]) => (
+                            <div key={grp}>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">
+                                {grp}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {items.map((sp: any) => {
+                                  const on = (form.specialties || []).includes(sp.name)
+                                  return (
+                                    <button key={sp.id} type="button" onClick={() => toggleSpec(sp.name)}
+                                      title={sp.name_en || ''}
+                                      className={cn(
+                                        'text-xs px-2.5 py-1 rounded-full border transition-colors',
+                                        on
+                                          ? 'bg-brand-900 text-white border-brand-900'
+                                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-400'
+                                      )}>
+                                      {sp.name}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 

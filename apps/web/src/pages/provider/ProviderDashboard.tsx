@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +12,23 @@ import * as XLSX from 'xlsx'
 import ProviderStaffPage from './ProviderStaffPage'
 
 type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import'
+
+// Ποιοι τύποι παρόχων πουλάνε ΚΑΙ προϊόντα (τροφές, σαμπουάν, αξεσουάρ).
+// Ένας walker ή sitter δεν έχει κατάστημα — δεν βλέπει καθόλου Προϊόντα
+// ούτε μαζικό Import. Άλλαξε ΜΟΝΟ αυτή τη γραμμή για να προσθέσεις τύπο.
+const PRODUCT_TYPES = ['veterinary', 'grooming', 'boarding', 'training']
+
+// Οι 8 τύποι υπηρεσιών, όπως ακριβώς αποθηκεύονται στο services.service_type
+const SERVICE_TYPES = [
+  { value: 'veterinary',  label: 'Κτηνιατρείο' },
+  { value: 'grooming',    label: 'Grooming' },
+  { value: 'walking',     label: 'Βόλτα' },
+  { value: 'sitting',     label: 'Φύλαξη (sitting)' },
+  { value: 'boarding',    label: 'Φιλοξενία (boarding)' },
+  { value: 'training',    label: 'Εκπαίδευση' },
+  { value: 'transport',   label: 'Μεταφορά' },
+  { value: 'photography', label: 'Φωτογράφιση' },
+]
 
 // ─── Import Tab ───────────────────────────────────────────────────
 function ImportTab() {
@@ -289,7 +306,9 @@ function ServicesTab() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', price: '', type: 'grooming', duration_minutes: '60' })
+  // Ο τύπος κληρονομείται από τις υπάρχουσες υπηρεσίες του παρόχου.
+  // Πριν ήταν σταθερά 'grooming', που εμφανιζόταν λάθος σε κτηνιατρεία.
+  const [form, setForm] = useState({ name: '', description: '', price: '', service_type: '', duration_minutes: '60' })
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['provider-services'],
@@ -297,13 +316,28 @@ function ServicesTab() {
     enabled: !!user,
   })
 
+  // Ο τύπος του παρόχου: από την πρώτη υπηρεσία που έχει ήδη καταχωρήσει.
+  const providerType = services[0]?.service_type || ''
+  useEffect(() => {
+    if (providerType && !form.service_type) setForm(f => ({ ...f, service_type: providerType }))
+  }, [providerType])
+
   const addService = useMutation({
-    mutationFn: () => api.post('/services', { ...form, price: parseFloat(form.price), duration_minutes: parseInt(form.duration_minutes) }),
+    mutationFn: () => api.post('/services', {
+      // ΠΡΟΣΟΧΗ: το πεδίο λέγεται service_type, όχι type. Με 'type' το Prisma
+      // απέρριπτε το αίτημα και η προσθήκη υπηρεσίας αποτύγχανε σιωπηλά.
+      provider_name: user?.full_name,
+      title: form.name,
+      description: form.description || form.name,
+      service_type: form.service_type,
+      city: (user as any)?.city || 'Αθήνα',
+      price: parseFloat(form.price) || 0,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
       toast.success('Υπηρεσία προστέθηκε!')
       setShowForm(false)
-      setForm({ name: '', description: '', price: '', type: 'grooming', duration_minutes: '60' })
+      setForm({ name: '', description: '', price: '', service_type: providerType, duration_minutes: '60' })
     },
     onError: () => toast.error('Σφάλμα προσθήκης υπηρεσίας'),
   })
@@ -329,8 +363,12 @@ function ServicesTab() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα</label><input className="input" placeholder="π.χ. Grooming Σκύλου" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
               <div><label className="text-xs font-medium text-gray-500 mb-1 block">Τύπος</label>
-                <select className="input" value={form.type} onChange={e => setForm(f => ({...f, type: e.target.value}))}>
-                  {['grooming','veterinary','walking','pet_sitting','training','boarding','photography','pet_taxi','other'].map(t => <option key={t} value={t}>{t}</option>)}
+                {/* Οι τιμές ΠΡΕΠΕΙ να ταιριάζουν με το services.service_type της βάσης.
+                    Πριν υπήρχαν 'pet_sitting' και 'pet_taxi' που δεν υπάρχουν πουθενά. */}
+                <select className="input" value={form.service_type}
+                        onChange={e => setForm(f => ({...f, service_type: e.target.value}))}>
+                  <option value="">— επίλεξε —</option>
+                  {SERVICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div><label className="text-xs font-medium text-gray-500 mb-1 block">Τιμή (€)</label><input className="input" type="number" placeholder="25" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
@@ -482,11 +520,12 @@ export default function ProviderDashboard() {
   })
 
   // Availability for telehealth
-  const { data: myServices = [] } = useQuery({
-    queryKey: ['my-vet-services'],
-    queryFn: () => api.get('/services/my').then(r => (r.data?.data ?? []).filter((s: any) => s.service_type === 'veterinary')),
+  const { data: allMyServices = [] } = useQuery({
+    queryKey: ['my-services-all'],
+    queryFn: () => api.get('/services/my').then(r => r.data?.data ?? []),
     enabled: !!user,
   })
+  const myServices = allMyServices.filter((s: any) => s.service_type === 'veterinary')
   const isVet = myServices.length > 0
   const isAvailableNow = myServices.some((s: any) => s.is_available_now)
 
@@ -498,14 +537,27 @@ export default function ProviderDashboard() {
     onError: () => toast.error('Σφάλμα αλλαγής διαθεσιμότητας'),
   })
 
+  // Ο τύπος του παρόχου καθορίζει ποιες καρτέλες βλέπει.
+  // Πριν εμφανίζονταν Προϊόντα και Import σε κάθε πάροχο, ακόμα και σε
+  // κτηνιατρείο ή walker που δεν πουλάει τίποτα.
+  const providerServiceType = allMyServices[0]?.service_type || ''
+  const sellsProducts = PRODUCT_TYPES.includes(providerServiceType)
+  const isClinic = providerServiceType === 'veterinary'
+
+  useEffect(() => {
+    if (!sellsProducts && (activeTab === 'products' || activeTab === 'import')) {
+      setActiveTab('overview')
+    }
+  }, [sellsProducts, activeTab])
+
   const tabs = [
     { id: 'overview',  label: 'Επισκόπηση', icon: TrendingUp },
     { id: 'services',  label: 'Υπηρεσίες',  icon: Scissors },
-    { id: 'staff',     label: 'Γιατροί',    icon: Stethoscope },
-    { id: 'products',  label: 'Προϊόντα',   icon: Package },
+    { id: 'staff',     label: isClinic ? 'Γιατροί' : 'Προσωπικό', icon: Stethoscope },
+    ...(sellsProducts ? [{ id: 'products', label: 'Προϊόντα', icon: Package }] : []),
     { id: 'bookings',  label: 'Κρατήσεις',  icon: Clock },
     { id: 'calendar',  label: 'Ημερολόγιο', icon: Calendar },
-    { id: 'import',    label: 'Import',      icon: Upload },
+    ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
   ]
 
   return (
@@ -579,9 +631,11 @@ export default function ProviderDashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { label: 'Προσθήκη υπηρεσίας', tab: 'services' as Tab, icon: Scissors },
-                { label: 'Γιατροί & προσωπικό', tab: 'staff' as Tab, icon: Stethoscope },
-                { label: 'Προσθήκη προϊόντος', tab: 'products' as Tab, icon: Package },
-                { label: 'Import από Excel', tab: 'import' as Tab, icon: FileSpreadsheet },
+                { label: isClinic ? 'Γιατροί & προσωπικό' : 'Προσωπικό', tab: 'staff' as Tab, icon: Stethoscope },
+                ...(sellsProducts ? [
+                  { label: 'Προσθήκη προϊόντος', tab: 'products' as Tab, icon: Package },
+                  { label: 'Import από Excel', tab: 'import' as Tab, icon: FileSpreadsheet },
+                ] : []),
                 { label: 'Κρατήσεις', tab: 'bookings' as Tab, icon: Clock },
                 { label: 'Ημερολόγιο', tab: 'calendar' as Tab, icon: Calendar },
                 { label: 'Google Calendar', tab: 'calendar' as Tab, icon: Calendar },

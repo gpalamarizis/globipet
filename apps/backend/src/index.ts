@@ -33,6 +33,7 @@ import wishlistRoutes from './routes/wishlist.js'
 import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
 import staffRoutes from './routes/staff.js'
+import specialtiesRoutes from './routes/specialties.js'
 import aiRoutes from './routes/ai.js'
 import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
@@ -177,6 +178,7 @@ const routes = [
   { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
   { prefix: '/api/staff', handler: staffRoutes },
+  { prefix: '/api/specialties', handler: specialtiesRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },
