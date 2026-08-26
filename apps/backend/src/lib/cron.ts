@@ -195,3 +195,83 @@ export function startAccountDeletionCron() {
     }
   })
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ΕΠΙΒΟΛΗ ΧΡΟΝΩΝ ΔΙΑΤΗΡΗΣΗΣ — Άρθρο 5 παρ. 1 στοιχ. ε΄
+   ═══════════════════════════════════════════════════════════════════════
+   Η πολιτική απορρήτου δηλώνει συγκεκριμένους χρόνους. Χωρίς αυτό το cron
+   η δήλωση δεν ισχύει στην πράξη — και μια πολιτική που λέει κάτι που δεν
+   συμβαίνει είναι χειρότερη από την απουσία πολιτικής.
+
+   ΑΡΧΕΣ
+     · Διαγραφή σε παρτίδες, ώστε να μη κλειδώνει ο πίνακας.
+     · Κάθε κανόνας τρέχει ανεξάρτητα — αν αποτύχει ένας, οι άλλοι συνεχίζουν.
+     · Η ίδια η εκκαθάριση καταγράφεται, αλλιώς δεν αποδεικνύεται ότι έγινε.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+type RetentionRule = {
+  label: string
+  table: string
+  column: string
+  days: number
+  /** Πρόσθετη συνθήκη — π.χ. μόνο ανακληθείσες συναινέσεις */
+  extra?: string
+}
+
+/** Οι κανόνες ΠΡΕΠΕΙ να ταυτίζονται με την πολιτική απορρήτου. */
+const RETENTION: RetentionRule[] = [
+  { label: 'Ιστορικό τοποθεσίας',   table: 'pet_locations', column: 'created_at', days: 90 },
+  { label: 'Ειδοποιήσεις',          table: 'notifications', column: 'created_at', days: 365 },
+  { label: 'Αρχεία καταγραφής',     table: 'audit_logs',    column: 'created_at', days: 180 },
+  { label: 'Αιτήματα διαγραφής',    table: 'account_deletion_requests', column: 'created_at',
+    days: 1095, extra: "status IN ('cancelled','executed','failed')" },
+]
+
+const BATCH = 5000
+
+export function startRetentionCron() {
+  // Κάθε μέρα στις 04:00, μετά το cron διαγραφής λογαριασμών.
+  cron.schedule('0 4 * * *', async () => {
+    console.log('🧹 Εκκαθάριση κατά τους χρόνους διατήρησης')
+
+    for (const r of RETENTION) {
+      try {
+        let removed = 0
+        // Παρτίδες: το DELETE ... WHERE ctid IN (SELECT ... LIMIT n) κρατά
+        // το κλείδωμα σύντομο ακόμα και σε πίνακα με εκατομμύρια γραμμές.
+        for (;;) {
+          const n: number = await prisma.$executeRawUnsafe(
+            `DELETE FROM ${r.table}
+              WHERE ctid IN (
+                SELECT ctid FROM ${r.table}
+                 WHERE ${r.column} < now() - interval '${r.days} days'
+                   ${r.extra ? 'AND ' + r.extra : ''}
+                 LIMIT ${BATCH})`)
+          removed += n
+          if (n < BATCH) break
+        }
+        if (removed > 0) {
+          console.log(`   ${r.label}: ${removed} εγγραφές (άνω των ${r.days} ημερών)`)
+          auditSystem({ action: 'delete', resource: r.table,
+                        metadata: { reason: 'retention', days: r.days, removed } })
+        }
+      } catch (err: any) {
+        // Πίνακας που δεν υπάρχει δεν σταματά τους υπόλοιπους κανόνες.
+        console.error(`   ✗ ${r.label}: ${err?.message?.slice(0, 160)}`)
+      }
+    }
+
+    // Ληγμένα tokens επαναφοράς — δεν διαγράφεται εγγραφή, μόνο καθαρίζεται
+    // το πεδίο. Η πολιτική λέει μία ώρα ισχύ.
+    try {
+      const n: number = await prisma.$executeRaw`
+        UPDATE users SET reset_token = NULL, reset_token_expires = NULL
+         WHERE reset_token IS NOT NULL AND reset_token_expires < now()`
+      if (n > 0) console.log(`   Ληγμένα tokens επαναφοράς: ${n}`)
+    } catch (err: any) {
+      console.error('   ✗ tokens:', err?.message?.slice(0, 160))
+    }
+
+    console.log('🧹 Ολοκληρώθηκε')
+  })
+}

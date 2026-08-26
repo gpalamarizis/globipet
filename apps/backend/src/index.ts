@@ -43,7 +43,7 @@ import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
-import { startAiTrialExpiryCron, startAccountDeletionCron } from './lib/cron.js'
+import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron } from './lib/cron.js'
 import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
@@ -205,6 +205,7 @@ for (const { prefix, handler } of routes) {
 
 startAiTrialExpiryCron()
 startAccountDeletionCron()   // GDPR Άρθρο 17 — εκτέλεση αιτημάτων διαγραφής
+startRetentionCron()         // GDPR Άρθρο 5 §1 ε΄ — επιβολή χρόνων διατήρησης
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
