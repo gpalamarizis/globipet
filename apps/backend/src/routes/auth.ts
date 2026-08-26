@@ -258,7 +258,13 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       const { password_hash: _, ...userSafe } = user as any
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      // Το JWT και το προφίλ περνούν σε FRAGMENT (#), όχι σε query string (?).
+      //
+      // Το fragment ΔΕΝ αποστέλλεται ποτέ στον διακομιστή: δεν καταγράφεται
+      // σε access logs, δεν διαρρέει μέσω Referer σε τρίτα domains, και δεν
+      // εμφανίζεται σε proxies ή CDN. Το frontend το διαβάζει κανονικά —
+      // το main.tsx υποστηρίζει ήδη και τις δύο μορφές.
+      reply.redirect(`${APP_URL}/#token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {
       console.error('Google OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=google_failed`)
@@ -320,7 +326,13 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       const { password_hash: _, ...userSafe } = user as any
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      // Το JWT και το προφίλ περνούν σε FRAGMENT (#), όχι σε query string (?).
+      //
+      // Το fragment ΔΕΝ αποστέλλεται ποτέ στον διακομιστή: δεν καταγράφεται
+      // σε access logs, δεν διαρρέει μέσω Referer σε τρίτα domains, και δεν
+      // εμφανίζεται σε proxies ή CDN. Το frontend το διαβάζει κανονικά —
+      // το main.tsx υποστηρίζει ήδη και τις δύο μορφές.
+      reply.redirect(`${APP_URL}/#token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {
       console.error('Facebook OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=facebook_failed`)
