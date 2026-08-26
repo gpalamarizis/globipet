@@ -10,11 +10,13 @@ import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 /**
- * Διαχείριση γιατρών / επαγγελματικού προσωπικού κλινικής.
+ * Διαχείριση επαγγελματικού προσωπικού παρόχου.
+ * Το λεξιλόγιο προσαρμόζεται: γιατροί σε κτηνιατρείο, groomers σε
+ * grooming, εκπαιδευτές σε training κ.ο.κ.
  *
- *  Η διοίκηση:  προσθέτει γιατρούς, ορίζει ειδικότητες και τιμές ανά υπηρεσία,
- *               συνδέει τον λογαριασμό του γιατρού με email.
- *  Ο γιατρός:   βλέπει τα δικά του ραντεβού — δεν αλλάζει τιμές.
+ *  Η διοίκηση:  προσθέτει προσωπικό, ορίζει ειδικότητες και τιμές,
+ *               συνδέει τον λογαριασμό του με email.
+ *  Το άτομο:    βλέπει τα δικά του ραντεβού — δεν αλλάζει τιμές.
  *
  * Όπου η διοίκηση δεν ορίσει τιμή, ισχύει η βασική τιμή του πακέτου.
  */
@@ -48,9 +50,37 @@ type PriceRow = {
   custom_price: boolean
 }
 
+/**
+ * Το λεξιλόγιο αλλάζει ανά τύπο παρόχου. Ένα grooming studio δεν έχει
+ * «γιατρούς» και δεν κάνει τηλεϊατρική — έχει groomers με πιστοποιήσεις.
+ */
+const VOCAB: Record<string, {
+  one: string; many: string; add: string; title: string;
+  licence: string; telehealth: boolean;
+}> = {
+  veterinary:  { one: 'γιατρού',      many: 'Γιατροί',      add: 'Προσθήκη γιατρού',
+                 title: 'Κτηνίατρος', licence: 'Αριθμός μητρώου (ΓΕΩΤΕΕ)', telehealth: true },
+  grooming:    { one: 'groomer',      many: 'Groomers',     add: 'Προσθήκη groomer',
+                 title: 'Groomer',    licence: 'Πιστοποίηση', telehealth: false },
+  training:    { one: 'εκπαιδευτή',   many: 'Εκπαιδευτές',  add: 'Προσθήκη εκπαιδευτή',
+                 title: 'Εκπαιδευτής', licence: 'Πιστοποίηση', telehealth: false },
+  sitting:     { one: 'sitter',       many: 'Sitters',      add: 'Προσθήκη sitter',
+                 title: 'Pet sitter', licence: 'Πιστοποίηση', telehealth: false },
+  boarding:    { one: 'υπεύθυνου',    many: 'Προσωπικό',    add: 'Προσθήκη προσωπικού',
+                 title: 'Υπεύθυνος',  licence: 'Πιστοποίηση', telehealth: false },
+  walking:     { one: 'walker',       many: 'Walkers',      add: 'Προσθήκη walker',
+                 title: 'Dog walker', licence: 'Πιστοποίηση', telehealth: false },
+  transport:   { one: 'οδηγού',       many: 'Οδηγοί',       add: 'Προσθήκη οδηγού',
+                 title: 'Οδηγός',     licence: 'Άδεια / πιστοποίηση', telehealth: false },
+  photography: { one: 'φωτογράφου',   many: 'Φωτογράφοι',   add: 'Προσθήκη φωτογράφου',
+                 title: 'Φωτογράφος', licence: 'Πιστοποίηση', telehealth: false },
+}
+const DEFAULT_VOCAB = { one: 'μέλους', many: 'Προσωπικό', add: 'Προσθήκη προσωπικού',
+                        title: '', licence: 'Πιστοποίηση', telehealth: false }
+
 const EMPTY: Partial<Staff> & { service_id: string } = {
   service_id: '',
-  full_name: '', title: 'Κτηνίατρος',
+  full_name: '', title: '',
   specialties: [], license_number: '', bio: '',
   years_experience: undefined, languages: ['Ελληνικά'],
   email: '', phone: '',
@@ -86,9 +116,14 @@ export default function ProviderStaffPage() {
 
   const [draft, setDraft] = useState<Record<string, { price: string; duration: string }>>({})
 
-  // Ο τύπος της υπηρεσίας καθορίζει ποιες ειδικότητες προσφέρονται.
+  // Ο τύπος της υπηρεσίας καθορίζει ειδικότητες ΚΑΙ λεξιλόγιο.
   const currentServiceType =
     services.find((s: any) => s.id === form.service_id)?.service_type || ''
+
+  // Ο τύπος του παρόχου συνολικά — για τους τίτλους της σελίδας.
+  const providerType = services[0]?.service_type || ''
+  const V  = VOCAB[providerType] || DEFAULT_VOCAB          // σελίδα
+  const FV = VOCAB[currentServiceType] || V                 // φόρμα
 
   const { data: specGroups = {} } = useQuery<Record<string, any[]>>({
     queryKey: ['specialties', currentServiceType],
@@ -102,7 +137,7 @@ export default function ProviderStaffPage() {
     mutationFn: (body: any) =>
       editing ? api.patch(`/staff/${editing.id}`, body) : api.post('/staff', body),
     onSuccess: () => {
-      toast.success(editing ? 'Αποθηκεύτηκε' : 'Ο γιατρός προστέθηκε')
+      toast.success(editing ? 'Αποθηκεύτηκε' : 'Προστέθηκε')
       qc.invalidateQueries({ queryKey: ['provider-staff'] })
       setShowForm(false); setEditing(null); setForm(EMPTY)
     },
@@ -149,7 +184,9 @@ export default function ProviderStaffPage() {
   // ── Βοηθητικά ──────────────────────────────────────────────────────
   const openNew = () => {
     setEditing(null)
-    setForm({ ...EMPTY, service_id: services[0]?.id || '' })
+    const sid = services[0]?.id || ''
+    const st = services.find((x: any) => x.id === sid)?.service_type || ''
+    setForm({ ...EMPTY, service_id: sid, title: (VOCAB[st] || DEFAULT_VOCAB).title })
     setSpecOpen(false); setShowForm(true)
   }
 
@@ -208,15 +245,17 @@ export default function ProviderStaffPage() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Stethoscope size={18} className="text-brand-900" />
-            Γιατροί & Προσωπικό
+            {providerType === 'veterinary'
+              ? <Stethoscope size={18} className="text-brand-900" />
+              : <UserIcon size={18} className="text-brand-900" />}
+            {V.many}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
             Ειδικότητες και τιμές ανά υπηρεσία. Όπου δεν ορίσεις τιμή, ισχύει η βασική του πακέτου.
           </p>
         </div>
         <button onClick={openNew} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={15} /> Προσθήκη γιατρού
+          <Plus size={15} /> {V.add}
         </button>
       </div>
 
@@ -224,13 +263,15 @@ export default function ProviderStaffPage() {
         <div className="card p-12 text-center text-gray-500">Φόρτωση...</div>
       ) : staff.length === 0 ? (
         <div className="card p-12 text-center">
-          <Stethoscope size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-medium text-gray-700 dark:text-gray-300">Δεν έχεις καταχωρήσει γιατρούς</p>
+          {providerType === 'veterinary'
+            ? <Stethoscope size={40} className="mx-auto text-gray-300 mb-3" />
+            : <UserIcon size={40} className="mx-auto text-gray-300 mb-3" />}
+          <p className="font-medium text-gray-700 dark:text-gray-300">Δεν έχεις καταχωρήσει προσωπικό</p>
           <p className="text-sm text-gray-500 mt-1">
             Πρόσθεσε το προσωπικό σου για να εμφανίζεται στους πελάτες κατά την κράτηση.
           </p>
           <button onClick={openNew} className="btn-primary inline-flex items-center gap-2 mt-4">
-            <Plus size={15} /> Προσθήκη γιατρού
+            <Plus size={15} /> {V.add}
           </button>
         </div>
       ) : (
@@ -255,7 +296,7 @@ export default function ProviderStaffPage() {
                         <BadgeCheck size={11} /> λογαριασμός
                       </span>
                     )}
-                    {s.accepts_telehealth && (
+                    {s.accepts_telehealth && V.telehealth && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                         <Video size={11} /> τηλεϊατρική
                       </span>
@@ -278,7 +319,7 @@ export default function ProviderStaffPage() {
                   )}
 
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    {s.license_number && <span>Αρ. μητρώου {s.license_number}</span>}
+                    {s.license_number && <span>{s.license_number}</span>}
                     {s.years_experience ? <span>{s.years_experience} χρόνια</span> : null}
                     {typeof s.bookings_count === 'number' && (
                       <span className="inline-flex items-center gap-1">
@@ -309,7 +350,7 @@ export default function ProviderStaffPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => { if (confirm(`Διαγραφή του ${s.full_name}; Τα ραντεβού του διατηρούνται.`)) remove.mutate(s.id) }}
+                  onClick={() => { if (confirm(`Διαγραφή: ${s.full_name}; Τα ραντεβού διατηρούνται.`)) remove.mutate(s.id) }}
                   className="btn-ghost p-1.5 hover:bg-red-50 ml-auto">
                   <Trash2 size={13} className="text-red-400" />
                 </button>
@@ -330,7 +371,7 @@ export default function ProviderStaffPage() {
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-display font-bold">
-                  {editing ? 'Επεξεργασία γιατρού' : 'Νέος γιατρός'}
+                  {editing ? `Επεξεργασία ${FV.one}` : V.add}
                 </h3>
                 <button onClick={() => setShowForm(false)} className="btn-ghost p-2"><X size={18} /></button>
               </div>
@@ -357,7 +398,7 @@ export default function ProviderStaffPage() {
                   </div>
                   <div>
                     <label className="label">Τίτλος</label>
-                    <input className="input" placeholder="Δρ. / Κτηνίατρος" value={form.title || ''}
+                    <input className="input" placeholder={FV.title || "Τίτλος"} value={form.title || ''}
                       onChange={e => setForm({ ...form, title: e.target.value })} />
                   </div>
                 </div>
@@ -431,7 +472,7 @@ export default function ProviderStaffPage() {
 
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="label">Αριθμός μητρώου</label>
+                    <label className="label">{FV.licence}</label>
                     <input className="input" value={form.license_number || ''}
                       onChange={e => setForm({ ...form, license_number: e.target.value })} />
                   </div>
@@ -462,11 +503,13 @@ export default function ProviderStaffPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={!!form.accepts_telehealth}
-                      onChange={e => setForm({ ...form, accepts_telehealth: e.target.checked })} />
-                    Δέχεται τηλεϊατρική
-                  </label>
+                  {FV.telehealth && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={!!form.accepts_telehealth}
+                        onChange={e => setForm({ ...form, accepts_telehealth: e.target.checked })} />
+                      Δέχεται τηλεϊατρική
+                    </label>
+                  )}
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={form.is_active !== false}
                       onChange={e => setForm({ ...form, is_active: e.target.checked })} />
@@ -572,7 +615,7 @@ export default function ProviderStaffPage() {
                 <button onClick={() => setLinkFor(null)} className="btn-ghost p-2"><X size={18} /></button>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Ο γιατρός πρέπει να έχει ήδη εγγραφεί στο GlobiPet. Μετά τη σύνδεση θα βλέπει
+                Το άτομο πρέπει να έχει ήδη εγγραφεί στο GlobiPet. Μετά τη σύνδεση θα βλέπει
                 τα ραντεβού που του ανατίθενται.
               </p>
               <label className="label">Email λογαριασμού</label>
