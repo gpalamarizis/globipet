@@ -5,8 +5,48 @@ import prisma from '../lib/prisma.js'
 const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Register
+  /**
+   * Ελάχιστη ηλικία εγγραφής.
+   *
+   * Στην Ελλάδα, η συγκατάθεση ανηλίκου σε υπηρεσίες της κοινωνίας της
+   * πληροφορίας ισχύει από τα 15 έτη· κάτω από αυτό απαιτείται γονική
+   * συναίνεση. Η πολιτική απορρήτου δηλώνει «από 15 και άνω» — εδώ
+   * επιβάλλεται στην πράξη.
+   */
+  const MIN_AGE = 15
+
+  function ageOn(birth: Date, at = new Date()) {
+    let a = at.getFullYear() - birth.getFullYear()
+    const m = at.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && at.getDate() < birth.getDate())) a--
+    return a
+  }
+
   app.post('/register', async (req, reply) => {
-    const { full_name, email, password, role, preferred_language } = req.body as any
+    const { full_name, email, password, role, preferred_language, birth_date } = req.body as any
+
+    if (!birth_date) {
+      return reply.code(400).send({ message: 'Η ημερομηνία γέννησης είναι υποχρεωτική' })
+    }
+    const birth = new Date(birth_date)
+    if (isNaN(birth.getTime())) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+    }
+    const now = new Date()
+    if (birth > now) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+    }
+    const age = ageOn(birth, now)
+    if (age > 120) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+    }
+    if (age < MIN_AGE) {
+      return reply.code(403).send({
+        message: `Η εγγραφή επιτρέπεται από ${MIN_AGE} ετών και άνω.`,
+        code: 'AGE_RESTRICTED',
+      })
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) return reply.code(409).send({ message: 'Email ήδη χρησιμοποιείται' })
     const password_hash = await bcrypt.hash(password, 12)
@@ -17,7 +57,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         password_hash,
         role: role || 'user',
         preferred_language: preferred_language || 'el',
-      }
+        birth_date: birth,
+      } as any
     })
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
@@ -130,6 +171,30 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // ─── GOOGLE OAUTH ───────────────────────────────────────────────
 
+  /**
+   * Παράμετρος state — προστασία από CSRF στη ροή OAuth.
+   *
+   * Χωρίς αυτήν, επιτιθέμενος ξεκινά ροή με δικό του λογαριασμό και
+   * παρασύρει το θύμα να ολοκληρώσει το callback· ο λογαριασμός του θύματος
+   * συνδέεται τότε με ταυτότητα του επιτιθέμενου.
+   *
+   * Υπογεγραμμένο JWT 10λεπτης ισχύος — χωρίς αποθήκευση στον server,
+   * χωρίς δυνατότητα πλαστογράφησης.
+   */
+  function makeState(provider: string) {
+    return (app as any).jwt.sign(
+      { p: provider, n: Math.random().toString(36).slice(2), t: 'oauth_state' },
+      { expiresIn: '10m' }
+    )
+  }
+  function checkState(state: any, provider: string) {
+    if (!state || typeof state !== 'string') return false
+    try {
+      const d: any = (app as any).jwt.verify(state)
+      return d?.t === 'oauth_state' && d?.p === provider
+    } catch { return false }
+  }
+
   app.get('/google', async (req, reply) => {
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID || '',
@@ -138,6 +203,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       scope: 'openid email profile',
       access_type: 'offline',
       prompt: 'select_account',
+      state: makeState('google'),
     })
     reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
   })
@@ -147,6 +213,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     try {
       const { code, state } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
+      if (!checkState(state, 'google')) {
+        return reply.redirect(`${APP_URL}/login?error=invalid_state`)
+      }
 
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -204,6 +273,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       redirect_uri: process.env.FACEBOOK_CALLBACK_URL || '',
       scope: 'email,public_profile',
       response_type: 'code',
+      state: makeState('facebook'),
     })
     reply.redirect(`https://www.facebook.com/v18.0/dialog/oauth?${params}`)
   })
@@ -211,8 +281,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   app.get('/facebook/callback', async (req: any, reply) => {
     const APP_URL = process.env.APP_URL || 'https://globipet.com'
     try {
-      const { code } = req.query
+      const { code, state } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
+      if (!checkState(state, 'facebook')) {
+        return reply.redirect(`${APP_URL}/login?error=invalid_state`)
+      }
 
       const tokenRes = await fetch(
         `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(process.env.FACEBOOK_CALLBACK_URL || '')}&client_secret=${process.env.FACEBOOK_APP_SECRET}&code=${code}`
@@ -262,13 +335,17 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if (!user) return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
 
     // Cryptographically secure token (256 bits of entropy) instead of Math.random
-    const { randomBytes } = await import('crypto')
+    const { randomBytes, createHash } = await import('crypto')
     const token = randomBytes(32).toString('hex')
+    // ΣΗΜΑΝΤΙΚΟ: στη βάση αποθηκεύεται ΜΟΝΟ το hash. Το καθαρό token
+    // ταξιδεύει μόνο στο email. Έτσι, ακόμα κι αν διαρρεύσει η βάση,
+    // κανείς δεν μπορεί να αλλάξει κωδικό τρίτου.
+    const tokenHash = createHash('sha256').update(token).digest('hex')
     const expires = new Date(Date.now() + 3600000) // 1 hour
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { reset_token: token, reset_token_expires: expires }
+      data: { reset_token: tokenHash, reset_token_expires: expires }
     })
 
     const RESEND_KEY = process.env.RESEND_API_KEY
@@ -347,8 +424,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if (typeof password !== 'string' || password.length < 8) {
       return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
     }
+    // Το token του συνδέσμου γίνεται hash και συγκρίνεται με το αποθηκευμένο.
+    const { createHash } = await import('crypto')
+    const tokenHash = createHash('sha256').update(String(token)).digest('hex')
     const user = await prisma.user.findFirst({
-      where: { reset_token: token, reset_token_expires: { gt: new Date() } }
+      where: { reset_token: tokenHash, reset_token_expires: { gt: new Date() } }
     })
     if (!user) return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος' })
 
