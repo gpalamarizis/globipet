@@ -38,6 +38,7 @@ model User {
   insurance_subscriptions UserInsuranceSubscription[]
   consents               UserConsent[]
   deletion_requests      AccountDeletionRequest[]
+  staff_profiles         ProviderStaff[]
   @@map("users")
 }
 
@@ -97,6 +98,7 @@ model Service {
   updated_at            DateTime @updatedAt
   packages              ServicePackage[]
   bookings              Booking[]
+  staff                 ProviderStaff[]
   @@map("services")
 }
 
@@ -124,6 +126,9 @@ model Booking {
   review         String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+  staff_id       String?
+  staff          ProviderStaff? @relation(fields: [staff_id], references: [id], onDelete: SetNull)
+  staff_name     String?
   packages       BookingPackage[]
   @@map("bookings")
 }
@@ -675,6 +680,7 @@ model ServicePackage {
   updated_at      DateTime @updatedAt
 
   bookings        BookingPackage[]
+  staff_prices    StaffServicePrice[]
 
   @@index([service_id])
   @@map("service_packages")
@@ -1009,4 +1015,66 @@ model AccountDeletionRequest {
   @@index([user_id])
   @@index([status, scheduled_for])
   @@map("account_deletion_requests")
+}
+
+
+model ProviderStaff {
+  id                 String   @id @default(uuid())
+  service_id         String
+  service            Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  provider_email     String
+
+  // Ο λογαριασμός του γιατρού. Κενό όσο δεν έχει ενεργοποιηθεί.
+  user_id            String?
+  user               User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  full_name          String
+  title              String?
+  specialties        String[] @default([])
+  license_number     String?
+  bio                String?
+  photo_url          String?
+
+  years_experience   Int?
+  languages          String[] @default([])
+  pet_types          String[] @default([])
+
+  email              String?
+  phone              String?
+
+  accepts_telehealth Boolean  @default(false)
+  is_available_now   Boolean  @default(false)
+  is_active          Boolean  @default(true)
+  display_order      Int      @default(0)
+
+  created_at         DateTime @default(now())
+  updated_at         DateTime @default(now()) @updatedAt
+
+  prices             StaffServicePrice[]
+  bookings           Booking[]
+
+  @@index([service_id])
+  @@index([provider_email])
+  @@index([user_id])
+  @@index([is_active])
+  @@map("provider_staff")
+}
+
+model StaffServicePrice {
+  id               String         @id @default(uuid())
+  staff_id         String
+  staff            ProviderStaff  @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  package_id       String
+  package          ServicePackage @relation(fields: [package_id], references: [id], onDelete: Cascade)
+
+  price            Float
+  duration_minutes Int            @default(30)
+  is_active        Boolean        @default(true)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @default(now()) @updatedAt
+
+  @@unique([staff_id, package_id], map: "staff_service_prices_unique")
+  @@index([staff_id])
+  @@index([package_id])
+  @@map("staff_service_prices")
 }

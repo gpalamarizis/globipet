@@ -32,6 +32,7 @@ import reviewsRoutes from './routes/reviews.js'
 import wishlistRoutes from './routes/wishlist.js'
 import adminRoutes from './routes/admin.js'
 import providerRoutes from './routes/provider.js'
+import staffRoutes from './routes/staff.js'
 import aiRoutes from './routes/ai.js'
 import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
@@ -175,6 +176,7 @@ const routes = [
   { prefix: '/api/admin', handler: adminRoutes },
   { prefix: '/api/admin/bulk-import', handler: bulkImportRoutes },
   { prefix: '/api/provider', handler: providerRoutes },
+  { prefix: '/api/staff', handler: staffRoutes },
   { prefix: '/api/ai', handler: aiRoutes },
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },
