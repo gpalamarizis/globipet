@@ -204,8 +204,8 @@ export default function Home() {
             </div>
       </section>
 
-      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
-      <div className="page-container my-8">
+      {/* Καμπάνιες — αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <div className="page-container py-6">
         <CampaignBanner page="home" slot="hero" />
       </div>
 
