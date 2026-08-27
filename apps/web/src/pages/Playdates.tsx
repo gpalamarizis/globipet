@@ -5,6 +5,7 @@ import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List }
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
+import CampaignBanner from '@/components/CampaignBanner'
 
 const eventTypes = [
   { value: 'walk', label: '🚶 Βόλτα' },
@@ -76,6 +77,9 @@ export default function Playdates() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <CampaignBanner page="playdates" slot="banner" className="mb-6" />
+
       <div className="max-w-3xl mx-auto px-4">
 
         {/* Header */}

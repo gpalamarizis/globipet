@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import ProductCard from '@/components/features/marketplace/ProductCard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { Product, ProductCategory } from '@/types'
+import CampaignBanner from '@/components/CampaignBanner'
 
 const categoryKeys: { value: ProductCategory | 'all'; key: string; emoji: string }[] = [
   { value: 'all',         key: 'all',         emoji: '🛍️' },
@@ -47,6 +48,9 @@ export default function Marketplace() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <CampaignBanner page="marketplace" slot="banner" className="mb-6" />
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="section-title mb-1">{t('marketplace.title')}</h1>

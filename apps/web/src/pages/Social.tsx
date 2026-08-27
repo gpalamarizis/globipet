@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import CampaignBanner from '@/components/CampaignBanner'
 
 export default function Social() {
   const { t } = useTranslation()
@@ -61,6 +62,9 @@ export default function Social() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-2xl mx-auto">
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <CampaignBanner page="social" slot="sidebar" className="mb-6" />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="section-title">{t('social.title')}</h1>
         {isAuthenticated && (

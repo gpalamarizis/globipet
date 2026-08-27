@@ -9,6 +9,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import CampaignBanner from '@/components/CampaignBanner'
 
 
 function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: number, suffix: string, label: string, color: string, decimals?: number }) {
@@ -38,6 +39,9 @@ function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: nu
   const displayValue = decimals > 0 ? current.toFixed(decimals) : Math.floor(current).toLocaleString('el-GR')
   return (
     <div ref={ref} className="text-center">
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <CampaignBanner page="home" slot="hero" className="mb-6" />
+
       <p className={`text-2xl md:text-3xl font-black ${color}`}>{displayValue}{suffix}</p>
       <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
     </div>

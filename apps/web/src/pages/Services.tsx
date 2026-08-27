@@ -9,6 +9,7 @@ import ServiceCard from '@/components/features/services/ServiceCard'
 import ServicesMap from '@/components/features/services/ServicesMap'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { Service, ServiceType } from '@/types'
+import CampaignBanner from '@/components/CampaignBanner'
 
 const serviceTypeKeys: { value: ServiceType | 'all' | 'hosting'; key: string; emoji: string }[] = [
   { value: 'all',          key: 'all',         emoji: '🔍' },
@@ -59,6 +60,9 @@ export default function Services() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <CampaignBanner page="services" slot="banner" className="mb-6" />
+
       <div className="mb-6">
         <h1 className="section-title mb-1">{t('services.title')}</h1>
         <p className="text-gray-500 text-sm">{t('services.subtitle')}</p>
