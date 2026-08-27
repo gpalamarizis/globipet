@@ -66,6 +66,7 @@ const PrivacyPolicyPage   = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage  = lazy(() => import('@/pages/TermsOfServicePage'))
 const CookiePreferencesPage = lazy(() => import('@/pages/CookiePreferencesPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
+const InboxPage = lazy(() => import('@/pages/InboxPage'))
 const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'))
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
@@ -158,6 +159,7 @@ export default function App() {
                 <Route path="/bookings"        element={<PrivateRoute><MyBookings /></PrivateRoute>} />
                 <Route path="/community"       element={<PrivateRoute><Community /></PrivateRoute>} />
                 <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/wishlist"        element={<PrivateRoute><Wishlist /></PrivateRoute>} />
                 <Route path="/checkout"        element={<PrivateRoute><Checkout /></PrivateRoute>} />
                 <Route path="/orders"          element={<PrivateRoute><MyOrders /></PrivateRoute>} />

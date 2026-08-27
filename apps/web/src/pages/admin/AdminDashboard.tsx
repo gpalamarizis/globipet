@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft, Calendar, Euro } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft, Calendar, Euro, Megaphone } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -12,8 +12,9 @@ import TranslationEditor from '@/components/admin/TranslationEditor'
 import ProductFormModal from '@/components/admin/ProductFormModal'
 import ServiceFormModal from '@/components/admin/ServiceFormModal'
 import BulkImportModal from '@/components/admin/BulkImportModal'
+import ProviderMarketingPage from '@/pages/provider/ProviderMarketingPage'
 
-type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database' | 'insurance' | 'bookings' | 'pets' | 'revenue'
+type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database' | 'insurance' | 'bookings' | 'pets' | 'revenue' | 'campaigns'
 
 function StatCard({ icon: Icon, label, value, change, color, onClick }: any) {
   // Με onClick γίνεται κουμπί: ο διαχειριστής κλικάρει τον αριθμό και
@@ -939,6 +940,7 @@ export default function AdminDashboard() {
     { id: 'services',  label: 'Υπηρεσίες',    icon: PawPrint },
     { id: 'orders',    label: 'Παραγγελίες',  icon: ClipboardList },
     { id: 'bookings',  label: 'Κρατήσεις',    icon: Calendar },
+    { id: 'campaigns', label: 'Καμπάνιες',    icon: Megaphone },
     { id: 'pets',      label: 'Κατοικίδια',   icon: PawPrint },
     { id: 'revenue',   label: 'Έσοδα',        icon: Euro },
     { id: 'database',  label: 'Βάση',         icon: Database },
@@ -1034,6 +1036,7 @@ export default function AdminDashboard() {
       {activeTab === 'database'  && <DatabaseTab />}
       {activeTab === 'insurance' && <InsuranceTab />}
       {activeTab === 'bookings' && <AdminBookingsTab />}
+      {activeTab === 'campaigns' && <ProviderMarketingPage />}
       {activeTab === 'pets' && <AdminPetsTab />}
       {activeTab === 'revenue' && <AdminRevenueTab />}
     </div>
