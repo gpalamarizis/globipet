@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -939,6 +939,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
+
+      {/* Επιστροφή στο site — χωρίς αυτό ο διαχειριστής εγκλωβίζεται
+          στο dashboard και πρέπει να γράψει το URL με το χέρι. */}
+      <Link to="/"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-900 dark:hover:text-yellow-400 transition-colors mb-4">
+        <ArrowLeft size={15} /> Επιστροφή στο GlobiPet
+      </Link>
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
           <Shield size={20} className="text-purple-600 dark:text-purple-400" />

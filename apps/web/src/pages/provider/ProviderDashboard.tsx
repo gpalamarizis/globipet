@@ -2,11 +2,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import ProviderStaffPage from './ProviderStaffPage'
@@ -564,6 +564,14 @@ export default function ProviderDashboard() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
+
+      {/* Επιστροφή στο site — χωρίς αυτό ο πάροχος εγκλωβίζεται στο
+          dashboard και πρέπει να γράψει το URL με το χέρι. */}
+      <Link to="/"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-900 dark:hover:text-yellow-400 transition-colors mb-4">
+        <ArrowLeft size={15} /> Επιστροφή στο GlobiPet
+      </Link>
+
       <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-900 font-bold text-lg shrink-0">
