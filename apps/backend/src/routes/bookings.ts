@@ -5,6 +5,68 @@ import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/e
 import { broadcastToUser } from './notifications.js'
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
+  /**
+   * Όλες οι κρατήσεις — μόνο διαχειριστής.
+   *
+   * Το GET / παραπάνω επιστρέφει μόνο τις δικές του. Ο admin χρειάζεται
+   * συνολική εικόνα: ποιος έκλεισε ποιον, πότε, πόσα, σε τι κατάσταση.
+   *
+   * Φίλτρα: q (πελάτης/πάροχος), status, from, to
+   * Σελιδοποίηση: limit έως 200, offset
+   */
+  app.get('/all', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
+    const user = req.user as any
+    if (user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Απαιτούνται δικαιώματα διαχειριστή' })
+    }
+  
+    const { q, status, from, to } = req.query || {}
+    const limit = Math.min(200, Math.max(1, parseInt(req.query?.limit) || 50))
+    const offset = Math.max(0, parseInt(req.query?.offset) || 0)
+  
+    const where: any = {}
+    if (status) where.status = status
+    if (from || to) {
+      where.booking_date = {}
+      if (from) where.booking_date.gte = from
+      if (to) where.booking_date.lte = to
+    }
+    if (q) {
+      where.OR = [
+        { customer_name:  { contains: q, mode: 'insensitive' } },
+        { customer_email: { contains: q, mode: 'insensitive' } },
+        { provider_name:  { contains: q, mode: 'insensitive' } },
+        { provider_email: { contains: q, mode: 'insensitive' } },
+      ]
+    }
+  
+    const [data, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        orderBy: [{ booking_date: 'desc' }, { booking_time: 'desc' }],
+        take: limit, skip: offset,
+      }),
+      prisma.booking.count({ where }),
+    ])
+  
+    // Σύνοψη για την κεφαλίδα της σελίδας
+    const grouped = await prisma.booking.groupBy({
+      by: ['status'], _count: { _all: true }, where,
+    })
+    const revenue = await prisma.booking.aggregate({
+      _sum: { total_price: true },
+      where: { ...where, payment_status: 'paid' },
+    })
+  
+    return {
+      data, total, limit, offset,
+      summary: {
+        byStatus: grouped.map((g: any) => ({ status: g.status, count: g._count._all })),
+        revenue: revenue._sum.total_price ?? 0,
+      },
+    }
+  })
+  
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
     const { tab = 'upcoming' } = req.query

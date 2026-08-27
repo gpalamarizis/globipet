@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -13,11 +13,16 @@ import ProductFormModal from '@/components/admin/ProductFormModal'
 import ServiceFormModal from '@/components/admin/ServiceFormModal'
 import BulkImportModal from '@/components/admin/BulkImportModal'
 
-type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database' | 'insurance'
+type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database' | 'insurance' | 'bookings'
 
-function StatCard({ icon: Icon, label, value, change, color }: any) {
+function StatCard({ icon: Icon, label, value, change, color, onClick }: any) {
+  // Με onClick γίνεται κουμπί: ο διαχειριστής κλικάρει τον αριθμό και
+  // πηγαίνει στα δεδομένα. Χωρίς αυτό, οι αριθμοί ήταν αδιέξοδο.
+  const Tag: any = onClick ? 'button' : 'div'
   return (
-    <div className="card p-5">
+    <Tag onClick={onClick}
+      className={cn('card p-5 w-full text-left',
+        onClick && 'hover:border-brand-400 hover:shadow-md transition-all cursor-pointer')}>
       <div className="flex items-start justify-between mb-3">
         <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', color)}>
           <Icon size={18} className="text-white" />
@@ -28,7 +33,7 @@ function StatCard({ icon: Icon, label, value, change, color }: any) {
       </div>
       <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
       <p className="text-sm text-gray-500 mt-0.5">{label}</p>
-    </div>
+    </Tag>
   )
 }
 
@@ -933,6 +938,7 @@ export default function AdminDashboard() {
     { id: 'products',  label: 'Προϊόντα',     icon: Package },
     { id: 'services',  label: 'Υπηρεσίες',    icon: PawPrint },
     { id: 'orders',    label: 'Παραγγελίες',  icon: ClipboardList },
+    { id: 'bookings',  label: 'Κρατήσεις',    icon: Calendar },
     { id: 'database',  label: 'Βάση',         icon: Database },
     { id: 'insurance', label: 'Ασφάλιση',     icon: Shield },
   ]
@@ -970,16 +976,16 @@ export default function AdminDashboard() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Users}       label="Χρήστες"     value={stats?.users ?? '—'}    change={12}  color="bg-blue-500" />
+            <StatCard icon={Users}       label="Χρήστες"     value={stats?.users ?? '—'}    change={12}  color="bg-blue-500" onClick={() => setActiveTab('users' as Tab)} />
             <StatCard icon={PawPrint}    label="Κατοικίδια"  value={stats?.pets ?? '—'}     change={8}   color="bg-orange-500" />
-            <StatCard icon={ShoppingBag} label="Παραγγελίες" value={stats?.orders ?? '—'}   change={-3}  color="bg-green-500" />
+            <StatCard icon={ShoppingBag} label="Παραγγελίες" value={stats?.orders ?? '—'}   change={-3}  color="bg-green-500" onClick={() => setActiveTab('orders' as Tab)} />
             <StatCard icon={TrendingUp}  label="Έσοδα"       value={`€${stats?.revenue ?? '0'}`} change={15} color="bg-purple-500" />
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Shield}      label="Πάροχοι"     value={stats?.providers ?? '—'} change={5}  color="bg-teal-500" />
-            <StatCard icon={Package}     label="Προϊόντα"    value={stats?.products ?? '—'}  change={2}  color="bg-pink-500" />
-            <StatCard icon={ClipboardList} label="Κρατήσεις" value={stats?.bookings ?? '—'}  change={18} color="bg-yellow-500" />
-            <StatCard icon={Database}    label="Εγγραφές DB" value={stats?.total_records ?? '—'} change={null} color="bg-gray-500" />
+            <StatCard icon={Shield}      label="Πάροχοι"     value={stats?.providers ?? '—'} change={5}  color="bg-teal-500" onClick={() => setActiveTab('providers' as Tab)} />
+            <StatCard icon={Package}     label="Προϊόντα"    value={stats?.products ?? '—'}  change={2}  color="bg-pink-500" onClick={() => setActiveTab('products' as Tab)} />
+            <StatCard icon={ClipboardList} label="Κρατήσεις" value={stats?.bookings ?? '—'}  change={18} color="bg-yellow-500" onClick={() => setActiveTab('bookings' as Tab)} />
+            <StatCard icon={Database}    label="Εγγραφές DB" value={stats?.total_records ?? '—'} change={null} color="bg-gray-500" onClick={() => setActiveTab('database' as Tab)} />
           </div>
           <div className="card p-5">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Γρήγορες ενέργειες</h3>
@@ -1025,6 +1031,155 @@ export default function AdminDashboard() {
       {activeTab === 'orders'    && <OrdersTab />}
       {activeTab === 'database'  && <DatabaseTab />}
       {activeTab === 'insurance' && <InsuranceTab />}
+      {activeTab === 'bookings' && <AdminBookingsTab />}
+    </div>
+  )
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Όλες οι κρατήσεις — μόνο διαχειριστής
+// ═══════════════════════════════════════════════════════════════════════
+
+function AdminBookingsTab() {
+  const [q, setQ] = useState('')
+  const [status, setStatus] = useState('')
+  const [page, setPage] = useState(0)
+  const LIMIT = 50
+
+  const params = new URLSearchParams()
+  if (q.trim()) params.set('q', q.trim())
+  if (status) params.set('status', status)
+  params.set('limit', String(LIMIT))
+  params.set('offset', String(page * LIMIT))
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-bookings', q, status, page],
+    queryFn: () => api.get(`/bookings/all?${params}`).then(r => r.data),
+  })
+
+  const rows = data?.data ?? []
+  const total = data?.total ?? 0
+  const summary = data?.summary
+
+  const STATUS_LABEL: Record<string, string> = {
+    pending: 'εκκρεμεί', confirmed: 'επιβεβαιωμένη',
+    completed: 'ολοκληρώθηκε', cancelled: 'ακυρώθηκε',
+  }
+
+  return (
+    <div className="space-y-4">
+
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="card p-4">
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{total}</p>
+            <p className="text-xs text-gray-500">Σύνολο</p>
+          </div>
+          {summary.byStatus.map((s: any) => (
+            <div key={s.status} className="card p-4">
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{s.count}</p>
+              <p className="text-xs text-gray-500">{STATUS_LABEL[s.status] ?? s.status}</p>
+            </div>
+          ))}
+          <div className="card p-4">
+            <p className="text-xl font-bold text-gray-900 dark:text-white">
+              €{Math.round(summary.revenue)}
+            </p>
+            <p className="text-xs text-gray-500">Εισπραγμένα</p>
+          </div>
+        </div>
+      )}
+
+      <div className="card p-3 flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input className="input pl-9" placeholder="Πελάτης ή πάροχος..."
+            value={q} onChange={e => { setQ(e.target.value); setPage(0) }} />
+        </div>
+        <select className="input w-auto" value={status}
+          onChange={e => { setStatus(e.target.value); setPage(0) }}>
+          <option value="">Όλες οι καταστάσεις</option>
+          {Object.entries(STATUS_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="card p-12 text-center text-gray-500">Φόρτωση...</div>
+      ) : rows.length === 0 ? (
+        <div className="card p-12 text-center">
+          <Calendar size={40} className="mx-auto text-gray-300 mb-3" />
+          <p className="font-medium text-gray-700 dark:text-gray-300">Καμία κράτηση</p>
+        </div>
+      ) : (
+        <>
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-100 dark:border-gray-800">
+                <tr className="text-left text-xs text-gray-500">
+                  <th className="p-3 font-medium">Ημερομηνία</th>
+                  <th className="p-3 font-medium">Πελάτης</th>
+                  <th className="p-3 font-medium">Πάροχος</th>
+                  <th className="p-3 font-medium">Ποσό</th>
+                  <th className="p-3 font-medium">Κατάσταση</th>
+                  <th className="p-3 font-medium">Πληρωμή</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {rows.map((b: any) => (
+                  <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="p-3 whitespace-nowrap">
+                      {b.booking_date}
+                      <span className="text-gray-400 ml-1">{b.booking_time}</span>
+                    </td>
+                    <td className="p-3">
+                      <p className="font-medium">{b.customer_name || '—'}</p>
+                      <p className="text-xs text-gray-500">{b.customer_email}</p>
+                    </td>
+                    <td className="p-3">
+                      <p>{b.provider_name || '—'}</p>
+                      {b.staff_name && <p className="text-xs text-gray-500">{b.staff_name}</p>}
+                    </td>
+                    <td className="p-3 font-medium whitespace-nowrap">
+                      €{Math.round(b.total_price ?? 0)}
+                    </td>
+                    <td className="p-3">
+                      <span className={cn('text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                        b.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : b.status === 'cancelled' ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400')}>
+                        {STATUS_LABEL[b.status] ?? b.status}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={cn('text-xs',
+                        b.payment_status === 'paid' ? 'text-green-600' : 'text-gray-400')}>
+                        {b.payment_status === 'paid' ? 'πληρωμένη' : 'απλήρωτη'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {total > LIMIT && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">
+                {page * LIMIT + 1}–{Math.min((page + 1) * LIMIT, total)} από {total}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0} className="btn-secondary text-sm">Προηγούμενα</button>
+                <button onClick={() => setPage(p => p + 1)}
+                  disabled={(page + 1) * LIMIT >= total} className="btn-secondary text-sm">Επόμενα</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
