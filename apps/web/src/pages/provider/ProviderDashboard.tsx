@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft, Megaphone, Users } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -11,8 +11,10 @@ import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import ProviderStaffPage from './ProviderStaffPage'
 import ProviderTranslationsPage from './ProviderTranslationsPage'
+import ProviderMarketingPage from './ProviderMarketingPage'
+import ProviderCustomersPage from './ProviderCustomersPage'
 
-type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations'
+type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers'
 
 // Ποιοι τύποι παρόχων πουλάνε ΚΑΙ προϊόντα (τροφές, σαμπουάν, αξεσουάρ).
 // Ένας walker ή sitter δεν έχει κατάστημα — δεν βλέπει καθόλου Προϊόντα
@@ -558,6 +560,8 @@ export default function ProviderDashboard() {
     ...(sellsProducts ? [{ id: 'products', label: 'Προϊόντα', icon: Package }] : []),
     { id: 'bookings',  label: 'Κρατήσεις',  icon: Clock },
     { id: 'calendar',  label: 'Ημερολόγιο', icon: Calendar },
+    { id: 'marketing',    label: 'Καμπάνιες',   icon: Megaphone },
+    { id: 'customers',    label: 'Πελάτες',     icon: Users },
     { id: 'translations', label: 'Μεταφράσεις', icon: Languages },
     ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
   ]
@@ -618,6 +622,10 @@ export default function ProviderDashboard() {
       {/* Μεταφράσεις περιεχομένου παρόχου */}
       {activeTab === 'translations' && <ProviderTranslationsPage />}
 
+      {/* Καμπάνιες και πελάτες */}
+      {activeTab === 'marketing' && <ProviderMarketingPage />}
+      {activeTab === 'customers' && <ProviderCustomersPage />}
+
       {/* Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -644,6 +652,8 @@ export default function ProviderDashboard() {
               {[
                 { label: 'Προσθήκη υπηρεσίας', tab: 'services' as Tab, icon: Scissors },
                 { label: isClinic ? 'Γιατροί & προσωπικό' : 'Προσωπικό', tab: 'staff' as Tab, icon: Stethoscope },
+                { label: 'Καμπάνιες', tab: 'marketing' as Tab, icon: Megaphone },
+                { label: 'Πελάτες', tab: 'customers' as Tab, icon: Users },
                 { label: 'Μεταφράσεις', tab: 'translations' as Tab, icon: Languages },
                 ...(sellsProducts ? [
                   { label: 'Προσθήκη προϊόντος', tab: 'products' as Tab, icon: Package },
