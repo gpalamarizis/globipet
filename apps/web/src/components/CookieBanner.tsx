@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cookie, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { api } from '@/lib/api'
+import { getCookieTexts } from '@/lib/cookieTexts'
 
 /**
  * GDPR-compliant cookie consent banner with granular categories.
@@ -54,7 +55,9 @@ async function recordConsent(state: Omit<ConsentState, 'timestamp'>, source = 'c
 }
 
 export default function CookieBanner() {
-  const { t } = useTranslation()
+  const { i18n } = useTranslation()
+  // Τα κείμενα των cookies ζουν στο lib/cookieTexts.ts, όχι στο i18n.
+  const ct = getCookieTexts(i18n.language)
   const [visible, setVisible] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [prefs, setPrefs] = useState({ analytics: false, marketing: false, functional: false })
@@ -96,10 +99,10 @@ export default function CookieBanner() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 id="cookie-banner-title" className="font-bold text-gray-900 dark:text-white mb-1">
-                    {t('cookieBanner.title')}
+                    {ct.title}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('cookieBanner.description')} <a href="/privacy" className="text-brand-900 dark:text-brand-400 underline">{t('cookieBanner.learnMore')}</a>
+                    {ct.description} <a href="/privacy" className="text-brand-900 dark:text-brand-400 underline">{ct.learnMore}</a>
                   </p>
 
                   {/* Granular controls (expanded) */}
@@ -114,34 +117,34 @@ export default function CookieBanner() {
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('cookieBanner.categories.necessary.title')}</span>
-                              <span className="text-xs text-gray-400 font-medium">{t('cookieBanner.alwaysOn')}</span>
+                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{ct.categories.necessary.title}</span>
+                              <span className="text-xs text-gray-400 font-medium">{ct.alwaysOn}</span>
                             </div>
-                            <p className="text-xs text-gray-500">{t('cookieBanner.categories.necessary.desc')}</p>
+                            <p className="text-xs text-gray-500">{ct.categories.necessary.desc}</p>
                           </div>
 
                           <label className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('cookieBanner.categories.analytics.title')}</span>
+                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{ct.categories.analytics.title}</span>
                               <input type="checkbox" checked={prefs.analytics} onChange={e => setPrefs({ ...prefs, analytics: e.target.checked })} className="rounded" />
                             </div>
-                            <p className="text-xs text-gray-500">{t('cookieBanner.categories.analytics.desc')}</p>
+                            <p className="text-xs text-gray-500">{ct.categories.analytics.desc}</p>
                           </label>
 
                           <label className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('cookieBanner.categories.marketing.title')}</span>
+                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{ct.categories.marketing.title}</span>
                               <input type="checkbox" checked={prefs.marketing} onChange={e => setPrefs({ ...prefs, marketing: e.target.checked })} className="rounded" />
                             </div>
-                            <p className="text-xs text-gray-500">{t('cookieBanner.categories.marketing.desc')}</p>
+                            <p className="text-xs text-gray-500">{ct.categories.marketing.desc}</p>
                           </label>
 
                           <label className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('cookieBanner.categories.functional.title')}</span>
+                              <span className="font-semibold text-sm text-gray-900 dark:text-white">{ct.categories.functional.title}</span>
                               <input type="checkbox" checked={prefs.functional} onChange={e => setPrefs({ ...prefs, functional: e.target.checked })} className="rounded" />
                             </div>
-                            <p className="text-xs text-gray-500">{t('cookieBanner.categories.functional.desc')}</p>
+                            <p className="text-xs text-gray-500">{ct.categories.functional.desc}</p>
                           </label>
                         </div>
                       </motion.div>
@@ -149,7 +152,7 @@ export default function CookieBanner() {
                   </AnimatePresence>
                 </div>
 
-                <button onClick={rejectAll} className="text-gray-400 hover:text-gray-600 p-1 shrink-0" aria-label={t('cookieBanner.rejectAll')}>
+                <button onClick={rejectAll} className="text-gray-400 hover:text-gray-600 p-1 shrink-0" aria-label={ct.rejectAll}>
                   <X size={18} />
                 </button>
               </div>
@@ -157,19 +160,19 @@ export default function CookieBanner() {
               <div className="flex flex-wrap gap-2 mt-4">
                 <button onClick={() => setExpanded(!expanded)}
                   className="text-xs font-medium text-brand-900 dark:text-brand-400 flex items-center gap-1 hover:underline">
-                  {expanded ? <><ChevronUp size={12} /> {t('cookieBanner.hidePrefs')}</> : <><ChevronDown size={12} /> {t('cookieBanner.managePrefs')}</>}
+                  {expanded ? <><ChevronUp size={12} /> {ct.hidePrefs}</> : <><ChevronDown size={12} /> {ct.managePrefs}</>}
                 </button>
                 <div className="flex-1" />
                 <button onClick={rejectAll} className="btn-secondary text-sm px-4 py-2">
-                  {t('cookieBanner.rejectAll')}
+                  {ct.rejectAll}
                 </button>
                 {expanded && (
                   <button onClick={savePrefs} className="btn-secondary text-sm px-4 py-2">
-                    {t('cookieBanner.saveChoices')}
+                    {ct.saveChoices}
                   </button>
                 )}
                 <button onClick={acceptAll} className="btn-primary text-sm px-4 py-2">
-                  {t('cookieBanner.acceptAll')}
+                  {ct.acceptAll}
                 </button>
               </div>
             </div>
