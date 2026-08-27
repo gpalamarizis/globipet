@@ -15,14 +15,14 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
       prisma.breed.findMany({ where, skip, take: Number(limit), orderBy: { popularity: 'desc' } }),
       prisma.breed.count({ where })
     ])
-    const translated = translateRecords(data, lang, ['name', 'description'])
+    const translated = await translateRecords('breed', data, lang)
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const breed = await prisma.breed.findUniqueOrThrow({ where: { id: req.params.id } })
-    return translateRecord(breed, lang, ['name', 'description'])
+    return translateRecord('breed', breed, lang)
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {

@@ -18,7 +18,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
       prisma.service.findMany({ where, skip, take: Number(limit), orderBy: { rating: 'desc' } }),
       prisma.service.count({ where })
     ])
-    const translated = translateRecords(data, lang, ['provider_name', 'description'])
+    const translated = await translateRecords('service', data, lang)
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
@@ -37,7 +37,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const service = await prisma.service.findUniqueOrThrow({ where: { id: req.params.id } })
-    return translateRecord(service, lang, ['provider_name', 'description'])
+    return translateRecord('service', service, lang)
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {

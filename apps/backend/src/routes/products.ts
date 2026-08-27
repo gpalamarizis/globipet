@@ -24,14 +24,14 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
       prisma.product.findMany({ where, skip, take: Number(limit), orderBy }),
       prisma.product.count({ where })
     ])
-    const translated = translateRecords(data, lang, ['name', 'description'])
+    const translated = await translateRecords('product', data, lang)
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const product = await prisma.product.findUniqueOrThrow({ where: { id: req.params.id } })
-    return translateRecord(product, lang, ['name', 'description'])
+    return translateRecord('product', product, lang)
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {

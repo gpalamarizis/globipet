@@ -21,14 +21,14 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       prisma.event.findMany({ where, skip, take: Number(limit), orderBy: { date: 'asc' } }),
       prisma.event.count({ where })
     ])
-    const translated = translateRecords(data, lang, ['title', 'description'])
+    const translated = await translateRecords('event', data, lang)
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })
 
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const event = await prisma.event.findUniqueOrThrow({ where: { id: req.params.id } })
-    return translateRecord(event, lang, ['title', 'description'])
+    return translateRecord('event', event, lang)
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
