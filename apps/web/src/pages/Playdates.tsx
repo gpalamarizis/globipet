@@ -77,6 +77,7 @@ export default function Playdates() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
+
       {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
       <CampaignBanner page="playdates" slot="banner" className="mb-6" />
 

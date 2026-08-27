@@ -48,6 +48,7 @@ export default function Marketplace() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
+
       {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
       <CampaignBanner page="marketplace" slot="banner" className="mb-6" />
 

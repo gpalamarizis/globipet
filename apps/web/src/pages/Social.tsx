@@ -62,6 +62,7 @@ export default function Social() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-2xl mx-auto">
+
       {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
       <CampaignBanner page="social" slot="sidebar" className="mb-6" />
 

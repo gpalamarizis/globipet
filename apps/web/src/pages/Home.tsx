@@ -11,7 +11,6 @@ import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import CampaignBanner from '@/components/CampaignBanner'
 
-
 function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: number, suffix: string, label: string, color: string, decimals?: number }) {
   const [current, setCurrent] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
@@ -39,8 +38,6 @@ function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: nu
   const displayValue = decimals > 0 ? current.toFixed(decimals) : Math.floor(current).toLocaleString('el-GR')
   return (
     <div ref={ref} className="text-center">
-      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
-      <CampaignBanner page="home" slot="hero" className="mb-6" />
 
       <p className={`text-2xl md:text-3xl font-black ${color}`}>{displayValue}{suffix}</p>
       <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
@@ -206,6 +203,11 @@ export default function Home() {
 
             </div>
       </section>
+
+      {/* Καμπάνιες: αν δεν υπάρχει ενεργή, δεν αποδίδεται τίποτα */}
+      <div className="page-container my-8">
+        <CampaignBanner page="home" slot="hero" />
+      </div>
 
       {/* ── PERSONALIZED WELCOME (logged-in only) ──────────── */}
       {isAuthenticated && user && (
@@ -391,9 +393,6 @@ export default function Home() {
 
       {/* ── STATS REMOVED ── */}
 
-
-
-
       {/* ── CATEGORIES ───────────────────────────────────── */}
       <section className="py-12 bg-white dark:bg-gray-900">
         <div className="page-container">
@@ -495,7 +494,6 @@ export default function Home() {
         </div>
       </section>
       )}
-
 
       {/* ── AI BANNER ────────────────────────────────────── */}
       {/* ── FOOTER CTA ───────────────────────────────────── */}
