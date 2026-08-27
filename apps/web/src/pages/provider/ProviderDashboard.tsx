@@ -564,16 +564,15 @@ export default function ProviderDashboard() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
-
-      {/* Επιστροφή στο site — χωρίς αυτό ο πάροχος εγκλωβίζεται στο
-          dashboard και πρέπει να γράψει το URL με το χέρι. */}
-      <Link to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-900 dark:hover:text-yellow-400 transition-colors mb-4">
-        <ArrowLeft size={15} /> Επιστροφή στο GlobiPet
-      </Link>
-
       <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
+          {/* Επιστροφή στο site. Στη γραμμή του τίτλου ώστε να είναι ορατή —
+              κάτω από τη μπάρα πλοήγησης κρυβόταν. */}
+          <Link to="/" title="Επιστροφή στο GlobiPet"
+            className="w-10 h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-brand-900 hover:border-brand-400 dark:hover:text-yellow-400 transition-colors shrink-0">
+            <ArrowLeft size={18} />
+          </Link>
+
           <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-900 font-bold text-lg shrink-0">
             {getInitials(user?.full_name || 'P')}
           </div>

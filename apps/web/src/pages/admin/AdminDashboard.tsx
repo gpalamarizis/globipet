@@ -940,11 +940,11 @@ export default function AdminDashboard() {
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
 
-      {/* Επιστροφή στο site — χωρίς αυτό ο διαχειριστής εγκλωβίζεται
-          στο dashboard και πρέπει να γράψει το URL με το χέρι. */}
-      <Link to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-900 dark:hover:text-yellow-400 transition-colors mb-4">
-        <ArrowLeft size={15} /> Επιστροφή στο GlobiPet
+      {/* adminBackButton — επιστροφή στο site.
+          Σταθερή θέση πάνω αριστερά ώστε να είναι πάντα ορατή. */}
+      <Link to="/" title="Επιστροφή στο GlobiPet"
+        className="inline-flex items-center gap-2 px-3 py-2 mb-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:text-brand-900 hover:border-brand-400 dark:hover:text-yellow-400 transition-colors">
+        <ArrowLeft size={16} /> Επιστροφή στο GlobiPet
       </Link>
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
