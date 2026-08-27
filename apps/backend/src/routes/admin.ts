@@ -14,6 +14,260 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  /**
+
+   * Όλα τα κατοικίδια της πλατφόρμας.
+
+   *
+
+   * ΧΩΡΙΣ ΙΑΤΡΙΚΑ ΔΕΔΟΜΕΝΑ. Εμβόλια, φάρμακα, αλλεργίες και εξετάσεις
+
+   * είναι προσωπικά δεδομένα του ιδιοκτήτη· η πολιτική απορρήτου δηλώνει
+
+   * ότι μοιράζονται μόνο με τον πάροχο που επιλέγει ο ίδιος.
+
+   */
+
+  app.get('/pets', async (req: any) => {
+
+    const { q, species } = req.query || {}
+
+    const limit = Math.min(200, Math.max(1, parseInt(req.query?.limit) || 50))
+
+    const offset = Math.max(0, parseInt(req.query?.offset) || 0)
+
+  
+
+    const where: any = {}
+
+    if (species) where.species = species
+
+    if (q) {
+
+      where.OR = [
+
+        { name:        { contains: q, mode: 'insensitive' } },
+
+        { breed:       { contains: q, mode: 'insensitive' } },
+
+        { owner_email: { contains: q, mode: 'insensitive' } },
+
+      ]
+
+    }
+
+  
+
+    const [data, total, bySpecies] = await Promise.all([
+
+      prisma.pet.findMany({
+
+        where,
+
+        // Ρητό select: ΑΠΟΚΛΕΙΕΙ τα vaccination_status και medical_conditions,
+
+        // που είναι ιατρικά δεδομένα και δεν αφορούν τη διαχείριση.
+
+        select: {
+
+          id: true, name: true, species: true, breed: true, gender: true,
+
+          age: true, weight: true, color: true, microchip_number: true,
+
+          image_url: true, is_lost: true, owner_email: true, created_at: true,
+
+        },
+
+        orderBy: { created_at: 'desc' },
+
+        take: limit, skip: offset,
+
+      }),
+
+      prisma.pet.count({ where }),
+
+      prisma.pet.groupBy({ by: ['species'], _count: { _all: true } }),
+
+    ])
+
+  
+
+    return {
+
+      data, total, limit, offset,
+
+      summary: bySpecies.map((s: any) => ({ species: s.species, count: s._count._all })),
+
+    }
+
+  })
+
+  
+
+  /**
+
+   * Ανάλυση εσόδων από κρατήσεις και παραγγελίες.
+
+   *
+
+   * Μετρώνται ΜΟΝΟ οι πληρωμένες — μια απλήρωτη κράτηση δεν είναι έσοδο.
+
+   */
+
+  app.get('/revenue', async (req: any) => {
+
+    const { from, to } = req.query || {}
+
+  
+
+    const bWhere: any = { payment_status: 'paid' }
+
+    if (from || to) {
+
+      bWhere.booking_date = {}
+
+      if (from) bWhere.booking_date.gte = from
+
+      if (to) bWhere.booking_date.lte = to
+
+    }
+
+  
+
+    // Σύνολα
+
+    const bookingAgg = await prisma.booking.aggregate({
+
+      _sum: { total_price: true, platform_fee_amount: true, provider_payout_amount: true },
+
+      _count: { _all: true },
+
+      where: bWhere,
+
+    })
+
+  
+
+    // Ανά πάροχο
+
+    const byProvider = await prisma.booking.groupBy({
+
+      by: ['provider_email', 'provider_name'],
+
+      _sum: { total_price: true, platform_fee_amount: true },
+
+      _count: { _all: true },
+
+      where: bWhere,
+
+      orderBy: { _sum: { total_price: 'desc' } },
+
+      take: 20,
+
+    })
+
+  
+
+    // Ανά μήνα — το booking_date είναι κείμενο YYYY-MM-DD
+
+    const monthly = await prisma.$queryRaw`
+
+      SELECT substring(booking_date, 1, 7) AS month,
+
+             count(*)::int AS bookings,
+
+             coalesce(sum(total_price), 0) AS revenue,
+
+             coalesce(sum(platform_fee_amount), 0) AS commission
+
+        FROM bookings
+
+       WHERE payment_status = 'paid'
+
+         AND (${from ?? null}::text IS NULL OR booking_date >= ${from ?? null})
+
+         AND (${to ?? null}::text IS NULL OR booking_date <= ${to ?? null})
+
+       GROUP BY 1 ORDER BY 1 DESC LIMIT 24`
+
+  
+
+    // Παραγγελίες, αν υπάρχει ο πίνακας
+
+    let orders: any = { count: 0, revenue: 0 }
+
+    try {
+
+      // Το Order έχει total_amount και χρησιμοποιεί status='delivered',
+
+      // όπως ήδη κάνει το /stats παραπάνω.
+
+      const oAgg = await prisma.order.aggregate({
+
+        _sum: { total_amount: true }, _count: { _all: true },
+
+        where: { status: 'delivered' },
+
+      })
+
+      orders = { count: oAgg._count._all, revenue: oAgg._sum.total_amount ?? 0 }
+
+    } catch { /* ο πίνακας μπορεί να έχει άλλο όνομα πεδίου */ }
+
+  
+
+    return {
+
+      data: {
+
+        bookings: {
+
+          count: bookingAgg._count._all,
+
+          revenue: bookingAgg._sum.total_price ?? 0,
+
+          commission: bookingAgg._sum.platform_fee_amount ?? 0,
+
+          payout: bookingAgg._sum.provider_payout_amount ?? 0,
+
+        },
+
+        orders,
+
+        byProvider: byProvider.map((p: any) => ({
+
+          email: p.provider_email,
+
+          name: p.provider_name,
+
+          bookings: p._count._all,
+
+          revenue: p._sum.total_price ?? 0,
+
+          commission: p._sum.platform_fee_amount ?? 0,
+
+        })),
+
+        monthly: (monthly as any[]).map(m => ({
+
+          month: m.month,
+
+          bookings: Number(m.bookings),
+
+          revenue: Number(m.revenue),
+
+          commission: Number(m.commission),
+
+        })),
+
+      },
+
+    }
+
+  })
+
+  
+
   app.get('/stats', async () => {
     const [users, pets, orders, providers, products, bookings] = await Promise.all([
       prisma.user.count(),
