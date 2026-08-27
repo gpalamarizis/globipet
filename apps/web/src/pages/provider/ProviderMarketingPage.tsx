@@ -8,6 +8,7 @@ import {
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import CampaignMediaUpload from '@/components/provider/CampaignMediaUpload'
 
 /**
  * Καμπάνιες παρόχου.
@@ -652,14 +653,12 @@ function CampaignSettings({
                 </div>
 
                 {p.media_type !== 'none' && (
-                  <div>
-                    <label className="label">
-                      Διεύθυνση {p.media_type === 'video' ? 'βίντεο' : 'εικόνας'}
-                    </label>
-                    <input className="input text-sm" value={p.media_url || ''}
-                      placeholder="https://..."
-                      onChange={e => updPlacement(i, { media_url: e.target.value })} />
-                  </div>
+                  <CampaignMediaUpload
+                    slot={p.slot || 'banner'}
+                    mediaType={p.media_type === 'video' ? 'video' : 'image'}
+                    value={p.media_url}
+                    onChange={(url) => updPlacement(i, { media_url: url })}
+                  />
                 )}
 
                 <div className="grid sm:grid-cols-2 gap-2">
@@ -683,10 +682,33 @@ function CampaignSettings({
                 </div>
 
                 <div>
-                  <label className="label">Σύνδεσμος</label>
-                  <input className="input text-sm" value={p.link_url || ''}
-                    placeholder="/services"
-                    onChange={e => updPlacement(i, { link_url: e.target.value })} />
+                  <label className="label">Πού οδηγεί το κλικ</label>
+                  {/* Dropdown αντί για ελεύθερο κείμενο: ο πάροχος δεν
+                      χρειάζεται να ξέρει διαδρομές, και δεν κάνει λάθος. */}
+                  <select className="input text-sm" value={p.link_url || ''}
+                    onChange={e => updPlacement(i, { link_url: e.target.value })}>
+                    <option value="">— πουθενά —</option>
+                    <optgroup label="Γενικά">
+                      <option value="/services">Όλες οι υπηρεσίες</option>
+                      <option value="/marketplace">Το κατάστημα</option>
+                    </optgroup>
+                    {services.length > 0 && (
+                      <optgroup label="Οι υπηρεσίες μου">
+                        {services.map((s: any) => (
+                          <option key={s.id} value={`/services/${s.id}`}>
+                            {s.title || s.provider_name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {products.length > 0 && (
+                      <optgroup label="Τα προϊόντα μου">
+                        {products.map((pr: any) => (
+                          <option key={pr.id} value={`/products/${pr.id}`}>{pr.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
                 </div>
 
                 <div className="flex justify-end">

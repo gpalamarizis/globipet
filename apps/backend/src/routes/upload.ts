@@ -13,15 +13,26 @@ const ALLOWED_TYPES: Record<string, { ext: string; magic: number[][] }> = {
   'image/webp': { ext: 'webp', magic: [[0x52, 0x49, 0x46, 0x46]] }, // RIFF, WEBP checked after
   'image/gif':  { ext: 'gif', magic: [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]] },
   'application/pdf': { ext: 'pdf', magic: [[0x25, 0x50, 0x44, 0x46]] },
+  // Βίντεο για banner καμπανιών.
+  // MP4: το 'ftyp' βρίσκεται στα bytes 4-7, όχι στην αρχή — τα πρώτα
+  // τέσσερα είναι το μήκος του box. Ελέγχεται χωριστά παρακάτω.
+  'video/mp4':  { ext: 'mp4',  magic: [[0x66, 0x74, 0x79, 0x70]] },
+  'video/webm': { ext: 'webm', magic: [[0x1A, 0x45, 0xDF, 0xA3]] },
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
-const ALLOWED_FOLDERS = ['uploads', 'pets', 'services', 'products', 'avatars', 'medical', 'reviews', 'community', 'ai-uploads']
+// Τα βίντεο είναι εγγενώς μεγαλύτερα: 10 δευτερόλεπτα από κινητό είναι
+// 8-15MB. Με όριο 5MB κανένα δεν θα περνούσε.
+const MAX_VIDEO_SIZE = 25 * 1024 * 1024 // 25 MB
+const isVideo = (mime: string) => mime.startsWith('video/')
+const ALLOWED_FOLDERS = ['uploads', 'pets', 'services', 'products', 'avatars', 'medical', 'reviews', 'community', 'ai-uploads', 'campaigns']
 
 function verifyMagicBytes(mime: string, body: Buffer): boolean {
   const spec = ALLOWED_TYPES[mime]
   if (!spec) return false
-  return spec.magic.some(sig => sig.every((byte, i) => body[i] === byte))
+  // Το MP4 έχει το 'ftyp' στο offset 4, όχι στο 0.
+  const offset = mime === 'video/mp4' ? 4 : 0
+  return spec.magic.some(sig => sig.every((byte, i) => body[offset + i] === byte))
 }
 
 function sanitizeFolder(folder: string): string {
@@ -34,21 +45,24 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
     try {
       const data = await req.file()
       if (!data) return reply.code(400).send({ message: 'Δεν βρέθηκε αρχείο' })
+      // Ο τύπος διαβάζεται ΕΔΩ, όχι παρακάτω: το όριο μεγέθους διαφέρει
+      // για βίντεο και πρέπει να είναι γνωστό πριν διαβαστεί η ροή.
+      const mime = data.mimetype
 
       // Read into buffer with size guard
       const chunks: Buffer[] = []
       let total = 0
       for await (const chunk of data.file) {
         total += chunk.length
-        if (total > MAX_FILE_SIZE) {
-          return reply.code(413).send({ message: 'Το αρχείο είναι πολύ μεγάλο (max 5MB)' })
+        if (total > (isVideo(mime) ? MAX_VIDEO_SIZE : MAX_FILE_SIZE)) {
+          return reply.code(413).send({ message: `Το αρχείο είναι πολύ μεγάλο (${isVideo(mime) ? "25MB για βίντεο" : "5MB"})` })
         }
         chunks.push(chunk)
       }
       const body = Buffer.concat(chunks)
 
       // 1) MIME whitelist check
-      const mime = data.mimetype
+
       if (!ALLOWED_TYPES[mime]) {
         return reply.code(400).send({ message: 'Μη επιτρεπόμενος τύπος αρχείου' })
       }

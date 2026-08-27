@@ -36,6 +36,33 @@ const PAGES = [
 const SLOTS = ['hero', 'banner', 'sidebar', 'inline', 'popup'] as const
 const TARGET_TYPES = ['product', 'service', 'service_package', 'all_products', 'all_services'] as const
 
+/**
+ * Επιτρεπόμενες πηγές μέσων.
+ *
+ * Το media_url καταλήγει σε <iframe> ή <img> στο frontend. Χωρίς λευκή
+ * λίστα, κάποιος θα μπορούσε να ενσωματώσει αυθαίρετη σελίδα στο site.
+ * Ο έλεγχος γίνεται ΚΑΙ στον server — ο έλεγχος του browser παρακάμπτεται.
+ */
+const MEDIA_HOSTS = [
+  'youtube-nocookie.com', 'youtube.com', 'youtu.be',
+  'player.vimeo.com', 'vimeo.com',
+  'ytimg.com',        // μικρογραφίες YouTube
+  'vumbnail.com',     // μικρογραφίες Vimeo
+]
+
+function isAllowedMedia(url: string | null | undefined): boolean {
+  if (!url) return true                        // κενό επιτρέπεται
+  const u = String(url).trim()
+  if (u.startsWith('data:image/')) return true // base64 από το upload
+  let host: string
+  try { host = new URL(u).hostname.replace(/^www\./, '') }
+  catch { return false }                        // ό,τι δεν είναι έγκυρο URL
+  // Δικά μας αρχεία από R2 ή Cloudflare
+  if (host.endsWith('.r2.cloudflarestorage.com') || host.endsWith('globipet.com')) return true
+  if (host.endsWith('.r2.dev') || host.endsWith('.pages.dev')) return true
+  return MEDIA_HOSTS.some(h => host === h || host.endsWith('.' + h))
+}
+
 function uid() {
   return (globalThis as any).crypto?.randomUUID?.() ??
          Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
@@ -377,7 +404,17 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
         }
         seen.add(key)
         if (p.media_type === 'video' && !p.media_url) {
-          return reply.code(400).send({ message: 'Το βίντεο απαιτεί διεύθυνση αρχείου' })
+          return reply.code(400).send({ message: 'Το βίντεο απαιτεί αρχείο ή σύνδεσμο' })
+        }
+        if (!isAllowedMedia(p.media_url)) {
+          return reply.code(400).send({
+            message: 'Μη επιτρεπόμενη πηγή. Υποστηρίζονται YouTube, Vimeo, ή αρχεία που ανέβασες.',
+            url: p.media_url,
+          })
+        }
+        // Ο σύνδεσμος προορισμού πρέπει να είναι εσωτερική διαδρομή.
+        if (p.link_url && !String(p.link_url).startsWith('/')) {
+          return reply.code(400).send({ message: 'Ο σύνδεσμος πρέπει να είναι εσωτερική διαδρομή' })
         }
       }
 
