@@ -3,6 +3,20 @@ import prisma from '../lib/prisma.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
+  // Τα κατοικίδια του συνδεδεμένου χρήστη.
+  //
+  // Ταυτόσημο με το /my. Υπάρχει επειδή το frontend καλεί /pets σε τέσσερα
+  // σημεία — αρχική, προφίλ, widget. Χωρίς αυτό επέστρεφαν 404 και οι
+  // λίστες έμεναν μονίμως κενές.
+  app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const { email } = req.user as any
+    const data = await prisma.pet.findMany({
+      where: { owner_email: email },
+      orderBy: { created_at: 'desc' },
+    })
+    return { data }
+  })
+
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
     const data = await prisma.pet.findMany({
