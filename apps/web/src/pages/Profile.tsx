@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +28,18 @@ export default function Profile() {
     city: (user as any)?.city || '',
     website: (user as any)?.website || '',
   })
+
+  // Keep form in sync with the user object (initial load, refresh, tab-switch)
+  useEffect(() => {
+    if (!user) return
+    setForm({
+      full_name: user.full_name || '',
+      bio:      (user as any).bio      || '',
+      phone:    (user as any).phone    || '',
+      city:     (user as any).city     || '',
+      website:  (user as any).website  || '',
+    })
+  }, [user])
 
   const hasGoogleAuth = !!(user as any)?.google_id
 
@@ -68,7 +80,7 @@ export default function Profile() {
   const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
 
   const saveProfile = useMutation({
-    mutationFn: () => api.put(`/users/${user?.id}`, form),
+    mutationFn: () => api.patch('/users/me', form),
     onSuccess: (res) => {
       updateUser(res.data)
       setEditing(false)
@@ -86,7 +98,7 @@ export default function Profile() {
       const { data } = await api.post('/upload?folder=profiles', fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      await api.put(`/users/${user?.id}`, { profile_photo: data.url })
+      await api.patch('/users/me', { profile_photo: data.url })
       updateUser({ ...user!, profile_photo: data.url })
       toast.success('Φωτογραφία ενημερώθηκε!')
     } catch {
