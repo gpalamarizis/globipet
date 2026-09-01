@@ -16,7 +16,7 @@ model User {
   role                    String                      @default("user") @db.VarChar(50)
   profile_photo           String?
   bio                     String?
-  phone                   String?                     @db.VarChar(50)
+  phone                   String?                     @db.VarChar(500)
   city                    String?                     @db.VarChar(120)
   country                 String?                     @db.VarChar(120)
   preferred_language      String?                     @default("el") @db.VarChar(10)
