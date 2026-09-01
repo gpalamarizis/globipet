@@ -12,6 +12,20 @@ const routes: FastifyPluginAsync = async (app) => {
     return { data }
   })
 
+  /**
+   * GET /reviews/my — all reviews written by the current user.
+   * Used by the profile page.
+   */
+  app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const { email } = req.user as any
+    const data = await prisma.review.findMany({
+      where: { customer_email: email },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    })
+    return { data, total: data.length }
+  })
+
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
     const { service_id, provider_email, rating, comment, booking_id } = req.body as any

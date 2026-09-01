@@ -78,6 +78,20 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     return { data, total: data.length }
   })
 
+  /**
+   * GET /bookings/my — all bookings for the current user, most-recent first.
+   * Used by the profile page. Simpler than the tabbed GET / above.
+   */
+  app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const { email } = req.user as any
+    const data = await prisma.booking.findMany({
+      where: { customer_email: email },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    })
+    return { data, total: data.length }
+  })
+
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
     const body = req.body as any
