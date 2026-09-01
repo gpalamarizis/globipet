@@ -171,12 +171,12 @@ const s = StyleSheet.create({
   // Quick actions - 4 per row
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionItem: { width: '22%', alignItems: 'center' },
-  actionIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
+  actionIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   actionEmoji: { fontSize: 22 },
   actionLabel: { fontSize: 10, color: '#374151', fontWeight: '600', textAlign: 'center' },
   // Service cards
   serviceCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3, gap: 10 },
-  serviceAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  serviceAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
   serviceAvatarImg: { width: 44, height: 44 },
   serviceAvatarEmoji: { fontSize: 20 },
   serviceName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },

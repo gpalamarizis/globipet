@@ -158,7 +158,7 @@ const s = StyleSheet.create({
   emptyCard: { margin: 16, backgroundColor: '#F3F4F6', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed' },
   emptyCardText: { color: '#9CA3AF', fontSize: 13 },
   postCard: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  postAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  postAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   postAvatarText: { fontSize: 16, fontWeight: '700', color: '#E65100' },
   postInfo: { flex: 1 },
   postAuthor: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },

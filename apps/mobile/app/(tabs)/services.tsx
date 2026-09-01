@@ -125,7 +125,7 @@ const s = StyleSheet.create({
   chipText: { fontSize: 12, color: '#374151', fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
-  avatar: { width: 52, height: 52, borderRadius: 14, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', flexShrink: 0 },
+  avatar: { width: 52, height: 52, borderRadius: 14, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', flexShrink: 0 },
   avatarImg: { width: 52, height: 52, borderRadius: 14 },
   avatarEmoji: { fontSize: 22 },
   info: { flex: 1, minWidth: 0 },

@@ -81,7 +81,7 @@ const s = StyleSheet.create({
   cardTitle: { fontSize: 11, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 2 },
   cardSub: { fontSize: 10, color: '#9CA3AF', textAlign: 'center' },
   eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, gap: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 },
-  eventLeft: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  eventLeft: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   eventEmoji: { fontSize: 20 },
   eventTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
   eventDate: { fontSize: 12, color: O, fontWeight: '600', marginBottom: 2 },

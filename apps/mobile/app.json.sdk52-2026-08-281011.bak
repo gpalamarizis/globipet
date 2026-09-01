@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#E65100"
     },
     "ios": {
       "supportsTablet": true,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#E65100"
       },
       "package": "com.globipet.app",
       "versionCode": 1,
@@ -42,10 +42,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@react-native-google-signin/google-signin",
-      "expo-asset",
-      "expo-font",
-      "expo-localization"
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
