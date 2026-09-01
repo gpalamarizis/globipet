@@ -22,6 +22,7 @@ import { audit } from '../lib/audit.js'
  *   GET  /user-consents/history    — full history for authenticated caller
  */
 const userConsentsRoutes: FastifyPluginAsync = async (app) => {
+
   // Optional auth: consents can be recorded before login (anonymous cookie id)
   app.decorateRequest('userId', null)
   app.addHook('preHandler', async (req: any) => {
@@ -55,12 +56,6 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'user_id ή cookie_id απαιτείται' })
     }
 
-    // Η προηγούμενη κατάσταση, ώστε να ξέρουμε ΤΙ άλλαξε — όχι μόνο τι δηλώθηκε.
-    const previous = await prisma.userConsent.findFirst({
-      where: req.userId ? { user_id: req.userId } : { cookie_id },
-      orderBy: { created_at: 'desc' },
-    })
-
     const record = await prisma.userConsent.create({
       data: {
         user_id: req.userId,
@@ -76,49 +71,13 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
         user_agent: (req.headers['user-agent'] as string) || null,
       },
     })
-
-    // ── Καταγραφή για λογοδοσία — άρθρο 7 παρ. 1 ──────────────────────
-    // Η ανάκληση συγκατάθεσης καταγράφεται ξεχωριστά από την παροχή, γιατί
-    // σε έλεγχο το κρίσιμο ερώτημα είναι «πότε ανακλήθηκε και σταμάτησε
-    // η επεξεργασία», όχι μόνο «πότε δόθηκε».
-    const cats = ['analytics', 'marketing', 'functional'] as const
-    const given: string[] = []
-    const withdrawn: string[] = []
-    for (const c of cats) {
-      const now = !!(record as any)[c]
-      const before = previous ? !!(previous as any)[c] : false
-      if (now && !before) given.push(c)
-      if (!now && before) withdrawn.push(c)
-    }
-
-    if (given.length) {
-      audit(req, {
-        action: 'consent_given', resource: 'user_consent', resourceId: record.id,
-        metadata: { categories: given, source: record.source, anonymous: !req.userId },
-      })
-    }
-    if (withdrawn.length) {
-      audit(req, {
-        action: 'consent_withdrawn', resource: 'user_consent', resourceId: record.id,
-        metadata: { categories: withdrawn, source: record.source, anonymous: !req.userId },
-      })
-    }
-    // Πρώτη δήλωση χωρίς προηγούμενη κατάσταση και χωρίς καμία αποδοχή:
-    // καταγράφεται ως συμβάν, αλλιώς η «απόρριψη όλων» δεν αφήνει ίχνος.
-    if (!previous && !given.length && !withdrawn.length) {
-      audit(req, {
-        action: 'consent_given', resource: 'user_consent', resourceId: record.id,
-        metadata: { categories: [], source: record.source, rejectedAll: true, anonymous: !req.userId },
-      })
-    }
-
+    await audit(req, { action: 'consent_change', resource: req.userId ? 'user' : 'anonymous_cookie', resource_id: req.userId || cookie_id, metadata: { analytics: !!analytics, marketing: !!marketing, functional: !!functional, source: source || 'cookie_banner' } })
     return reply.code(201).send({ data: record })
   })
 
   // ─── GET /user-consents/history ──────────────────────
   app.get('/history', async (req: any, reply) => {
     if (!req.userId) return reply.code(401).send({ message: 'Απαιτείται σύνδεση' })
-
     const records = await prisma.userConsent.findMany({
       where: { user_id: req.userId },
       orderBy: { created_at: 'desc' },

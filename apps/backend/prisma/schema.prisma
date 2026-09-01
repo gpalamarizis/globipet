@@ -8,38 +8,41 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  full_name     String
-  email         String   @unique
-  password_hash String?
-  google_id     String?  @unique
-  role          String   @default("user")
-  profile_photo String?
-  bio           String?
-  phone         String?
-  city          String?
-  country       String?
-  preferred_language String? @default("el")
-  website       String?
-  loyalty_tier  String   @default("bronze")
-  total_points  Int      @default(0)
-  birth_date             DateTime? @db.Date
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  is_verified      Boolean   @default(false)
-  address          String?
-  latitude         Float?
-  longitude        Float?
-  ai_subscription_status  String    @default("none") // none | trial | active | expired
-  ai_trial_started_at     DateTime?
-  ai_subscription_plan_id String?
-  reset_token           String?
-  reset_token_expires   DateTime?
+  id                      String                      @id @default(dbgenerated("(gen_random_uuid())::character varying")) @db.VarChar(255)
+  full_name               String                      @db.VarChar(255)
+  email                   String                      @unique @db.VarChar(255)
+  password_hash           String?                     @db.VarChar(255)
+  google_id               String?                     @unique @db.VarChar(255)
+  role                    String                      @default("user") @db.VarChar(50)
+  profile_photo           String?
+  bio                     String?
+  phone                   String?                     @db.VarChar(50)
+  city                    String?                     @db.VarChar(120)
+  country                 String?                     @db.VarChar(120)
+  preferred_language      String?                     @default("el") @db.VarChar(10)
+  website                 String?                     @db.VarChar(255)
+  loyalty_tier            String                      @default("bronze") @db.VarChar(30)
+  total_points            Int                         @default(0)
+  created_at              DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                    @default(now()) @updatedAt @db.Timestamptz(6)
+  is_verified             Boolean                     @default(false)
+  address                 String?
+  latitude                Float?
+  longitude               Float?
+  ai_subscription_status  String                      @default("none") @db.VarChar(30)
+  ai_trial_started_at     DateTime?                   @db.Timestamptz(6)
+  ai_subscription_plan_id String?                     @db.VarChar(255)
+  reset_token             String?                     @db.VarChar(255)
+  reset_token_expires     DateTime?                   @db.Timestamptz(6)
+  birth_date              DateTime?                   @db.Date
+  deletion_requests       AccountDeletionRequest[]
   product_subscriptions   ProductSubscription[]
+  staff_profiles          ProviderStaff[]
+  consents                UserConsent[]
   insurance_subscriptions UserInsuranceSubscription[]
-  consents               UserConsent[]
-  deletion_requests      AccountDeletionRequest[]
-  staff_profiles         ProviderStaff[]
+
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
@@ -61,81 +64,85 @@ model Pet {
   last_seen_location String?
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
+
   @@map("pets")
 }
 
 model Service {
-  id                    String   @id @default(uuid())
-  provider_email        String
-  provider_name         String
-  service_type          String
-  title                 String?
-  category              String?
-  cover_image           String?
-  country               String?  @default("GR")
-  description           String
-  price                 Float    @default(0)
-  location              String?
-  city                  String
-  latitude              Float?
-  longitude             Float?
-  contact_phone         String?
-  contact_email         String?
-  available_days        Int[]
-  rating                Float    @default(0)
-  reviews_count         Int      @default(0)
-  image_url             String?
-  is_active             Boolean  @default(true)
-  is_verified           Boolean  @default(false)
-  home_visits           Boolean  @default(false)
-  emergency_available   Boolean  @default(false)
-  years_experience      Int?
-  specializations       String[]
-  pet_types             String[]
-  languages             String[]
-  is_available_now      Boolean  @default(false)
-  available_since       DateTime?
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  packages              ServicePackage[]
-  bookings              Booking[]
-  staff                 ProviderStaff[]
+  id                  String           @id @default(uuid())
+  provider_email      String
+  description         String
+  city                String
+  location            String?
+  latitude            Float?
+  longitude           Float?
+  home_visits         Boolean          @default(false)
+  emergency_available Boolean          @default(false)
+  years_experience    Int?
+  specializations     String[]
+  pet_types           String[]
+  languages           String[]
+  is_verified         Boolean          @default(false)
+  is_active           Boolean          @default(true)
+  rating              Float            @default(0)
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+  available_days      Int[]
+  available_since     DateTime?
+  contact_email       String?
+  contact_phone       String?
+  image_url           String?
+  is_available_now    Boolean          @default(false)
+  price               Float            @default(0)
+  provider_name       String
+  reviews_count       Int              @default(0)
+  service_type        String
+  category            String?
+  country             String?          @default("GR")
+  cover_image         String?
+  title               String?
+  bookings            Booking[]
+  staff               ProviderStaff[]
+  packages            ServicePackage[]
+
   @@map("services")
 }
 
 model Booking {
-  id             String   @id @default(uuid())
-  service_id     String
-  service        Service  @relation(fields: [service_id], references: [id])
-  provider_email String
-  provider_name  String
-  customer_email String
-  customer_name  String
-  pet_id         String?
-  pet_name       String?
-  booking_date   String
-  booking_time   String
-  duration       Int?
-  total_price    Float
-  status         String   @default("pending")
-  payment_status String   @default("unpaid")
-  commission_rate         Float?
-  platform_fee_amount     Float?
-  provider_payout_amount  Float?
-  notes          String?
-  rating         Int?
-  review         String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-  staff_id       String?
-  staff          ProviderStaff? @relation(fields: [staff_id], references: [id], onDelete: SetNull)
-  staff_name     String?
-  packages       BookingPackage[]
+  id                     String           @id @default(uuid())
+  service_id             String
+  pet_id                 String?
+  status                 String           @default("pending")
+  total_price            Float
+  notes                  String?
+  payment_status         String           @default("unpaid")
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @updatedAt
+  booking_date           String
+  booking_time           String
+  commission_rate        Float?
+  customer_email         String
+  customer_name          String
+  duration               Int?
+  pet_name               String?
+  platform_fee_amount    Float?
+  provider_email         String
+  provider_name          String
+  provider_payout_amount Float?
+  rating                 Int?
+  review                 String?
+  staff_id               String?          @db.VarChar(255)
+  staff_name             String?          @db.VarChar(255)
+  packages               BookingPackage[]
+  service                Service          @relation(fields: [service_id], references: [id])
+  staff                  ProviderStaff?   @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
+
+  @@index([staff_id], map: "bookings_staff_idx")
   @@map("bookings")
 }
 
 model Product {
-  id                  String   @id @default(uuid())
+  id                  String                @id @default(uuid())
   name                String
   description         String
   price               Float
@@ -143,41 +150,43 @@ model Product {
   brand               String?
   image_url           String?
   images              String[]
-  stock               Int      @default(0)
-  rating              Float    @default(0)
-  reviews_count       Int      @default(0)
+  stock               Int                   @default(0)
+  rating              Float                 @default(0)
+  reviews_count       Int                   @default(0)
   target_species      String[]
-  is_featured         Boolean  @default(false)
+  is_featured         Boolean               @default(false)
   discount_percentage Int?
   sale_price          Float?
   provider_email      String?
-  is_subscribable     Boolean  @default(false)
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  created_at          DateTime              @default(now())
+  updated_at          DateTime              @updatedAt
+  is_subscribable     Boolean               @default(false)
   subscriptions       ProductSubscription[]
+
   @@map("products")
 }
 
 model Order {
-  id               String   @id @default(uuid())
-  user_email       String
-  user_name        String
-  items            Json[]
-  total_amount     Float
-  status           String   @default("pending")
-  payment_status   String   @default("unpaid")
-  payment_ref      String?
-  shipping_address Json
-  payment_method   String?
-  payment_intent   String?
-  coupon_code      String?
-  discount_amount  Float?
+  id                     String   @id @default(uuid())
+  user_email             String
+  user_name              String
+  items                  Json[]
+  total_amount           Float
+  status                 String   @default("pending")
+  shipping_address       Json
+  payment_method         String?
+  payment_intent         String?
+  coupon_code            String?
+  discount_amount        Float?
+  notes                  String?
+  tracking_number        String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  payment_ref            String?
+  payment_status         String   @default("unpaid")
   platform_fee_amount    Float?
   provider_payout_amount Float?
-  notes            String?
-  tracking_number  String?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+
   @@map("orders")
 }
 
@@ -190,6 +199,7 @@ model CartItem {
   product_image String?
   quantity      Int      @default(1)
   created_at    DateTime @default(now())
+
   @@unique([user_email, product_id])
   @@map("cart_items")
 }
@@ -202,6 +212,7 @@ model Wishlist {
   product_price Float
   product_image String?
   created_at    DateTime @default(now())
+
   @@unique([user_email, product_id])
   @@map("wishlist")
 }
@@ -220,6 +231,7 @@ model Post {
   pet_name       String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+
   @@map("posts")
 }
 
@@ -248,35 +260,37 @@ model Event {
   is_international Boolean  @default(false)
   is_featured      Boolean  @default(false)
   created_at       DateTime @default(now())
+
   @@map("events")
 }
 
 model Breed {
-  id               String   @id @default(uuid())
-  name             String
-  name_el          String?
-  species          String
-  fci_number       String?
-  description      String
-  origin           String?
-  size             String
-  weight_min       Float?
-  weight_max       Float?
-  lifespan_min     Int?
-  lifespan_max     Int?
-  temperament      String[]
-  health_issues    String[]
-  pros             String[]
-  cons             String[]
-  grooming_needs   Int
-  exercise_needs   Int
-  trainability     Int
-  good_with_children Boolean @default(true)
-  good_with_pets   Boolean  @default(true)
-  apartment_friendly Boolean @default(false)
-  image_url        String?
-  popularity       Int      @default(0)
-  created_at       DateTime @default(now())
+  id                 String   @id @default(uuid())
+  name               String
+  name_el            String?
+  species            String
+  fci_number         String?
+  description        String
+  origin             String?
+  size               String
+  weight_min         Float?
+  weight_max         Float?
+  lifespan_min       Int?
+  lifespan_max       Int?
+  temperament        String[]
+  health_issues      String[]
+  pros               String[]
+  cons               String[]
+  grooming_needs     Int
+  exercise_needs     Int
+  trainability       Int
+  good_with_children Boolean  @default(true)
+  good_with_pets     Boolean  @default(true)
+  apartment_friendly Boolean  @default(false)
+  image_url          String?
+  popularity         Int      @default(0)
+  created_at         DateTime @default(now())
+
   @@map("breeds")
 }
 
@@ -289,11 +303,12 @@ model Notification {
   is_read    Boolean  @default(false)
   link       String?
   created_at DateTime @default(now())
+
   @@map("notifications")
 }
 
 model Review {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   service_id     String
   provider_email String
   customer_email String
@@ -303,7 +318,8 @@ model Review {
   booking_id     String?
   response       String?
   response_date  DateTime?
-  created_at     DateTime @default(now())
+  created_at     DateTime  @default(now())
+
   @@map("reviews")
 }
 
@@ -321,6 +337,7 @@ model HealthRecord {
   next_appointment String?
   attachments      String[]
   created_at       DateTime @default(now())
+
   @@map("health_records")
 }
 
@@ -334,8 +351,9 @@ model Vaccination {
   next_due_date     String?
   vet_name          String?
   is_overdue        Boolean  @default(false)
-  notes             String?
   created_at        DateTime @default(now())
+  notes             String?
+
   @@map("vaccinations")
 }
 
@@ -346,12 +364,13 @@ model LoyaltyPoints {
   tier            String   @default("bronze")
   lifetime_points Int      @default(0)
   updated_at      DateTime @updatedAt
+
   @@map("loyalty_points")
 }
 
 model Achievement {
-  id                String  @id @default(uuid())
-  code              String  @unique
+  id                String @id @default(uuid())
+  code              String @unique
   name              String
   name_el           String
   description       String
@@ -361,6 +380,7 @@ model Achievement {
   rarity            String
   requirement_type  String
   requirement_value Int
+
   @@map("achievements")
 }
 
@@ -377,6 +397,7 @@ model ForumTopic {
   is_pinned     Boolean  @default(false)
   is_solved     Boolean  @default(false)
   created_at    DateTime @default(now())
+
   @@map("forum_topics")
 }
 
@@ -389,63 +410,66 @@ model PetLocation {
   status      String   @default("safe")
   is_resolved Boolean  @default(false)
   created_at  DateTime @default(now())
+
   @@map("pet_locations")
 }
 
 model TelehealthConsultation {
-  id             String   @id @default(uuid())
-  provider_email String
-  provider_name  String
-  client_email   String
-  client_name    String
-  pet_id         String?
-  pet_name       String?
-  service_id     String?
-  scheduled_date String
-  scheduled_time String
-  duration       Int
-  status         String   @default("pending_payment")
-  payment_status String   @default("unpaid")
-  payment_ref    String?
-  meeting_url    String?
-  notes          String?
-  price          Float
-  commission_rate         Float?
-  platform_fee_amount     Float?
-  provider_payout_amount  Float?
-  created_at     DateTime @default(now())
+  id                     String   @id @default(uuid())
+  provider_email         String
+  provider_name          String
+  client_email           String
+  client_name            String
+  pet_id                 String?
+  pet_name               String?
+  scheduled_date         String
+  scheduled_time         String
+  duration               Int
+  status                 String   @default("pending_payment")
+  meeting_url            String?
+  notes                  String?
+  price                  Float
+  created_at             DateTime @default(now())
+  commission_rate        Float?
+  payment_ref            String?
+  payment_status         String   @default("unpaid")
+  platform_fee_amount    Float?
+  provider_payout_amount Float?
+  service_id             String?
+
   @@map("telehealth_consultations")
 }
+
 model BookingPackage {
-  id              String         @id @default(cuid())
-  booking_id      String
-  booking         Booking        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  package_id      String
-  package         ServicePackage @relation(fields: [package_id], references: [id])
-  quantity        Int            @default(1)
-  price_snapshot  Float
-  name_snapshot   String
+  id             String         @id @default(cuid())
+  booking_id     String
+  package_id     String
+  quantity       Int            @default(1)
+  price_snapshot Float
+  name_snapshot  String
+  booking        Booking        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  package        ServicePackage @relation(fields: [package_id], references: [id])
 
   @@index([booking_id])
   @@map("booking_packages")
 }
 
 model CatalogTemplate {
-  id              String   @id @default(cuid())
-  category        String   // grooming | veterinary | clinic | walking | sitting | daycare | boarding | training | transport | photography | insurance | other
-  group           String   // bathing | haircut | addon | consultation | vaccination | surgery | diagnostics | etc.
-  name            String
-  description     String?
-  size            String?  // small | medium | large | xlarge
-  pet_type        String?  // dog | cat | rabbit | bird | other
-  breed_group     String?
-  modality        String?  // in_clinic | home_visit | telehealth | emergency
-  suggested_duration_minutes Int @default(60)
-  is_addon        Boolean  @default(false)
-  is_active       Boolean  @default(true)
-  display_order   Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                         String   @id @default(cuid())
+  category                   String
+  group                      String
+  name                       String
+  description                String?
+  size                       String?
+  pet_type                   String?
+  breed_group                String?
+  modality                   String?
+  suggested_duration_minutes Int      @default(60)
+  is_addon                   Boolean  @default(false)
+  is_active                  Boolean  @default(true)
+  display_order              Int      @default(0)
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @updatedAt
 
   @@index([category])
   @@index([category, group])
@@ -453,64 +477,56 @@ model CatalogTemplate {
 }
 
 model InsuranceProvider {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  name_el     String?
-  logo_url    String?
-  website     String?
-  phone       String?
-  email       String?
-  description String?
-  is_active   Boolean  @default(true)
-  display_order Int    @default(0)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  plans       InsurancePlan[]
+  id            String          @id @default(cuid())
+  name          String          @unique
+  name_el       String?
+  logo_url      String?
+  website       String?
+  phone         String?
+  email         String?
+  description   String?
+  is_active     Boolean         @default(true)
+  display_order Int             @default(0)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+  plans         InsurancePlan[]
 
   @@map("insurance_providers")
 }
 
 model InsurancePlan {
-  id                    String   @id @default(cuid())
+  id                    String                      @id @default(cuid())
   provider_id           String
-  provider              InsuranceProvider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
-
   name                  String
   name_el               String?
   description           String?
-  tier                  String   // basic | standard | premium | comprehensive
+  tier                  String
   price_monthly         Float
   price_annual          Float?
-  currency              String   @default("EUR")
-
-  covers_accidents      Boolean  @default(true)
-  covers_illness        Boolean  @default(true)
-  covers_surgery        Boolean  @default(false)
-  covers_dental         Boolean  @default(false)
-  covers_preventive     Boolean  @default(false)
-  covers_liability      Boolean  @default(false)
-  covers_death          Boolean  @default(false)
-
+  currency              String                      @default("EUR")
+  covers_accidents      Boolean                     @default(true)
+  covers_illness        Boolean                     @default(true)
+  covers_surgery        Boolean                     @default(false)
+  covers_dental         Boolean                     @default(false)
+  covers_preventive     Boolean                     @default(false)
+  covers_liability      Boolean                     @default(false)
+  covers_death          Boolean                     @default(false)
   annual_limit          Float?
   per_incident_limit    Float?
   deductible            Float?
   reimbursement_percent Int?
-  waiting_period_days   Int      @default(14)
-
-  pet_types             String[] @default([])
+  waiting_period_days   Int                         @default(14)
+  pet_types             String[]                    @default([])
   max_age_years         Int?
   min_age_months        Int?
-
-  features              String[] @default([])
-  exclusions            String[] @default([])
-
-  is_active             Boolean  @default(true)
-  is_featured           Boolean  @default(false)
-  display_order         Int      @default(0)
-
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  features              String[]                    @default([])
+  exclusions            String[]                    @default([])
+  is_active             Boolean                     @default(true)
+  is_featured           Boolean                     @default(false)
+  display_order         Int                         @default(0)
+  created_at            DateTime                    @default(now())
+  updated_at            DateTime                    @updatedAt
+  provider              InsuranceProvider           @relation(fields: [provider_id], references: [id], onDelete: Cascade)
   user_subscriptions    UserInsuranceSubscription[]
 
   @@index([provider_id])
@@ -561,28 +577,27 @@ model PetTravelDocument {
 }
 
 model PlaydateEvent {
-  id              String   @id @default(cuid())
-  creator_email   String
-  creator_name    String
-  creator_photo   String?
-  title           String
-  description     String?
-  event_type      String   // walk | play | meetup | training | other
-  date            String
-  time            String
-  duration_minutes Int     @default(60)
-  location        String
-  city            String
-  latitude        Float?
-  longitude       Float?
-  max_participants Int     @default(10)
-  pet_types       String[] @default([])
-  is_public       Boolean  @default(true)
-  status          String   @default("active") // active | cancelled | completed
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  invitations     PlaydateInvitation[]
+  id               String               @id @default(cuid())
+  creator_email    String
+  creator_name     String
+  creator_photo    String?
+  title            String
+  description      String?
+  event_type       String
+  date             String
+  time             String
+  duration_minutes Int                  @default(60)
+  location         String
+  city             String
+  latitude         Float?
+  longitude        Float?
+  max_participants Int                  @default(10)
+  pet_types        String[]             @default([])
+  is_public        Boolean              @default(true)
+  status           String               @default("active")
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+  invitations      PlaydateInvitation[]
 
   @@index([city])
   @@index([creator_email])
@@ -590,17 +605,17 @@ model PlaydateEvent {
 }
 
 model PlaydateInvitation {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   event_id      String
-  event         PlaydateEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
   invitee_email String
   invitee_name  String
   invitee_photo String?
   pet_name      String?
-  status        String   @default("pending") // pending | accepted | declined
+  status        String        @default("pending")
   message       String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  event         PlaydateEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
 
   @@unique([event_id, invitee_email])
   @@index([invitee_email])
@@ -608,38 +623,37 @@ model PlaydateInvitation {
 }
 
 model Community {
-  id              String   @id @default(cuid())
-  creator_email   String
-  creator_name    String
-  name            String
-  description     String?
-  address         String?
-  city            String
-  latitude        Float
-  longitude       Float
-  radius_km       Float    @default(1.0)
-  image_url       String?
-  is_public       Boolean  @default(true)
-  member_count    Int      @default(1)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  members         CommunityMember[]
-  messages        CommunityMessage[]
+  id            String             @id @default(cuid())
+  creator_email String
+  creator_name  String
+  name          String
+  description   String?
+  address       String?
+  city          String
+  latitude      Float
+  longitude     Float
+  radius_km     Float              @default(1.0)
+  image_url     String?
+  is_public     Boolean            @default(true)
+  member_count  Int                @default(1)
+  created_at    DateTime           @default(now())
+  updated_at    DateTime           @updatedAt
+  members       CommunityMember[]
+  messages      CommunityMessage[]
 
   @@index([city])
   @@map("communities")
 }
 
 model CommunityMember {
-  id            String    @id @default(cuid())
-  community_id  String
-  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
-  user_email    String
-  user_name     String
-  user_photo    String?
-  role          String    @default("member") // admin | member
-  joined_at     DateTime  @default(now())
+  id           String    @id @default(cuid())
+  community_id String
+  user_email   String
+  user_name    String
+  user_photo   String?
+  role         String    @default("member")
+  joined_at    DateTime  @default(now())
+  community    Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
 
   @@unique([community_id, user_email])
   @@index([user_email])
@@ -647,41 +661,40 @@ model CommunityMember {
 }
 
 model CommunityMessage {
-  id            String    @id @default(cuid())
-  community_id  String
-  community     Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
-  author_email  String
-  author_name   String
-  author_photo  String?
-  content       String?
-  image_url     String?
-  created_at    DateTime  @default(now())
+  id           String    @id @default(cuid())
+  community_id String
+  author_email String
+  author_name  String
+  author_photo String?
+  content      String?
+  image_url    String?
+  created_at   DateTime  @default(now())
+  community    Community @relation(fields: [community_id], references: [id], onDelete: Cascade)
 
   @@index([community_id])
   @@map("community_messages")
 }
 
 model ServicePackage {
-  id              String   @id @default(cuid())
-  service_id      String
-  service         Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
-  group           String?
-  size            String?
-  pet_type        String?
-  breed_group     String?
-  modality        String?
-  is_addon        Boolean  @default(false)
-  price           Float
-  duration_minutes Int     @default(60)
-  is_active       Boolean  @default(true)
-  display_order   Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  bookings        BookingPackage[]
-  staff_prices    StaffServicePrice[]
+  id               String              @id @default(cuid())
+  service_id       String
+  group            String?
+  name             String
+  description      String?
+  price            Float
+  duration_minutes Int                 @default(60)
+  is_active        Boolean             @default(true)
+  display_order    Int                 @default(0)
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
+  breed_group      String?
+  is_addon         Boolean             @default(false)
+  modality         String?
+  pet_type         String?
+  size             String?
+  bookings         BookingPackage[]
+  service          Service             @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  staff_prices     StaffServicePrice[]
 
   @@index([service_id])
   @@map("service_packages")
@@ -696,23 +709,23 @@ model AppSetting {
 }
 
 model ProductSubscription {
-  id                      String    @id @default(cuid())
-  user_id                 String
-  user                    User      @relation(fields: [user_id], references: [id])
-  product_id              String
-  product                 Product   @relation(fields: [product_id], references: [id])
-  discount_percent        Float
-  monthly_price           Float
-  commission_rate         Float?
-  status                  String    @default("active") // active | paused | cancelled | payment_failed
-  stripe_customer_id      String?
-  stripe_subscription_id  String?   @unique
-  start_date              DateTime  @default(now())
-  end_date                DateTime?
-  next_delivery_date      DateTime?
-  deliveries_completed    Int       @default(0)
-  created_at              DateTime  @default(now())
-  updated_at              DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  user_id                String
+  product_id             String
+  discount_percent       Float
+  monthly_price          Float
+  commission_rate        Float?
+  status                 String    @default("active")
+  stripe_customer_id     String?
+  stripe_subscription_id String?   @unique
+  start_date             DateTime  @default(now())
+  end_date               DateTime?
+  next_delivery_date     DateTime?
+  deliveries_completed   Int       @default(0)
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  product                Product   @relation(fields: [product_id], references: [id])
+  user                   User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id])
   @@index([product_id])
@@ -720,17 +733,17 @@ model ProductSubscription {
 }
 
 model UserInsuranceSubscription {
-  id          String    @id @default(cuid())
-  user_id     String
-  user        User      @relation(fields: [user_id], references: [id])
-  plan_id     String
-  plan        InsurancePlan @relation(fields: [plan_id], references: [id])
-  pet_id      String?
-  status      String    @default("active") // active | cancelled | expired
-  started_at  DateTime  @default(now())
-  ends_at     DateTime?
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  id         String        @id @default(cuid())
+  user_id    String
+  plan_id    String
+  pet_id     String?
+  status     String        @default("active")
+  started_at DateTime      @default(now())
+  ends_at    DateTime?
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  plan       InsurancePlan @relation(fields: [plan_id], references: [id])
+  user       User          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id])
   @@index([plan_id])
@@ -738,72 +751,72 @@ model UserInsuranceSubscription {
 }
 
 model AiSubscriptionPlan {
-  id                          String   @id @default(cuid())
-  name                        String
-  name_el                     String?
-  description                 String?
-  tier                        String   // free | basic | pro | premium
-  price_monthly                Float
-  price_annual                Float?
-  currency                    String   @default("EUR")
-  includes_ai_health           Boolean  @default(false)
-  includes_emotion_ai          Boolean  @default(false)
-  includes_wellness_tracker    Boolean  @default(false)
-  includes_telehealth          Boolean  @default(false)
+  id                            String   @id @default(cuid())
+  name                          String
+  name_el                       String?
+  description                   String?
+  tier                          String
+  price_monthly                 Float
+  price_annual                  Float?
+  currency                      String   @default("EUR")
+  includes_ai_health            Boolean  @default(false)
+  includes_emotion_ai           Boolean  @default(false)
+  includes_wellness_tracker     Boolean  @default(false)
+  includes_telehealth           Boolean  @default(false)
   telehealth_sessions_per_month Int?
-  max_pets                     Int?
-  features                    String[] @default([])
-  is_active                   Boolean  @default(true)
-  is_featured                 Boolean  @default(false)
-  display_order               Int      @default(0)
-  created_at                  DateTime @default(now())
-  updated_at                  DateTime @updatedAt
+  max_pets                      Int?
+  features                      String[] @default([])
+  is_active                     Boolean  @default(true)
+  is_featured                   Boolean  @default(false)
+  display_order                 Int      @default(0)
+  created_at                    DateTime @default(now())
+  updated_at                    DateTime @updatedAt
 
   @@index([tier])
   @@map("ai_subscription_plans")
 }
 
-// ─── Full Veterinary Medical Record Models ────────────────────────
-
 model PetMedication {
-  id            String   @id @default(uuid())
-  pet_id        String
-  owner_email   String
-  name          String
+  id                String   @id @default(uuid())
+  pet_id            String
+  owner_email       String
+  name              String
   active_ingredient String?
-  dosage        String
-  frequency     String
-  route         String?     // oral, injection, topical, eye_drops, ear_drops
-  start_date    String
-  end_date      String?
-  is_active     Boolean  @default(true)
-  prescribed_by String?
-  clinic_name   String?
-  reason        String?
-  side_effects  String?
-  notes         String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  dosage            String
+  frequency         String
+  route             String?
+  start_date        String
+  end_date          String?
+  is_active         Boolean  @default(true)
+  prescribed_by     String?
+  clinic_name       String?
+  reason            String?
+  side_effects      String?
+  notes             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
   @@index([pet_id])
   @@map("pet_medications")
 }
 
 model PetLabResult {
-  id           String   @id @default(uuid())
-  pet_id       String
-  owner_email  String
-  result_type  String   // blood_count, biochemistry, urine, fecal, biopsy, culture, hormone, serology, other
-  title        String
-  date         String
-  lab_name     String?
-  vet_name     String?
-  clinic_name  String?
-  findings     String?
-  is_abnormal  Boolean  @default(false)
-  file_urls    String[]
-  notes        String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id          String   @id @default(uuid())
+  pet_id      String
+  owner_email String
+  result_type String
+  title       String
+  date        String
+  lab_name    String?
+  vet_name    String?
+  clinic_name String?
+  findings    String?
+  is_abnormal Boolean  @default(false)
+  file_urls   String[]
+  notes       String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
   @@index([pet_id])
   @@map("pet_lab_results")
 }
@@ -812,7 +825,7 @@ model PetImaging {
   id           String   @id @default(uuid())
   pet_id       String
   owner_email  String
-  imaging_type String   // xray, ultrasound, ct, mri, endoscopy, echocardiogram, other
+  imaging_type String
   body_region  String?
   date         String
   vet_name     String?
@@ -823,30 +836,32 @@ model PetImaging {
   notes        String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
+
   @@index([pet_id])
   @@map("pet_imaging")
 }
 
 model PetSurgery {
-  id            String   @id @default(uuid())
-  pet_id        String
-  owner_email   String
-  procedure     String
-  category      String?  // orthopedic, soft_tissue, dental, ophthalmic, neurological, reproductive, other
-  date          String
-  surgeon_name  String?
-  clinic_name   String?
-  anesthesia    String?  // general, local, sedation
-  duration_min  Int?
-  complications String?
-  outcome       String?
-  follow_up     String?
+  id               String   @id @default(uuid())
+  pet_id           String
+  owner_email      String
+  procedure        String
+  category         String?
+  date             String
+  surgeon_name     String?
+  clinic_name      String?
+  anesthesia       String?
+  duration_min     Int?
+  complications    String?
+  outcome          String?
+  follow_up        String?
   stitches_removed String?
-  cost          Float?
-  file_urls     String[]
-  notes         String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  cost             Float?
+  file_urls        String[]
+  notes            String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
   @@index([pet_id])
   @@map("pet_surgeries")
 }
@@ -856,14 +871,15 @@ model PetAllergy {
   pet_id         String
   owner_email    String
   allergen       String
-  allergen_type  String   // food, medication, environmental, insect, contact, other
+  allergen_type  String
   reaction       String?
-  severity       String   @default("moderate")  // mild, moderate, severe, anaphylactic
+  severity       String   @default("moderate")
   diagnosed_date String?
   diagnosed_by   String?
   treatment      String?
   notes          String?
   created_at     DateTime @default(now())
+
   @@index([pet_id])
   @@map("pet_allergies")
 }
@@ -877,32 +893,34 @@ model PetChronicCondition {
   diagnosed_date String?
   diagnosed_by   String?
   clinic_name    String?
-  status         String   @default("active")  // active, managed, resolved
+  status         String   @default("active")
   treatment_plan String?
   monitoring     String?
   notes          String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
+
   @@index([pet_id])
   @@map("pet_chronic_conditions")
 }
 
 model PetDentalRecord {
-  id           String   @id @default(uuid())
-  pet_id       String
-  owner_email  String
-  procedure    String   // cleaning, extraction, xray, filling, root_canal, orthodontic, other
-  date         String
-  vet_name     String?
-  clinic_name  String?
+  id            String   @id @default(uuid())
+  pet_id        String
+  owner_email   String
+  procedure     String
+  date          String
+  vet_name      String?
+  clinic_name   String?
   teeth_treated String?
-  findings     String?
-  grade        String?  // Stage 1-4 periodontal disease
-  next_due     String?
-  cost         Float?
-  file_urls    String[]
-  notes        String?
-  created_at   DateTime @default(now())
+  findings      String?
+  grade         String?
+  next_due      String?
+  cost          Float?
+  file_urls     String[]
+  notes         String?
+  created_at    DateTime @default(now())
+
   @@index([pet_id])
   @@map("pet_dental_records")
 }
@@ -912,46 +930,49 @@ model PetWeightRecord {
   pet_id      String
   owner_email String
   weight_kg   Float
-  bcs         Int?     // Body Condition Score 1-9
+  bcs         Int?
   date        String
   vet_name    String?
   notes       String?
   created_at  DateTime @default(now())
+
   @@index([pet_id])
   @@map("pet_weight_records")
 }
 
 model PetGeneticTest {
-  id              String   @id @default(uuid())
-  pet_id          String
-  owner_email     String
-  test_name       String
-  provider        String?  // e.g. Embark, Wisdom Panel
-  date            String
-  results         String?
-  breeds_detected String[]
+  id               String   @id @default(uuid())
+  pet_id           String
+  owner_email      String
+  test_name        String
+  provider         String?
+  date             String
+  results          String?
+  breeds_detected  String[]
   conditions_found String[]
-  file_urls       String[]
-  notes           String?
-  created_at      DateTime @default(now())
+  file_urls        String[]
+  notes            String?
+  created_at       DateTime @default(now())
+
   @@index([pet_id])
   @@map("pet_genetic_tests")
 }
 
 model PetVitalSigns {
-  id              String   @id @default(uuid())
-  pet_id          String
-  owner_email     String
-  date            String
-  temperature_c   Float?
-  heart_rate      Int?
+  id               String   @id @default(uuid())
+  pet_id           String
+  owner_email      String
+  date             String
+  temperature_c    Float?
+  heart_rate       Int?
   respiratory_rate Int?
-  weight_kg       Float?
-  blood_pressure  String?
+  weight_kg        Float?
+  blood_pressure   String?
   capillary_refill String?
-  vet_name        String?
-  notes           String?
-  created_at      DateTime @default(now())
+  vet_name         String?
+  notes            String?
+  created_at       DateTime @default(now())
+
   @@index([pet_id])
   @@map("pet_vital_signs")
 }
@@ -963,34 +984,32 @@ model PetPassportAccess {
   provider_email String
   provider_name  String
   reason         String?
-  status         String    @default("pending")  // pending, approved, revoked
+  status         String    @default("pending")
   granted_at     DateTime?
   expires_at     DateTime?
   created_at     DateTime  @default(now())
+
   @@unique([pet_id, provider_email])
   @@index([pet_id])
   @@index([provider_email])
   @@map("pet_passport_access")
 }
-// ═══════════════════════════════════════════════════════
-// GDPR — User consent tracking (Article 7 audit trail)
-// ═══════════════════════════════════════════════════════
-model UserConsent {
-  id                String   @id @default(cuid())
-  user_id           String?
-  cookie_id         String?
-  necessary         Boolean  @default(true)
-  analytics         Boolean  @default(false)
-  marketing         Boolean  @default(false)
-  functional        Boolean  @default(false)
-  terms_accepted    Boolean  @default(false)
-  privacy_accepted  Boolean  @default(false)
-  source            String   @default("cookie_banner")
-  ip_address        String?
-  user_agent        String?
-  created_at        DateTime @default(now())
 
-  user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+model UserConsent {
+  id               String   @id @default(cuid())
+  user_id          String?
+  cookie_id        String?
+  necessary        Boolean  @default(true)
+  analytics        Boolean  @default(false)
+  marketing        Boolean  @default(false)
+  functional       Boolean  @default(false)
+  terms_accepted   Boolean  @default(false)
+  privacy_accepted Boolean  @default(false)
+  source           String   @default("cookie_banner")
+  ip_address       String?
+  user_agent       String?
+  created_at       DateTime @default(now())
+  user             User?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id])
   @@index([cookie_id])
@@ -998,84 +1017,293 @@ model UserConsent {
   @@map("user_consents")
 }
 
-// ═══════════════════════════════════════════════════════
-// GDPR — Account deletion requests (Article 17, 30-day grace period)
-// ═══════════════════════════════════════════════════════
 model AccountDeletionRequest {
-  id             String    @id @default(cuid())
-  user_id        String
-  reason         String?
-  status         String    @default("pending")
-  scheduled_for  DateTime
-  cancelled_at   DateTime?
-  executed_at    DateTime?
-  created_at     DateTime  @default(now())
-
-  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  user_id       String
+  reason        String?
+  status        String    @default("pending")
+  scheduled_for DateTime
+  cancelled_at  DateTime?
+  executed_at   DateTime?
+  created_at    DateTime  @default(now())
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id])
   @@index([status, scheduled_for])
   @@map("account_deletion_requests")
 }
 
-
 model ProviderStaff {
-  id                 String   @id @default(uuid())
-  service_id         String
-  service            Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
-  provider_email     String
-
-  // Ο λογαριασμός του γιατρού. Κενό όσο δεν έχει ενεργοποιηθεί.
-  user_id            String?
-  user               User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
-
-  full_name          String
-  title              String?
-  specialties        String[] @default([])
-  license_number     String?
+  id                 String              @id @default(dbgenerated("(gen_random_uuid())::character varying")) @db.VarChar(255)
+  service_id         String              @db.VarChar(255)
+  provider_email     String              @db.VarChar(255)
+  user_id            String?             @db.VarChar(255)
+  full_name          String              @db.VarChar(255)
+  title              String?             @db.VarChar(50)
+  specialties        String[]            @default([])
+  license_number     String?             @db.VarChar(100)
   bio                String?
   photo_url          String?
-
   years_experience   Int?
-  languages          String[] @default([])
-  pet_types          String[] @default([])
-
-  email              String?
-  phone              String?
-
-  accepts_telehealth Boolean  @default(false)
-  is_available_now   Boolean  @default(false)
-  is_active          Boolean  @default(true)
-  display_order      Int      @default(0)
-
-  created_at         DateTime @default(now())
-  updated_at         DateTime @default(now()) @updatedAt
-
-  prices             StaffServicePrice[]
+  languages          String[]            @default([])
+  pet_types          String[]            @default([])
+  email              String?             @db.VarChar(255)
+  phone              String?             @db.VarChar(50)
+  accepts_telehealth Boolean             @default(false)
+  is_available_now   Boolean             @default(false)
+  is_active          Boolean             @default(true)
+  display_order      Int                 @default(0)
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
   bookings           Booking[]
+  service            Service             @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user               User?               @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  prices             StaffServicePrice[]
 
-  @@index([service_id])
-  @@index([provider_email])
-  @@index([user_id])
-  @@index([is_active])
+  @@index([is_active], map: "provider_staff_active_idx")
+  @@index([provider_email], map: "provider_staff_provider_idx")
+  @@index([service_id], map: "provider_staff_service_idx")
+  @@index([user_id], map: "provider_staff_user_idx")
   @@map("provider_staff")
 }
 
 model StaffServicePrice {
-  id               String         @id @default(uuid())
-  staff_id         String
-  staff            ProviderStaff  @relation(fields: [staff_id], references: [id], onDelete: Cascade)
-  package_id       String
-  package          ServicePackage @relation(fields: [package_id], references: [id], onDelete: Cascade)
-
+  id               String         @id @default(dbgenerated("(gen_random_uuid())::character varying")) @db.VarChar(255)
+  staff_id         String         @db.VarChar(255)
+  package_id       String         @db.VarChar(255)
   price            Float
   duration_minutes Int            @default(30)
   is_active        Boolean        @default(true)
-  created_at       DateTime       @default(now())
-  updated_at       DateTime       @default(now()) @updatedAt
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
+  package          ServicePackage @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  staff            ProviderStaff  @relation(fields: [staff_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([staff_id, package_id], map: "staff_service_prices_unique")
-  @@index([staff_id])
-  @@index([package_id])
+  @@index([package_id], map: "staff_service_prices_package_idx")
+  @@index([staff_id], map: "staff_service_prices_staff_idx")
   @@map("staff_service_prices")
+}
+
+model AuditLog {
+  id            String   @id @default(cuid()) @db.VarChar(255)
+  actor_id      String?  @db.VarChar(255)
+  actor_email   String?  @db.VarChar(255)
+  actor_role    String?  @db.VarChar(50)
+  action        String   @db.VarChar(60)
+  resource      String   @db.VarChar(60)
+  resource_id   String?  @db.VarChar(255)
+  subject_email String?  @db.VarChar(255)
+  metadata      Json?
+  ip            String?  @db.VarChar(64)
+  user_agent    String?
+  method        String?  @db.VarChar(10)
+  path          String?  @db.VarChar(300)
+  status_code   Int?
+  outcome       String   @default("success") @db.VarChar(20)
+  error_message String?  @db.VarChar(500)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([action, created_at(sort: Desc)], map: "audit_logs_action_idx")
+  @@index([actor_email, created_at(sort: Desc)], map: "audit_logs_actor_idx")
+  @@index([resource, resource_id], map: "audit_logs_resource_idx")
+  @@index([subject_email, created_at(sort: Desc)], map: "audit_logs_subject_idx")
+  @@index([created_at(sort: Desc)], map: "audit_logs_time_idx")
+  @@map("audit_logs")
+}
+
+model campaign_audience {
+  id             String    @id @db.VarChar(255)
+  campaign_id    String    @db.VarChar(255)
+  customer_email String    @db.VarChar(255)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  campaigns      campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([campaign_id, customer_email], map: "campaign_audience_unique")
+  @@index([customer_email], map: "campaign_audience_customer_idx")
+}
+
+model campaign_placements {
+  id            String    @id @db.VarChar(255)
+  campaign_id   String    @db.VarChar(255)
+  page          String    @db.VarChar(40)
+  slot          String    @default("banner") @db.VarChar(20)
+  media_type    String    @default("image") @db.VarChar(10)
+  media_url     String?
+  link_url      String?
+  headline      String?   @db.VarChar(200)
+  subtext       String?   @db.VarChar(400)
+  cta_label     String?   @db.VarChar(60)
+  display_order Int       @default(0)
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+  campaigns     campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([campaign_id, page, slot], map: "campaign_placements_unique")
+  @@index([page, slot, is_active], map: "campaign_placements_page_idx")
+}
+
+model campaign_targets {
+  id          String    @id @db.VarChar(255)
+  campaign_id String    @db.VarChar(255)
+  target_type String    @db.VarChar(30)
+  target_id   String?   @db.VarChar(255)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  campaigns   campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([campaign_id, target_type, target_id], map: "campaign_targets_unique")
+  @@index([target_type, target_id], map: "campaign_targets_lookup_idx")
+}
+
+model campaigns {
+  id                  String                @id @db.VarChar(255)
+  owner_email         String                @db.VarChar(255)
+  owner_type          String                @default("provider") @db.VarChar(20)
+  title               String                @db.VarChar(200)
+  description         String?
+  discount_type       String?               @db.VarChar(10)
+  discount_value      Float?
+  min_order           Float?
+  starts_at           DateTime              @db.Timestamptz(6)
+  ends_at             DateTime              @db.Timestamptz(6)
+  boost               Int                   @default(0)
+  is_active           Boolean               @default(true)
+  views               Int                   @default(0)
+  clicks              Int                   @default(0)
+  redemptions         Int                   @default(0)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  campaign_audience   campaign_audience[]
+  campaign_placements campaign_placements[]
+  campaign_targets    campaign_targets[]
+  provider_messages   provider_messages[]
+
+  @@index([is_active, starts_at, ends_at], map: "campaigns_active_idx")
+  @@index([owner_email, is_active], map: "campaigns_owner_idx")
+}
+
+model customer_notes {
+  id             String   @id @db.VarChar(255)
+  provider_email String   @db.VarChar(255)
+  customer_email String   @db.VarChar(255)
+  note           String?
+  tags           String[] @default([])
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([provider_email, customer_email], map: "customer_notes_unique")
+  @@index([provider_email], map: "customer_notes_provider_idx")
+}
+
+model provider_messages {
+  id             String     @id @db.VarChar(255)
+  provider_email String     @db.VarChar(255)
+  provider_name  String?    @db.VarChar(255)
+  customer_email String     @db.VarChar(255)
+  subject        String?    @db.VarChar(200)
+  body           String
+  campaign_id    String?    @db.VarChar(255)
+  batch_id       String?    @db.VarChar(255)
+  read_at        DateTime?  @db.Timestamptz(6)
+  created_at     DateTime   @default(now()) @db.Timestamptz(6)
+  campaigns      campaigns? @relation(fields: [campaign_id], references: [id], onUpdate: NoAction)
+
+  @@index([batch_id], map: "provider_messages_batch_idx")
+  @@index([customer_email, created_at(sort: Desc)], map: "provider_messages_customer_idx")
+  @@index([provider_email, created_at(sort: Desc)], map: "provider_messages_provider_idx")
+}
+
+model specialties {
+  id            String   @id @db.VarChar(255)
+  category      String   @db.VarChar(50)
+  group         String?  @db.VarChar(80)
+  name          String   @db.VarChar(150)
+  name_en       String?  @db.VarChar(150)
+  is_active     Boolean  @default(true)
+  display_order Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([category, name], map: "specialties_unique")
+  @@index([is_active], map: "specialties_active_idx")
+  @@index([category])
+}
+
+model translations {
+  id         String   @id @db.VarChar(255)
+  entity     String   @db.VarChar(60)
+  entity_id  String   @db.VarChar(255)
+  field      String   @db.VarChar(60)
+  lang       String   @db.VarChar(5)
+  value      String
+  created_by String?  @db.VarChar(255)
+  source     String   @default("manual") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([entity, entity_id, field, lang], map: "translations_unique")
+  @@index([entity, entity_id], map: "translations_lookup_idx")
+  @@index([entity, lang, entity_id], map: "translations_lookup_lang_idx")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GDPR Phase 3 — Governance models (new tables)
+// ═══════════════════════════════════════════════════════════════
+
+// GDPR — Subprocessor tracker (Article 28)
+// Third parties that process personal data on our behalf + DPA status.
+model Subprocessor {
+  id                  String    @id @default(cuid()) @db.VarChar(255)
+  name                String    @db.VarChar(200)
+  purpose             String    @db.VarChar(200)
+  data_categories     String[]  @default([])
+  region              String?   @db.VarChar(50)
+  transfer_mechanism  String?   @db.VarChar(50)
+  dpa_status          String    @default("pending") @db.VarChar(30)
+  dpa_signed_at       DateTime? @db.Timestamptz(6)
+  dpa_expires_at      DateTime? @db.Timestamptz(6)
+  dpa_url             String?
+  contact_email       String?   @db.VarChar(255)
+  website             String?   @db.VarChar(255)
+  is_active           Boolean   @default(true)
+  notes               String?
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([dpa_status])
+  @@index([is_active])
+  @@map("subprocessors")
+}
+
+// GDPR — Breach incident log (Articles 33 / 34)
+// Every suspected or confirmed breach with its timeline.
+model BreachIncident {
+  id                        String    @id @default(cuid()) @db.VarChar(255)
+  reference                 String    @unique @db.VarChar(50)
+  title                     String    @db.VarChar(200)
+  description               String
+  severity                  String    @default("low") @db.VarChar(20)
+  status                    String    @default("open") @db.VarChar(30)
+  detected_at               DateTime  @db.Timestamptz(6)
+  confirmed_at              DateTime? @db.Timestamptz(6)
+  contained_at              DateTime? @db.Timestamptz(6)
+  root_cause                String?
+  affected_data_categories  String[]  @default([])
+  affected_user_count       Int?
+  supervisory_notified      Boolean   @default(false)
+  supervisory_notified_at   DateTime? @db.Timestamptz(6)
+  data_subjects_notified    Boolean   @default(false)
+  data_subjects_notified_at DateTime? @db.Timestamptz(6)
+  notification_method       String?   @db.VarChar(50)
+  reporter_email            String    @db.VarChar(255)
+  remediation_actions       String?
+  lessons_learned           String?
+  attachments_url           String?
+  created_at                DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([status, detected_at])
+  @@index([severity, detected_at])
+  @@map("breach_incidents")
 }

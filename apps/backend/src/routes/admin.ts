@@ -1,6 +1,8 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import bcrypt from 'bcryptjs'
+import { audit } from '../lib/audit.js'
+import { encryptField, decryptField } from '../lib/crypto.js'
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req, reply) => {
@@ -306,7 +308,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/users', async (req: any, reply) => {
-    const { full_name, email, password, role } = req.body as any
+    const { full_name, email, password, role, phone } = req.body as any
     if (!email || !password) {
       return reply.code(400).send({ message: 'Email και κωδικός είναι υποχρεωτικά' })
     }
@@ -321,20 +323,24 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         email,
         password_hash,
         role: role || 'user',
+        phone: encryptField(phone) as any,
       },
       select: {
         id: true, full_name: true, email: true, role: true, created_at: true
       }
     })
+    await audit(req, { action: 'admin_user_create', resource: 'user', resource_id: user.id, metadata: { email, role: user.role } })
     return user
   })
 
   app.patch('/users/:id', async (req: any) => {
-    const { password, ...rest } = req.body as any
+    const { password, phone, address, ...rest } = req.body as any
     const data: any = { ...rest }
     if (password) {
       data.password_hash = await bcrypt.hash(password, 12)
     }
+    if (phone   !== undefined) data.phone   = encryptField(phone)
+    if (address !== undefined) data.address = encryptField(address)
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data,
@@ -342,11 +348,13 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         id: true, full_name: true, email: true, role: true, created_at: true
       }
     })
+    await audit(req, { action: 'admin_user_update', resource: 'user', resource_id: user.id, metadata: { fields: Object.keys(data), password_changed: !!password } })
     return user
   })
 
   app.delete('/users/:id', async (req: any, reply) => {
     await prisma.user.delete({ where: { id: req.params.id } })
+    await audit(req, { action: 'admin_user_delete', resource: 'user', resource_id: req.params.id })
     return reply.code(204).send()
   })
 

@@ -1,140 +1,104 @@
 import prisma from './prisma.js'
 
 /**
- * Καταγραφή ενεργειών — άρθρα 5 §2 και 32 ΓΚΠΔ.
+ * Audit-log helper — writes to the EXISTING `audit_logs` table.
  *
- * ΑΡΧΕΣ ΣΧΕΔΙΑΣΜΟΥ
+ * ─── Table shape (as it exists in the DB) ──────────────────────
+ * Columns:
+ *   id, action, resource, resource_id, actor_id, actor_email, actor_role,
+ *   subject_email, metadata (Json), ip, user_agent, method, path,
+ *   status_code, outcome, error_message, created_at
  *
- *   1. Ποτέ δεν σπάει το αίτημα.
- *      Αν αποτύχει η καταγραφή, ο χρήστης δεν πρέπει να το αντιληφθεί.
- *      Η αποτυχία γράφεται στα logs του server και η ροή συνεχίζει.
- *
- *   2. Ποτέ δεν καταγράφεται περιεχόμενο.
- *      Γράφουμε «ο Χ άνοιξε τον ιατρικό φάκελο του ζώου Ψ», όχι τι έγραφε
- *      ο φάκελος. Αλλιώς η καταγραφή γίνεται δεύτερο αντίγραφο των
- *      δεδομένων, με διπλάσια έκθεση σε παραβίαση.
- *
- *   3. Δεν μπλοκάρει την απόκριση.
- *      Η εγγραφή γίνεται ασύγχρονα· δεν περιμένουμε το αποτέλεσμα.
- *
- *   4. Χρησιμοποιεί raw SQL.
- *      Δεν εξαρτάται από το prisma generate, ώστε να δουλεύει ακόμα κι αν
- *      ο client δεν έχει ενημερωθεί με το νέο μοντέλο.
+ * ─── Design principles ─────────────────────────────────────────
+ * • Fire-and-forget. Audit failures NEVER break the calling operation.
+ * • Actor is derived from req.user automatically; caller only supplies
+ *   the "what" (action, resource) and optional metadata.
+ * • No plaintext secrets (passwords, tokens, encrypted payloads) in metadata.
+ * • Method/path/IP/user-agent are captured for GDPR breach-investigation.
  */
 
-/** Ενέργειες που καταγράφονται. */
-export type AuditAction =
-  | 'read' | 'create' | 'update' | 'delete'
-  | 'export' | 'login' | 'logout' | 'login_failed'
-  | 'password_reset_request' | 'password_reset'
-  | 'consent_given' | 'consent_withdrawn'
-  | 'deletion_requested' | 'deletion_cancelled' | 'deletion_executed'
-  | 'permission_denied'
+export type AuditOutcome = 'success' | 'failure' | 'blocked'
 
-export type AuditOutcome = 'success' | 'denied' | 'error'
-
-export interface AuditEntry {
-  action: AuditAction
-  resource: string
-  resourceId?: string | null
-  /** Το υποκείμενο των δεδομένων — όχι απαραίτητα ο δράστης. */
-  subjectEmail?: string | null
-  /** Ονόματα πεδίων, πλήθος εγγραφών. ΠΟΤΕ τιμές. */
-  metadata?: Record<string, any> | null
-  outcome?: AuditOutcome
-  errorMessage?: string | null
+export interface AuditParams {
+  action:        string                       // e.g. 'login', 'password_reset_complete', 'data_export'
+  resource:      string                       // e.g. 'user', 'consent', 'service', 'catalog_template'
+  resource_id?:  string | null                // subject of the action
+  subject_email?: string | null               // the user "receiving" the action (may differ from actor)
+  outcome?:      AuditOutcome                 // default: 'success'
+  error_message?: string | null               // short human-readable failure reason
+  status_code?:  number | null                // HTTP status code, when known at call site
+  metadata?:     Record<string, any> | null   // extra structured context (no secrets!)
 }
 
-/** Πεδία που δεν επιτρέπεται ποτέ να καταλήξουν στο metadata. */
-const FORBIDDEN = new Set([
-  'password', 'password_hash', 'token', 'reset_token', 'access_token',
-  'refresh_token', 'secret', 'authorization', 'cookie', 'card', 'cvv', 'iban',
-])
-
 /**
- * Καθαρίζει το metadata: κρατά μόνο ονόματα πεδίων και αριθμούς.
- * Συμβολοσειρές πάνω από 80 χαρακτήρες κόβονται — δεν θέλουμε περιεχόμενο.
+ * Record an audit event tied to a request. Never throws.
+ *
+ *   audit(req, { action: 'login', resource: 'user', subject_email: user.email })
  */
-function sanitize(meta: Record<string, any> | null | undefined) {
-  if (!meta) return null
-  const out: Record<string, any> = {}
-  for (const [k, v] of Object.entries(meta)) {
-    const key = k.toLowerCase()
-    if (FORBIDDEN.has(key) || [...FORBIDDEN].some(f => key.includes(f))) {
-      out[k] = '[παραλείφθηκε]'
-      continue
-    }
-    if (v === null || v === undefined) { out[k] = null; continue }
-    if (typeof v === 'number' || typeof v === 'boolean') { out[k] = v; continue }
-    if (Array.isArray(v)) {
-      // Πίνακας πεδίων -> κρατάμε τα ονόματα· πίνακας δεδομένων -> μόνο πλήθος
-      out[k] = v.every(x => typeof x === 'string' && x.length <= 40)
-        ? v.slice(0, 40)
-        : { count: v.length }
-      continue
-    }
-    if (typeof v === 'object') { out[k] = { keys: Object.keys(v).slice(0, 30) }; continue }
-    const s = String(v)
-    out[k] = s.length > 80 ? s.slice(0, 80) + '…' : s
+export async function audit(req: any, params: AuditParams): Promise<void> {
+  try {
+    const actor_id    = req?.user?.id    ?? null
+    const actor_email = req?.user?.email ?? null
+    const actor_role  = req?.user?.role  ?? null
+
+    const ip =
+      ((req?.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim())
+      || req?.ip
+      || null
+    const user_agent = (req?.headers?.['user-agent'] as string) ?? null
+    const method     = req?.method ?? null
+    const path       = req?.url    ?? null
+
+    await prisma.auditLog.create({
+      data: {
+        action:        params.action,
+        resource:      params.resource,
+        resource_id:   params.resource_id ?? null,
+        actor_id,
+        actor_email,
+        actor_role,
+        subject_email: params.subject_email ?? null,
+        metadata:      params.metadata ? (params.metadata as any) : undefined,
+        ip,
+        user_agent,
+        method,
+        path,
+        status_code:   params.status_code ?? null,
+        outcome:       params.outcome ?? 'success',
+        error_message: params.error_message ?? null,
+      },
+    })
+  } catch (err) {
+    console.error('audit log write failed:', (err as any)?.message ?? err)
   }
-  return out
 }
 
-let warned = false
-
 /**
- * Γράφει μία εγγραφή. Δεν πετάει ποτέ σφάλμα προς τα έξω.
- * Το `req` είναι προαιρετικό — για ενέργειες συστήματος (cron) παραλείπεται.
+ * Explicit "system" event for background jobs (cron, migration scripts) with no
+ * request context. Records the actor as null across the board.
  */
-export function audit(req: any | null, entry: AuditEntry): void {
-  const user = req?.user as any | undefined
-
-  const row = {
-    id: (globalThis as any).crypto?.randomUUID?.() ??
-        Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
-    actor_id:      user?.id ?? null,
-    actor_email:   user?.email ?? null,
-    actor_role:    user?.role ?? null,
-    action:        entry.action,
-    resource:      entry.resource,
-    resource_id:   entry.resourceId ?? null,
-    subject_email: entry.subjectEmail ?? user?.email ?? null,
-    metadata:      sanitize(entry.metadata),
-    ip:            req?.ip ?? null,
-    user_agent:    (req?.headers?.['user-agent'] ?? null)?.toString().slice(0, 400) ?? null,
-    method:        req?.method ?? null,
-    path:          req?.url ? String(req.url).split('?')[0].slice(0, 300) : null,
-    status_code:   entry.outcome === 'denied' ? 403 : entry.outcome === 'error' ? 500 : null,
-    outcome:       entry.outcome ?? 'success',
-    error_message: entry.errorMessage ? String(entry.errorMessage).slice(0, 500) : null,
+export async function auditSystem(params: AuditParams): Promise<void> {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action:        params.action,
+        resource:      params.resource,
+        resource_id:   params.resource_id ?? null,
+        actor_id:      null,
+        actor_email:   'system@globipet',
+        actor_role:    'system',
+        subject_email: params.subject_email ?? null,
+        metadata:      params.metadata ? (params.metadata as any) : undefined,
+        ip:            null,
+        user_agent:    null,
+        method:        null,
+        path:          null,
+        status_code:   params.status_code ?? null,
+        outcome:       params.outcome ?? 'success',
+        error_message: params.error_message ?? null,
+      },
+    })
+  } catch (err) {
+    console.error('audit system write failed:', (err as any)?.message ?? err)
   }
-
-  // Ασύγχρονα και σιωπηλά — η καταγραφή δεν καθυστερεί ποτέ την απόκριση.
-  prisma.$executeRaw`
-    INSERT INTO audit_logs
-      (id, actor_id, actor_email, actor_role, action, resource, resource_id,
-       subject_email, metadata, ip, user_agent, method, path, status_code,
-       outcome, error_message, created_at)
-    VALUES
-      (${row.id}, ${row.actor_id}, ${row.actor_email}, ${row.actor_role},
-       ${row.action}, ${row.resource}, ${row.resource_id}, ${row.subject_email},
-       ${row.metadata ? JSON.stringify(row.metadata) : null}::jsonb,
-       ${row.ip}, ${row.user_agent}, ${row.method}, ${row.path}, ${row.status_code},
-       ${row.outcome}, ${row.error_message}, now())
-  `.catch((err: any) => {
-    // Δεν σιωπούμε εντελώς: αν λείπει ο πίνακας πρέπει να το μάθουμε.
-    if (!warned) {
-      warned = true
-      console.error('[audit] η καταγραφή απέτυχε — τρέξε τη migration audit_logs:',
-                    err?.message?.slice(0, 200))
-    }
-  })
-}
-
-/**
- * Βοηθητικό για ενέργειες συστήματος, χωρίς αίτημα HTTP.
- * Παράδειγμα: το cron που εκτελεί διαγραφές λογαριασμών.
- */
-export function auditSystem(entry: AuditEntry & { subjectEmail?: string }): void {
-  audit({ user: { id: null, email: 'system', role: 'system' } }, entry)
 }

@@ -1,55 +1,22 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import prisma from '../lib/prisma.js'
+import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 
 const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Register
-  /**
-   * Ελάχιστη ηλικία εγγραφής.
-   *
-   * Στην Ελλάδα, η συγκατάθεση ανηλίκου σε υπηρεσίες της κοινωνίας της
-   * πληροφορίας ισχύει από τα 15 έτη· κάτω από αυτό απαιτείται γονική
-   * συναίνεση. Η πολιτική απορρήτου δηλώνει «από 15 και άνω» — εδώ
-   * επιβάλλεται στην πράξη.
-   */
-  const MIN_AGE = 15
-
-  function ageOn(birth: Date, at = new Date()) {
-    let a = at.getFullYear() - birth.getFullYear()
-    const m = at.getMonth() - birth.getMonth()
-    if (m < 0 || (m === 0 && at.getDate() < birth.getDate())) a--
-    return a
-  }
-
   app.post('/register', async (req, reply) => {
-    const { full_name, email, password, role, preferred_language, birth_date } = req.body as any
-
-    if (!birth_date) {
-      return reply.code(400).send({ message: 'Η ημερομηνία γέννησης είναι υποχρεωτική' })
-    }
-    const birth = new Date(birth_date)
-    if (isNaN(birth.getTime())) {
-      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
-    }
-    const now = new Date()
-    if (birth > now) {
-      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
-    }
-    const age = ageOn(birth, now)
-    if (age > 120) {
-      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
-    }
-    if (age < MIN_AGE) {
-      return reply.code(403).send({
-        message: `Η εγγραφή επιτρέπεται από ${MIN_AGE} ετών και άνω.`,
-        code: 'AGE_RESTRICTED',
-      })
-    }
-
+    const { full_name, email, password, role, preferred_language, phone } = req.body as any
     const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing) return reply.code(409).send({ message: 'Email ήδη χρησιμοποιείται' })
+    if (existing) {
+      await audit(req, { action: 'register', resource: 'user', outcome: 'failure', metadata: { reason: 'email_taken', email } })
+      return reply.code(409).send({ message: 'Email ήδη χρησιμοποιείται' })
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
+    }
     const password_hash = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
       data: {
@@ -58,14 +25,14 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         password_hash,
         role: role || 'user',
         preferred_language: preferred_language || 'el',
-        birth_date: birth,
-      } as any
+        // Sensitive fields encrypted at rest
+        phone: encryptField(phone) as any,
+      }
     })
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
-    audit({ ...req, user: { id: user.id, email: user.email, role: user.role } },
-          { action: 'create', resource: 'user', resourceId: user.id,
-            subjectEmail: user.email, metadata: { role: user.role, via: 'register' } })
+    decryptUserFields(userSafe) // return plaintext to caller
+    await audit(req, { action: 'register', resource: 'user', resource_id: user.id })
     return { user: userSafe, token }
   })
 
@@ -74,23 +41,18 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { email, password } = req.body as any
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || !user.password_hash) {
-      // Καταγράφεται και η αποτυχία: επαναλαμβανόμενες προσπάθειες σε έναν
-      // λογαριασμό είναι το πρώτο σημάδι επίθεσης.
-      audit(req, { action: 'login_failed', resource: 'user', subjectEmail: email,
-                   outcome: 'denied', metadata: { reason: 'unknown_account' } })
+      await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'no_such_user', email } })
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
     const valid = await bcrypt.compare(password, user.password_hash)
     if (!valid) {
-      audit(req, { action: 'login_failed', resource: 'user', resourceId: user.id,
-                   subjectEmail: email, outcome: 'denied',
-                   metadata: { reason: 'wrong_password' } })
+      await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'wrong_password' } })
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
-    audit({ ...req, user: { id: user.id, email: user.email, role: user.role } },
-          { action: 'login', resource: 'user', resourceId: user.id, subjectEmail: user.email })
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
+    decryptUserFields(userSafe)
+    await audit(req, { action: 'login', resource: 'user', resource_id: user.id })
     return { user: userSafe, token }
   })
 
@@ -100,7 +62,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return null
     const { password_hash: _, ...userSafe } = user as any
-    return userSafe
+    return decryptUserFields(userSafe)
   })
 
   // Update me (PATCH /auth/me or PATCH /users/me - whichever your frontend uses)
@@ -115,8 +77,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if (Object.keys(updateData).length === 0) {
       return reply.code(400).send({ message: 'No fields to update' })
     }
+    // Encrypt sensitive fields before write
+    if ('phone' in updateData) updateData.phone = encryptField(updateData.phone)
     const user = await prisma.user.update({ where: { id }, data: updateData })
     const { password_hash: _, ...userSafe } = user as any
+    decryptUserFields(userSafe)
     return userSafe
   })
 
@@ -188,30 +153,6 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // ─── GOOGLE OAUTH ───────────────────────────────────────────────
 
-  /**
-   * Παράμετρος state — προστασία από CSRF στη ροή OAuth.
-   *
-   * Χωρίς αυτήν, επιτιθέμενος ξεκινά ροή με δικό του λογαριασμό και
-   * παρασύρει το θύμα να ολοκληρώσει το callback· ο λογαριασμός του θύματος
-   * συνδέεται τότε με ταυτότητα του επιτιθέμενου.
-   *
-   * Υπογεγραμμένο JWT 10λεπτης ισχύος — χωρίς αποθήκευση στον server,
-   * χωρίς δυνατότητα πλαστογράφησης.
-   */
-  function makeState(provider: string) {
-    return (app as any).jwt.sign(
-      { p: provider, n: Math.random().toString(36).slice(2), t: 'oauth_state' },
-      { expiresIn: '10m' }
-    )
-  }
-  function checkState(state: any, provider: string) {
-    if (!state || typeof state !== 'string') return false
-    try {
-      const d: any = (app as any).jwt.verify(state)
-      return d?.t === 'oauth_state' && d?.p === provider
-    } catch { return false }
-  }
-
   app.get('/google', async (req, reply) => {
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID || '',
@@ -220,7 +161,6 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       scope: 'openid email profile',
       access_type: 'offline',
       prompt: 'select_account',
-      state: makeState('google'),
     })
     reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
   })
@@ -230,9 +170,6 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     try {
       const { code, state } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
-      if (!checkState(state, 'google')) {
-        return reply.redirect(`${APP_URL}/login?error=invalid_state`)
-      }
 
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -275,13 +212,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       const { password_hash: _, ...userSafe } = user as any
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      // Το JWT και το προφίλ περνούν σε FRAGMENT (#), όχι σε query string (?).
-      //
-      // Το fragment ΔΕΝ αποστέλλεται ποτέ στον διακομιστή: δεν καταγράφεται
-      // σε access logs, δεν διαρρέει μέσω Referer σε τρίτα domains, και δεν
-      // εμφανίζεται σε proxies ή CDN. Το frontend το διαβάζει κανονικά —
-      // το main.tsx υποστηρίζει ήδη και τις δύο μορφές.
-      reply.redirect(`${APP_URL}/#token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {
       console.error('Google OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=google_failed`)
@@ -296,7 +227,6 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       redirect_uri: process.env.FACEBOOK_CALLBACK_URL || '',
       scope: 'email,public_profile',
       response_type: 'code',
-      state: makeState('facebook'),
     })
     reply.redirect(`https://www.facebook.com/v18.0/dialog/oauth?${params}`)
   })
@@ -304,11 +234,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   app.get('/facebook/callback', async (req: any, reply) => {
     const APP_URL = process.env.APP_URL || 'https://globipet.com'
     try {
-      const { code, state } = req.query
+      const { code } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
-      if (!checkState(state, 'facebook')) {
-        return reply.redirect(`${APP_URL}/login?error=invalid_state`)
-      }
 
       const tokenRes = await fetch(
         `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(process.env.FACEBOOK_CALLBACK_URL || '')}&client_secret=${process.env.FACEBOOK_APP_SECRET}&code=${code}`
@@ -343,13 +270,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       const { password_hash: _, ...userSafe } = user as any
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      // Το JWT και το προφίλ περνούν σε FRAGMENT (#), όχι σε query string (?).
-      //
-      // Το fragment ΔΕΝ αποστέλλεται ποτέ στον διακομιστή: δεν καταγράφεται
-      // σε access logs, δεν διαρρέει μέσω Referer σε τρίτα domains, και δεν
-      // εμφανίζεται σε proxies ή CDN. Το frontend το διαβάζει κανονικά —
-      // το main.tsx υποστηρίζει ήδη και τις δύο μορφές.
-      reply.redirect(`${APP_URL}/#token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {
       console.error('Facebook OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=facebook_failed`)
@@ -361,23 +282,20 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { email } = req.body as any
     const user = await prisma.user.findUnique({ where: { email } })
     // Always return success message to prevent user enumeration
-    if (!user) return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
+    if (!user) {
+      await audit(req, { action: 'password_reset_request', resource: 'user', outcome: 'failure', metadata: { reason: 'no_such_user', email } })
+      return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
+    }
 
     // Cryptographically secure token (256 bits of entropy) instead of Math.random
-    const { randomBytes, createHash } = await import('crypto')
+    const { randomBytes } = await import('crypto')
     const token = randomBytes(32).toString('hex')
-    // ΣΗΜΑΝΤΙΚΟ: στη βάση αποθηκεύεται ΜΟΝΟ το hash. Το καθαρό token
-    // ταξιδεύει μόνο στο email. Έτσι, ακόμα κι αν διαρρεύσει η βάση,
-    // κανείς δεν μπορεί να αλλάξει κωδικό τρίτου.
-    const tokenHash = createHash('sha256').update(token).digest('hex')
     const expires = new Date(Date.now() + 3600000) // 1 hour
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { reset_token: tokenHash, reset_token_expires: expires }
+      data: { reset_token: token, reset_token_expires: expires }
     })
-    audit(req, { action: 'password_reset_request', resource: 'user',
-                 resourceId: user.id, subjectEmail: user.email })
 
     const RESEND_KEY = process.env.RESEND_API_KEY
     const APP_URL = process.env.APP_URL || 'https://globipet.com'
@@ -455,22 +373,21 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if (typeof password !== 'string' || password.length < 8) {
       return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
     }
-    // Το token του συνδέσμου γίνεται hash και συγκρίνεται με το αποθηκευμένο.
-    const { createHash } = await import('crypto')
-    const tokenHash = createHash('sha256').update(String(token)).digest('hex')
     const user = await prisma.user.findFirst({
-      where: { reset_token: tokenHash, reset_token_expires: { gt: new Date() } }
+      where: { reset_token: token, reset_token_expires: { gt: new Date() } }
     })
-    if (!user) return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος' })
+    if (!user) {
+      await audit(req, { action: 'password_reset_complete', resource: 'user', outcome: 'failure', metadata: { reason: 'invalid_or_expired_token' } })
+      return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος' })
+    }
 
-    const bcrypt = await import('bcryptjs')
-    const password_hash = await bcrypt.hash(password, 12)
+    const bcryptMod = await import('bcryptjs')
+    const password_hash = await bcryptMod.hash(password, 12)
     await prisma.user.update({
       where: { id: user.id },
       data: { password_hash, reset_token: null, reset_token_expires: null }
     })
-    audit(req, { action: 'password_reset', resource: 'user',
-                 resourceId: user.id, subjectEmail: user.email })
+    await audit(req, { action: 'password_reset_complete', resource: 'user', resource_id: user.id })
     return { message: 'Ο κωδικός άλλαξε επιτυχώς' }
   })
 

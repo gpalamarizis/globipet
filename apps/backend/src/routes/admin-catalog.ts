@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { audit } from '../lib/audit.js'
 
 /**
  * Admin endpoints for catalog templates + services + packages of any provider.
@@ -46,6 +47,7 @@ const adminCatalogRoutes: FastifyPluginAsync = async (app) => {
         display_order: parseInt(body.display_order) || 0,
       }
     })
+    await audit(req, { action: 'template_create', resource: 'catalog_template', resource_id: tpl.id, metadata: { category: tpl.category, name: tpl.name } })
     return tpl
   })
 
@@ -59,11 +61,14 @@ const adminCatalogRoutes: FastifyPluginAsync = async (app) => {
     if (body.is_addon !== undefined) data.is_addon = !!body.is_addon
     if (body.is_active !== undefined) data.is_active = !!body.is_active
     if (body.display_order !== undefined) data.display_order = parseInt(body.display_order) || 0
-    return prisma.catalogTemplate.update({ where: { id: req.params.id }, data })
+    const updated = await prisma.catalogTemplate.update({ where: { id: req.params.id }, data })
+    await audit(req, { action: 'template_update', resource: 'catalog_template', resource_id: updated.id, metadata: { fields: Object.keys(data) } })
+    return updated
   })
 
   app.delete('/templates/:id', async (req: any, reply) => {
     await prisma.catalogTemplate.delete({ where: { id: req.params.id } })
+    await audit(req, { action: 'template_delete', resource: 'catalog_template', resource_id: req.params.id })
     return reply.code(204).send()
   })
 
@@ -99,11 +104,13 @@ const adminCatalogRoutes: FastifyPluginAsync = async (app) => {
     const updated = await prisma.service.update({
       where: { id: req.params.id }, data, include: { packages: true }
     })
+    await audit(req, { action: 'service_update', resource: 'service', resource_id: updated.id, metadata: { fields: Object.keys(data) } })
     return updated
   })
 
   app.delete('/services/:id', async (req: any, reply) => {
     await prisma.service.delete({ where: { id: req.params.id } })
+    await audit(req, { action: 'service_delete', resource: 'service', resource_id: req.params.id })
     return reply.code(204).send()
   })
 
@@ -130,11 +137,14 @@ const adminCatalogRoutes: FastifyPluginAsync = async (app) => {
     if (body.is_addon !== undefined) data.is_addon = !!body.is_addon
     if (body.is_active !== undefined) data.is_active = !!body.is_active
     if (body.display_order !== undefined) data.display_order = parseInt(body.display_order) || 0
-    return prisma.servicePackage.update({ where: { id: req.params.id }, data })
+    const updated = await prisma.servicePackage.update({ where: { id: req.params.id }, data })
+    await audit(req, { action: 'package_update', resource: 'service_package', resource_id: updated.id, metadata: { fields: Object.keys(data) } })
+    return updated
   })
 
   app.delete('/packages/:id', async (req: any, reply) => {
     await prisma.servicePackage.delete({ where: { id: req.params.id } })
+    await audit(req, { action: 'package_delete', resource: 'service_package', resource_id: req.params.id })
     return reply.code(204).send()
   })
 }
