@@ -79,15 +79,27 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   /**
-   * GET /bookings/my — all bookings for the current user, most-recent first.
-   * Used by the profile page. Simpler than the tabbed GET / above.
+   * GET /bookings/my — bookings for the current user.
+   * Optional filters:
+   *   ?upcoming=true — only future bookings (booking_date >= today)
+   *   ?past=true     — only past bookings (booking_date < today)
+   *   ?limit=N       — cap results (default 50, max 100)
+   *
+   * Default ordering: most-recent first. When ?upcoming=true, ascending by booking_date
+   * (so the very next booking is first).
    */
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
+    const { upcoming, past, limit } = req.query
+    const now = new Date().toISOString().split('T')[0]
+    const where: any = { customer_email: email }
+    if (upcoming === 'true' || upcoming === '1') where.booking_date = { gte: now }
+    else if (past === 'true' || past === '1')     where.booking_date = { lt: now }
+    const take = Math.min(parseInt(limit) || 50, 100)
     const data = await prisma.booking.findMany({
-      where: { customer_email: email },
-      orderBy: { created_at: 'desc' },
-      take: 50,
+      where,
+      orderBy: (upcoming === 'true' || upcoming === '1') ? { booking_date: 'asc' } : { created_at: 'desc' },
+      take,
     })
     return { data, total: data.length }
   })
