@@ -54,6 +54,7 @@ import adminSubscriptionsRoutes from './routes/admin-subscriptions.js'
 import adminAiPlansRoutes from './routes/ai-plans-admin.js'
 import userRightsRoutes from './routes/user-rights.js'
 import userConsentsRoutes from './routes/user-consents.js'
+import governanceRoutes from './routes/governance.js'
 
 const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
 
@@ -202,6 +203,7 @@ const routes = [
   { prefix: '/api/admin/ai-plans', handler: adminAiPlansRoutes },
   { prefix: '/api/user-rights', handler: userRightsRoutes },
   { prefix: '/api/user-consents', handler: userConsentsRoutes },
+  { prefix: '/api/admin/governance', handler: governanceRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
 
