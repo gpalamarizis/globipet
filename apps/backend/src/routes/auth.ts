@@ -4,6 +4,52 @@ import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 
+/**
+ * Auto-link any provider_staff records that were pre-created by an employer
+ * for this email address but have not yet been linked to a user account.
+ *
+ * Flow:
+ *   1. Provider adds their employee by email (creates a ProviderStaff row
+ *      with `email` set but `user_id` = null).
+ *   2. Employee later signs up on GlobiPet (via password / Google / Facebook).
+ *   3. This function runs and fills in `user_id` on every matching staff row,
+ *      so the employee lands with the staff dashboard ready.
+ *
+ * Case-insensitive email match. Safe to call on every login too — a no-op
+ * when there is nothing to link.
+ */
+async function autoLinkProviderStaff(userId: string, userEmail: string, req: any) {
+  const email = userEmail.trim().toLowerCase()
+  const unlinked = await (prisma as any).providerStaff.findMany({
+    where: {
+      user_id: null,
+      email: { equals: email, mode: 'insensitive' },
+    },
+    select: { id: true, service_id: true, provider_email: true, full_name: true },
+  })
+  if (!unlinked.length) return 0
+
+  await (prisma as any).providerStaff.updateMany({
+    where: { id: { in: unlinked.map((s: any) => s.id) } },
+    data: { user_id: userId, updated_at: new Date() },
+  })
+
+  // One audit line per linked record so employers can see who was auto-linked
+  for (const s of unlinked) {
+    await audit(req, {
+      action: 'staff_auto_link',
+      resource: 'provider_staff',
+      resource_id: s.id,
+      metadata: {
+        service_id: s.service_id,
+        provider_email: s.provider_email,
+        staff_name: s.full_name,
+      },
+    })
+  }
+  return unlinked.length
+}
+
 const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Register
@@ -29,6 +75,12 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         phone: encryptField(phone) as any,
       }
     })
+    // Auto-link any provider_staff records pre-created by an employer for
+    // this email. If a provider added their employee's email before the
+    // employee registered, this links the account so the employee immediately
+    // sees the staff dashboard on first login.
+    await autoLinkProviderStaff(user.id, user.email, req)
+
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
     decryptUserFields(userSafe) // return plaintext to caller
@@ -49,6 +101,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'wrong_password' } })
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
+    // Pick up any staff records the employer added for this email after the
+    // user's original registration. Silent no-op when there is nothing new.
+    await autoLinkProviderStaff(user.id, user.email, req)
     const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
     const { password_hash: _, ...userSafe } = user as any
     decryptUserFields(userSafe)
@@ -143,6 +198,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      // Auto-link staff records the employer pre-created for this email
+      await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
       return { user: userSafe, token }
     } catch (err: any) {
@@ -212,6 +269,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      // Auto-link staff records the employer pre-created for this email
+      await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
       return { user: userSafe, token }
     } catch (err: any) {
@@ -280,6 +339,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      // Auto-link staff records the employer pre-created for this email
+      await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
       reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {
@@ -338,6 +399,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      // Auto-link staff records the employer pre-created for this email
+      await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
       reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
     } catch (err: any) {

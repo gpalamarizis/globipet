@@ -54,6 +54,7 @@ const ForgotPassword    = lazy(() => import('@/pages/auth/ForgotPassword'))
 const ResetPassword     = lazy(() => import('@/pages/auth/ResetPassword'))
 const ProviderDashboard = lazy(() => import('@/pages/provider/ProviderDashboard'))
 const ProviderPackagesPage = lazy(() => import('@/pages/provider/ProviderPackagesPage'))
+const ProviderStaffPage = lazy(() => import('@/pages/provider/ProviderStaffPage'))
 const AdminDashboard    = lazy(() => import('@/pages/admin/AdminDashboard'))
 const AdminCatalogPage  = lazy(() => import('@/pages/admin/AdminCatalogPage'))
 const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage'))
@@ -222,6 +223,7 @@ export default function App() {
               <Route element={<ProviderRoute><ProviderLayout /></ProviderRoute>}>
                 <Route path="/provider"          element={<ProviderDashboard />} />
                 <Route path="/provider/packages" element={<ProviderPackagesPage />} />
+                <Route path="/provider/staff"    element={<ProviderStaffPage />} />
                 <Route path="/provider/*"        element={<ProviderDashboard />} />
               </Route>
 
