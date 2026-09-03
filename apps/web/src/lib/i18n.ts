@@ -281,6 +281,8 @@ const el = {
     marketing: 'Marketing', clients: 'Πελάτες',
   },
   adminLayout: {
+    backToSite: '← Στο GlobiPet',
+    adminPanel: 'Πίνακας Διαχείρισης',
     overview: 'Επισκόπηση', catalog: 'Κατάλογος', services: 'Υπηρεσίες',
     packages: 'Πακέτα', subscriptions: 'Συνδρομές', commissions: 'Προμήθειες', messages: 'Μηνύματα', aiPlans: 'Πλάνα AI',
     auditLogs: 'Καταγραφές', governance: 'Διακυβέρνηση',
@@ -997,6 +999,8 @@ const en: typeof el = {
     marketing: 'Marketing', clients: 'Clients',
   },
   adminLayout: {
+    backToSite: '← Back to GlobiPet',
+    adminPanel: 'Admin Panel',
     overview: 'Overview', catalog: 'Catalog', services: 'Services',
     packages: 'Packages', subscriptions: 'Subscriptions', commissions: 'Commissions', messages: 'Messages', aiPlans: 'AI Plans',
     auditLogs: 'Audit logs', governance: 'Governance',
@@ -1683,6 +1687,8 @@ const es: typeof el = {
     marketing: 'Marketing', clients: 'Clientes',
   },
   adminLayout: {
+    backToSite: '← Volver a GlobiPet',
+    adminPanel: 'Panel de Administración',
     overview: 'Resumen', catalog: 'Catálogo', services: 'Servicios',
     packages: 'Paquetes', subscriptions: 'Suscripciones', commissions: 'Comisiones', messages: 'Mensajes', aiPlans: 'Planes AI',
     auditLogs: 'Registros de auditoría', governance: 'Gobernanza',
@@ -2369,6 +2375,8 @@ const fr: typeof el = {
     marketing: 'Marketing', clients: 'Clients',
   },
   adminLayout: {
+    backToSite: '← Retour à GlobiPet',
+    adminPanel: "Panneau d'administration",
     overview: "Aperçu", catalog: 'Catalogue', services: 'Services',
     packages: 'Forfaits', subscriptions: 'Abonnements', commissions: 'Commissions', messages: 'Messages', aiPlans: 'Forfaits IA',
     auditLogs: "Journaux d'audit", governance: 'Gouvernance',
@@ -3055,6 +3063,8 @@ const zh: typeof el = {
     marketing: '营销', clients: '客户',
   },
   adminLayout: {
+    backToSite: '← 返回 GlobiPet',
+    adminPanel: '管理面板',
     overview: '概览', catalog: '目录', services: '服务',
     packages: '套餐', subscriptions: '订阅', commissions: '佣金', messages: '消息', aiPlans: 'AI 套餐',
     auditLogs: '审计日志', governance: '治理',

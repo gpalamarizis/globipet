@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, Languages } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, Languages, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -25,6 +25,17 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-40">
         <div className="page-container">
+          {/* Top row: brand + back to public site */}
+          <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+            <Link to="/" className="flex items-center gap-2 text-brand-900 dark:text-yellow-400 hover:opacity-80 transition-opacity">
+              <Home size={16}/>
+              <span className="font-semibold text-sm">{t('adminLayout.backToSite')}</span>
+            </Link>
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
+              {t('adminLayout.adminPanel')}
+            </div>
+          </div>
+          {/* Bottom row: tabs + language */}
           <div className="flex flex-wrap items-center gap-1 py-2">
             <div className="flex flex-wrap gap-1 flex-1">
               {tabs.map(tab => {
