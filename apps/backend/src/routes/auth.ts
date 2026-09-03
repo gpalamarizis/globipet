@@ -73,6 +73,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         preferred_language: preferred_language || 'el',
         // Sensitive fields encrypted at rest
         phone: encryptField(phone) as any,
+        // Every new account starts a 30-day AI trial automatically.
+        // The AI feature gate reads `ai_subscription_status` and treats
+        // 'trial' the same as an active paid subscription.
+        ai_subscription_status: 'trial',
+        ai_trial_started_at: new Date(),
       }
     })
     // Auto-link any provider_staff records pre-created by an employer for
@@ -188,6 +193,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             profile_photo: verifiedUser.picture || googleUserData.profile_photo,
             role: 'user',
             preferred_language: preferredLang,
+            // Every new OAuth-created account starts a 30-day AI trial too.
+            ai_subscription_status: 'trial',
+            ai_trial_started_at: new Date(),
           }
         })
       } else if (!user.profile_photo && (verifiedUser.picture || googleUserData.profile_photo)) {
@@ -259,6 +267,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             profile_photo: fbPicture,
             role: 'user',
             preferred_language: preferredLang,
+            // Every new OAuth-created account starts a 30-day AI trial too.
+            ai_subscription_status: 'trial',
+            ai_trial_started_at: new Date(),
           }
         })
       } else if (!user.profile_photo && fbPicture) {
@@ -332,6 +343,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             profile_photo: googleUser.picture,
             role: 'user',
             preferred_language: preferredLang,
+            // Every new OAuth-created account starts a 30-day AI trial too.
+            ai_subscription_status: 'trial',
+            ai_trial_started_at: new Date(),
           }
         })
       } else if (!user.profile_photo && googleUser.picture) {
@@ -394,6 +408,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             profile_photo: fbUser.picture?.data?.url,
             role: 'user',
             preferred_language: preferredLang,
+            // Every new OAuth-created account starts a 30-day AI trial too.
+            ai_subscription_status: 'trial',
+            ai_trial_started_at: new Date(),
           }
         })
       }
