@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy } from 'react'
+﻿import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -71,7 +71,6 @@ const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
 const AdminAuditLogPage    = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
 const AdminGovernancePage  = lazy(() => import('@/pages/admin/AdminGovernancePage'))
-const AdminTranslationsPage = lazy(() => import('@/pages/admin/AdminTranslationsPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
@@ -84,7 +83,40 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false } },
 })
 
+/**
+ * Reads the OAuth callback query params that the backend appends after a
+ * successful Google/Facebook sign-in:
+ *
+ *   https://globipet.com/?token=<jwt>&user=<url-encoded-json>
+ *
+ * Writes them to the auth store and cleans the URL so the credentials do
+ * not linger in the address bar (or in the browser history).
+ *
+ * Runs once on mount. Silent if no params — plain visits are unaffected.
+ */
 function OAuthHandler() {
+  const setAuth = useAuthStore(s => s.setAuth)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const userStr = params.get('user')
+    if (!token || !userStr) return
+
+    try {
+      const user = JSON.parse(decodeURIComponent(userStr))
+      setAuth(user, token)
+    } catch (err) {
+      console.error('OAuth callback: bad user payload', err)
+    } finally {
+      // Strip the OAuth params from the URL without adding a history entry
+      params.delete('token')
+      params.delete('user')
+      const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '')
+      window.history.replaceState(null, '', clean)
+    }
+  }, [setAuth])
+
   return null
 }
 
@@ -188,7 +220,6 @@ export default function App() {
                 <Route path="/admin/content"       element={<AdminContentPage />} />
                 <Route path="/admin/audit-logs"    element={<AdminAuditLogPage />} />
                 <Route path="/admin/governance"    element={<AdminGovernancePage />} />
-                <Route path="/admin/translations"  element={<AdminTranslationsPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />
