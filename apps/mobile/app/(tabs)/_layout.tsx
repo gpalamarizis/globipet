@@ -28,7 +28,7 @@ const TABS = [
 const HIDDEN = ['social', 'services', 'insurance', 'cart', 'community']
 
 /** Το ύψος της ίδιας της μπάρας, χωρίς την περιοχή του συστήματος. */
-const BAR_CONTENT = 58
+const BAR_CONTENT = 64
 
 function TabIcon({ Icon, focused, color }: any) {
   return (
@@ -41,9 +41,11 @@ function TabIcon({ Icon, focused, color }: any) {
 export default function TabLayout() {
   const insets = useSafeAreaInsets()
 
-  // Ελάχιστο 12 ώστε να μη στριμώχνει την ετικέτα πάνω στη γραμμή του
+  // Ελάχιστο 20 ώστε να μη στριμώχνει την ετικέτα πάνω στη γραμμή του
   // συστήματος σε συσκευές με φυσική μπάρα πλοήγησης (Samsung κ.ά.).
-  const bottom = Math.max(insets.bottom, 12)
+  // Σε Samsung 3-button nav το insets.bottom συχνά είναι μικρό, οπότε
+  // εξασφαλίζουμε άνετο κενό ακόμα και τότε.
+  const bottom = Math.max(insets.bottom, 20)
 
   return (
     <Tabs
