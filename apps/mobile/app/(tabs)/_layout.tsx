@@ -17,11 +17,11 @@ import { colors, radius, font, weight } from '@/theme'
  */
 
 const TABS = [
-  { name: 'index',       title: 'Αρχική',      Icon: Home },
-  { name: 'discover',    title: 'Αναζήτηση',   Icon: Search },
-  { name: 'pets',        title: 'Κατοικίδια',  Icon: PawPrint },
-  { name: 'marketplace', title: 'Κατάστημα',   Icon: ShoppingBag },
-  { name: 'profile',     title: 'Προφίλ',      Icon: User },
+  { name: 'index',       title: 'Αρχική',   Icon: Home },
+  { name: 'discover',    title: 'Ψάξε',     Icon: Search },
+  { name: 'pets',        title: 'Ζώα',      Icon: PawPrint },
+  { name: 'marketplace', title: 'Αγορά',    Icon: ShoppingBag },
+  { name: 'profile',     title: 'Προφίλ',   Icon: User },
 ]
 
 /** Οθόνες που υπάρχουν στον φάκελο αλλά δεν εμφανίζονται στη μπάρα. */
