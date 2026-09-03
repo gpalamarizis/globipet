@@ -14,51 +14,6 @@ import LoadingScreen from '@/components/ui/LoadingScreen'
 import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
 import CookieBanner from '@/components/CookieBanner'
 
-/**
- * ─── OAuth callback bootstrap ────────────────────────────────────────
- *
- * Runs ONCE at module import time — before React renders anything, and
- * before Zustand hydrates the auth store from localStorage.
- *
- * Backend flow: after Google/Facebook sign-in, the OAuth callback route
- * redirects the user to  https://globipet.com/?token=<jwt>&user=<url-encoded-json>
- *
- * If we handled this inside a component's useEffect, the first render
- * would show the "not logged in" UI (because the effect runs AFTER paint)
- * and the user would need to refresh the page to see themselves logged in.
- *
- * By writing directly to localStorage here — in the exact shape the
- * Zustand `persist` middleware uses (key: 'globipet-auth', shape:
- * { state: {...}, version: 0 }) — the store picks up the fresh user
- * during its normal hydration step, and the very first render is
- * already authenticated. No page refresh, no flicker.
- *
- * The URL is also cleaned so credentials don't linger in the address
- * bar or in browser history.
- */
-if (typeof window !== 'undefined') {
-  const params = new URLSearchParams(window.location.search)
-  const oauthToken = params.get('token')
-  const oauthUserStr = params.get('user')
-  if (oauthToken && oauthUserStr) {
-    try {
-      const user = JSON.parse(decodeURIComponent(oauthUserStr))
-      localStorage.setItem('globipet-auth', JSON.stringify({
-        state: { user, token: oauthToken, isAuthenticated: true },
-        version: 0,
-      }))
-    } catch (err) {
-      console.error('OAuth callback: could not parse user payload', err)
-    }
-    // Strip OAuth params so credentials don't stay in the URL
-    params.delete('token')
-    params.delete('user')
-    const search = params.toString()
-    const clean = window.location.pathname + (search ? '?' + search : '')
-    window.history.replaceState(null, '', clean)
-  }
-}
-
 const Home              = lazy(() => import('@/pages/Home'))
 const Social            = lazy(() => import('@/pages/Social'))
 const Marketplace       = lazy(() => import('@/pages/Marketplace'))
