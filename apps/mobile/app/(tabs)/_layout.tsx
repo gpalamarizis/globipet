@@ -41,8 +41,9 @@ function TabIcon({ Icon, focused, color }: any) {
 export default function TabLayout() {
   const insets = useSafeAreaInsets()
 
-  // Ελάχιστο 8 ώστε να μην κολλάει στην άκρη σε συσκευές χωρίς inset.
-  const bottom = Math.max(insets.bottom, 8)
+  // Ελάχιστο 12 ώστε να μη στριμώχνει την ετικέτα πάνω στη γραμμή του
+  // συστήματος σε συσκευές με φυσική μπάρα πλοήγησης (Samsung κ.ά.).
+  const bottom = Math.max(insets.bottom, 12)
 
   return (
     <Tabs
@@ -55,7 +56,10 @@ export default function TabLayout() {
           paddingBottom: bottom,
         }],
         tabBarLabelStyle: s.label,
-        tabBarItemStyle: { paddingTop: 6 },
+        // Το πλήρες πλάτος του tab δίνεται στο label ώστε να χωράνε
+        // "Αναζήτηση" και "Κατοικίδια" χωρίς περικοπή.
+        tabBarItemStyle: { paddingTop: 6, paddingHorizontal: 2 },
+        tabBarLabelPosition: 'below-icon',
       }}>
 
       {TABS.map(({ name, title, Icon }) => (
@@ -82,9 +86,13 @@ const s = StyleSheet.create({
     paddingTop: 4,
   },
   label: {
-    fontSize: font.xs,
+    // 10.5px χωρά "Κατοικίδια" σε 360dp πλάτος. Το allowFontScaling:false
+    // εμποδίζει το OS να μεγαλώσει τη γραμματοσειρά (accessibility settings)
+    // και να ξαναπροκαλέσει την περικοπή.
+    fontSize: 10.5,
     fontWeight: weight.semibold,
     marginTop: 2,
+    includeFontPadding: false,
   },
   iconWrap: {
     width: 44, height: 30,

@@ -6,11 +6,12 @@ import { useAuthStore } from '../../src/store/auth'
 
 export default function LoginScreen() {
   const router = useRouter()
-  const { login, loginWithGoogle, isLoading } = useAuthStore()
+  const { login, loginWithGoogle, loginWithFacebook, isLoading } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [facebookLoading, setFacebookLoading] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Σφάλμα', 'Συμπληρώστε email και κωδικό'); return }
@@ -31,6 +32,18 @@ export default function LoginScreen() {
       Alert.alert('Σφάλμα σύνδεσης με Google', err.message || err.response?.data?.message || 'Κάτι πήγε στραβά')
     } finally {
       setGoogleLoading(false)
+    }
+  }
+
+  const handleFacebookLogin = async () => {
+    setFacebookLoading(true)
+    try {
+      const signedIn = await loginWithFacebook()
+      if (signedIn) router.replace('/(tabs)')
+    } catch (err: any) {
+      Alert.alert('Σφάλμα σύνδεσης με Facebook', err.message || err.response?.data?.message || 'Κάτι πήγε στραβά')
+    } finally {
+      setFacebookLoading(false)
     }
   }
 
@@ -80,6 +93,16 @@ export default function LoginScreen() {
               : <Text style={styles.socialButtonText}>🔵  Σύνδεση με Google</Text>
             }
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.socialButton, styles.socialButtonFacebook]}
+            onPress={handleFacebookLogin}
+            disabled={facebookLoading}>
+            {facebookLoading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.socialButtonTextFacebook}>f  Σύνδεση με Facebook</Text>
+            }
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -111,8 +134,10 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
   dividerText: { marginHorizontal: 12, color: '#9CA3AF', fontSize: 13 },
-  socialButton: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, alignItems: 'center' },
+  socialButton: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 8 },
   socialButtonText: { color: '#374151', fontWeight: '500', fontSize: 14 },
+  socialButtonFacebook: { backgroundColor: '#1877F2', borderColor: '#1877F2' },
+  socialButtonTextFacebook: { color: '#fff', fontWeight: '600', fontSize: 14 },
   footer: { flexDirection: 'row', marginTop: 24 },
   footerText: { color: '#6B7280', fontSize: 14 },
   footerLink: { color: '#E65100', fontWeight: '700', fontSize: 14 },

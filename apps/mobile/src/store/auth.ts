@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import { api } from '../lib/api'
 import { signInWithGoogle } from '../lib/googleAuth'
+import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
 
 interface User {
   id: string
@@ -18,6 +19,7 @@ interface AuthState {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<boolean>
+  loginWithFacebook: () => Promise<boolean>
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
   loadToken: () => Promise<void>
@@ -85,6 +87,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  // Returns true if signed in, false if user cancelled the Facebook flow.
+  // Unlike Google, we don't send user data from the client — the backend
+  // fetches it fresh from Graph API using the access_token, so a stolen
+  // token cannot be paired with a fake email.
+  loginWithFacebook: async () => {
+    set({ isLoading: true })
+    try {
+      const fbResult = await signInWithFacebook()
+      if (!fbResult) {
+        set({ isLoading: false })
+        return false // user cancelled
+      }
+
+      const { data } = await api.post('/auth/facebook/mobile', {
+        access_token: fbResult.accessToken,
+      })
+
+      await SecureStore.setItemAsync('token', data.token)
+      await SecureStore.setItemAsync('user', JSON.stringify(data.user))
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      return true
+    } catch (err) {
+      set({ isLoading: false })
+      throw err
+    }
+  },
+
   register: async (data) => {
     set({ isLoading: true })
     try {
@@ -104,5 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync('user')
     delete api.defaults.headers.common['Authorization']
     set({ user: null, token: null, isAuthenticated: false })
+    // Best-effort sign-out from Facebook so the next login prompts again
+    signOutFacebook().catch(() => {})
   },
 }))

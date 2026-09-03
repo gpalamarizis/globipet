@@ -151,6 +151,75 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  // ─── FACEBOOK OAUTH FOR MOBILE APPS ──────────────────────────────
+  // Mobile app sends Facebook's access_token from the native FB SDK.
+  // Backend verifies the token with Graph API's /me endpoint, then
+  // creates/updates the user and returns a JWT.
+  app.post('/facebook/mobile', async (req: any, reply) => {
+    try {
+      const { access_token } = req.body as any
+      if (!access_token) {
+        return reply.code(400).send({ message: 'Λείπει το access token' })
+      }
+
+      // Verify the token by hitting Graph API. Fields we ask for:
+      //   id       — Facebook's stable user id
+      //   email    — requires 'email' permission (we always request it)
+      //   name     — full name
+      //   picture  — profile photo (large, ~200x200)
+      //   locale   — used to seed preferred_language
+      const url = new URL('https://graph.facebook.com/v18.0/me')
+      url.searchParams.set('fields', 'id,email,name,picture.type(large),locale')
+      url.searchParams.set('access_token', access_token)
+
+      const verifyRes = await fetch(url.toString())
+      if (!verifyRes.ok) {
+        return reply.code(401).send({ message: 'Μη έγκυρο Facebook token' })
+      }
+      const fbUser = await verifyRes.json() as any
+
+      if (!fbUser.email) {
+        // Some FB users deny the email permission — we cannot create an
+        // account without an email address as the primary key.
+        return reply.code(400).send({
+          message: 'Απαιτείται πρόσβαση στο email σας. Παρακαλώ επιτρέψτε την κοινοποίηση email και ξαναδοκιμάστε.'
+        })
+      }
+
+      // Map Facebook locale (e.g. "el_GR") to our supported languages
+      const fbLocale = (fbUser.locale || '').toLowerCase().split('_')[0]
+      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
+      const preferredLang = supportedLangs.includes(fbLocale) ? fbLocale : 'el'
+
+      const fbPicture = fbUser.picture?.data?.url || null
+
+      let user = await prisma.user.findUnique({ where: { email: fbUser.email } })
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: fbUser.email,
+            full_name: fbUser.name || 'Facebook User',
+            profile_photo: fbPicture,
+            role: 'user',
+            preferred_language: preferredLang,
+          }
+        })
+      } else if (!user.profile_photo && fbPicture) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { profile_photo: fbPicture }
+        })
+      }
+
+      const { password_hash: _, ...userSafe } = user as any
+      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
+      return { user: userSafe, token }
+    } catch (err: any) {
+      console.error('Facebook mobile OAuth error:', err)
+      return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
+    }
+  })
+
   // ─── GOOGLE OAUTH ───────────────────────────────────────────────
 
   app.get('/google', async (req, reply) => {

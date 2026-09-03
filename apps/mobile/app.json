@@ -43,6 +43,18 @@
       "expo-router",
       "expo-secure-store",
       "@react-native-google-signin/google-signin",
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1482383943531208",
+          "clientToken": "d12ab802cc289ee4c86cacfa7bd4b67f",
+          "displayName": "GlobiPet",
+          "scheme": "fb1482383943531208",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
+      ],
       "expo-asset",
       "expo-font",
       "expo-localization"
@@ -52,6 +64,8 @@
     },
     "extra": {
       "googleWebClientId": "26367014154-8aqhrgd9l9nr6brcjimfgahnq095vpvu.apps.googleusercontent.com",
+      "facebookAppId": "1482383943531208",
+      "facebookClientToken": "d12ab802cc289ee4c86cacfa7bd4b67f",
       "eas": {
         "projectId": "fb18039a-36c8-4c24-af71-6f4853701cf9"
       }
