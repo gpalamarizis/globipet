@@ -1,119 +1,68 @@
 import { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Navigate, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { Lock, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
 /**
- * Detects which AI feature is being accessed based on the current pathname.
- * Maps to the corresponding `includes_*` boolean on the user's plan.
+ * Gate for AI features (Health Check, Emotion Detector, Wellness Tracker,
+ * Stool/Urine analysis, etc).
+ *
+ * Access rules — evaluated in order:
+ *   1. Admins pass through unconditionally. They need full access to test
+ *      and support customers without being asked to buy their own product.
+ *   2. Active AI subscription → allowed.
+ *   3. Trial period still active → allowed.
+ *   4. Otherwise → upgrade card, with a link to /pricing.
+ *
+ * Not logged in is handled one level up by <PrivateRoute>, so by the time
+ * this component renders the user is always authenticated.
  */
-function featureFromPath(pathname: string): keyof AiFeatureFlags | null {
-  if (pathname.startsWith('/ai-health'))      return 'includes_ai_health'
-  if (pathname.startsWith('/ai-emotion'))     return 'includes_emotion_ai'
-  if (pathname.startsWith('/ai-stool-urine')) return 'includes_ai_health' // stool/urine belongs to AI health
-  if (pathname.startsWith('/wellness'))       return 'includes_wellness_tracker'
-  return null
-}
-
-interface AiFeatureFlags {
-  includes_ai_health: boolean
-  includes_emotion_ai: boolean
-  includes_wellness_tracker: boolean
-  includes_telehealth: boolean
-}
-
-interface AiStatus {
-  ai_subscription_status: 'none' | 'trial' | 'active' | 'expired'
-  ai_trial_started_at: string | null
-  ai_subscription_plan_id: string | null
-  trial_days_left: number | null
-  plan: (AiFeatureFlags & { id: string; name: string; name_el: string | null }) | null
-}
-
-interface Props {
-  children: ReactNode
-}
-
-export default function AiFeatureGuard({ children }: Props) {
+export default function AiFeatureGuard({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const user = useAuthStore(s => s.user)
+  const isAdmin = user?.role === 'admin'
 
-  const { data, isLoading } = useQuery<AiStatus>({
+  // Admins bypass the subscription check entirely — no query, no waiting.
+  // This also avoids a wasted request on every admin page load.
+  const { data: status, isLoading } = useQuery({
     queryKey: ['ai-subscription-status'],
     queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
-    staleTime: 60_000, // avoid hammering the backend
+    enabled: !isAdmin,
+    staleTime: 60_000,
   })
 
+  if (isAdmin) return <>{children}</>
   if (isLoading) return <LoadingScreen />
-  if (!data) return <Navigate to="/trial" replace />
 
-  // Not started → send to trial landing
-  if (data.ai_subscription_status === 'none') {
-    return <Navigate to="/trial" replace />
-  }
+  const st = status?.ai_subscription_status
+  const hasAccess = st === 'active' || st === 'trial'
+  if (hasAccess) return <>{children}</>
 
-  // Expired trial → show blocking modal, offer upgrade
-  if (data.ai_subscription_status === 'expired') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-        <div className="max-w-md w-full card p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <Lock size={28} className="text-amber-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('aiGuard.expiredTitle')}
-          </h2>
-          <p className="text-sm text-gray-500 mb-6">
-            {t('aiGuard.expiredDesc')}
-          </p>
-          <div className="flex flex-col gap-2">
-            <button onClick={() => navigate('/pricing')} className="btn-primary w-full flex items-center justify-center gap-2">
-              <Sparkles size={16} /> {t('aiGuard.seePlans')}
-            </button>
-            <button onClick={() => navigate('/')} className="btn-secondary w-full">
-              {t('aiGuard.backHome')}
-            </button>
-          </div>
+  // No access — show an upgrade card rather than silently redirecting,
+  // so the user understands what happened and where to go next.
+  return (
+    <div className="page-container py-16">
+      <div className="max-w-lg mx-auto text-center bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+        <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center mx-auto mb-4">
+          <Lock size={26} className="text-brand-900 dark:text-yellow-400"/>
         </div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {t('aiFeatureGuard.title', 'Απαιτείται συνδρομή AI')}
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          {st === 'expired'
+            ? t('aiFeatureGuard.expired', 'Η δωρεάν σου δοκιμή έληξε. Επίλεξε πλάνο για να συνεχίσεις.')
+            : t('aiFeatureGuard.upgrade', 'Αυτή η λειτουργία είναι διαθέσιμη με συνδρομή AI. Ξεκίνησε δωρεάν δοκιμή 30 ημερών.')}
+        </p>
+        <a href="/pricing" className="btn-primary inline-flex items-center gap-2">
+          <Sparkles size={16}/>
+          {t('aiFeatureGuard.viewPlans', 'Δες τα πλάνα')}
+        </a>
       </div>
-    )
-  }
-
-  // Trial or active → check if the specific feature is included in the user's plan.
-  // Note: during trial, the assigned plan gates access. If for some reason the user
-  // is in trial but has no plan attached (legacy data), we allow access to be safe.
-  const feature = featureFromPath(window.location.pathname)
-  if (data.plan && feature) {
-    const enabled = data.plan[feature]
-    if (!enabled) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-          <div className="max-w-md w-full card p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Sparkles size={28} className="text-blue-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('aiGuard.notInPlanTitle')}
-            </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              {t('aiGuard.notInPlanDesc', { plan: data.plan.name_el || data.plan.name })}
-            </p>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => navigate('/pricing')} className="btn-primary w-full flex items-center justify-center gap-2">
-                <Sparkles size={16} /> {t('aiGuard.upgradePlan')}
-              </button>
-              <button onClick={() => navigate('/')} className="btn-secondary w-full">
-                {t('aiGuard.backHome')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-  }
-
-  return <>{children}</>
+    </div>
+  )
 }
