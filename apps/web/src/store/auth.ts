@@ -15,6 +15,7 @@ interface AuthState {
   updateUser: (data: Partial<User>) => void
   setAuth: (user: User, token: string) => void
   refreshToken: () => Promise<void>
+  refreshUser: () => Promise<void>
   updateLanguage: (lang: string) => Promise<void>
 }
 
@@ -115,6 +116,28 @@ export const useAuthStore = create<AuthState>()(
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
         } catch {
           get().logout()
+        }
+      },
+
+      /**
+       * Pull the latest user record from the backend and replace the cached
+       * one. Used at app boot / MainLayout mount so users who logged in before
+       * a backfill (e.g. profile_photo from Google OAuth added later) see the
+       * fresh data without needing to log out and back in.
+       *
+       * Silent on failure — the cached user stays as-is.
+       */
+      refreshUser: async () => {
+        const { token } = get()
+        if (!token) return
+        try {
+          const { data } = await api.get('/auth/me')
+          if (data) {
+            set({ user: data })
+            applyUserLanguage(data)
+          }
+        } catch {
+          /* keep cached user */
         }
       },
     }),

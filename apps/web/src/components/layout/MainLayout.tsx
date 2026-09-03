@@ -119,12 +119,20 @@ function ThemeToggle() {
 export default function MainLayout() {
   const { t } = useTranslation()
   const location = useLocation()
-  const { user, isAuthenticated, logout } = useAuthStore()
+  const { user, isAuthenticated, logout, refreshUser } = useAuthStore()
   const [moreOpen, setMoreOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Pull the freshest user record on mount so users who logged in before a
+  // backfill (e.g. Google profile_photo) see updated data without needing to
+  // log out. Runs once per mount when authenticated.
+  useEffect(() => {
+    if (isAuthenticated) refreshUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -232,8 +240,8 @@ export default function MainLayout() {
                       aria-label="Μενού χρήστη"
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
-                        {user?.profile_photo
-                          ? <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
+                        {(user?.profile_photo || (user as any)?.picture)
+                          ? <img src={user?.profile_photo || (user as any)?.picture} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                           : <span>{getInitials(user?.full_name || 'U')}</span>}
                       </div>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
@@ -414,8 +422,8 @@ export default function MainLayout() {
                 {isAuthenticated && (
                   <div className="flex items-center gap-3 py-4 mb-2 border-b border-gray-100 dark:border-gray-800">
                     <div className="w-12 h-12 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-bold shrink-0">
-                      {user?.profile_photo
-                        ? <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
+                      {(user?.profile_photo || (user as any)?.picture)
+                        ? <img src={user?.profile_photo || (user as any)?.picture} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         : <span>{getInitials(user?.full_name || 'U')}</span>}
                     </div>
                     <div className="min-w-0">
