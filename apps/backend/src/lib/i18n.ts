@@ -20,7 +20,7 @@ import prisma from './prisma.js'
  *   Περιεχόμενο χρήστη: δημοσιεύσεις, μηνύματα, ονόματα ζώων, ιατρικά.
  */
 
-export const SUPPORTED = ['el', 'en'] as const
+export const SUPPORTED = ['el', 'en', 'es', 'fr', 'zh'] as const
 export type Lang = typeof SUPPORTED[number]
 export const DEFAULT_LANG: Lang = 'el'
 
