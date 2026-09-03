@@ -131,21 +131,24 @@ const queryClient = new QueryClient({
 /**
  * OAuth callback processor.
  *
- * PROBLEM
- *   After Google/Facebook login, the backend redirects to:
- *     https://globipet.com/?token=<jwt>&user=<url-encoded-json>
- *   A previous version used React's useEffect to pick up these params,
- *   but useEffect runs AFTER the first render — so the first paint showed
- *   the "not logged in" state, and only a manual page refresh fixed it.
+ * After Google/Facebook login the backend redirects to:
+ *   https://globipet.com/?token=<jwt>&user=<url-encoded-json>
  *
- * SOLUTION
- *   Run this as a module-level side effect (executes on import, BEFORE
- *   any React code) and write directly to localStorage in the exact
- *   format Zustand's `persist` middleware expects. When the auth store
- *   hydrates during the first render, the user is already there.
+ * WHY MODULE-LEVEL + HARD RELOAD
+ *   Two things had to be true for the first paint to show the logged-in
+ *   state: (1) the auth store had to see the user before rendering, and
+ *   (2) the render itself had to be a fresh one. useEffect and setAuth
+ *   satisfied neither in practice. This version:
+ *     - Runs at import time (before any React code executes)
+ *     - Writes directly to localStorage in the exact shape Zustand's
+ *       `persist` middleware expects (key `globipet-auth`)
+ *     - Then hard-navigates to the clean URL via location.replace(), so
+ *       the entire app boots from scratch with the store hydrating from
+ *       the freshly-written localStorage entry
  *
- *   The Zustand persist key is `globipet-auth` (set in store/auth.ts).
- *   Its shape is `{ state: {...}, version: 0 }`.
+ *   The hard reload is instant (no network round-trip since the SPA is
+ *   already cached) and eliminates every edge case around React lifecycle
+ *   timing, Cloudflare cache of a stale bundle, etc.
  */
 if (typeof window !== 'undefined') {
   const params = new URLSearchParams(window.location.search)
@@ -161,19 +164,21 @@ if (typeof window !== 'undefined') {
     } catch (err) {
       console.error('OAuth callback: bad user payload', err)
     }
-    // Strip credentials from the address bar without adding a history entry
+    // Strip credentials from the URL and hard-reload so the app boots
+    // fresh with the store hydrated from localStorage.
     params.delete('token')
     params.delete('user')
     const search = params.toString()
     const clean = window.location.pathname + (search ? '?' + search : '')
-    window.history.replaceState(null, '', clean)
+    window.location.replace(clean)
+    // location.replace() halts further script execution on this page —
+    // the rest of App.tsx will not run until the new page loads.
   }
 }
 
 function OAuthHandler() {
-  // The heavy lifting happens above at module scope, before React renders.
-  // This component exists only so the existing JSX (<OAuthHandler />) keeps
-  // compiling without changes.
+  // The work happens above at module scope. This component exists only
+  // so <OAuthHandler /> in the JSX below keeps compiling.
   return null
 }
 
