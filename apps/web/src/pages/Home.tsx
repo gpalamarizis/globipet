@@ -210,29 +210,39 @@ export default function Home() {
         <section className="bg-gradient-to-br from-yellow-50 via-orange-50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 px-4 py-8 border-b border-gray-100 dark:border-gray-800">
           <div className="max-w-6xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-4 mb-6 flex-wrap">
                 <span className="text-3xl">👋</span>
-                <div className="flex-1">
+                <div className="min-w-0">
                   <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
                     Καλώς ήρθες πίσω, <span className="text-brand-900 dark:text-yellow-400">{user.full_name?.split(' ')[0] || 'φίλε'}</span>!
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Δες τι έχει σήμερα για σένα και τα κατοικίδιά σου</p>
                 </div>
-                {/* AI trial countdown — visible only during the free trial */}
+                {/* AI trial badge — active → jump into AI Health, expired → pricing */}
                 {(user as any).ai_subscription_status === 'trial' && (user as any).ai_trial_started_at && (() => {
                   const started = new Date((user as any).ai_trial_started_at).getTime()
                   const daysUsed = Math.floor((Date.now() - started) / 86400000)
                   const daysLeft = Math.max(0, 30 - daysUsed)
+                  const expired = daysLeft === 0
                   return (
-                    <Link to="/pricing"
-                      className="hidden md:flex items-center gap-2 bg-white dark:bg-gray-800 border border-yellow-300 dark:border-yellow-500/40 rounded-xl px-4 py-2.5 hover:shadow-md transition-shadow">
-                      <div className="w-9 h-9 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                        <Sparkles size={16} className="text-yellow-600 dark:text-yellow-400" />
+                    <Link
+                      to={expired ? '/pricing' : '/ai-health'}
+                      className={`flex items-center gap-2 border rounded-xl px-4 py-2.5 hover:shadow-md transition-shadow ${
+                        expired
+                          ? 'bg-white dark:bg-gray-800 border-red-300 dark:border-red-500/40'
+                          : 'bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-500/40'
+                      }`}>
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                        expired
+                          ? 'bg-red-100 dark:bg-red-900/30'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30'
+                      }`}>
+                        <Sparkles size={16} className={expired ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} />
                       </div>
-                      <div>
+                      <div className="text-left">
                         <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Δωρεάν δοκιμή AI</div>
                         <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">
-                          {daysLeft > 0 ? `${daysLeft} ${daysLeft === 1 ? 'ημέρα' : 'ημέρες'}` : 'Έληξε'}
+                          {expired ? 'Έληξε — Δες πλάνα' : `${daysLeft} ${daysLeft === 1 ? 'ημέρα' : 'ημέρες'}`}
                         </div>
                       </div>
                     </Link>

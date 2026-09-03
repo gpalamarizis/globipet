@@ -206,6 +206,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
@@ -280,6 +281,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
@@ -353,6 +355,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
@@ -416,6 +419,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { password_hash: _, ...userSafe } = user as any
+      decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
       const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
