@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
+import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
 export default async function insuranceRoutes(app: FastifyInstance) {
 
@@ -11,7 +12,8 @@ export default async function insuranceRoutes(app: FastifyInstance) {
   }
 
   // GET /insurance/providers
-  app.get('/insurance/providers', async (req, reply) => {
+  app.get('/insurance/providers', async (req: any, reply) => {
+    const lang = getRequestLang(req)
     const providers = await prisma.insuranceProvider.findMany({
       where: { is_active: true },
       include: {
@@ -22,11 +24,20 @@ export default async function insuranceRoutes(app: FastifyInstance) {
       },
       orderBy: { display_order: 'asc' },
     })
-    return reply.send({ data: providers })
+    // Translate providers themselves, then translate the nested plans array
+    // of each provider. translateRecords is a no-op if no translations exist.
+    const translatedProviders = await translateRecords('insurance_provider', providers, lang)
+    for (const p of translatedProviders) {
+      if (p.plans?.length) {
+        p.plans = await translateRecords('insurance_plan', p.plans, lang)
+      }
+    }
+    return reply.send({ data: translatedProviders })
   })
 
   // GET /insurance/plans
   app.get('/insurance/plans', async (req: any, reply) => {
+    const lang = getRequestLang(req)
     const { pet_type, tier, max_price, covers_surgery, covers_dental } = req.query
     const plans = await prisma.insurancePlan.findMany({
       where: {
@@ -42,17 +53,30 @@ export default async function insuranceRoutes(app: FastifyInstance) {
       },
       orderBy: [{ is_featured: 'desc' }, { display_order: 'asc' }, { price_monthly: 'asc' }],
     })
-    return reply.send({ data: plans })
+    // Translate the plan itself, then its nested provider (which is a
+    // single record, so translateRecord — singular).
+    const translatedPlans = await translateRecords('insurance_plan', plans, lang)
+    for (const p of translatedPlans) {
+      if (p.provider) {
+        p.provider = await translateRecord('insurance_provider', p.provider, lang)
+      }
+    }
+    return reply.send({ data: translatedPlans })
   })
 
   // GET /insurance/plans/:id
   app.get('/insurance/plans/:id', async (req: any, reply) => {
+    const lang = getRequestLang(req)
     const plan = await prisma.insurancePlan.findUnique({
       where: { id: req.params.id },
       include: { provider: true },
     })
     if (!plan) return reply.code(404).send({ message: 'Not found' })
-    return reply.send({ data: plan })
+    const translated: any = await translateRecord('insurance_plan', plan, lang)
+    if (translated?.provider) {
+      translated.provider = await translateRecord('insurance_provider', translated.provider, lang)
+    }
+    return reply.send({ data: translated })
   })
 
   // ============ ADMIN ROUTES ============
