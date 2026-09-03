@@ -25,17 +25,28 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /ai-subscriptions/my-status
   app.get('/my-status', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: (req.user as any).id },
-      select: { ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
+      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
     })
     if (!user) return reply.code(404).send({ message: 'Not found' })
 
-    let daysLeft = null
+    let daysLeft: number | null = null
     if (user.ai_subscription_status === 'trial' && user.ai_trial_started_at) {
       const elapsedMs = Date.now() - new Date(user.ai_trial_started_at).getTime()
       const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24)
       daysLeft = Math.max(0, Math.ceil(TRIAL_DAYS - elapsedDays))
+
+      // Auto-transition trial → expired the moment we notice it ran out.
+      // Without this, the feature gate would keep letting the user in past
+      // the trial window because the status column still says 'trial'.
+      if (daysLeft === 0) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { ai_subscription_status: 'expired' },
+        })
+        user = { ...user, ai_subscription_status: 'expired' }
+      }
     }
 
     // Also fetch plan if user has one

@@ -40,9 +40,16 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     return translateRecord('service', service, lang)
   })
 
-  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const { email, full_name } = req.user as any
-    return prisma.service.create({ data: { ...req.body, provider_email: email, provider_name: req.body.provider_name || full_name } })
+  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
+    const { email, full_name, role } = req.user as any
+    // Only providers/admins may create services.
+    if (role !== 'admin' && role !== 'service_provider' && role !== 'both') {
+      return reply.code(403).send({ message: 'Μόνο πάροχοι μπορούν να δημιουργούν υπηρεσίες' })
+    }
+    // Callers cannot spoof provider_email; only admins can set it explicitly.
+    const { provider_email: bodyOwner, ...body } = req.body ?? {}
+    const provider_email = (role === 'admin' && bodyOwner) || email
+    return prisma.service.create({ data: { ...body, provider_email, provider_name: body.provider_name || full_name } })
   })
 
   // Επιβεβαιώνει ότι η υπηρεσία ανήκει στον συνδεδεμένο χρήστη.
