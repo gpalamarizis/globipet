@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint } from 'lucide-react'
+import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint, Clock, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
@@ -168,7 +168,16 @@ export default function Home() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 0.8 }}
                 className="flex gap-3 mt-10 flex-wrap justify-center">
-                <Link to="/register" className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
+                <Link
+                  to={
+                    !isAuthenticated
+                      ? '/register'                                    // guest → sign up (auto-starts trial)
+                      : (user as any)?.ai_subscription_status === 'trial'
+                          || (user as any)?.ai_subscription_status === 'active'
+                        ? '/ai-health'                                  // active/trial → jump into AI
+                        : '/pricing'                                    // expired/none → show plans
+                  }
+                  className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
                   Δοκίμασε δωρεάν
                 </Link>
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
@@ -203,12 +212,32 @@ export default function Home() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">👋</span>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
                     Καλώς ήρθες πίσω, <span className="text-brand-900 dark:text-yellow-400">{user.full_name?.split(' ')[0] || 'φίλε'}</span>!
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Δες τι έχει σήμερα για σένα και τα κατοικίδιά σου</p>
                 </div>
+                {/* AI trial countdown — visible only during the free trial */}
+                {(user as any).ai_subscription_status === 'trial' && (user as any).ai_trial_started_at && (() => {
+                  const started = new Date((user as any).ai_trial_started_at).getTime()
+                  const daysUsed = Math.floor((Date.now() - started) / 86400000)
+                  const daysLeft = Math.max(0, 30 - daysUsed)
+                  return (
+                    <Link to="/pricing"
+                      className="hidden md:flex items-center gap-2 bg-white dark:bg-gray-800 border border-yellow-300 dark:border-yellow-500/40 rounded-xl px-4 py-2.5 hover:shadow-md transition-shadow">
+                      <div className="w-9 h-9 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                        <Sparkles size={16} className="text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Δωρεάν δοκιμή AI</div>
+                        <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">
+                          {daysLeft > 0 ? `${daysLeft} ${daysLeft === 1 ? 'ημέρα' : 'ημέρες'}` : 'Έληξε'}
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })()}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
