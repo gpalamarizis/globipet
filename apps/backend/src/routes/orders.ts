@@ -18,33 +18,62 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     return { data: orders }
   })
 
-  // Get order by ID
-  app.get('/:id', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+  // Get order by ID — only the buyer, a provider with a line in it, or an admin
+  app.get('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
     const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    if (!order) return reply.code(404).send({ message: 'Η παραγγελία δεν βρέθηκε' })
+
+    const isBuyer = order.user_email === user.email
+    const isAdmin = user.role === 'admin'
+    const isSeller = Array.isArray(order.items)
+      && (order.items as any[]).some(i => i?.provider_email === user.email)
+
+    if (!isBuyer && !isAdmin && !isSeller) {
+      return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση σε αυτή την παραγγελία' })
+    }
     return order
   })
 
   // Create order
-  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+  //
+  // SECURITY: prices and the order total are computed from the products table,
+  // never taken from the request body. Previously a client could post
+  // { items: [{ product_id: X, product_price: 0.01 }], total_amount: 0.01 }
+  // and the order was created at that price.
+  app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
-    const { items, shipping_address, payment_method, total_amount } = req.body as any
+    const { items, shipping_address, payment_method } = req.body as any
 
-    // Look up products to enrich items with category + provider_email for commission calc
+    if (!Array.isArray(items) || items.length === 0) {
+      return reply.code(400).send({ message: 'Το καλάθι είναι κενό' })
+    }
+
+    // Look up products for authoritative price, name, image, category, owner
     const productIds = items.map((i: any) => i.product_id || i.id).filter(Boolean)
     const products = await prisma.product.findMany({ where: { id: { in: productIds } } })
     const productMap = new Map(products.map(p => [p.id, p]))
 
+    // Every line must reference a product that actually exists
+    const missing = productIds.filter((id: string) => !productMap.has(id))
+    if (missing.length) {
+      return reply.code(400).send({ message: 'Κάποια προϊόντα δεν είναι πλέον διαθέσιμα', missing })
+    }
+
     let totalPlatformFee = 0
     let totalProviderPayout = 0
+    let computedTotal = 0
 
     const enrichedItems = await Promise.all(items.map(async (item: any) => {
       const productId = item.product_id || item.id
-      const product = productMap.get(productId)
-      const price = parseFloat(item.product_price ?? item.price ?? 0)
-      const quantity = item.quantity
+      const product = productMap.get(productId)!
+      // Authoritative price from the database — the client value is ignored.
+      const price = product.price
+      const quantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 99)
       const lineTotal = price * quantity
-      const category = product?.category || null
-      const providerEmail = product?.provider_email || null
+      computedTotal += lineTotal
+      const category = product.category || null
+      const providerEmail = product.provider_email || null
 
       let commission_rate: number | null = null
       let platform_fee: number | null = null
@@ -61,10 +90,12 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         product_id: productId,
-        name: item.product_name || item.name,
+        // Name and image also come from the database, so the stored order
+        // reflects the real product rather than whatever the client sent.
+        name: product.name,
         price,
         quantity,
-        image: item.product_image || item.image || null,
+        image: product.image_url ?? null,
         category,
         provider_email: providerEmail,
         commission_rate,
@@ -78,7 +109,8 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         user_email: email,
         user_name: full_name || email.split('@')[0],
         items: enrichedItems,
-        total_amount: parseFloat(total_amount),
+        // Computed from database prices, not from the request body.
+        total_amount: Math.round(computedTotal * 100) / 100,
         status: 'pending',
         shipping_address: shipping_address,
         payment_method,
@@ -93,7 +125,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   // ─── VIVA.COM SMART CHECKOUT ─────────────────────────────────────
   app.post('/viva/checkout', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { order_id, total_amount } = req.body as any
+    const { order_id } = req.body as any
     const user = req.user as any
 
     try {
@@ -101,9 +133,14 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (!order || order.user_email !== user.email) {
         return reply.code(404).send({ message: 'Η παραγγελία δεν βρέθηκε' })
       }
+      // Already-paid orders must not be chargeable a second time.
+      if (order.payment_status === 'paid') {
+        return reply.code(400).send({ message: 'Η παραγγελία έχει ήδη πληρωθεί' })
+      }
 
       const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
-        amount: parseFloat(total_amount || order.total_amount),
+        // Charge the stored order total — never an amount supplied by the client.
+        amount: order.total_amount,
         customerEmail: user.email,
         customerName: user.full_name,
         orderId: order_id,
