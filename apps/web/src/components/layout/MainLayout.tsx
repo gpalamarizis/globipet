@@ -38,6 +38,7 @@ const servicesDropdown = [
 const communityDropdown = [
   { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,   color: 'text-green-500' },
   { path: '/communities', labelKey: 'nav.communities', icon: Building2,  color: 'text-purple-500' },
+  { path: '/forum',       labelKey: 'nav.forum',       icon: MessageSquare, color: 'text-blue-500' },
 ]
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────
@@ -337,10 +338,10 @@ export default function MainLayout() {
             <div>
               <h4 className="text-white font-semibold mb-3 text-sm">{t('footer.explore')}</h4>
               <ul className="space-y-2 text-sm">
-                {['/services', '/marketplace', '/events', '/breeds'].map((path, i) => (
+                {['/services', '/marketplace', '/events', '/breeds', '/market-insights'].map((path, i) => (
                   <li key={path}>
                     <Link to={path} className="hover:text-white transition-colors">
-                      {[t('nav.services'), t('nav.shop'), t('nav.events'), t('nav.breeds')][i]}
+                      {[t('nav.services'), t('nav.shop'), t('nav.events'), t('nav.breeds'), t('nav.popular', 'Δημοφιλή')][i]}
                     </Link>
                   </li>
                 ))}

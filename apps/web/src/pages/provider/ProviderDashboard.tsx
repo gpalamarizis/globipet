@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft, Megaphone, Users } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft, Megaphone, Users, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -10,6 +10,7 @@ import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import ProviderStaffPage from './ProviderStaffPage'
+import MarketInsights from '@/pages/MarketInsights'
 import ProviderTranslationsPage from './ProviderTranslationsPage'
 import ProviderMarketingPage from './ProviderMarketingPage'
 import ProviderCustomersPage from './ProviderCustomersPage'
@@ -189,24 +190,64 @@ function ImportTab() {
 
 // ─── Calendar Tab ─────────────────────────────────────────────────
 function CalendarTab() {
-  const { user } = useAuthStore()
+  const queryClient = useQueryClient()
   const [syncing, setSyncing] = useState(false)
 
-  const syncGoogle = async () => {
+  /**
+   * Which calendars are attached to this account.
+   *
+   * There was nothing here before because nothing was stored — the old
+   * callback threw the tokens away, so "connected" was a claim the app made
+   * about a state it never kept.
+   */
+  const { data: connections = [] } = useQuery({
+    queryKey: ['calendar-connections'],
+    queryFn: () => api.get('/calendar/connections').then(r => r.data?.data ?? []),
+  })
+  const connected = (p: string) => connections.some((c: any) => c.provider === p && c.is_active)
+
+  /**
+   * Start the OAuth flow.
+   *
+   * The old handlers opened /calendar/<p>/auth?userId=<id> directly. That
+   * route was never registered, so the popup showed a 404 — and passing the
+   * user id in the URL meant anyone could attach their calendar to another
+   * account. The endpoint now requires a session, issues a one-time state
+   * server-side, and hands back the URL to open.
+   */
+  const connect = async (provider: 'google' | 'outlook') => {
     setSyncing(true)
     try {
-      window.open(`https://globipetbackend-production.up.railway.app/api/calendar/google/auth?userId=${user?.id}`, '_blank', 'width=500,height=600')
-      toast.success('Ανοίχτηκε η σύνδεση Google Calendar')
+      const { data } = await api.get(`/calendar/${provider}/connect`)
+      const url = data?.data?.url
+      if (!url) throw new Error('Δεν επιστράφηκε διεύθυνση σύνδεσης')
+      window.open(url, '_blank', 'width=520,height=640')
+    } catch (err: any) {
+      toast.error(err?.message || 'Δεν ήταν δυνατή η σύνδεση')
     } finally { setSyncing(false) }
   }
 
-  const syncOutlook = async () => {
-    setSyncing(true)
+  const disconnect = async (provider: 'google' | 'outlook') => {
     try {
-      window.open(`https://globipetbackend-production.up.railway.app/api/calendar/outlook/auth?userId=${user?.id}`, '_blank', 'width=500,height=600')
-      toast.success('Ανοίχτηκε η σύνδεση Microsoft Outlook')
-    } finally { setSyncing(false) }
+      await api.delete(`/calendar/${provider}`)
+      queryClient.invalidateQueries({ queryKey: ['calendar-connections'] })
+      toast.success('Η σύνδεση αφαιρέθηκε')
+    } catch (err: any) {
+      toast.error(err?.message || 'Σφάλμα')
+    }
   }
+
+  // The popup redirects the opener back to /provider?calendar=… when it
+  // finishes, so re-read the connection list on focus rather than making the
+  // provider reload the page to see the result.
+  useEffect(() => {
+    const onFocus = () => queryClient.invalidateQueries({ queryKey: ['calendar-connections'] })
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [queryClient])
+
+  const syncGoogle = () => connected('google') ? disconnect('google') : connect('google')
+  const syncOutlook = () => connected('outlook') ? disconnect('outlook') : connect('outlook')
 
   const { data: bookings = [] } = useQuery({
     queryKey: ['provider-bookings'],
@@ -235,7 +276,10 @@ function CalendarTab() {
             <svg width="24" height="24" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
             <div className="text-left">
               <p className="font-medium text-sm text-gray-900 dark:text-white">Google Calendar</p>
-              <p className="text-xs text-gray-500">Σύνδεση με Google</p>
+              {/* Say what pressing this will do, not what it is. */}
+              <p className={cn('text-xs', connected('google') ? 'text-green-600' : 'text-gray-500')}>
+                {connected('google') ? '✓ Συνδεδεμένο — πάτα για αποσύνδεση' : 'Σύνδεση με Google'}
+              </p>
             </div>
           </button>
           <button onClick={syncOutlook}
@@ -243,7 +287,9 @@ function CalendarTab() {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="#0078D4"><path d="M24 12.204c0-.687-.563-1.244-1.258-1.244h-9.416V3.258C13.326 2.563 12.763 2 12.07 2H1.258C.563 2 0 2.563 0 3.258v17.484C0 21.437.563 22 1.258 22h21.484C23.437 22 24 21.437 24 20.742v-8.538z"/></svg>
             <div className="text-left">
               <p className="font-medium text-sm text-gray-900 dark:text-white">Microsoft Outlook</p>
-              <p className="text-xs text-gray-500">Σύνδεση με Microsoft</p>
+              <p className={cn('text-xs', connected('outlook') ? 'text-green-600' : 'text-gray-500')}>
+                {connected('outlook') ? '✓ Συνδεδεμένο — πάτα για αποσύνδεση' : 'Σύνδεση με Microsoft'}
+              </p>
             </div>
           </button>
         </div>
@@ -581,6 +627,8 @@ export default function ProviderDashboard() {
     { id: 'marketing',    label: 'Καμπάνιες',   icon: Megaphone },
     { id: 'customers',    label: 'Πελάτες',     icon: Users },
     { id: 'translations', label: 'Μεταφράσεις', icon: Languages },
+    // The insights page existed with no way to reach it.
+    ...(sellsProducts ? [{ id: 'insights', label: 'Στατιστικά', icon: BarChart3 }] : []),
     ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
   ]
 
@@ -636,6 +684,7 @@ export default function ProviderDashboard() {
 
       {/* Γιατροί & προσωπικό */}
       {activeTab === 'staff' && <ProviderStaffPage />}
+      {activeTab === 'insights' && <MarketInsights />}
 
       {/* Μεταφράσεις περιεχομένου παρόχου */}
       {activeTab === 'translations' && <ProviderTranslationsPage />}
