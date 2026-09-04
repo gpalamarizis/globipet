@@ -127,6 +127,10 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   '/api/auth/reset-password':  { max: 6,  window: '1 hour' },
   '/api/auth/google/mobile':   { max: 20, window: '15 minutes' },
   '/api/user-rights/export':   { max: 5,  window: '1 hour' },
+  // GPS collars report on a schedule, not continuously. This is generous for
+  // a real device and still caps how fast an unauthenticated caller can probe
+  // device tokens or flood the location table.
+  '/api/tracker/ingest':       { max: 60, window: '1 minute' },
 }
 
 app.addHook('onRoute', (route) => {

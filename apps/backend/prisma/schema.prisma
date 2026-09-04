@@ -65,6 +65,8 @@ model Pet {
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
+  trackers PetTracker[]
+
   @@map("pets")
 }
 
@@ -426,8 +428,37 @@ model PetLocation {
   status      String   @default("safe")
   is_resolved Boolean  @default(false)
   created_at  DateTime @default(now())
+  tracker_id  String?
 
+  tracker PetTracker? @relation(fields: [tracker_id], references: [id], onDelete: SetNull)
+
+  @@index([tracker_id], map: "pet_locations_tracker_idx")
+  @@index([pet_id, created_at], map: "pet_locations_pet_created_idx")
   @@map("pet_locations")
+}
+
+model PetTracker {
+  id              String    @id @default(uuid())
+  pet_id          String
+  owner_email     String
+  device_id       String    @unique(map: "pet_trackers_device_id_key")
+  device_token    String
+  name            String?
+  brand           String?
+  model           String?
+  battery_percent Int?
+  signal_strength String?
+  last_seen_at    DateTime?
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  pet       Pet           @relation(fields: [pet_id], references: [id], onDelete: Cascade)
+  locations PetLocation[]
+
+  @@index([owner_email], map: "pet_trackers_owner_idx")
+  @@index([pet_id], map: "pet_trackers_pet_idx")
+  @@map("pet_trackers")
 }
 
 model TelehealthConsultation {
