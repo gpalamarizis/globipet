@@ -37,37 +37,36 @@ export default function ProductDetail() {
   })
   const inWishlist = wishlist.some((w: any) => w.product_id === product?.id)
 
-  const { data: reviews = [] } = useQuery({
-    queryKey: ['reviews', id],
-    queryFn: () => api.get(`/products/${id}/reviews`).then(r => r.data?.data ?? []).catch(() => []),
-    enabled: !!id,
-  })
+  /**
+   * Product reviews do not exist in the data model.
+   *
+   * The Review table requires a service_id — reviews attach to services, not
+   * products. The old query hit /products/:id/reviews, a route that was never
+   * written, and a .catch swallowed the 404 so the tab silently showed
+   * nothing forever. The aggregate figures the Product row does carry
+   * (rating, reviews_count) are used below instead.
+   */
+  const reviews: any[] = []
 
   const addToCart = useMutation({
+    // Price, name and image come from the products table on the server.
     mutationFn: () => api.post('/cart', {
       product_id: product!.id,
-      product_name: product!.name,
-      product_price: product!.sale_price || product!.price,
-      product_image: product!.image_url,
       quantity,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] })
       toast.success(t('cart.added'))
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const toggleWishlist = useMutation({
-    mutationFn: () => inWishlist
-      ? api.delete(`/wishlist/${product!.id}`)
-      : api.post('/wishlist', {
-          product_id: product!.id,
-          product_name: product!.name,
-          product_price: product!.sale_price || product!.price,
-          product_image: product!.image_url,
-        }),
+    // POST toggles. The previous DELETE passed the product id to a route that
+    // expects the wishlist row id, so removing a favourite never worked.
+    mutationFn: () => api.post('/wishlist', { product_id: product!.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   if (isLoading) return (
@@ -203,7 +202,7 @@ export default function ProductDetail() {
           {/* CTA buttons */}
           <div className="flex gap-3">
             <button
-              onClick={() => isAuthenticated ? addToCart.mutate() : navigate('/auth')}
+              onClick={() => isAuthenticated ? addToCart.mutate() : navigate('/login')}
               disabled={addToCart.isPending || product.stock === 0}
               className="btn-primary flex-1 flex items-center justify-center gap-2 py-3"
             >

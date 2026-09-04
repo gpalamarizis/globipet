@@ -25,7 +25,11 @@ export default function ProductSubscribe() {
       const url = res.data?.data?.checkout_url
       if (url) window.location.href = url
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα δημιουργίας συνδρομής'),
+    // The api interceptor rejects with { message, statusCode, errors } — the
+    // original axios error is gone by then. Reading err.response.data.message
+    // always found undefined, so the real reason ("you already have an active
+    // subscription for this product") was replaced by the generic fallback.
+    onError: (err: any) => toast.error(err?.message || 'Σφάλμα δημιουργίας συνδρομής'),
   })
 
   if (isLoading) return <div className="page-container py-16 flex justify-center"><LoadingSpinner /></div>

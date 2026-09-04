@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Heart, ShoppingCart, Star, Bone, Gamepad2, Tag, HeartPulse, Scissors, GraduationCap, Home, Package } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -23,6 +23,7 @@ const defaultIllustration = { Icon: Package, bg: 'bg-gray-50 dark:bg-gray-800', 
 
 export default function ProductCard({ product, viewMode = 'grid' }: Props) {
   const { isAuthenticated, user } = useAuthStore()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const illustration = categoryIllustration[product.category] || defaultIllustration
   const { Icon: CategoryIcon, bg: illuBg, fg: illuFg } = illustration
@@ -31,14 +32,27 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
   const inWishlist = wishlist.some((w: any) => w.product_id === product.id)
 
   const addToCart = useMutation({
-    mutationFn: () => api.post('/cart', { product_id: product.id, product_name: product.name, product_price: product.price, product_image: product.image_url, quantity: 1 }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }); toast.success('Προστέθηκε στο καλάθι!') }
+    // Price, name and image are resolved from the products table on the
+    // server; sending them here is ignored.
+    mutationFn: () => api.post('/cart', { product_id: product.id, quantity: 1 }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }); toast.success('Προστέθηκε στο καλάθι!') },
+    onError: (err: any) => toast.error(err?.message || 'Δεν προστέθηκε στο καλάθι'),
   })
 
   const toggleWishlist = useMutation({
-    mutationFn: () => inWishlist ? api.delete(`/wishlist/${product.id}`) : api.post('/wishlist', { product_id: product.id, product_name: product.name, product_price: product.price, product_image: product.image_url }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+    // POST toggles: it removes the item when it is already saved. The old
+    // code called DELETE /wishlist/<product id>, but that route expects the
+    // wishlist row id — so it matched nothing and un-favouriting never worked.
+    mutationFn: () => api.post('/wishlist', { product_id: product.id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: (err: any) => toast.error(err?.message || 'Δεν αποθηκεύτηκε'),
   })
+
+  /** Sending someone to log in beats a button that silently does nothing. */
+  const requireAuth = (action: () => void) => {
+    if (!isAuthenticated) { toast('Συνδέσου για να συνεχίσεις'); navigate('/login'); return }
+    action()
+  }
 
   if (viewMode === 'list') {
     return (
@@ -56,7 +70,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="shrink-0 flex flex-col items-end gap-2">
           <p className="font-bold text-brand-900">{formatCurrency(product.sale_price || product.price)}</p>
           {product.sale_price && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
-          <button onClick={() => isAuthenticated ? addToCart.mutate() : null} disabled={addToCart.isPending} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>Καλάθι</button>
+          <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>Καλάθι</button>
         </div>
       </div>
     )
@@ -92,7 +106,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
                 <Heart size={13} fill={inWishlist ? 'currentColor' : 'none'}/>
               </button>
             )}
-            <button onClick={() => isAuthenticated ? addToCart.mutate() : null} disabled={addToCart.isPending || product.stock === 0} className="p-1.5 rounded-lg bg-brand-900 text-white hover:bg-brand-800 transition-colors disabled:opacity-50">
+            <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending || product.stock === 0} className="p-1.5 rounded-lg bg-brand-900 text-white hover:bg-brand-800 transition-colors disabled:opacity-50">
               <ShoppingCart size={13}/>
             </button>
           </div>
