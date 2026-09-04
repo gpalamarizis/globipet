@@ -64,16 +64,22 @@ export default function ServiceDetail() {
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['service-reviews', id],
-    queryFn: () => api.get(`/services/${id}/reviews`).then(r => r.data?.data ?? []).catch(() => []),
+    // There is no /services/:id/reviews route — reviews are served from
+    // /reviews with a service_id filter. The old path 404'd and the .catch
+    // swallowed it, so this page showed no reviews at all, silently.
+    queryFn: () => api.get(`/reviews?service_id=${id}`).then(r => r.data?.data ?? []),
     enabled: !!id,
   })
 
   const bookService = useMutation({
+    // The payload used `date`, `time` and `provider_id`. None of those are
+    // columns on Booking — it stores booking_date and booking_time, and the
+    // provider is resolved from the service on the server. Prisma rejected
+    // the unknown arguments, so this request never created a booking.
     mutationFn: () => api.post('/bookings', {
       service_id: id,
-      provider_id: service?.provider_id,
-      date: selectedDate,
-      time: selectedTime,
+      booking_date: selectedDate,
+      booking_time: selectedTime,
       notes: bookingNote,
     }),
     onSuccess: () => {
@@ -88,10 +94,12 @@ export default function ServiceDetail() {
           colors: ['#E65100', '#FFD60A', '#FF9800', '#1565C0'],
         })
       }
-      toast.success('✅ ' + t('bookings.status.confirmed'))
+      // A new booking starts as pending — the provider confirms it. Saying
+      // "confirmed" here promised something that had not happened.
+      toast.success('✅ ' + t('bookings.requestSent', 'Το αίτημα κράτησης στάλθηκε'))
       setTimeout(() => navigate('/bookings'), 600)
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const timeSlots = [
