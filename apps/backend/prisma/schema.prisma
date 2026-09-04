@@ -327,17 +327,23 @@ model Notification {
 
 model Review {
   id             String    @id @default(uuid())
-  service_id     String
-  provider_email String
+  // Exactly one of service_id / product_id is set. Enforced in the database
+  // by the reviews_one_target check constraint.
+  service_id     String?
+  product_id     String?
+  provider_email String?
   customer_email String
   customer_name  String
   rating         Int
   comment        String?
   booking_id     String?
+  order_id       String?
   response       String?
   response_date  DateTime?
   created_at     DateTime  @default(now())
 
+  @@index([product_id], map: "reviews_product_idx")
+  @@index([service_id], map: "reviews_service_idx")
   @@map("reviews")
 }
 

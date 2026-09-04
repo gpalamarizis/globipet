@@ -1,15 +1,22 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 
+/**
+ * Reviews for services and for products.
+ *
+ * One table serves both. A row points at exactly one target — the database
+ * enforces that with the reviews_one_target check constraint — so the
+ * listings, the averages and the "have I already reviewed this" rule all work
+ * the same way for either kind.
+ */
 const routes: FastifyPluginAsync = async (app) => {
 
   /**
    * Recompute a service's average rating and review count from scratch.
    *
-   * Called after every create and delete. The previous code only recalculated
-   * on create, so deleting a review left the old average in place — a 1-star
-   * review could be removed and the service kept the damaged score, or vice
-   * versa.
+   * Called after every create and delete. Earlier code only recalculated on
+   * create, so deleting a review left the old average in place — a one-star
+   * review could be removed and the service kept the damaged score.
    */
   async function recalcServiceRating(serviceId: string) {
     const agg = await prisma.review.aggregate({
@@ -26,11 +33,59 @@ const routes: FastifyPluginAsync = async (app) => {
     })
   }
 
-  app.get('/', async (req: any) => {
-    const { service_id, provider_email } = req.query
-    const data = await prisma.review.findMany({
-      where: { ...(service_id && { service_id }), ...(provider_email && { provider_email }) },
+  /** Same for a product. */
+  async function recalcProductRating(productId: string) {
+    const agg = await prisma.review.aggregate({
+      where: { product_id: productId },
+      _avg: { rating: true },
+      _count: { _all: true },
+    })
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        rating: agg._avg.rating ?? 0,
+        reviews_count: agg._count._all,
+      },
+    })
+  }
+
+  /**
+   * Did this customer buy this product?
+   *
+   * Order lines live in a Json[] column, so this is an array scan rather than
+   * a join. Only paid orders count — an unpaid basket is not a purchase.
+   */
+  async function findPaidOrderFor(email: string, productId: string): Promise<string | null> {
+    const orders = await prisma.order.findMany({
+      where: { user_email: email, payment_status: 'paid' },
+      select: { id: true, items: true },
       orderBy: { created_at: 'desc' },
+      take: 200,
+    })
+    for (const order of orders) {
+      const items = (order.items ?? []) as any[]
+      if (items.some(i => i?.product_id === productId)) return order.id
+    }
+    return null
+  }
+
+  /**
+   * GET /reviews?service_id=… or ?product_id=…
+   * Also accepts provider_email to list everything a provider has received.
+   */
+  app.get('/', async (req: any) => {
+    const { service_id, product_id, provider_email } = req.query
+    if (!service_id && !product_id && !provider_email) {
+      return { data: [] }
+    }
+    const data = await prisma.review.findMany({
+      where: {
+        ...(service_id && { service_id }),
+        ...(product_id && { product_id }),
+        ...(provider_email && { provider_email }),
+      },
+      orderBy: { created_at: 'desc' },
+      take: 200,
     })
     return { data }
   })
@@ -50,21 +105,60 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   /**
-   * Create a review.
+   * GET /reviews/can-review?product_id=… or ?service_id=…
    *
-   * Four things the previous version did not do:
-   *   - validate the rating (an unbounded parseInt could set 1000000 and
-   *     wreck the service average)
-   *   - check the reviewer actually used the service
-   *   - stop the same person reviewing the same service repeatedly
-   *   - take provider_email from the service rather than the request body
+   * Lets the UI decide whether to show a write-a-review form instead of
+   * offering one and failing on submit.
+   */
+  app.get('/can-review', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const { service_id, product_id } = req.query
+
+    if (!service_id && !product_id) {
+      return reply.code(400).send({ message: 'Λείπει service_id ή product_id' })
+    }
+
+    const already = await prisma.review.findFirst({
+      where: {
+        customer_email: email,
+        ...(service_id ? { service_id } : { product_id }),
+      },
+      select: { id: true },
+    })
+    if (already) return { data: { can_review: false, reason: 'already_reviewed' } }
+
+    if (product_id) {
+      const orderId = await findPaidOrderFor(email, String(product_id))
+      return { data: { can_review: !!orderId, reason: orderId ? null : 'not_purchased' } }
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: {
+        service_id: String(service_id),
+        customer_email: email,
+        OR: [{ status: 'completed' }, { payment_status: 'paid' }],
+      },
+      select: { id: true },
+    })
+    return { data: { can_review: !!booking, reason: booking ? null : 'not_purchased' } }
+  })
+
+  /**
+   * Create a review for a service or a product.
+   *
+   * The rules are the same either way: a valid 1-5 rating, one review per
+   * customer per target, and the reviewer must actually have used or bought
+   * the thing. Without the last rule the ratings are decoration.
    */
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
-    const { service_id, rating, comment, booking_id } = req.body as any
+    const { service_id, product_id, rating, comment } = req.body as any
 
-    if (!service_id || rating === undefined || rating === null) {
-      return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    if (!service_id && !product_id) {
+      return reply.code(400).send({ message: 'Λείπει service_id ή product_id' })
+    }
+    if (service_id && product_id) {
+      return reply.code(400).send({ message: 'Μια κριτική αφορά είτε υπηρεσία είτε προϊόν' })
     }
 
     const parsedRating = parseInt(rating)
@@ -72,25 +166,59 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Η βαθμολογία πρέπει να είναι από 1 έως 5' })
     }
 
+    // One review per customer per target.
+    const already = await prisma.review.findFirst({
+      where: {
+        customer_email: email,
+        ...(service_id ? { service_id } : { product_id }),
+      },
+      select: { id: true },
+    })
+    if (already) {
+      return reply.code(409).send({ message: 'Έχεις ήδη αξιολογήσει' })
+    }
+
+    const trimmedComment = comment ? String(comment).trim().slice(0, 2000) : null
+
+    // ── Product review ───────────────────────────────────────────────
+    if (product_id) {
+      const product = await prisma.product.findUnique({ where: { id: product_id } })
+      if (!product) return reply.code(404).send({ message: 'Το προϊόν δεν βρέθηκε' })
+
+      if (product.provider_email && product.provider_email === email) {
+        return reply.code(400).send({ message: 'Δεν μπορείς να αξιολογήσεις το δικό σου προϊόν' })
+      }
+
+      const orderId = await findPaidOrderFor(email, product_id)
+      if (!orderId) {
+        return reply.code(403).send({
+          message: 'Μπορείς να αξιολογήσεις μόνο προϊόντα που έχεις αγοράσει',
+        })
+      }
+
+      const review = await prisma.review.create({
+        data: {
+          product_id,
+          provider_email: product.provider_email ?? null,
+          customer_email: email,
+          customer_name: full_name || email.split('@')[0],
+          rating: parsedRating,
+          comment: trimmedComment,
+          order_id: orderId,
+        },
+      })
+      await recalcProductRating(product_id)
+      return reply.code(201).send({ data: review })
+    }
+
+    // ── Service review ───────────────────────────────────────────────
     const service = await prisma.service.findUnique({ where: { id: service_id } })
     if (!service) return reply.code(404).send({ message: 'Η υπηρεσία δεν βρέθηκε' })
 
-    // Reviewing your own service is self-dealing.
     if (service.provider_email === email) {
       return reply.code(400).send({ message: 'Δεν μπορείς να αξιολογήσεις τη δική σου υπηρεσία' })
     }
 
-    // One review per customer per service.
-    const already = await prisma.review.findFirst({
-      where: { service_id, customer_email: email },
-      select: { id: true },
-    })
-    if (already) {
-      return reply.code(409).send({ message: 'Έχεις ήδη αξιολογήσει αυτή την υπηρεσία' })
-    }
-
-    // Verified purchase: the reviewer must have a completed or paid booking
-    // for this service. Without it, anyone could farm five-star reviews.
     const booking = await prisma.booking.findFirst({
       where: {
         service_id,
@@ -108,26 +236,23 @@ const routes: FastifyPluginAsync = async (app) => {
     const review = await prisma.review.create({
       data: {
         service_id,
-        // Taken from the service, not the request — the body value could point
+        // Taken from the service, not the request — a body value could point
         // the review at an unrelated provider's profile.
         provider_email: service.provider_email,
         customer_email: email,
         customer_name: full_name || email.split('@')[0],
         rating: parsedRating,
-        comment: comment ? String(comment).trim() : null,
-        // Tie the review to a real booking of this customer, ignoring any
-        // booking_id the client may have supplied.
-        booking_id: booking_id && booking_id === booking.id ? booking_id : booking.id,
-      }
+        comment: trimmedComment,
+        booking_id: booking.id,
+      },
     })
-
     await recalcServiceRating(service_id)
     return reply.code(201).send({ data: review })
   })
 
   /**
-   * The provider may reply to a review on their own service. This is the
-   * `response` column that had no endpoint writing to it.
+   * The provider may reply to a review on their own service or product. This
+   * is the `response` column that had no endpoint writing to it.
    */
   app.patch('/:id/response', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const user = req.user as any
@@ -140,7 +265,7 @@ const routes: FastifyPluginAsync = async (app) => {
     const updated = await prisma.review.update({
       where: { id: existing.id },
       data: {
-        response: response ? String(response).trim() : null,
+        response: response ? String(response).trim().slice(0, 2000) : null,
         response_date: response ? new Date() : null,
       },
     })
@@ -156,8 +281,9 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
     }
     await prisma.review.delete({ where: { id: existing.id } })
-    // Keep the service average honest after the row is gone.
-    await recalcServiceRating(existing.service_id)
+    // Keep the average honest after the row is gone.
+    if (existing.service_id) await recalcServiceRating(existing.service_id)
+    if (existing.product_id) await recalcProductRating(existing.product_id)
     return reply.code(204).send()
   })
 }

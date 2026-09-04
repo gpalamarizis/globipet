@@ -37,16 +37,38 @@ export default function ProductDetail() {
   })
   const inWishlist = wishlist.some((w: any) => w.product_id === product?.id)
 
-  /**
-   * Product reviews do not exist in the data model.
-   *
-   * The Review table requires a service_id — reviews attach to services, not
-   * products. The old query hit /products/:id/reviews, a route that was never
-   * written, and a .catch swallowed the 404 so the tab silently showed
-   * nothing forever. The aggregate figures the Product row does carry
-   * (rating, reviews_count) are used below instead.
-   */
-  const reviews: any[] = []
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['product-reviews', id],
+    queryFn: () => api.get(`/reviews?product_id=${id}`).then(r => r.data?.data ?? []),
+    enabled: !!id,
+  })
+
+  // Whether to offer the write-a-review form. Asking the server avoids
+  // showing a form that would be rejected on submit.
+  const { data: eligibility } = useQuery({
+    queryKey: ['can-review-product', id],
+    queryFn: () => api.get(`/reviews/can-review?product_id=${id}`).then(r => r.data?.data),
+    enabled: !!id && isAuthenticated,
+  })
+
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post('/reviews', {
+      product_id: id,
+      rating: reviewRating,
+      comment: reviewComment.trim() || undefined,
+    }),
+    onSuccess: () => {
+      toast.success(t('reviews.thanks', 'Ευχαριστούμε για την αξιολόγηση!'))
+      setReviewComment('')
+      queryClient.invalidateQueries({ queryKey: ['product-reviews', id] })
+      queryClient.invalidateQueries({ queryKey: ['can-review-product', id] })
+      queryClient.invalidateQueries({ queryKey: ['product', id] })
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
 
   const addToCart = useMutation({
     // Price, name and image come from the products table on the server.
@@ -278,11 +300,47 @@ export default function ProductDetail() {
         )}
 
         {tab === 'reviews' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
+            {/* Write a review — only for someone who bought it and has not
+                already reviewed it. */}
+            {eligibility?.can_review && (
+              <div className="card p-4">
+                <p className="font-semibold text-sm text-gray-900 dark:text-white mb-3">
+                  {t('reviews.writeOne', 'Γράψε την αξιολόγησή σου')}
+                </p>
+                <div className="flex items-center gap-1 mb-3">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} onClick={() => setReviewRating(s)} aria-label={`${s}`}>
+                      <Star size={22}
+                        className={s <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={e => setReviewComment(e.target.value)}
+                  rows={3}
+                  placeholder={t('reviews.commentPlaceholder', 'Πώς σου φάνηκε; (προαιρετικό)')}
+                  className="input w-full" />
+                <button
+                  onClick={() => submitReview.mutate()}
+                  disabled={submitReview.isPending}
+                  className="btn-primary text-sm mt-3">
+                  {submitReview.isPending ? t('common.loading') : t('reviews.submit', 'Υποβολή')}
+                </button>
+              </div>
+            )}
+
+            {isAuthenticated && eligibility && !eligibility.can_review && eligibility.reason === 'not_purchased' && (
+              <p className="text-xs text-gray-400">
+                {t('reviews.onlyBuyers', 'Μόνο όσοι αγόρασαν το προϊόν μπορούν να το αξιολογήσουν.')}
+              </p>
+            )}
+
             {reviews.length === 0 ? (
               <div className="text-center py-12">
                 <Star size={40} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">No reviews yet. Be the first!</p>
+                <p className="text-gray-500">{t('reviews.none', 'Καμία αξιολόγηση ακόμη.')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -291,9 +349,11 @@ export default function ProductDetail() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-xs font-bold text-brand-900">
-                          {r.user_name?.[0]?.toUpperCase() || 'U'}
+                          {/* The column is customer_name; reading user_name
+                              left every avatar and byline blank. */}
+                          {r.customer_name?.[0]?.toUpperCase() || 'U'}
                         </div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{r.user_name}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{r.customer_name}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         {[1,2,3,4,5].map(s => (
@@ -303,6 +363,14 @@ export default function ProductDetail() {
                       </div>
                     </div>
                     {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
+                    {r.response && (
+                      <div className="mt-3 pl-3 border-l-2 border-brand-200 dark:border-brand-800">
+                        <p className="text-xs font-semibold text-brand-900 dark:text-yellow-400 mb-0.5">
+                          {t('reviews.sellerReply', 'Απάντηση πωλητή')}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{r.response}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

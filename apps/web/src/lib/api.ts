@@ -59,7 +59,24 @@ api.interceptors.response.use(
     }
     // Don't show global toast for 500 errors - let components handle them
 
-    return Promise.reject({ message, statusCode: status, errors: error.response?.data?.errors })
+    /**
+     * The rejection carries the message twice.
+     *
+     * `message` is the shape this file has always produced. But roughly
+     * thirty-five components were written against plain axios and read
+     * `err.response.data.message` — which this interceptor had already thrown
+     * away, so every one of them fell through to its generic fallback text.
+     * Users saw "Σφάλμα" instead of "Έχεις ήδη ενεργή συνδρομή".
+     *
+     * Carrying both shapes fixes all of those call sites at once and lets new
+     * code use the flat `err.message`.
+     */
+    return Promise.reject({
+      message,
+      statusCode: status,
+      errors: error.response?.data?.errors,
+      response: { status, data: error.response?.data },
+    })
   }
 )
 
