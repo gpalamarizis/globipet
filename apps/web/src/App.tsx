@@ -217,6 +217,10 @@ export default function App() {
                 <Route path="/checkout"        element={<PrivateRoute><Checkout /></PrivateRoute>} />
                 <Route path="/orders"          element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"      element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
+                {/* Viva redirects here after a card payment — see successUrl in
+                    lib/viva.ts. The route did not exist, so a customer who had
+                    just been charged landed on the 404 page. */}
+                <Route path="/orders/:id/confirmation" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
               </Route>
 

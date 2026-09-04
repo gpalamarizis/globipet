@@ -1,22 +1,36 @@
-// NOTE: This is an EXAMPLE success handler.
-// If you already have an OrderConfirmation page, just add the Viva verification
-// logic shown in the useEffect below to your existing page.
-
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle, XCircle, Loader2, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 
+/**
+ * Where the customer lands after paying.
+ *
+ * Viva redirects to /orders/:id/confirmation with ?t=<transactionId> and
+ * ?s=<orderCode>. Two things were wrong here:
+ *
+ *   The page started with verifying=false and no order loaded, so `isPaid`
+ *   was false on the first render and it showed a red cross with "payment
+ *   pending" — to someone who had just been charged successfully.
+ *
+ *   And there was no polling. Viva's webhook sometimes confirms after the
+ *   browser redirect; when the single verify call raced it, the page stayed
+ *   on "pending" until the customer reloaded by hand.
+ */
 export default function OrderConfirmation() {
   const { id } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const [verifying, setVerifying] = useState(false)
 
-  // Viva returns these query params on redirect: ?t=transactionId&s=orderCode&eventId=...
   const transactionId = params.get('t')
-  const vivaSuccess = params.get('s')  // orderCode present = came back from Viva
+  // An orderCode in the URL means we arrived from the Viva checkout rather
+  // than from the orders list.
+  const cameFromViva = !!(transactionId || params.get('s'))
+
+  // Start in the verifying state when we came back from a payment, so the
+  // first thing the customer sees is a spinner rather than a failure.
+  const [verifying, setVerifying] = useState(cameFromViva)
 
   const { data: order, refetch } = useQuery({
     queryKey: ['order', id],
@@ -24,36 +38,54 @@ export default function OrderConfirmation() {
     enabled: !!id,
   })
 
+  const isPaid = order?.payment_status === 'paid'
+
   // Verify Viva payment when redirected back
   useEffect(() => {
+    if (!cameFromViva || !id) return
+    let cancelled = false
     const verify = async () => {
-      if (transactionId && id) {
-        setVerifying(true)
-        try {
-          await api.post('/orders/viva/verify', {
-            order_id: id,
-            transaction_id: transactionId,
-          })
-          await refetch()
-        } catch {
-          // verification will also happen via webhook
-        } finally {
-          setVerifying(false)
+      try {
+        if (transactionId) {
+          await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
         }
+        await refetch()
+      } catch {
+        // The webhook confirms independently; the poll below will catch it.
+      } finally {
+        if (!cancelled) setVerifying(false)
       }
     }
     verify()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionId, id])
 
-  const isPaid = order?.payment_status === 'paid'
+  // Poll while the payment is still unconfirmed, for the case where the
+  // webhook lands after the redirect. Gives up after a minute so the page
+  // does not sit there requesting forever.
+  useEffect(() => {
+    if (!cameFromViva || isPaid) return
+    let elapsed = 0
+    const interval = setInterval(() => {
+      elapsed += 3
+      if (elapsed > 60) { clearInterval(interval); return }
+      refetch()
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [cameFromViva, isPaid, refetch])
+
+  // Waiting covers both the explicit verify call and the window where the
+  // webhook has not reported yet.
+  const waiting = verifying || (cameFromViva && !isPaid)
 
   return (
     <div className="page-container py-16 max-w-lg mx-auto text-center">
-      {verifying ? (
+      {waiting ? (
         <>
           <Loader2 size={56} className="mx-auto text-brand-900 animate-spin mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Επιβεβαίωση πληρωμής...</h1>
-          <p className="text-gray-500">Παρακαλώ περιμένετε</p>
+          <p className="text-gray-500">Μην κλείσεις αυτή τη σελίδα.</p>
         </>
       ) : isPaid ? (
         <>
@@ -74,7 +106,10 @@ export default function OrderConfirmation() {
         <>
           <XCircle size={56} className="mx-auto text-amber-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Εκκρεμεί πληρωμή</h1>
-          <p className="text-gray-500 mb-6">Η παραγγελία δημιουργήθηκε αλλά η πληρωμή δεν έχει επιβεβαιωθεί ακόμα.</p>
+          <p className="text-gray-500 mb-6">
+            Η παραγγελία δημιουργήθηκε αλλά η πληρωμή δεν έχει επιβεβαιωθεί ακόμα.
+            Αν χρεώθηκες, επικοινώνησε μαζί μας με τον αριθμό #{id?.slice(0, 8)}.
+          </p>
           <button onClick={() => navigate('/orders')} className="btn-secondary w-full">Οι παραγγελίες μου</button>
         </>
       )}
