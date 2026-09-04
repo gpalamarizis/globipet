@@ -121,6 +121,134 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     return prisma.event.update({ where: { id: event.id }, data })
   })
 
+  // ─── Registrations ─────────────────────────────────────────────────
+  //
+  // events.registered_count existed with no table behind it, so every event
+  // reported zero attendees and there was no way to sign up at all.
+
+  /** Am I registered, and how many places are left? */
+  app.get('/:id/registration', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, capacity: true, registered_count: true },
+    })
+    if (!event) return reply.code(404).send({ message: 'Η εκδήλωση δεν βρέθηκε' })
+
+    const mine = await prisma.eventRegistration.findUnique({
+      where: { event_id_user_email: { event_id: event.id, user_email: email } },
+    })
+    return {
+      data: {
+        registered: mine?.status === 'registered',
+        registration: mine ?? null,
+        spots_left: event.capacity ? Math.max(0, event.capacity - event.registered_count) : null,
+      },
+    }
+  })
+
+  /** The organiser's attendee list. */
+  app.get('/:id/registrations', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
+    const event = await prisma.event.findUnique({ where: { id: req.params.id } })
+    if (!event) return reply.code(404).send({ message: 'Η εκδήλωση δεν βρέθηκε' })
+    if (event.organizer_email !== user.email && user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση στη λίστα συμμετεχόντων' })
+    }
+    const data = await prisma.eventRegistration.findMany({
+      where: { event_id: event.id },
+      orderBy: { created_at: 'asc' },
+    })
+    return { data }
+  })
+
+  app.post('/:id/register', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email, full_name } = req.user as any
+    const { pet_id, pet_name, guests, notes } = (req.body ?? {}) as any
+
+    const event = await prisma.event.findUnique({ where: { id: req.params.id } })
+    if (!event) return reply.code(404).send({ message: 'Η εκδήλωση δεν βρέθηκε' })
+
+    // A finished event cannot be joined.
+    const today = new Date().toISOString().split('T')[0]
+    if ((event.end_date || event.date) < today) {
+      return reply.code(400).send({ message: 'Η εκδήλωση έχει ολοκληρωθεί' })
+    }
+
+    const existing = await prisma.eventRegistration.findUnique({
+      where: { event_id_user_email: { event_id: event.id, user_email: email } },
+    })
+    if (existing?.status === 'registered') {
+      return reply.code(409).send({ message: 'Έχεις ήδη δηλώσει συμμετοχή' })
+    }
+
+    // Capacity counts the people already in, and this booking's own party.
+    const partySize = 1 + Math.min(Math.max(parseInt(guests) || 0, 0), 10)
+    if (event.capacity && event.registered_count + partySize > event.capacity) {
+      return reply.code(409).send({ message: 'Δεν υπάρχουν αρκετές διαθέσιμες θέσεις' })
+    }
+
+    // A pet may be brought along, but only one the caller owns.
+    if (pet_id) {
+      const pet = await prisma.pet.findUnique({ where: { id: pet_id }, select: { owner_email: true, name: true } })
+      if (!pet || pet.owner_email !== email) {
+        return reply.code(403).send({ message: 'Το κατοικίδιο δεν σου ανήκει' })
+      }
+    }
+
+    const data = {
+      user_name: full_name || email.split('@')[0],
+      pet_id: pet_id || null,
+      pet_name: pet_name || null,
+      guests: partySize - 1,
+      notes: notes ? String(notes).slice(0, 500) : null,
+      status: 'registered',
+    }
+
+    const [registration] = await prisma.$transaction([
+      // A previous cancellation reuses its row rather than colliding with the
+      // unique index.
+      prisma.eventRegistration.upsert({
+        where: { event_id_user_email: { event_id: event.id, user_email: email } },
+        create: { event_id: event.id, user_email: email, ...data },
+        update: data,
+      }),
+      prisma.event.update({
+        where: { id: event.id },
+        data: { registered_count: { increment: partySize } },
+      }),
+    ])
+    return reply.code(201).send({ data: registration })
+  })
+
+  app.delete('/:id/register', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const existing = await prisma.eventRegistration.findUnique({
+      where: { event_id_user_email: { event_id: req.params.id, user_email: email } },
+    })
+    if (!existing || existing.status !== 'registered') {
+      return reply.code(404).send({ message: 'Δεν βρέθηκε συμμετοχή' })
+    }
+
+    const partySize = 1 + (existing.guests ?? 0)
+    await prisma.$transaction([
+      // Kept, not deleted, so the organiser can see who dropped out.
+      prisma.eventRegistration.update({
+        where: { id: existing.id },
+        data: { status: 'cancelled' },
+      }),
+      prisma.event.update({
+        where: { id: req.params.id },
+        data: { registered_count: { decrement: partySize } },
+      }),
+    ])
+    await prisma.event.updateMany({
+      where: { id: req.params.id, registered_count: { lt: 0 } },
+      data: { registered_count: 0 },
+    })
+    return reply.code(204).send()
+  })
+
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const event = await assertCanModify(req, reply, req.params.id)
     if (!event) return

@@ -234,7 +234,8 @@ model Post {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  likes PostLike[]
+  likes    PostLike[]
+  comments PostComment[]
 
   @@map("posts")
 }
@@ -278,6 +279,9 @@ model Event {
   is_international Boolean  @default(false)
   is_featured      Boolean  @default(false)
   created_at       DateTime @default(now())
+
+  registrations EventRegistration[]
+
 
   @@map("events")
 }
@@ -422,7 +426,60 @@ model ForumTopic {
   is_solved     Boolean  @default(false)
   created_at    DateTime @default(now())
 
+  replies ForumReply[]
+
   @@map("forum_topics")
+}
+
+model ForumReply {
+  id           String   @id @default(uuid())
+  topic_id     String
+  author_email String
+  author_name  String
+  author_photo String?
+  content      String
+  is_answer    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  topic ForumTopic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([topic_id, created_at], map: "forum_replies_topic_idx")
+  @@map("forum_replies")
+}
+
+model PostComment {
+  id           String   @id @default(uuid())
+  post_id      String
+  author_email String
+  author_name  String
+  author_photo String?
+  content      String
+  created_at   DateTime @default(now())
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id, created_at], map: "post_comments_post_idx")
+  @@map("post_comments")
+}
+
+model EventRegistration {
+  id         String   @id @default(uuid())
+  event_id   String
+  user_email String
+  user_name  String
+  pet_id     String?
+  pet_name   String?
+  guests     Int      @default(0)
+  notes      String?
+  status     String   @default("registered")
+  created_at DateTime @default(now())
+
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, user_email], map: "event_registrations_event_user_key")
+  @@index([user_email], map: "event_registrations_user_idx")
+  @@map("event_registrations")
 }
 
 model PetLocation {

@@ -173,6 +173,68 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     return { liked: false, likes_count }
   })
 
+  // ─── Comments ──────────────────────────────────────────────────────
+  //
+  // posts.comments_count shipped as a column with no table behind it, so the
+  // speech-bubble on every post showed zero and clicking it did nothing.
+
+  app.get('/:id/comments', async (req: any) => {
+    const data = await prisma.postComment.findMany({
+      where: { post_id: req.params.id },
+      orderBy: { created_at: 'asc' },
+      take: 200,
+    })
+    return { data }
+  })
+
+  app.post('/:id/comments', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email, full_name, profile_photo } = req.user as any
+    const { content } = req.body as any
+    if (!content?.trim()) return reply.code(400).send({ message: 'Το σχόλιο δεν μπορεί να είναι κενό' })
+
+    const post = await prisma.post.findUnique({ where: { id: req.params.id }, select: { id: true } })
+    if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+
+    const [created] = await prisma.$transaction([
+      prisma.postComment.create({
+        data: {
+          post_id: post.id,
+          author_email: email,
+          author_name: full_name || email.split('@')[0],
+          author_photo: profile_photo || null,
+          content: String(content).trim().slice(0, 2000),
+        },
+      }),
+      prisma.post.update({ where: { id: post.id }, data: { comments_count: { increment: 1 } } }),
+    ])
+    return reply.code(201).send({ data: created })
+  })
+
+  // Comment author, post author, or admin — a post owner can moderate their
+  // own thread without waiting for staff.
+  app.delete('/comments/:commentId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
+    const existing = await prisma.postComment.findUnique({
+      where: { id: req.params.commentId },
+      include: { post: { select: { id: true, author_email: true } } },
+    })
+    if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    const allowed = existing.author_email === user.email
+      || existing.post.author_email === user.email
+      || user.role === 'admin'
+    if (!allowed) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+
+    await prisma.$transaction([
+      prisma.postComment.delete({ where: { id: existing.id } }),
+      prisma.post.update({ where: { id: existing.post.id }, data: { comments_count: { decrement: 1 } } }),
+    ])
+    await prisma.post.updateMany({
+      where: { id: existing.post.id, comments_count: { lt: 0 } },
+      data: { comments_count: 0 },
+    })
+    return reply.code(204).send()
+  })
+
   // PATCH update post — author or admin
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const post = await assertCanModify(req, reply, req.params.id)
