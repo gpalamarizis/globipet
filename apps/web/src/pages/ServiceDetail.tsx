@@ -255,12 +255,15 @@ export default function ServiceDetail() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-white">{service.provider_name}</p>
-                    {service.provider_bio && (
-                      <p className="text-sm text-gray-500 truncate">{service.provider_bio}</p>
+                    {/* Service has no provider_bio column; the free-text
+                        field is `description`. */}
+                    {service.description && (
+                      <p className="text-sm text-gray-500 truncate">{service.description}</p>
                     )}
                   </div>
-                  {service.provider_phone && (
-                    <a href={`tel:${service.provider_phone}`}
+                  {/* The column is contact_phone. */}
+                  {service.contact_phone && (
+                    <a href={`tel:${service.contact_phone}`}
                       className="p-2 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
                       <Phone size={18} />
                     </a>
@@ -411,10 +414,10 @@ export default function ServiceDetail() {
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
               {service.price ? formatCurrency(service.price) : t('common.free')}
             </div>
-            {service.price_per === 'hour' && (
-              <p className="text-sm text-gray-500 mb-4">{t('serviceDetailExtra.perHour')}</p>
-            )}
-            {service.price_per === 'session' && (
+            {/* There is no price_per column, so neither branch ever
+                rendered and the price showed with no unit beside it. Services
+                are priced per session. */}
+            {service.price > 0 && (
               <p className="text-sm text-gray-500 mb-4">{t('serviceDetailExtra.perSession')}</p>
             )}
 

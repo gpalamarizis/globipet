@@ -83,14 +83,33 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
     socket.send(JSON.stringify({ type: 'connected' }))
   })
 
-  // Get notifications
+  /**
+   * List notifications.
+   *
+   * `?unread=true` returns only unread rows. The header badge has been asking
+   * for that all along, but the filter was never implemented — so the count
+   * was simply "the last twenty notifications", read or not, and the red dot
+   * never went away.
+   */
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const notifications = await prisma.notification.findMany({
-      where: { user_email: (req.user as any).email },
-      orderBy: { created_at: 'desc' },
-      take: 20,
-    })
-    return { data: notifications }
+    const { unread, limit } = req.query ?? {}
+    const onlyUnread = unread === 'true' || unread === '1'
+    const take = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+
+    const where: any = { user_email: (req.user as any).email }
+    if (onlyUnread) where.is_read = false
+
+    const [notifications, unread_count] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        take,
+      }),
+      prisma.notification.count({
+        where: { user_email: (req.user as any).email, is_read: false },
+      }),
+    ])
+    return { data: notifications, unread_count }
   })
 
   // Mark as read — scoped to the caller's own rows.
