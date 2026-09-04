@@ -266,7 +266,17 @@ function CalendarTab() {
           {Array.from({ length: firstDay }, (_, i) => <div key={`empty-${i}`} />)}
           {days.map(day => {
             const isToday = day === today.getDate()
-            const hasBooking = bookings.some((b: any) => new Date(b.scheduled_at).getDate() === day)
+            // Bookings store booking_date as a "YYYY-MM-DD" string. Reading
+            // scheduled_at — a column that does not exist — gave Invalid Date,
+            // so getDate() was NaN and no day ever showed a dot.
+            const hasBooking = bookings.some((b: any) => {
+              if (!b.booking_date) return false
+              const bd = new Date(b.booking_date)
+              return !isNaN(bd.getTime())
+                && bd.getDate() === day
+                && bd.getMonth() === today.getMonth()
+                && bd.getFullYear() === today.getFullYear()
+            })
             return (
               <div key={day} className={cn('aspect-square flex items-center justify-center rounded-xl text-sm cursor-pointer transition-all relative',
                 isToday ? 'bg-brand-900 text-white font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300')}>
@@ -289,8 +299,13 @@ function CalendarTab() {
               <Calendar size={16} className="text-brand-900" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-sm text-gray-900 dark:text-white">{b.service_name || 'Κράτηση'}</p>
-              <p className="text-xs text-gray-500">{b.user_name} · {new Date(b.scheduled_at).toLocaleDateString('el-GR')}</p>
+              {/* service_name and user_name are not columns — the title comes
+                  from the included service relation and the customer column
+                  is customer_name. Both rendered blank before. */}
+              <p className="font-medium text-sm text-gray-900 dark:text-white">{b.service?.title || 'Κράτηση'}</p>
+              <p className="text-xs text-gray-500">
+                {b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}
+              </p>
             </div>
             <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
               b.status === 'confirmed' ? 'bg-green-100 text-green-700' :

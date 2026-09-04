@@ -62,16 +62,17 @@ export default function Telehealth() {
       const pet = pets.find((p: any) => p.id === selectedPetId)
       const isNow = tab === 'now'
       const now = new Date()
+      // The session price and the provider's name are read from the service
+      // row on the server — a client-supplied price used to go straight into
+      // the Viva charge. Sending them here is ignored.
       const { data } = await api.post('/telehealth', {
         provider_email: selectedVet.provider_email,
-        provider_name: selectedVet.provider_name,
         service_id: selectedVet.id,
         pet_id: selectedPetId || undefined,
         pet_name: pet?.name,
         scheduled_date: isNow ? now.toISOString().split('T')[0] : bookingDate,
         scheduled_time: isNow ? now.toTimeString().slice(0, 5) : bookingTime,
         duration: 30,
-        price: selectedVet.price,
       })
       return data
     },
