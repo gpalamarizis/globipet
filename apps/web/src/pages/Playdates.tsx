@@ -34,6 +34,7 @@ export default function Playdates() {
     max_participants: 10, pet_types: [] as string[], is_public: true,
   })
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteUserId, setInviteUserId] = useState<string | null>(null)
   const [inviteMsg, setInviteMsg] = useState('')
 
   const { data, isLoading } = useQuery({
@@ -55,8 +56,14 @@ export default function Playdates() {
   })
 
   const sendInvite = useMutation({
-    mutationFn: () => api.post(`/playdates/${showInviteModal}/invite`, { invitee_email: inviteEmail, message: inviteMsg }),
-    onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteMsg(''); toast.success('Πρόσκληση στάλθηκε!') },
+    // invitee_id covers the nearby-owner cards, which no longer receive an
+    // email address; invitee_email still works for someone typing one in.
+    mutationFn: () => api.post(`/playdates/${showInviteModal}/invite`,
+      inviteUserId
+        ? { invitee_id: inviteUserId, message: inviteMsg }
+        : { invitee_email: inviteEmail, message: inviteMsg }),
+    onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success('Πρόσκληση στάλθηκε!') },
+    onError: (e: any) => toast.error(e?.message || 'Η πρόσκληση δεν στάλθηκε'),
     onError: (e: any) => toast.error(e?.message || 'Σφάλμα'),
   })
 
@@ -183,7 +190,15 @@ export default function Playdates() {
                     <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">👥 Ιδιοκτήτες κοντά σου</h2>
                     <div className="grid grid-cols-2 gap-3">
                       {data.nearbyOwners.map((owner: any) => (
-                        <div key={owner.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                        <button key={owner.id}
+                          onClick={() => {
+                            const mine = data?.events?.filter((e: any) => e.creator_email === user?.email) ?? []
+                            if (!mine.length) { toast.error('Δημιούργησε πρώτα μια εκδήλωση'); return }
+                            setInviteUserId(owner.id)
+                            setInviteEmail('')
+                            setShowInviteModal(mine[0].id)
+                          }}
+                          className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm flex items-center gap-3 text-left w-full hover:shadow-md transition-shadow">
                           <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center overflow-hidden shrink-0">
                             {owner.profile_photo ? <img src={owner.profile_photo} className="w-full h-full object-cover" /> : <span className="text-green-700 font-semibold text-sm">{owner.full_name[0]}</span>}
                           </div>
@@ -191,7 +206,7 @@ export default function Playdates() {
                             <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{owner.full_name}</p>
                             <p className="text-xs text-gray-400 flex items-center gap-1"><MapPin size={10} />{owner.city}</p>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -323,16 +338,25 @@ export default function Playdates() {
       {/* Invite Modal */}
       <AnimatePresence>
         {showInviteModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowInviteModal(null)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowInviteModal(null); setInviteUserId(null) }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               onClick={e => e.stopPropagation()}
               className="w-full max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Αποστολή Πρόσκλησης</h3>
-                <button onClick={() => setShowInviteModal(null)}><X size={18} className="text-gray-400" /></button>
+                <button onClick={() => { setShowInviteModal(null); setInviteUserId(null) }}><X size={18} className="text-gray-400" /></button>
               </div>
               <div className="space-y-3">
-                <div><label className={labelCls}>Email χρήστη *</label><input className={inputCls} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" /></div>
+                {inviteUserId ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Πρόσκληση προς{' '}
+                    <strong className="text-gray-900 dark:text-white">
+                      {data?.nearbyOwners?.find((o: any) => o.id === inviteUserId)?.full_name ?? 'τον χρήστη'}
+                    </strong>
+                  </p>
+                ) : (
+                  <div><label className={labelCls}>Email χρήστη *</label><input className={inputCls} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" /></div>
+                )}
                 <div><label className={labelCls}>Μήνυμα (προαιρετικό)</label><textarea className={inputCls} rows={2} value={inviteMsg} onChange={e => setInviteMsg(e.target.value)} placeholder="Έλα να βγάλουμε τα σκυλιά μαζί!" /></div>
               </div>
               <button onClick={() => sendInvite.mutate()} disabled={!inviteEmail || sendInvite.isPending}

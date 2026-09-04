@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, MapPin, Plus, X, Send, Image, ChevronLeft, Navigation, Loader2 } from 'lucide-react'
+import { Users, MapPin, Plus, X, Send, Image, ChevronLeft, Navigation, Loader2, Lock } from 'lucide-react'
 import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
@@ -50,13 +50,22 @@ export default function Communities() {
     enabled: !!selectedId,
   })
 
-  // Poll messages every 3 seconds when in chat
+  // Derived from the query above. Declared here rather than further down
+  // because the polling effect below reads isMember — a const referenced
+  // before its declaration is a runtime error, not just untidy.
+  const community = communityData
+  const isMember = community?.isMember
+  const myEmail = user?.email
+
+  // Poll messages every 3 seconds while in a chat we belong to.
+  // A non-member gets an empty list every time, so polling for them was three
+  // requests a minute that could never return anything.
   useEffect(() => {
-    if (view === 'chat' && selectedId) {
+    if (view === 'chat' && selectedId && isMember) {
       pollRef.current = setInterval(() => refetchMessages(), 3000)
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [view, selectedId])
+  }, [view, selectedId, isMember])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -112,10 +121,6 @@ export default function Communities() {
   }
 
   const openChat = (id: string) => { setSelectedId(id); setView('chat') }
-
-  const community = communityData
-  const isMember = community?.isMember
-  const myEmail = user?.email
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
@@ -246,7 +251,26 @@ export default function Communities() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 mb-3">
-              {community.messages?.length === 0 && (
+              {/* The conversation is members-only — the server returns an
+                  empty list to everyone else. Without this the outsider saw
+                  "no messages yet, start the conversation", which is both
+                  wrong and an invitation to try something they cannot do. */}
+              {!isMember && (
+                <div className="text-center py-10 px-6">
+                  <Lock size={28} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+                    Η συζήτηση είναι για τα μέλη
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Γίνε μέλος για να δεις και να συμμετέχεις.
+                  </p>
+                  <button onClick={() => joinCommunity.mutate(community.id)}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium">
+                    Συμμετοχή
+                  </button>
+                </div>
+              )}
+              {isMember && community.messages?.length === 0 && (
                 <div className="text-center py-8 text-gray-400 text-sm">Δεν υπάρχουν μηνύματα ακόμα. Ξεκίνησε τη συζήτηση!</div>
               )}
               {community.messages?.map((msg: any) => {
