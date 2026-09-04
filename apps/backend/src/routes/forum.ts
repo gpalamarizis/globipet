@@ -33,18 +33,49 @@ const routes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send(topic)
   })
 
+  /**
+   * Edit a topic.
+   *
+   * The previous version passed `req.body` straight into the update, so an
+   * author could set `is_pinned: true` to park their thread at the top of the
+   * category permanently, inflate `views_count`, or rewrite `author_email` to
+   * put the post in someone else's name.
+   */
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
+    const user = req.user as any
     const topic = await prisma.forumTopic.findUnique({ where: { id: req.params.id } })
-    if (!topic || topic.author_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.forumTopic.update({ where: { id: req.params.id }, data: req.body })
+    if (!topic) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+
+    const isAuthor = topic.author_email === user.email
+    const isAdmin = user.role === 'admin'
+    if (!isAuthor && !isAdmin) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+
+    const body = (req.body ?? {}) as any
+    const data: any = {}
+    if (body.title !== undefined) data.title = String(body.title).slice(0, 300)
+    if (body.content !== undefined) data.content = String(body.content)
+    if (body.category !== undefined) data.category = body.category
+    if (body.tags !== undefined) data.tags = Array.isArray(body.tags) ? body.tags : []
+    // The author marks their own question answered.
+    if (body.is_solved !== undefined) data.is_solved = !!body.is_solved
+    // Pinning is a moderation action.
+    if (body.is_pinned !== undefined && isAdmin) data.is_pinned = !!body.is_pinned
+
+    if (Object.keys(data).length === 0) {
+      return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
+    }
+    return prisma.forumTopic.update({ where: { id: topic.id }, data })
   })
 
+  // Delete — author or admin, so moderation is possible from the admin panel.
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
+    const user = req.user as any
     const topic = await prisma.forumTopic.findUnique({ where: { id: req.params.id } })
-    if (!topic || topic.author_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    await prisma.forumTopic.delete({ where: { id: req.params.id } })
+    if (!topic) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    if (topic.author_email !== user.email && user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    }
+    await prisma.forumTopic.delete({ where: { id: topic.id } })
     return reply.code(204).send()
   })
 }
