@@ -12,6 +12,20 @@ import { audit } from '../lib/audit.js'
  *   POST /user-rights/cancel-delete  — cancel pending deletion during grace period
  *   PATCH /user-rights/rectify       — Article 16: user can correct their own profile fields
  *   GET  /user-rights/delete-status  — check whether user has a pending deletion request
+ *
+ * OWNERSHIP COLUMNS
+ *   This codebase keys most user-owned rows by email, not by user id:
+ *     Pet.owner_email, Booking.customer_email, Order.user_email,
+ *     Post.author_email, Review.customer_email, HealthRecord.owner_email,
+ *     Vaccination.owner_email, TelehealthConsultation.client_email.
+ *   Only UserConsent and AccountDeletionRequest use user_id.
+ *
+ *   An earlier version of this file queried owner_id / user_id everywhere and
+ *   wrapped each call in `.catch(() => [])`, so the export silently returned
+ *   empty arrays — and the User select referenced a non-existent `avatar_url`
+ *   column, which made the endpoint fail outright. Both are fixed here, and
+ *   the catches are gone so a future schema change fails loudly instead of
+ *   quietly handing the user an empty file.
  */
 const userRightsRoutes: FastifyPluginAsync = async (app) => {
 
@@ -29,32 +43,39 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
   // Serves Article 15 (right of access) and Article 20 (right to data portability).
   app.get('/export', async (req: any, reply) => {
     const userId = (req.user as any).id
+    const email = (req.user as any).email
 
-    // Fetch everything related to the user in parallel
-    const [user, pets, bookings, orders, posts, reviews, notifications, healthRecords, medicalRecords, consents] = await Promise.all([
+    const [
+      user, pets, bookings, orders, posts, reviews, notifications,
+      healthRecords, vaccinations, telehealth, consents, deletionRequests,
+    ] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: {
           id: true, email: true, full_name: true, phone: true, address: true,
-          role: true, preferred_language: true, avatar_url: true,
+          role: true, preferred_language: true, profile_photo: true,
+          city: true, country: true, bio: true, website: true,
+          loyalty_tier: true, total_points: true, is_verified: true,
           ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true,
           created_at: true, updated_at: true,
         },
       }),
-      prisma.pet.findMany({ where: { owner_id: userId } }).catch(() => []),
-      prisma.booking.findMany({ where: { user_id: userId } }).catch(() => []),
-      prisma.order.findMany({ where: { user_id: userId } }).catch(() => []),
-      prisma.post.findMany({ where: { user_id: userId } }).catch(() => []),
-      prisma.review.findMany({ where: { user_id: userId } }).catch(() => []),
-      prisma.notification.findMany({ where: { user_email: (req.user as any).email } }).catch(() => []),
-      prisma.healthRecord.findMany({ where: { pet: { owner_id: userId } } }).catch(() => []),
-      prisma.medicalRecord.findMany({ where: { pet: { owner_id: userId } } }).catch(() => []),
-      prisma.userConsent.findMany({ where: { user_id: userId } }).catch(() => []),
+      prisma.pet.findMany({ where: { owner_email: email } }),
+      prisma.booking.findMany({ where: { customer_email: email } }),
+      prisma.order.findMany({ where: { user_email: email } }),
+      prisma.post.findMany({ where: { author_email: email } }),
+      prisma.review.findMany({ where: { customer_email: email } }),
+      prisma.notification.findMany({ where: { user_email: email } }),
+      prisma.healthRecord.findMany({ where: { owner_email: email } }),
+      prisma.vaccination.findMany({ where: { owner_email: email } }),
+      prisma.telehealthConsultation.findMany({ where: { client_email: email } }),
+      prisma.userConsent.findMany({ where: { user_id: userId } }),
+      prisma.accountDeletionRequest.findMany({ where: { user_id: userId } }),
     ])
 
     const payload = {
       export_generated_at: new Date().toISOString(),
-      export_version: '1.0',
+      export_version: '1.1',
       gdpr_article: 'Article 15 / 20',
       user,
       pets,
@@ -64,8 +85,10 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       reviews,
       notifications,
       health_records: healthRecords,
-      medical_records: medicalRecords,
+      vaccinations,
+      telehealth_consultations: telehealth,
       consent_history: consents,
+      deletion_requests: deletionRequests,
     }
 
     // Force download as JSON attachment
@@ -157,7 +180,9 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
   app.patch('/rectify', async (req: any, reply) => {
     const userId = (req.user as any).id
     const body = req.body ?? {}
-    const allowed = ['full_name', 'phone', 'address', 'preferred_language', 'avatar_url']
+    // profile_photo is the real column; the old whitelist said avatar_url,
+    // which does not exist and made the write fail.
+    const allowed = ['full_name', 'phone', 'address', 'preferred_language', 'profile_photo', 'bio', 'city', 'country', 'website']
     const data: any = {}
     for (const f of allowed) if (f in body) data[f] = body[f]
     if (Object.keys(data).length === 0) {
@@ -169,7 +194,11 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
     const updated = await prisma.user.update({
       where: { id: userId },
       data,
-      select: { id: true, full_name: true, phone: true, address: true, preferred_language: true, avatar_url: true },
+      select: {
+        id: true, full_name: true, phone: true, address: true,
+        preferred_language: true, profile_photo: true,
+        bio: true, city: true, country: true, website: true,
+      },
     })
     decryptUserFields(updated as any)
     await audit(req, { action: 'rectify', resource: 'user', resource_id: userId, metadata: { fields: Object.keys(data) } })

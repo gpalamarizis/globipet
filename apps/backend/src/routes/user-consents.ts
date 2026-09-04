@@ -41,9 +41,19 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
     const where: any = req.userId ? { user_id: req.userId } : (cookie_id ? { cookie_id } : null)
     if (!where) return { data: null }
 
+    // The anonymous path is addressable by anyone who has the cookie id, so it
+    // returns only the consent flags. ip_address and user_agent are personal
+    // data and stay behind authentication.
+    const select = req.userId ? undefined : {
+      id: true, cookie_id: true, necessary: true, analytics: true,
+      marketing: true, functional: true, terms_accepted: true,
+      privacy_accepted: true, source: true, created_at: true,
+    }
+
     const latest = await prisma.userConsent.findFirst({
       where,
       orderBy: { created_at: 'desc' },
+      ...(select ? { select } : {}),
     })
     return { data: latest }
   })
