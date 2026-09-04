@@ -12,16 +12,19 @@ export default function ContactPage() {
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [honeypot, setHoneypot] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await api.post('/contact', { name, email, subject, message })
+      await api.post('/contact', { name, email, subject, message, website: honeypot })
       toast.success(t('contact.success'))
       setName(''); setEmail(''); setSubject(''); setMessage('')
-    } catch {
-      toast.error(t('contact.error'))
+    } catch (err: any) {
+      // The endpoint answers with a reason — rate limit, invalid email — and
+      // the generic fallback hid all of it.
+      toast.error(err?.message || t('contact.error'))
     } finally {
       setSubmitting(false)
     }
@@ -86,6 +89,13 @@ export default function ContactPage() {
                 <input type="text" required value={subject} onChange={e => setSubject(e.target.value)}
                   className="input" placeholder={t('contact.subjectPlaceholder')} />
               </div>
+              {/* Honeypot. Hidden from sight and from screen readers; a bot
+                  that fills every field fills this one too and the server
+                  drops the submission without saying so. */}
+              <input type="text" name="website" tabIndex={-1} autoComplete="off"
+                aria-hidden="true" value={honeypot} onChange={e => setHoneypot(e.target.value)}
+                style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} />
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('contact.message')}</label>
                 <textarea required rows={6} value={message} onChange={e => setMessage(e.target.value)}

@@ -22,6 +22,7 @@ import eventsRoutes from './routes/events.js'
 import breedsRoutes from './routes/breeds.js'
 import healthRoutes from './routes/health.js'
 import calendarRoutes from './routes/calendar.js'
+import contactRoutes from './routes/contact.js'
 import telehealthRoutes from './routes/telehealth.js'
 import loyaltyRoutes from './routes/loyalty.js'
 import notificationsRoutes from './routes/notifications.js'
@@ -131,6 +132,8 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   // a real device and still caps how fast an unauthenticated caller can probe
   // device tokens or flood the location table.
   '/api/tracker/ingest':       { max: 60, window: '1 minute' },
+  // A public form with no limit is a spam relay.
+  '/api/contact':              { max: 5,  window: '1 hour' },
 }
 
 app.addHook('onRoute', (route) => {
@@ -166,6 +169,8 @@ const routes = [
   // calendarRoutes was imported but never registered, so every /api/calendar
   // path answered 404 while the provider dashboard linked straight to them.
   { prefix: '/api/calendar', handler: calendarRoutes },
+  // ContactPage has posted here since it was written; the route never existed.
+  { prefix: '/api/contact', handler: contactRoutes },
   { prefix: '/api/users', handler: usersRoutes },
   { prefix: '/api/pets', handler: petsRoutes },
   { prefix: '/api/products', handler: productsRoutes },

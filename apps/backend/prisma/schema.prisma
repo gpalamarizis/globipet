@@ -1463,3 +1463,23 @@ model CampaignImpression {
   @@index([campaign_id, kind], map: "campaign_impressions_campaign_idx")
   @@map("campaign_impressions")
 }
+
+model ContactMessage {
+  id         String   @id @default(uuid())
+  name       String
+  email      String
+  subject    String?
+  message    String
+  // Set when the sender happened to be logged in.
+  user_email String?
+  ip_address String?
+  user_agent String?
+  // new | read | replied | archived
+  status     String   @default("new")
+  notes      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@index([status, created_at], map: "contact_messages_status_idx")
+  @@map("contact_messages")
+}
