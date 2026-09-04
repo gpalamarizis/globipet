@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   TrendingUp, Eye, ShoppingBag, Euro, Package, AlertTriangle,
-  ArrowUpDown, BarChart3, EyeOff,
+  ArrowUpDown, BarChart3, EyeOff, Star, Flame,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -28,6 +29,19 @@ type SortKey = 'revenue' | 'units' | 'views' | 'conversion' | 'rating'
 
 export default function MarketInsights() {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+
+  /**
+   * Two audiences, one route.
+   *
+   * Whoever runs the shop gets the trading view. Everyone else gets the
+   * popular list — the only part of this that is any of their business, and
+   * genuinely useful to them. Sending a customer to a 403 taught them
+   * nothing.
+   */
+  const canSeeTrading = ['admin', 'service_provider', 'both']
+    .includes((user as any)?.role)
+
   const [days, setDays] = useState(30)
   const [category, setCategory] = useState('')
   const [sort, setSort] = useState<SortKey>('revenue')
@@ -37,11 +51,20 @@ export default function MarketInsights() {
     queryFn: () => api.get('/insights/shop', {
       params: { days, category: category || undefined },
     }).then(r => r.data?.data),
+    enabled: canSeeTrading,
   })
 
   const { data: categories = [] } = useQuery({
     queryKey: ['shop-insight-categories'],
     queryFn: () => api.get('/insights/shop/categories').then(r => r.data?.data ?? []),
+    enabled: canSeeTrading,
+  })
+
+  const { data: popular = [], isLoading: popularLoading } = useQuery({
+    queryKey: ['popular-products', days],
+    queryFn: () => api.get('/insights/popular', { params: { days, limit: 24 } })
+      .then(r => r.data?.data ?? []),
+    enabled: !canSeeTrading,
   })
 
   /** Views that turned into a sale. Meaningless below a handful of views. */
@@ -56,6 +79,99 @@ export default function MarketInsights() {
     return list
   }, [data, sort])
 
+  // ─── Customer view ───────────────────────────────────────────────
+  if (!canSeeTrading) {
+    return (
+      <div className="page-container py-8 pb-24 lg:pb-8">
+        <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
+          <div>
+            <h1 className="section-title mb-1 flex items-center gap-2">
+              <Flame size={22} className="text-orange-500" />
+              {t('insights.popularTitle', 'Δημοφιλέστερα προϊόντα')}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t('insights.popularSubtitle', 'Αυτά επιλέγουν οι υπόλοιποι ιδιοκτήτες')}
+            </p>
+          </div>
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            {[7, 30, 90].map(r => (
+              <button key={r} onClick={() => setDays(r)}
+                className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                  days === r ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
+                {r} {t('insights.days', 'ημέρες')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {popularLoading ? (
+          <div className="py-24 flex justify-center"><LoadingSpinner /></div>
+        ) : popular.length === 0 ? (
+          <div className="text-center py-24">
+            <Flame size={44} className="mx-auto text-gray-200 mb-4" />
+            <p className="font-semibold text-gray-900 dark:text-white mb-2">
+              {t('insights.noPopular', 'Δεν υπάρχουν ακόμη δημοφιλή προϊόντα')}
+            </p>
+            <Link to="/marketplace" className="btn-primary mt-2">
+              {t('insights.browse', 'Δες το κατάστημα')}
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {popular.map((p: any) => (
+              <Link key={p.id} to={`/marketplace/${p.id}`}
+                className="card overflow-hidden group hover:shadow-card-hover transition-all block relative">
+                {/* The first three are worth calling out; a badge on every
+                    card would rank nothing. */}
+                {p.rank <= 3 && (
+                  <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center">
+                    {p.rank}
+                  </div>
+                )}
+                <div className="aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  {p.image_url
+                    ? <img src={p.image_url} alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    : <div className="w-full h-full flex items-center justify-center">
+                        <Package size={32} className="text-gray-300" />
+                      </div>}
+                </div>
+                <div className="p-3">
+                  <p className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 leading-snug">
+                    {p.name}
+                  </p>
+                  {p.brand && <p className="text-[10px] text-gray-400 mt-0.5">{p.brand}</p>}
+                  <div className="flex items-center gap-0.5 mt-1">
+                    <Star size={9} className="text-yellow-400 fill-yellow-400" />
+                    <span className="text-[10px] text-gray-500">
+                      {p.rating} ({p.reviews_count})
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1.5">
+                    <p className="font-bold text-sm text-gray-900 dark:text-white">
+                      {formatCurrency(p.price)}
+                    </p>
+                    {p.original_price && (
+                      <p className="text-[10px] text-gray-400 line-through">
+                        {formatCurrency(p.original_price)}
+                      </p>
+                    )}
+                  </div>
+                  {!p.in_stock && (
+                    <p className="text-[10px] text-red-500 mt-1">
+                      {t('insights.outOfStock', 'Εξαντλήθηκε')}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ─── Trading view ────────────────────────────────────────────────
   if (isLoading) return (
     <div className="page-container py-24 flex justify-center"><LoadingSpinner /></div>
   )

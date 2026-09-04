@@ -34,16 +34,93 @@ type Row = {
 
 const insightsRoutes: FastifyPluginAsync = async (app) => {
 
-  app.addHook('preHandler', async (req: any, reply: any) => {
+  /**
+   * Trading figures — revenue, units, stock, conversion, who sells what — are
+   * for the people running the shop. A customer gets /popular instead, which
+   * answers the only question they actually have: what is everyone else
+   * buying.
+   */
+  const requireShopAccess = async (req: any, reply: any) => {
     try { await (app as any).authenticate(req, reply) }
     catch { return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' }) }
     const role = (req.user as any)?.role
     if (!['admin', 'service_provider', 'both'].includes(role)) {
       return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση στα στατιστικά καταστήματος' })
     }
+  }
+
+  /**
+   * Most popular products — public.
+   *
+   * Ranked by units sold over the window, with views breaking ties and
+   * standing in for products that have been looked at but not yet bought.
+   *
+   * Deliberately absent: revenue, units, stock, conversion and the seller's
+   * address. A shopper needs to know what is popular, not how the business is
+   * doing. Publishing per-product sales figures would also tell every
+   * competitor exactly what to stock.
+   */
+  app.get('/popular', async (req: any) => {
+    const days = Math.min(Math.max(parseInt(req.query?.days) || 30, 1), 365)
+    const since = new Date(Date.now() - days * 86_400_000)
+    const category = req.query?.category || undefined
+    const limit = Math.min(Math.max(parseInt(req.query?.limit) || 12, 1), 48)
+
+    const products = await prisma.product.findMany({
+      where: { ...(category ? { category } : {}) },
+      select: {
+        id: true, name: true, image_url: true, category: true, brand: true,
+        price: true, sale_price: true, rating: true, reviews_count: true,
+        views_count: true, stock: true,
+      },
+      take: 500,
+    })
+    if (products.length === 0) return { data: [] }
+
+    const inScope = new Set(products.map(p => p.id))
+    const sold = new Map<string, number>()
+
+    const orders = await prisma.order.findMany({
+      where: { payment_status: 'paid', created_at: { gte: since } },
+      select: { items: true },
+      orderBy: { created_at: 'desc' },
+      take: 5000,
+    })
+    for (const order of orders) {
+      for (const item of (order.items ?? []) as any[]) {
+        const pid = item?.product_id
+        if (!pid || !inScope.has(pid)) continue
+        sold.set(pid, (sold.get(pid) ?? 0) + (Number(item.quantity) || 0))
+      }
+    }
+
+    const ranked = products
+      .map(p => ({ p, units: sold.get(p.id) ?? 0 }))
+      // Something nobody has bought and nobody has looked at is not popular,
+      // it is just present.
+      .filter(r => r.units > 0 || (r.p.views_count ?? 0) > 0)
+      .sort((a, b) => b.units - a.units || (b.p.views_count ?? 0) - (a.p.views_count ?? 0))
+      .slice(0, limit)
+
+    return {
+      data: ranked.map((r, i) => ({
+        rank: i + 1,
+        id: r.p.id,
+        name: r.p.name,
+        image_url: r.p.image_url,
+        category: r.p.category,
+        brand: r.p.brand,
+        price: r.p.sale_price ?? r.p.price,
+        original_price: r.p.sale_price ? r.p.price : null,
+        rating: r.p.rating,
+        reviews_count: r.p.reviews_count,
+        in_stock: (r.p.stock ?? 0) > 0,
+      })),
+      range_days: days,
+    }
   })
 
-  app.get('/shop', async (req: any) => {
+  app.get('/shop', { preHandler: [requireShopAccess] }, async (req: any) => {
     const user = req.user as any
     const isAdmin = user.role === 'admin'
 
@@ -179,7 +256,7 @@ const insightsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   /** Distinct categories in scope, for the filter. */
-  app.get('/shop/categories', async (req: any) => {
+  app.get('/shop/categories', { preHandler: [requireShopAccess] }, async (req: any) => {
     const user = req.user as any
     const rows = await prisma.product.groupBy({
       by: ['category'],
