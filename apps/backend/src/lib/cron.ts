@@ -33,7 +33,10 @@ export function startAiTrialExpiryCron() {
           },
         })
 
-        broadcastToUser(user.id, { type: 'notification', notification })
+        // Live push is keyed by email, like every other broadcast call.
+        // This passed user.id, so the trial-expiry notification was written
+        // to the database but never reached an open browser.
+        broadcastToUser(user.email, { type: 'notification', notification })
       }
 
       if (expiredTrialUsers.length > 0) {

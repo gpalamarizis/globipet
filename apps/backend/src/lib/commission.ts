@@ -26,7 +26,16 @@ export const DEFAULT_COMMISSION_RATES: Record<CommissionCategory, number> = {
 
 let cache: { rates: Record<string, number>; expires: number } | null = null
 
-/** Reads commission rates from AppSetting (JSON blob), merged over defaults. Cached 30s in-process. */
+/**
+ * Reads commission rates from AppSetting (JSON blob), merged over defaults.
+ * Cached 30s in-process.
+ *
+ * Values are clamped to 0-100. The settings endpoint validates on write, but
+ * the rates live in a free-form JSON column — a hand edit in the database, a
+ * restored backup or a half-written value would otherwise flow straight into
+ * every payout calculation. A rate above 100 makes the provider payout
+ * negative.
+ */
 export async function getCommissionRates(): Promise<Record<CommissionCategory, number>> {
   if (cache && cache.expires > Date.now()) return cache.rates as any
   const setting = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY } })
@@ -34,7 +43,18 @@ export async function getCommissionRates(): Promise<Record<CommissionCategory, n
   if (setting) {
     try { stored = JSON.parse(setting.value) } catch { stored = {} }
   }
-  const merged = { ...DEFAULT_COMMISSION_RATES, ...stored }
+
+  const sane: Record<string, number> = {}
+  for (const [key, value] of Object.entries(stored)) {
+    const n = Number(value)
+    if (Number.isFinite(n) && n >= 0 && n <= 100) {
+      sane[key] = n
+    } else {
+      console.error(`[commission] ignoring invalid rate for ${key}: ${value}`)
+    }
+  }
+
+  const merged = { ...DEFAULT_COMMISSION_RATES, ...sane }
   cache = { rates: merged, expires: Date.now() + 30_000 }
   return merged
 }
@@ -71,7 +91,13 @@ export async function calculateCommission(amount: number, category: string | nul
   const rates = await getCommissionRates()
   const resolved = resolveCommissionCategory(category)
   const rate = rates[resolved] ?? DEFAULT_COMMISSION_RATES.services_default
-  const platformFee = Math.round(amount * (rate / 100) * 100) / 100
-  const providerPayout = Math.round((amount - platformFee) * 100) / 100
+
+  // A non-finite or negative amount means something upstream miscalculated.
+  // Returning a zero split keeps the transaction record honest rather than
+  // writing a negative fee that later shows up as money owed to the platform.
+  const base = Number.isFinite(amount) && amount > 0 ? amount : 0
+
+  const platformFee = Math.round(base * (rate / 100) * 100) / 100
+  const providerPayout = Math.round((base - platformFee) * 100) / 100
   return { rate, platformFee, providerPayout }
 }

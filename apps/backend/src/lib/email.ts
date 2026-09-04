@@ -167,8 +167,10 @@ export async function sendSubscriptionFailedEmail(to: string, opts: { customerNa
 export async function sendAiTrialStartedEmail(to: string, opts: { customerName: string }) {
   await sendEmail({
     to, subject: `Το δωρεάν trial AI ξεκίνησε 🚀`,
-    html: wrapper('15 μέρες δωρεάν AI λειτουργίες', `
-      <p style="color:#6B7280;font-size:14px;">Γεια σου ${opts.customerName}, το δωρεάν 15ήμερο trial των AI λειτουργιών (Υγεία, Emotion, Ούρα/Περιττώματα) ενεργοποιήθηκε.</p>
+    // The trial is 30 days (TRIAL_DAYS in ai-subscriptions.ts). This email
+    // promised 15, so every new user was told the wrong figure in writing.
+    html: wrapper('30 μέρες δωρεάν AI λειτουργίες', `
+      <p style="color:#6B7280;font-size:14px;">Γεια σου ${opts.customerName}, το δωρεάν 30ήμερο trial των AI λειτουργιών (Υγεία, Emotion, Ούρα/Περιττώματα) ενεργοποιήθηκε.</p>
     `)
   })
 }

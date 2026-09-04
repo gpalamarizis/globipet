@@ -105,6 +105,30 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
   const sourceCode = process.env.VIVA_SOURCE_CODE
   const frontendUrl = process.env.FRONTEND_URL || 'https://globipet.com'
 
+  /**
+   * The source code is what separates this application's payments from every
+   * other application on the same Viva account. GlobiPet shares its Viva
+   * account with Thesis, so a missing or wrong source code means the money
+   * and the reporting land under the other product.
+   *
+   * Previously an unset VIVA_SOURCE_CODE was sent as `undefined`, which Viva
+   * accepts by falling back to the account's default source. The charge still
+   * went through, which is exactly what makes it dangerous: nothing failed,
+   * the payment simply appeared in the wrong place. Fail loudly instead.
+   */
+  if (!sourceCode) {
+    throw new Error(
+      'VIVA_SOURCE_CODE is not set. Refusing to create a payment order — ' +
+      'without it the charge is filed under the shared account default.'
+    )
+  }
+
+  // A zero or negative charge is always a bug upstream, and Viva would either
+  // reject it or create an order nobody can pay.
+  if (!Number.isFinite(params.amount) || params.amount <= 0) {
+    throw new Error(`Invalid payment amount: ${params.amount}`)
+  }
+
   // Amount must be in cents (integer)
   const amountInCents = Math.round(params.amount * 100)
 
