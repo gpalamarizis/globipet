@@ -51,7 +51,7 @@ export default function ServiceDetail() {
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const goToBooking = () => {
-    if (!isAuthenticated) { navigate('/auth'); return }
+    if (!isAuthenticated) { navigate('/login'); return }
     setTab('booking')
     setTimeout(() => bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
@@ -323,7 +323,7 @@ export default function ServiceDetail() {
               {!isAuthenticated ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">{t('authExtra.requiredTitle')}</p>
-                  <button onClick={() => navigate('/auth')} className="btn-primary">{t('auth.login')}</button>
+                  <button onClick={() => navigate('/login')} className="btn-primary">{t('auth.login')}</button>
                 </div>
               ) : (
                 <>

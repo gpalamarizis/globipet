@@ -210,7 +210,10 @@ function CalendarTab() {
 
   const { data: bookings = [] } = useQuery({
     queryKey: ['provider-bookings'],
-    queryFn: () => api.get('/bookings/provider').then(r => r.data?.data ?? []),
+    // The provider's bookings live at /provider/bookings — bookings.ts has no
+    // /provider path, so this request 404'd and the dashboard's calendar and
+    // upcoming list were fed an empty array on every load.
+    queryFn: () => api.get('/provider/bookings').then(r => r.data?.data ?? []),
     enabled: !!user,
   })
 

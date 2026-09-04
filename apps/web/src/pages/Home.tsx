@@ -275,7 +275,7 @@ export default function Home() {
                 </Link>
 
                 {/* My pets card */}
-                <Link to="/pets"
+                <Link to="/my-pets"
                   className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">

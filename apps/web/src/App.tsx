@@ -1,6 +1,7 @@
 ﻿import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'react-hot-toast'
 import { I18nextProvider } from 'react-i18next'
@@ -81,7 +82,27 @@ const ContactPage       = lazy(() => import('@/pages/ContactPage'))
 const LegalPage         = lazy(() => import('@/pages/LegalPage'))
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: { staleTime: 1000 * 60 * 5, retry: 1, refetchOnWindowFocus: false },
+    mutations: {
+      /**
+       * Last-resort failure notice for writes.
+       *
+       * A third of the mutations in the app had no onError of their own, so a
+       * failed save or delete did nothing visible at all — the user pressed
+       * delete, the row stayed, and nothing explained why. This default fires
+       * only for those; any mutation that defines its own onError overrides
+       * it and this never runs.
+       *
+       * 401 is excluded because the api interceptor already redirects to the
+       * login page, and a toast on the way out is just noise.
+       */
+      onError: (err: any) => {
+        if (err?.statusCode === 401) return
+        toast.error(err?.message || err?.response?.data?.message || 'Η ενέργεια απέτυχε')
+      },
+    },
+  },
 })
 
 /**
