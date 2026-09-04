@@ -190,6 +190,7 @@ function ImportTab() {
 
 // ─── Calendar Tab ─────────────────────────────────────────────────
 function CalendarTab() {
+  const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [syncing, setSyncing] = useState(false)
 
