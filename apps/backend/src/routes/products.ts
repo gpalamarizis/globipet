@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { createHash } from 'node:crypto'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
 const productsRoutes: FastifyPluginAsync = async (app) => {
@@ -74,10 +75,44 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
     return { data, total: data.length }
   })
 
+  /**
+   * Count a product view, once per visitor per day.
+   *
+   * The visitor is a hash of IP and user agent — enough to make a ranking
+   * mean something without keeping an address on file. Without the dedup a
+   * refresh loop would decide which products the insights page calls popular.
+   */
+  function visitorHash(req: any): string {
+    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim()
+      || req.ip || 'unknown'
+    const ua = (req.headers['user-agent'] || '').toString().slice(0, 200)
+    return createHash('sha256')
+      .update(`${ip}|${ua}|${process.env.JWT_SECRET || 'globipet'}`)
+      .digest('hex').slice(0, 32)
+  }
+
+  async function countView(req: any, productId: string) {
+    const day = new Date()
+    day.setUTCHours(0, 0, 0, 0)
+    try {
+      await prisma.productImpression.create({
+        data: { product_id: productId, visitor_hash: visitorHash(req), day },
+      })
+    } catch {
+      return // already counted today, or the product vanished mid-request
+    }
+    await prisma.product.update({
+      where: { id: productId },
+      data: { views_count: { increment: 1 } },
+    }).catch(() => {})
+  }
+
   // Public detail — placed AFTER /my so the router doesn't match /my as :id
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const product = await prisma.product.findUniqueOrThrow({ where: { id: req.params.id } })
+    // Fire and forget: a view counter must never delay or fail the page.
+    countView(req, product.id).catch(() => {})
     return translateRecord('product', product, lang)
   })
 

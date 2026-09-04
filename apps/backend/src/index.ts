@@ -23,6 +23,7 @@ import breedsRoutes from './routes/breeds.js'
 import healthRoutes from './routes/health.js'
 import calendarRoutes from './routes/calendar.js'
 import contactRoutes from './routes/contact.js'
+import insightsRoutes from './routes/insights.js'
 import telehealthRoutes from './routes/telehealth.js'
 import loyaltyRoutes from './routes/loyalty.js'
 import notificationsRoutes from './routes/notifications.js'
@@ -171,6 +172,7 @@ const routes = [
   { prefix: '/api/calendar', handler: calendarRoutes },
   // ContactPage has posted here since it was written; the route never existed.
   { prefix: '/api/contact', handler: contactRoutes },
+  { prefix: '/api/insights', handler: insightsRoutes },
   { prefix: '/api/users', handler: usersRoutes },
   { prefix: '/api/pets', handler: petsRoutes },
   { prefix: '/api/products', handler: productsRoutes },

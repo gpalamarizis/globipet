@@ -159,6 +159,7 @@ model Product {
   stock               Int                   @default(0)
   rating              Float                 @default(0)
   reviews_count       Int                   @default(0)
+  views_count         Int                   @default(0)
   target_species      String[]
   is_featured         Boolean               @default(false)
   discount_percentage Int?
@@ -168,6 +169,9 @@ model Product {
   updated_at          DateTime              @updatedAt
   is_subscribable     Boolean               @default(false)
   subscriptions       ProductSubscription[]
+
+  impressions ProductImpression[]
+
 
   @@map("products")
 }
@@ -1482,4 +1486,18 @@ model ContactMessage {
 
   @@index([status, created_at], map: "contact_messages_status_idx")
   @@map("contact_messages")
+}
+
+model ProductImpression {
+  id           String   @id @default(uuid())
+  product_id   String
+  visitor_hash String
+  day          DateTime @default(now()) @db.Date
+  created_at   DateTime @default(now())
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([product_id, visitor_hash, day], map: "product_impressions_unique_key")
+  @@index([day, product_id], map: "product_impressions_day_idx")
+  @@map("product_impressions")
 }
