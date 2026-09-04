@@ -17,6 +17,21 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
     if (!product) return reply.code(404).send({ message: 'Το προϊόν δεν βρέθηκε' })
     if (!product.is_subscribable) return reply.code(400).send({ message: 'Αυτό το προϊόν δεν διαθέτει συνδρομή' })
 
+    // One live subscription per product per user. Without this the checkout
+    // could be opened twice and the customer charged monthly on two parallel
+    // Stripe subscriptions for the same food plan.
+    const active = await prisma.productSubscription.findFirst({
+      where: {
+        user_id: user.id,
+        product_id: product.id,
+        status: { in: ['active', 'payment_failed'] },
+      },
+      select: { id: true },
+    })
+    if (active) {
+      return reply.code(409).send({ message: 'Έχεις ήδη ενεργή συνδρομή για αυτό το προϊόν' })
+    }
+
     const setting = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY } })
     const discountPercent = setting ? parseFloat(setting.value) : 0
     const monthlyPrice = Math.round(product.price * (1 - discountPercent / 100) * 100) / 100

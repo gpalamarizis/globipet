@@ -77,14 +77,27 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               const nextDelivery = new Date()
               nextDelivery.setMonth(nextDelivery.getMonth() + 1)
 
+              const deliveryNumber = productSub.deliveries_completed + 1
+              // The plan is sold as twelve monthly deliveries. Without this
+              // check Stripe kept charging past the twelfth month, because
+              // nothing ever cancelled the subscription.
+              const isFinalDelivery = deliveryNumber >= 12
+
               await prisma.productSubscription.update({
                 where: { id: productSub.id },
                 data: {
                   deliveries_completed: { increment: 1 },
-                  next_delivery_date: nextDelivery,
-                  status: 'active',
+                  next_delivery_date: isFinalDelivery ? null : nextDelivery,
+                  status: isFinalDelivery ? 'completed' : 'active',
+                  ...(isFinalDelivery ? { end_date: new Date() } : {}),
                 },
               })
+
+              if (isFinalDelivery && productSub.stripe_subscription_id) {
+                // Stop future charges. The delivery just paid for still ships.
+                stripe.subscriptions.cancel(productSub.stripe_subscription_id)
+                  .catch((e: any) => console.error('Stripe cancel at term end failed:', e?.message))
+              }
 
               const rate = productSub.commission_rate ?? 10
               const platformFee = Math.round(productSub.monthly_price * (rate / 100) * 100) / 100
@@ -110,7 +123,7 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                   payment_method: 'stripe_subscription',
                   platform_fee_amount: providerEmail ? platformFee : null,
                   provider_payout_amount: providerEmail ? providerPayout : null,
-                  notes: `Αυτόματη μηνιαία παράδοση συνδρομής (παράδοση #${productSub.deliveries_completed + 1}/12)`,
+                  notes: `Αυτόματη μηνιαία παράδοση συνδρομής (παράδοση #${deliveryNumber}/12)`,
                 },
               })
 
@@ -123,12 +136,15 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                   link: '/orders',
                 },
               })
-              broadcastToUser(productSub.user_id, { type: 'notification', notification })
+              // Live push is keyed by email, like every other broadcast call.
+              // This previously passed user_id, so subscription notifications
+              // were written to the database but never reached the browser.
+              broadcastToUser(productSub.user.email, { type: 'notification', notification })
 
               sendSubscriptionRenewedEmail(productSub.user.email, {
                 customerName: productSub.user.full_name,
                 productName: productSub.product.name,
-                deliveryNumber: productSub.deliveries_completed + 1,
+                deliveryNumber,
               }).catch(() => {})
 
               if (providerEmail) {
@@ -169,7 +185,10 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                   link: '/profile',
                 },
               })
-              broadcastToUser(productSub.user_id, { type: 'notification', notification })
+              // Live push is keyed by email, like every other broadcast call.
+              // This previously passed user_id, so subscription notifications
+              // were written to the database but never reached the browser.
+              broadcastToUser(productSub.user.email, { type: 'notification', notification })
 
               sendSubscriptionFailedEmail(productSub.user.email, {
                 customerName: productSub.user.full_name,
