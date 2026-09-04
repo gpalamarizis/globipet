@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Heart, MessageCircle, Share2, Plus, Image, X, Send, MoreHorizontal, Bookmark } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { api } from '@/lib/api'
+import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -28,12 +28,11 @@ export default function Social() {
 
   const createPost = useMutation({
     mutationFn: async () => {
+      // Setting Content-Type by hand drops the boundary the browser
+      // generates for multipart bodies, and the server cannot then split the
+      // request into parts. uploadFile leaves the header to the browser.
       let image_url = null
-      if (selectedImage) {
-        const fd = new FormData(); fd.append('file', selectedImage); fd.append('folder', 'posts')
-        const { data } = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-        image_url = data.url
-      }
+      if (selectedImage) image_url = await uploadFile(selectedImage, 'posts')
       return api.post('/posts', { content: newPost, image_url, tags })
     },
     onSuccess: () => {
@@ -41,22 +40,36 @@ export default function Social() {
       setNewPost(''); setSelectedImage(null); setImagePreview(null); setTags([]); setShowCompose(false)
       toast.success(t('socialExtra.published'))
     },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
+  /**
+   * Like / un-like.
+   *
+   * Two things were wrong here. The server returns `liked_by_me`, not
+   * `is_liked`, so the heart never filled in and the optimistic update wrote
+   * to a field nothing read. And only POST was ever sent — the like endpoint
+   * is idempotent, so a second press did nothing and un-liking was
+   * impossible; the optimistic decrement snapped back on the next refetch.
+   */
   const likePost = useMutation({
-    mutationFn: (id: string) => api.post(`/posts/${id}/like`),
-    onMutate: async (id) => {
+    mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
+      liked ? api.delete(`/posts/${id}/like`) : api.post(`/posts/${id}/like`),
+    onMutate: async ({ id, liked }) => {
       await queryClient.cancelQueries({ queryKey: ['posts', activeFilter] })
       queryClient.setQueryData(['posts', activeFilter], (old: any) =>
-        old?.map((p: any) => p.id === id ? { ...p, likes_count: p.is_liked ? p.likes_count - 1 : p.likes_count + 1, is_liked: !p.is_liked } : p)
+        old?.map((p: any) => p.id === id
+          ? { ...p, likes_count: Math.max(0, p.likes_count + (liked ? -1 : 1)), liked_by_me: !liked }
+          : p)
       )
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
   })
 
+  // "Following" is not offered: there is no follow or friendship table in the
+  // schema, so the tab could only ever have returned the same list as "all".
   const filters = [
     { value: 'all', label: t('social.filters.all') },
-    { value: 'following', label: t('social.filters.following') },
     { value: 'trending', label: t('social.filters.trending') },
   ]
 
@@ -146,8 +159,8 @@ export default function Social() {
               {post.image_url && <img src={post.image_url} alt="" className="w-full rounded-xl object-cover max-h-80 mb-3" />}
               {post.tags?.length > 0 && <div className="flex flex-wrap gap-1.5 mb-3">{post.tags.map((tag: string) => <span key={tag} className="text-xs text-brand-700 dark:text-brand-400 hover:underline cursor-pointer">#{tag}</span>)}</div>}
               <div className="flex items-center gap-1 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <button onClick={() => isAuthenticated && likePost.mutate(post.id)} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors', post.is_liked ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-                  <Heart size={16} fill={post.is_liked ? 'currentColor' : 'none'} /><span>{post.likes_count}</span>
+                <button onClick={() => isAuthenticated && likePost.mutate({ id: post.id, liked: !!post.liked_by_me })} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors', post.liked_by_me ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
+                  <Heart size={16} fill={post.liked_by_me ? 'currentColor' : 'none'} /><span>{post.likes_count}</span>
                 </button>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><MessageCircle size={16} /><span>{post.comments_count}</span></button>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-auto"><Bookmark size={16} /></button>

@@ -24,16 +24,29 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
 
   // GET posts
   //
+  // `?filter=` selects the ordering. The feed has been sending this parameter
+  // since it was written, but nothing read it — so the "trending" tab
+  // returned the same newest-first list as "all", and switching tabs changed
+  // nothing on screen.
+  //
   // When the caller is authenticated we also return `liked_by_me` per post so
   // the feed can render the heart in the right state without a second request.
   app.get('/', async (req: any) => {
-    const { limit = 20, page = 1 } = req.query
+    const { limit = 20, page = 1, filter = 'all' } = req.query
     const take = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
     const skip = (Math.max(parseInt(page) || 1, 1) - 1) * take
 
+    // Trending looks at engagement over the past week, so a post from last
+    // year with a thousand likes does not sit at the top forever.
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const where = filter === 'trending' ? { created_at: { gte: weekAgo } } : {}
+    const orderBy: any = filter === 'trending'
+      ? [{ likes_count: 'desc' }, { comments_count: 'desc' }, { created_at: 'desc' }]
+      : { created_at: 'desc' }
+
     const [posts, total] = await Promise.all([
-      prisma.post.findMany({ orderBy: { created_at: 'desc' }, take, skip }),
-      prisma.post.count(),
+      prisma.post.findMany({ where, orderBy, take, skip }),
+      prisma.post.count({ where }),
     ])
 
     // Try to identify the caller. This route is public, so a missing or
