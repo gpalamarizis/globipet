@@ -55,13 +55,34 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
     return { data: bookings }
   })
 
-  // Update booking status
-  app.patch('/bookings/:id', async (req: any) => {
-    const booking = await prisma.booking.update({
-      where: { id: req.params.id },
-      data: { status: req.body.status }
+  // Update booking status.
+  //
+  // The previous version updated by id alone with whatever string arrived in
+  // the body. Any provider could rewrite any other provider's bookings — and
+  // set the status to arbitrary text that no other code path understood.
+  app.patch('/bookings/:id', async (req: any, reply) => {
+    const user = req.user as any
+    const existing = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!existing) return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+
+    if (existing.provider_email !== user.email && user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Η κράτηση δεν σου ανήκει' })
+    }
+
+    const status = (req.body as any)?.status
+    const ALLOWED = ['confirmed', 'cancelled', 'completed', 'no_show']
+    if (!ALLOWED.includes(status)) {
+      return reply.code(400).send({ message: 'Μη έγκυρη κατάσταση', allowed: ALLOWED })
+    }
+    // Completing a booking implies it was paid for.
+    if (status === 'completed' && existing.payment_status !== 'paid') {
+      return reply.code(400).send({ message: 'Η κράτηση δεν έχει πληρωθεί' })
+    }
+
+    return prisma.booking.update({
+      where: { id: existing.id },
+      data: { status },
     })
-    return booking
   })
 }
 

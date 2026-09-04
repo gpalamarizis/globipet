@@ -134,6 +134,12 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       const userEmail = (req.user as any).email
       const { service_id, packages_with_prices } = req.body as any
 
+      // Without this guard a non-array body throws on .map and returns a 500
+      // with a stack trace instead of a clear validation error.
+      if (!Array.isArray(packages_with_prices) || packages_with_prices.length === 0) {
+        return reply.code(400).send({ message: 'packages_with_prices πρέπει να είναι μη κενός πίνακας' })
+      }
+
       const service = await prisma.service.findUnique({ where: { id: service_id } })
       if (!service || service.provider_email !== userEmail) {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
@@ -147,6 +153,7 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         .map((p: any, i: number) => {
           const t = templatesById.get(p.template_id)
           if (!t) return null
+          const price = parseFloat(String(p.price))
           return {
             service_id,
             group: t.group,
@@ -156,13 +163,19 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
             pet_type: t.pet_type,
             breed_group: t.breed_group,
             modality: t.modality,
-            price: parseFloat(String(p.price)) || 0,
+            // A negative or non-numeric price would flow straight into
+            // bookings and the commission split.
+            price: Number.isFinite(price) && price >= 0 ? price : 0,
             duration_minutes: parseInt(String(p.duration_minutes ?? t.suggested_duration_minutes)) || 60,
             is_addon: t.is_addon,
             display_order: i,
           }
         })
         .filter(Boolean) as any[]
+
+      if (data.length === 0) {
+        return reply.code(400).send({ message: 'Κανένα έγκυρο πρότυπο δεν βρέθηκε' })
+      }
 
       const created = await prisma.servicePackage.createMany({ data })
       return { count: created.count }
@@ -225,6 +238,15 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
     provider.post('/', async (req: any, reply) => {
       const userEmail = (req.user as any).email
       const body = req.body as any
+      if (!body?.name) {
+        return reply.code(400).send({ message: 'Το όνομα είναι υποχρεωτικό' })
+      }
+      const price = parseFloat(body.price)
+      // parseFloat(undefined) is NaN, which Prisma rejects with an opaque
+      // error at write time. Catch it here with a message the UI can show.
+      if (!Number.isFinite(price) || price < 0) {
+        return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
+      }
       const service = await prisma.service.findUnique({ where: { id: body.service_id } })
       if (!service || service.provider_email !== userEmail) {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα σε αυτή την υπηρεσία' })
@@ -235,7 +257,7 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
           group: body.group, name: body.name, description: body.description || null,
           size: body.size || null, pet_type: body.pet_type || null,
           breed_group: body.breed_group || null, modality: body.modality || null,
-          price: parseFloat(body.price), duration_minutes: parseInt(body.duration_minutes) || 60,
+          price, duration_minutes: parseInt(body.duration_minutes) || 60,
           is_addon: !!body.is_addon, is_active: body.is_active !== false,
           display_order: parseInt(body.display_order) || 0,
         }

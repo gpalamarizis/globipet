@@ -112,6 +112,14 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /settings/content/:section — admin only
   app.patch('/content/:section', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
     const { section } = req.params
+    // Only sections the app actually renders. An open key meant a typo (or a
+    // script) could fill app_settings with rows nothing ever reads.
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTENT, section)) {
+      return reply.code(400).send({
+        message: 'Άγνωστη ενότητα περιεχομένου',
+        allowed: Object.keys(DEFAULT_CONTENT),
+      })
+    }
     const body = req.body as Record<string, string>
     const existing = await prisma.appSetting.findUnique({ where: { key: `content_${section}` } })
     let current: Record<string, any> = {}
