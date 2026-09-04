@@ -1,12 +1,14 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users, Ticket,
-  Mail, PawPrint,
+  Mail, PawPrint, Check, UserPlus,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
+import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -22,6 +24,8 @@ export default function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
+  const { isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
 
   const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
   const locale = localeMap[i18n.language] || 'el-GR'
@@ -30,6 +34,39 @@ export default function EventDetail() {
     queryKey: ['event', id],
     queryFn: () => api.get(`/events/${id}`).then(r => r.data),
     enabled: !!id,
+  })
+
+  /**
+   * Registration state.
+   *
+   * events.registered_count was a column with no table behind it until
+   * event_registrations existed, so there was no way to sign up at all and
+   * this page could only hand the visitor an email address.
+   */
+  const { data: reg } = useQuery({
+    queryKey: ['event-registration', id],
+    queryFn: () => api.get(`/events/${id}/registration`).then(r => r.data?.data),
+    enabled: !!id && isAuthenticated,
+  })
+
+  const register = useMutation({
+    mutationFn: () => api.post(`/events/${id}/register`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+      queryClient.invalidateQueries({ queryKey: ['event', id] })
+      toast.success(t('events.registered', 'Δήλωσες συμμετοχή!'))
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  const cancel = useMutation({
+    mutationFn: () => api.delete(`/events/${id}/register`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+      queryClient.invalidateQueries({ queryKey: ['event', id] })
+      toast.success(t('events.cancelled', 'Η συμμετοχή ακυρώθηκε'))
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const fmt = (value?: string | null) => {
@@ -136,6 +173,35 @@ export default function EventDetail() {
             </p>
           </div>
         )}
+
+        {/* Attend */}
+        <div className="card p-5 mb-5">
+          {!isAuthenticated ? (
+            <Link to="/login" className="btn-primary w-full justify-center text-sm">
+              {t('events.loginToJoin', 'Συνδέσου για να δηλώσεις συμμετοχή')}
+            </Link>
+          ) : reg?.registered ? (
+            <>
+              <p className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 font-medium mb-3">
+                <Check size={16} /> {t('events.youAreGoing', 'Δήλωσες συμμετοχή')}
+              </p>
+              <button onClick={() => cancel.mutate()} disabled={cancel.isPending}
+                className="btn-secondary w-full justify-center text-sm">
+                {cancel.isPending ? t('common.loading') : t('events.cancelAttendance', 'Ακύρωση συμμετοχής')}
+              </button>
+            </>
+          ) : spotsLeft === 0 ? (
+            <p className="text-sm text-red-500 text-center">
+              {t('events.soldOut', 'Εξαντλήθηκε')}
+            </p>
+          ) : (
+            <button onClick={() => register.mutate()} disabled={register.isPending}
+              className="btn-primary w-full justify-center text-sm flex items-center gap-2">
+              <UserPlus size={15} />
+              {register.isPending ? t('common.loading') : t('events.join', 'Δήλωση συμμετοχής')}
+            </button>
+          )}
+        </div>
 
         <div className="card p-5">
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-3">

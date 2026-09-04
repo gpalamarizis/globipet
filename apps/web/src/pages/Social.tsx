@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, MessageCircle, Share2, Plus, Image, X, Send, MoreHorizontal, Bookmark } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Plus, Image, X, Send, MoreHorizontal, Bookmark, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { api, uploadFile } from '@/lib/api'
@@ -20,6 +20,9 @@ export default function Social() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
+  // Which post's comments are open, and the draft for it.
+  const [openComments, setOpenComments] = useState<string | null>(null)
+  const [commentDraft, setCommentDraft] = useState('')
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts', activeFilter],
@@ -68,6 +71,37 @@ export default function Social() {
 
   // "Following" is not offered: there is no follow or friendship table in the
   // schema, so the tab could only ever have returned the same list as "all".
+  /**
+   * Comments.
+   *
+   * posts.comments_count shipped as a column with nothing behind it, so the
+   * speech bubble showed zero on every post and clicking it did nothing.
+   */
+  const { data: comments = [] } = useQuery({
+    queryKey: ['post-comments', openComments],
+    queryFn: () => api.get(`/posts/${openComments}/comments`).then(r => r.data?.data ?? []),
+    enabled: !!openComments,
+  })
+
+  const addComment = useMutation({
+    mutationFn: () => api.post(`/posts/${openComments}/comments`, { content: commentDraft.trim() }),
+    onSuccess: () => {
+      setCommentDraft('')
+      queryClient.invalidateQueries({ queryKey: ['post-comments', openComments] })
+      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  const deleteComment = useMutation({
+    mutationFn: (commentId: string) => api.delete(`/posts/comments/${commentId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-comments', openComments] })
+      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
   const filters = [
     { value: 'all', label: t('social.filters.all') },
     { value: 'trending', label: t('social.filters.trending') },
@@ -162,10 +196,68 @@ export default function Social() {
                 <button onClick={() => isAuthenticated && likePost.mutate({ id: post.id, liked: !!post.liked_by_me })} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors', post.liked_by_me ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
                   <Heart size={16} fill={post.liked_by_me ? 'currentColor' : 'none'} /><span>{post.likes_count}</span>
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><MessageCircle size={16} /><span>{post.comments_count}</span></button>
+                <button
+                  onClick={() => { setOpenComments(openComments === post.id ? null : post.id); setCommentDraft('') }}
+                  className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors',
+                    openComments === post.id ? 'text-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
+                  <MessageCircle size={16} /><span>{post.comments_count}</span>
+                </button>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-auto"><Bookmark size={16} /></button>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><Share2 size={16} /></button>
               </div>
+
+              {openComments === post.id && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                  {comments.map((c: any) => (
+                    <div key={c.id} className="flex gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center text-[11px] font-semibold text-gray-600 dark:text-gray-300 shrink-0">
+                        {c.author_photo
+                          ? <img src={c.author_photo} alt="" className="w-full h-full object-cover" />
+                          : getInitials(c.author_name || 'U')}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl px-3 py-2">
+                          <p className="text-xs font-medium text-gray-900 dark:text-white">{c.author_name}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{c.content}</p>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5 ml-3">{formatRelativeTime(c.created_at)}</p>
+                      </div>
+                      {/* The comment's author, and the post's author, can remove it. */}
+                      {(c.author_email === user?.email || post.author_email === user?.email) && (
+                        <button onClick={() => deleteComment.mutate(c.id)}
+                          className="text-gray-300 hover:text-red-500 p-1 shrink-0 self-start">
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {comments.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-2">
+                      {t('socialExtra.noComments', 'Κανένα σχόλιο ακόμη')}
+                    </p>
+                  )}
+
+                  {isAuthenticated && (
+                    <div className="flex gap-2 items-end">
+                      <textarea rows={1} value={commentDraft}
+                        onChange={e => setCommentDraft(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey && commentDraft.trim()) {
+                            e.preventDefault(); addComment.mutate()
+                          }
+                        }}
+                        placeholder={t('socialExtra.commentPlaceholder', 'Γράψε σχόλιο...')}
+                        className="input resize-none text-sm py-2 flex-1" />
+                      <button onClick={() => addComment.mutate()}
+                        disabled={!commentDraft.trim() || addComment.isPending}
+                        className="btn-primary p-2 shrink-0">
+                        <Send size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           ))}
           {posts.length === 0 && <div className="text-center py-16"><p className="text-4xl mb-3">🐾</p><p className="font-semibold text-gray-900 dark:text-white mb-1">{t('socialExtra.noPostsTitle')}</p><p className="text-sm text-gray-500">{t('socialExtra.noPostsDesc')}</p></div>}
