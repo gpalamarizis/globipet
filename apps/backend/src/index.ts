@@ -163,6 +163,9 @@ app.decorate('authenticate', async (req: any, reply: any) => {
 // Register all routes
 const routes = [
   { prefix: '/api/auth', handler: authRoutes },
+  // calendarRoutes was imported but never registered, so every /api/calendar
+  // path answered 404 while the provider dashboard linked straight to them.
+  { prefix: '/api/calendar', handler: calendarRoutes },
   { prefix: '/api/users', handler: usersRoutes },
   { prefix: '/api/pets', handler: petsRoutes },
   { prefix: '/api/products', handler: productsRoutes },

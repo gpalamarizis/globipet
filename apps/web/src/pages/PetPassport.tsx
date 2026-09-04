@@ -280,6 +280,10 @@ export default function PetPassport() {
                     ['Ηλικία', pet.age ? `${pet.age} ετών` : null],
                     ['Χρώμα', pet.color],
                     ['Μικροτσίπ', pet.microchip_number],
+                    // Three states, not two. Null means nobody has said, and
+                    // the filter below drops the row rather than guessing.
+                    ['Στειρωμένο', pet.is_sterilized === true ? 'Ναι'
+                      : pet.is_sterilized === false ? 'Όχι' : null],
                     ['Εμβολιασμοί', pet.vaccination_status]
                   ].filter(([, v]) => v).map(([l, v]) => (
                     <div key={l}><p className="text-xs text-gray-400">{l}</p><p className="font-medium text-gray-900 dark:text-white">{v as string}</p></div>

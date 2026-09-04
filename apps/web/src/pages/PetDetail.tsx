@@ -217,6 +217,9 @@ export default function PetDetail() {
                 [t('petDetail.breed', 'Ράτσα'), pet.breed],
                 [t('petDetail.gender', 'Φύλο'), pet.gender === 'male' ? '♂' : pet.gender === 'female' ? '♀' : null],
                 [t('petDetail.microchip', 'Microchip'), pet.microchip_number],
+                [t('petDetail.sterilized', 'Στειρωμένο'),
+                  pet.is_sterilized === true ? t('common.yes', 'Ναι')
+                    : pet.is_sterilized === false ? t('common.no', 'Όχι') : null],
               ].filter(([, v]) => v).map(([k, v]) => (
                 <Row key={String(k)} title={String(k)} right={String(v)} />
               ))}

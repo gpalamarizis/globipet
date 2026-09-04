@@ -53,7 +53,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
-    const { name, species, breed, age, weight, gender, color, microchip_number, image_url } = req.body as any
+    const { name, species, breed, age, weight, gender, color, microchip_number, image_url, is_sterilized, sterilized_date } = req.body as any
     if (!name || !species) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
     const pet = await prisma.pet.create({
       data: {
@@ -67,6 +67,10 @@ const routes: FastifyPluginAsync = async (app) => {
         color: color || null,
         microchip_number: microchip_number || null,
         image_url: image_url || null,
+        // Three states: true, false, and null for "nobody has said". Coercing
+        // an absent value to false would print a false claim on the passport.
+        is_sterilized: typeof is_sterilized === 'boolean' ? is_sterilized : null,
+        sterilized_date: sterilized_date || null,
       }
     })
     return reply.code(201).send({ data: pet })
@@ -75,7 +79,7 @@ const routes: FastifyPluginAsync = async (app) => {
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const existing = await assertCanAccess(req, reply, req.params.id)
     if (!existing) return
-    const { name, species, breed, age, weight, gender, color, microchip_number, image_url, is_lost, last_seen_location } = req.body as any
+    const { name, species, breed, age, weight, gender, color, microchip_number, image_url, is_lost, last_seen_location, is_sterilized, sterilized_date } = req.body as any
     const data: any = {}
     if (name !== undefined) data.name = name
     if (species !== undefined) data.species = species
@@ -88,6 +92,10 @@ const routes: FastifyPluginAsync = async (app) => {
     if (image_url !== undefined) data.image_url = image_url
     if (is_lost !== undefined) data.is_lost = !!is_lost
     if (last_seen_location !== undefined) data.last_seen_location = last_seen_location
+    if (is_sterilized !== undefined) {
+      data.is_sterilized = typeof is_sterilized === 'boolean' ? is_sterilized : null
+    }
+    if (sterilized_date !== undefined) data.sterilized_date = sterilized_date || null
     const pet = await prisma.pet.update({ where: { id: existing.id }, data })
     return { data: pet }
   })

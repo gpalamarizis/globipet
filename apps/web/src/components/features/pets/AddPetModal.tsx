@@ -23,7 +23,11 @@ const species = [
   { value: 'other', label: 'Άλλο', emoji: '🐾' },
 ]
 
-const emptyForm = { name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', image_url: '' }
+// is_sterilized is deliberately a three-way choice, not a checkbox. On a pet
+// passport "unknown" is a real answer, and a checkbox would record every
+// unanswered case as "not neutered" — the exact false claim the passport used
+// to print for every animal.
+const emptyForm = { name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', image_url: '', is_sterilized: '' }
 
 export default function AddPetModal({ open, onClose, editing }: Props) {
   const { user } = useAuthStore()
@@ -45,6 +49,8 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
         color: editing.color || '',
         microchip_number: editing.microchip_number || '',
         image_url: editing.image_url || '',
+        is_sterilized: editing.is_sterilized === true ? 'yes'
+          : editing.is_sterilized === false ? 'no' : '',
       })
     } else {
       setForm(emptyForm)
@@ -78,6 +84,8 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
         color: form.color || null,
         microchip_number: form.microchip_number || null,
         image_url: form.image_url || null,
+        is_sterilized: form.is_sterilized === 'yes' ? true
+          : form.is_sterilized === 'no' ? false : null,
       }
       if (editing) return api.patch(`/pets/${editing.id}`, data)
       return api.post('/pets', data)
@@ -167,6 +175,18 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
                     <button key={g.v} type="button" onClick={() => setForm(f => ({ ...f, gender: g.v }))}
                       className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${form.gender === g.v ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700' : 'border-gray-200 dark:border-gray-700'}`}>
                       {g.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Στειρωμένο</label>
+                <div className="flex gap-2">
+                  {[{ v: 'yes', l: 'Ναι' }, { v: 'no', l: 'Όχι' }, { v: '', l: 'Δεν γνωρίζω' }].map(o => (
+                    <button key={o.v || 'unknown'} type="button" onClick={() => setForm(f => ({ ...f, is_sterilized: o.v }))}
+                      className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${form.is_sterilized === o.v ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700' : 'border-gray-200 dark:border-gray-700'}`}>
+                      {o.l}
                     </button>
                   ))}
                 </div>

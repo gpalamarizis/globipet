@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
+import { createHash } from 'node:crypto'
 
 /**
  * Καμπάνιες — εκπτώσεις, προβολές, στοχευμένο κοινό.
@@ -101,14 +102,53 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
     return { data: rows, page, total: rows.length }
   })
 
+  /**
+   * Impression counters.
+   *
+   * These were public with no filter of any kind, so a loop could push a
+   * campaign's views and clicks to any number. The provider then judged
+   * whether the campaign was worth the money on figures someone had made up.
+   *
+   * A row in campaign_impressions makes each count idempotent per visitor per
+   * day. The visitor is a hash of IP and user agent — enough to stop casual
+   * inflation without keeping an address on file, which would be personal
+   * data we have no reason to store.
+   */
+  function visitorHash(req: any): string {
+    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim()
+      || req.ip || 'unknown'
+    const ua = (req.headers['user-agent'] || '').toString().slice(0, 200)
+    return createHash('sha256')
+      .update(`${ip}|${ua}|${process.env.JWT_SECRET || 'globipet'}`)
+      .digest('hex')
+      .slice(0, 32)
+  }
+
+  async function countOnce(req: any, campaignId: string, kind: 'view' | 'click') {
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    try {
+      await prisma.campaignImpression.create({
+        data: { campaign_id: campaignId, visitor_hash: visitorHash(req), kind, day: today },
+      })
+    } catch {
+      // Unique violation — this visitor already counted today. Not an error.
+      return false
+    }
+    const column = kind === 'view' ? 'views' : 'clicks'
+    await prisma.$executeRawUnsafe(
+      `UPDATE campaigns SET ${column} = ${column} + 1 WHERE id = $1`, campaignId)
+    return true
+  }
+
   app.post('/:id/view', async (req: any) => {
-    await prisma.$executeRaw`UPDATE campaigns SET views = views + 1 WHERE id = ${req.params.id}`
-    return { ok: true }
+    const counted = await countOnce(req, req.params.id, 'view')
+    return { ok: true, counted }
   })
 
   app.post('/:id/click', async (req: any) => {
-    await prisma.$executeRaw`UPDATE campaigns SET clicks = clicks + 1 WHERE id = ${req.params.id}`
-    return { ok: true }
+    const counted = await countOnce(req, req.params.id, 'click')
+    return { ok: true, counted }
   })
 
   // ══ ΑΠΑΙΤΕΙΤΑΙ ΣΥΝΔΕΣΗ ═════════════════════════════════════════════

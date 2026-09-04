@@ -60,6 +60,8 @@ model Pet {
   vaccination_status String?
   medical_conditions String[]
   image_url          String?
+  is_sterilized      Boolean?
+  sterilized_date    String?
   is_lost            Boolean  @default(false)
   last_seen_location String?
   created_at         DateTime @default(now())
@@ -140,6 +142,8 @@ model Booking {
   staff                  ProviderStaff?   @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
 
   @@index([staff_id], map: "bookings_staff_idx")
+  calendar_event_id      String?
+
   @@map("bookings")
 }
 
@@ -1416,4 +1420,46 @@ model BreachIncident {
   @@index([status, detected_at])
   @@index([severity, detected_at])
   @@map("breach_incidents")
+}
+
+model CalendarConnection {
+  id             String    @id @default(uuid())
+  user_email     String
+  provider       String
+  access_token   String
+  refresh_token  String?
+  expires_at     DateTime?
+  calendar_id    String    @default("primary")
+  account_email  String?
+  is_active      Boolean   @default(true)
+  last_synced_at DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  @@unique([user_email, provider], map: "calendar_connections_user_provider_key")
+  @@map("calendar_connections")
+}
+
+model OAuthState {
+  state      String   @id
+  user_email String
+  provider   String
+  created_at DateTime @default(now())
+  expires_at DateTime
+
+  @@index([expires_at], map: "oauth_states_expires_idx")
+  @@map("oauth_states")
+}
+
+model CampaignImpression {
+  id           String   @id @default(uuid())
+  campaign_id  String
+  visitor_hash String
+  kind         String
+  day          DateTime @default(now()) @db.Date
+  created_at   DateTime @default(now())
+
+  @@unique([campaign_id, visitor_hash, kind, day], map: "campaign_impressions_unique_key")
+  @@index([campaign_id, kind], map: "campaign_impressions_campaign_idx")
+  @@map("campaign_impressions")
 }
