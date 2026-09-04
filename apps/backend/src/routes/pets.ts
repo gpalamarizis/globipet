@@ -3,6 +3,25 @@ import prisma from '../lib/prisma.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
+  /**
+   * Load a pet and verify the caller may see or change it.
+   * Owners get their own pets; admins get everything, so support and
+   * moderation are possible from the admin panel without impersonation.
+   */
+  async function assertCanAccess(req: any, reply: any, id: string) {
+    const pet = await prisma.pet.findUnique({ where: { id } })
+    if (!pet) {
+      reply.code(404).send({ message: 'Δεν βρέθηκε' })
+      return null
+    }
+    const user = req.user as any
+    if (pet.owner_email !== user.email && user.role !== 'admin') {
+      reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      return null
+    }
+    return pet
+  }
+
   // Τα κατοικίδια του συνδεδεμένου χρήστη.
   //
   // Ταυτόσημο με το /my. Υπάρχει επειδή το frontend καλεί /pets σε τέσσερα
@@ -27,10 +46,8 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   app.get('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
-    const pet = await prisma.pet.findUnique({ where: { id: req.params.id } })
-    if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (pet.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const pet = await assertCanAccess(req, reply, req.params.id)
+    if (!pet) return
     return pet
   })
 
@@ -56,10 +73,8 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
-    const existing = await prisma.pet.findUnique({ where: { id: req.params.id } })
-    if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const existing = await assertCanAccess(req, reply, req.params.id)
+    if (!existing) return
     const { name, species, breed, age, weight, gender, color, microchip_number, image_url, is_lost, last_seen_location } = req.body as any
     const data: any = {}
     if (name !== undefined) data.name = name
@@ -73,16 +88,14 @@ const routes: FastifyPluginAsync = async (app) => {
     if (image_url !== undefined) data.image_url = image_url
     if (is_lost !== undefined) data.is_lost = !!is_lost
     if (last_seen_location !== undefined) data.last_seen_location = last_seen_location
-    const pet = await prisma.pet.update({ where: { id: req.params.id }, data })
+    const pet = await prisma.pet.update({ where: { id: existing.id }, data })
     return { data: pet }
   })
 
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
-    const existing = await prisma.pet.findUnique({ where: { id: req.params.id } })
-    if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    await prisma.pet.delete({ where: { id: req.params.id } })
+    const existing = await assertCanAccess(req, reply, req.params.id)
+    if (!existing) return
+    await prisma.pet.delete({ where: { id: existing.id } })
     return reply.code(204).send()
   })
 }

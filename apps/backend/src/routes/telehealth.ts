@@ -82,8 +82,14 @@ const routes: FastifyPluginAsync = async (app) => {
 
   // PATCH /telehealth/availability — provider toggles their own availability
   app.patch('/availability', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
+    const { email, role } = req.user as any
     const { is_available } = req.body as { is_available: boolean }
+
+    // Only providers own a service row, so anyone else calling this is either
+    // confused or probing. Reject explicitly instead of silently updating zero rows.
+    if (role !== 'admin' && role !== 'service_provider' && role !== 'both') {
+      return reply.code(403).send({ message: 'Μόνο πάροχοι μπορούν να αλλάξουν διαθεσιμότητα' })
+    }
 
     const updated = await prisma.service.updateMany({
       where: { provider_email: email, service_type: 'veterinary' },
@@ -130,18 +136,49 @@ const routes: FastifyPluginAsync = async (app) => {
   // (via /:id/viva/verify or the shared orders.ts webhook fallback) before meeting_url is set.
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
-    const { provider_email, provider_name, service_id, pet_id, pet_name, scheduled_date, scheduled_time, duration, notes, price } = req.body as any
+    const { provider_email, service_id, pet_id, pet_name, scheduled_date, scheduled_time, duration, notes } = req.body as any
     if (!provider_email || !scheduled_date || !scheduled_time) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
 
-    const sessionPrice = parseFloat(price) || 0
+    // The price is read from the provider's service row, never from the body.
+    // A client-supplied `price` previously went straight into the Viva charge,
+    // so a consultation could be booked for a cent.
+    const service = service_id
+      ? await prisma.service.findUnique({ where: { id: service_id } })
+      : await prisma.service.findFirst({
+          where: { provider_email, service_type: 'veterinary', is_active: true },
+        })
+
+    if (!service) {
+      return reply.code(404).send({ message: 'Η υπηρεσία τηλεϊατρικής δεν βρέθηκε' })
+    }
+    if (service.provider_email !== provider_email) {
+      return reply.code(400).send({ message: 'Η υπηρεσία δεν ανήκει στον συγκεκριμένο πάροχο' })
+    }
+
+    // Booking a consultation with yourself would create a payment loop where
+    // the platform fee is charged on money moving between the same two hands.
+    if (provider_email === email) {
+      return reply.code(400).send({ message: 'Δεν μπορείς να κλείσεις ραντεβού με τον εαυτό σου' })
+    }
+
+    // A consultation may reference a pet, but only one the caller owns.
+    if (pet_id) {
+      const pet = await prisma.pet.findUnique({ where: { id: pet_id }, select: { owner_email: true } })
+      if (!pet || pet.owner_email !== email) {
+        return reply.code(403).send({ message: 'Το κατοικίδιο δεν σου ανήκει' })
+      }
+    }
+
+    const sessionPrice = service.price ?? 0
     const { rate, platformFee, providerPayout } = await calculateCommission(sessionPrice, 'telehealth')
 
     const consultation = await prisma.telehealthConsultation.create({
       data: {
-        provider_email, provider_name: provider_name || provider_email,
+        provider_email,
+        provider_name: service.provider_name || provider_email,
         client_email: email, client_name: full_name || email.split('@')[0],
         pet_id: pet_id || null, pet_name: pet_name || null,
-        service_id: service_id || null,
+        service_id: service.id,
         scheduled_date, scheduled_time,
         duration: parseInt(duration) || 30,
         notes: notes || null,
@@ -161,7 +198,7 @@ const routes: FastifyPluginAsync = async (app) => {
         customerEmail: email,
         customerName: full_name,
         orderId: consultation.id,
-        description: `GlobiPet τηλεϊατρική με ${provider_name || provider_email}`,
+        description: `GlobiPet τηλεϊατρική με ${service.provider_name || provider_email}`,
         successUrl: `${frontendUrl}/telehealth/${consultation.id}/confirmation`,
         failureUrl: `${frontendUrl}/telehealth/${consultation.id}/confirmation`,
       })
@@ -202,19 +239,63 @@ const routes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  // PATCH — whitelisted fields only.
+  //
+  // The previous version passed req.body straight into the update, so a client
+  // could send { payment_status: 'paid', status: 'scheduled' } and hold a paid
+  // consultation without ever paying. Payment state is set exclusively by the
+  // Viva verify route and the webhook.
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     const existing = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
     if (!existing) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (existing.client_email !== email && existing.provider_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.telehealthConsultation.update({ where: { id: req.params.id }, data: req.body })
+
+    const isClient = existing.client_email === email
+    const isProvider = existing.provider_email === email
+    if (!isClient && !isProvider) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+
+    const body = (req.body ?? {}) as any
+    const data: any = {}
+
+    // Both sides may reschedule and leave notes. These are the only free-text
+    // and scheduling fields the model actually has.
+    if (body.scheduled_date !== undefined) data.scheduled_date = body.scheduled_date
+    if (body.scheduled_time !== undefined) data.scheduled_time = body.scheduled_time
+    if (body.notes !== undefined) data.notes = body.notes || null
+    if (body.duration !== undefined) data.duration = parseInt(body.duration) || existing.duration
+
+    // Status may only move to cancelled or completed, and only from a state
+    // where that makes sense. Everything else is driven by the payment flow.
+    if (body.status !== undefined) {
+      const paid = existing.payment_status === 'paid'
+      if (body.status === 'cancelled') {
+        data.status = 'cancelled'
+      } else if (body.status === 'completed' && isProvider && paid) {
+        data.status = 'completed'
+      } else {
+        return reply.code(400).send({ message: 'Μη έγκυρη αλλαγή κατάστασης' })
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
+    }
+
+    return prisma.telehealthConsultation.update({ where: { id: existing.id }, data })
   })
 
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     const existing = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
     if (!existing || existing.client_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    await prisma.telehealthConsultation.delete({ where: { id: req.params.id } })
+    // A paid consultation is a financial record — cancel it instead of erasing
+    // it, so the payment, commission and payout trail stay intact.
+    if (existing.payment_status === 'paid') {
+      return reply.code(400).send({
+        message: 'Η συνεδρία έχει πληρωθεί και δεν διαγράφεται. Χρησιμοποίησε ακύρωση.',
+      })
+    }
+    await prisma.telehealthConsultation.delete({ where: { id: existing.id } })
     return reply.code(204).send()
   })
 }

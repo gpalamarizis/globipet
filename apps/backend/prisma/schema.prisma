@@ -232,8 +232,24 @@ model Post {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
+  likes PostLike[]
+
   @@map("posts")
 }
+
+model PostLike {
+  id         String   @id @default(uuid())
+  post_id    String
+  user_email String
+  created_at DateTime @default(now())
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_email], map: "post_likes_post_user_key")
+  @@index([user_email], map: "post_likes_user_idx")
+  @@map("post_likes")
+}
+
 
 model Event {
   id               String   @id @default(uuid())

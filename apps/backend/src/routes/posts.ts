@@ -3,16 +3,62 @@ import prisma from '../lib/prisma.js'
 
 const postsRoutes: FastifyPluginAsync = async (app) => {
 
+  /**
+   * Load a post and verify the caller may modify it.
+   * The author can edit and delete their own posts; an admin can do both on
+   * any post, which is what makes moderation possible from the admin panel.
+   */
+  async function assertCanModify(req: any, reply: any, id: string) {
+    const post = await prisma.post.findUnique({ where: { id } })
+    if (!post) {
+      reply.code(404).send({ message: 'Δεν βρέθηκε' })
+      return null
+    }
+    const user = req.user as any
+    if (post.author_email !== user.email && user.role !== 'admin') {
+      reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      return null
+    }
+    return post
+  }
+
   // GET posts
+  //
+  // When the caller is authenticated we also return `liked_by_me` per post so
+  // the feed can render the heart in the right state without a second request.
   app.get('/', async (req: any) => {
     const { limit = 20, page = 1 } = req.query
-    const skip = (Number(page) - 1) * Number(limit)
-    const posts = await prisma.post.findMany({
-      orderBy: { created_at: 'desc' },
-      take: Number(limit),
-      skip,
+    const take = Math.min(Math.max(parseInt(limit) || 20, 1), 100)
+    const skip = (Math.max(parseInt(page) || 1, 1) - 1) * take
+
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({ orderBy: { created_at: 'desc' }, take, skip }),
+      prisma.post.count(),
+    ])
+
+    // Try to identify the caller. This route is public, so a missing or
+    // invalid token simply means we skip the liked_by_me enrichment.
+    let email: string | null = null
+    try {
+      await req.jwtVerify()
+      email = (req.user as any)?.email ?? null
+    } catch {
+      /* anonymous visitor */
+    }
+
+    if (!email || posts.length === 0) {
+      return { data: posts.map(p => ({ ...p, liked_by_me: false })), total }
+    }
+
+    const likes = await prisma.postLike.findMany({
+      where: { user_email: email, post_id: { in: posts.map(p => p.id) } },
+      select: { post_id: true },
     })
-    return { data: posts, total: posts.length }
+    const likedIds = new Set(likes.map(l => l.post_id))
+    return {
+      data: posts.map(p => ({ ...p, liked_by_me: likedIds.has(p.id) })),
+      total,
+    }
   })
 
   // GET single post
@@ -28,6 +74,15 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     const { content, image_url, tags, pet_name, pet_id } = req.body as any
     if (!content?.trim()) return reply.code(400).send({ message: 'Το περιεχόμενο είναι υποχρεωτικό' })
 
+    // A post may reference a pet, but only one the author actually owns —
+    // otherwise anyone could attach their post to someone else's pet profile.
+    if (pet_id) {
+      const pet = await prisma.pet.findUnique({ where: { id: pet_id }, select: { owner_email: true } })
+      if (!pet || pet.owner_email !== email) {
+        return reply.code(403).send({ message: 'Το κατοικίδιο δεν σου ανήκει' })
+      }
+    }
+
     const post = await prisma.post.create({
       data: {
         author_email: email,
@@ -35,7 +90,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
         author_photo: profile_photo || null,
         content: content.trim(),
         image_url: image_url || null,
-        tags: tags || [],
+        tags: Array.isArray(tags) ? tags : [],
         pet_name: pet_name || null,
         pet_id: pet_id || null,
       }
@@ -43,37 +98,86 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send(post)
   })
 
-  // POST like
-  app.post('/:id/like', { preHandler: [(app as any).authenticate] }, async (req: any) => {
-    const post = await prisma.post.findUnique({ where: { id: req.params.id } })
-    if (!post) return { liked: false }
-    await prisma.post.update({
-      where: { id: req.params.id },
-      data: { likes_count: { increment: 1 } }
+  // POST like — idempotent
+  //
+  // Previously this incremented likes_count on every call, so holding the
+  // button inflated the number without limit. Now a like is a row keyed by
+  // (post_id, user_email); a repeat call is a no-op and returns the current state.
+  app.post('/:id/like', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const postId = req.params.id
+
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } })
+    if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+
+    const existing = await prisma.postLike.findUnique({
+      where: { post_id_user_email: { post_id: postId, user_email: email } },
     })
-    return { liked: true }
+    if (existing) {
+      const fresh = await prisma.post.findUnique({ where: { id: postId }, select: { likes_count: true } })
+      return { liked: true, likes_count: fresh?.likes_count ?? 0 }
+    }
+
+    // Create the like and bump the denormalised counter together, so the two
+    // can never drift apart if one of the writes fails.
+    const [, updated] = await prisma.$transaction([
+      prisma.postLike.create({ data: { post_id: postId, user_email: email } }),
+      prisma.post.update({
+        where: { id: postId },
+        data: { likes_count: { increment: 1 } },
+        select: { likes_count: true },
+      }),
+    ])
+    return { liked: true, likes_count: updated.likes_count }
   })
 
-  // PATCH update post
+  // DELETE like — un-like
+  app.delete('/:id/like', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const postId = req.params.id
+
+    const existing = await prisma.postLike.findUnique({
+      where: { post_id_user_email: { post_id: postId, user_email: email } },
+    })
+    if (!existing) {
+      const fresh = await prisma.post.findUnique({ where: { id: postId }, select: { likes_count: true } })
+      return { liked: false, likes_count: fresh?.likes_count ?? 0 }
+    }
+
+    const [, updated] = await prisma.$transaction([
+      prisma.postLike.delete({ where: { id: existing.id } }),
+      prisma.post.update({
+        where: { id: postId },
+        // Guard against the counter going negative if it was ever out of sync.
+        data: { likes_count: { decrement: 1 } },
+        select: { likes_count: true },
+      }),
+    ])
+    const likes_count = Math.max(0, updated.likes_count)
+    if (updated.likes_count < 0) {
+      await prisma.post.update({ where: { id: postId }, data: { likes_count: 0 } })
+    }
+    return { liked: false, likes_count }
+  })
+
+  // PATCH update post — author or admin
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
-    const post = await prisma.post.findUnique({ where: { id: req.params.id } })
-    if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (post.author_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const post = await assertCanModify(req, reply, req.params.id)
+    if (!post) return
     const { content, image_url, tags } = req.body as any
-    return prisma.post.update({
-      where: { id: req.params.id },
-      data: { content, image_url, tags }
-    })
+    const data: any = {}
+    if (content !== undefined) data.content = String(content).trim()
+    if (image_url !== undefined) data.image_url = image_url || null
+    if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : []
+    return prisma.post.update({ where: { id: post.id }, data })
   })
 
-  // DELETE post
+  // DELETE post — author or admin (moderation)
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
-    const post = await prisma.post.findUnique({ where: { id: req.params.id } })
-    if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    if (post.author_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    await prisma.post.delete({ where: { id: req.params.id } })
+    const post = await assertCanModify(req, reply, req.params.id)
+    if (!post) return
+    // post_likes rows cascade via the foreign key.
+    await prisma.post.delete({ where: { id: post.id } })
     return reply.code(204).send()
   })
 }
