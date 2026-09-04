@@ -36,18 +36,33 @@ export default function MyBookings() {
   const cancelBooking = useMutation({
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-bookings'] }); toast.success(t('bookings.cancelled')) },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const submitReview = useMutation({
-    mutationFn: () => api.post('/reviews', { booking_id: reviewBooking.id, service_id: reviewBooking.service_id, rating, comment }),
+    mutationFn: () => api.post('/reviews', { service_id: reviewBooking.service_id, rating, comment }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-bookings'] }); setReviewBooking(null); toast.success(t('bookings.reviewSubmitted')) },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
+
+  /**
+   * Bookings store the date and time as two strings — booking_date
+   * ("2026-09-04") and booking_time ("14:00"). This page read scheduled_at,
+   * a column that does not exist, so every date was Invalid Date: the
+   * comparison below was always false and the "upcoming" tab was permanently
+   * empty no matter how many bookings existed.
+   */
+  const bookingDate = (b: any): Date | null => {
+    if (!b?.booking_date) return null
+    const d = new Date(`${b.booking_date}T${b.booking_time || '00:00'}`)
+    return isNaN(d.getTime()) ? null : d
+  }
 
   const now = new Date()
   const filtered = bookings.filter((b: any) => {
-    const date = new Date(b.scheduled_at)
-    if (activeTab === 'upcoming') return date >= now && b.status !== 'cancelled'
-    if (activeTab === 'past') return date < now || b.status === 'completed'
+    const date = bookingDate(b)
+    if (activeTab === 'upcoming') return !!date && date >= now && b.status !== 'cancelled'
+    if (activeTab === 'past') return (!!date && date < now) || b.status === 'completed'
     return true
   })
 
@@ -101,8 +116,11 @@ export default function MyBookings() {
                     <span className="text-2xl">✂️</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{booking.service_name || t('bookingsExtra.service')}</p>
-                    <p className="text-xs text-gray-500">{booking.provider_name}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{booking.service?.title || t('bookingsExtra.service')}</p>
+                    <p className="text-xs text-gray-500">
+                      {booking.provider_name}
+                      {booking.staff_name && ` · ${booking.staff_name}`}
+                    </p>
                   </div>
                 </div>
                 <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusColors[booking.status] || 'bg-gray-100 text-gray-600')}>
@@ -113,24 +131,39 @@ export default function MyBookings() {
               <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <Calendar size={12}/>
-                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: 'short' }) : '—'}
+                  {(() => {
+                    const d = bookingDate(booking)
+                    return d ? d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: 'short' }) : '—'
+                  })()}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={12}/>
-                  {booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  {booking.duration_minutes && ` · ${booking.duration_minutes} ${t('bookings.minutes')}`}
+                  {booking.booking_time || '—'}
+                  {booking.duration && ` · ${booking.duration} ${t('bookings.minutes')}`}
                 </div>
-                {booking.location && <div className="flex items-center gap-1.5 col-span-2"><MapPin size={12}/>{booking.location}</div>}
+                {booking.pet_name && (
+                  <div className="flex items-center gap-1.5"><span>🐾</span>{booking.pet_name}</div>
+                )}
+                {(booking.service?.location || booking.service?.city) && (
+                  <div className="flex items-center gap-1.5 col-span-2">
+                    <MapPin size={12}/>{booking.service.location || booking.service.city}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
-                {booking.status === 'pending' && (
+                {/* A booking can be called off while it is still pending or
+                    confirmed. Limiting this to pending left customers unable
+                    to cancel anything the provider had accepted. */}
+                {(booking.status === 'pending' || booking.status === 'confirmed') && (
                   <button onClick={() => { if(confirm(t('bookingsExtra.cancelConfirm'))) cancelBooking.mutate(booking.id) }}
                     className="flex-1 btn-secondary text-xs py-2 text-red-600 border-red-200 hover:bg-red-50">
                     {t('bookings.cancel')}
                   </button>
                 )}
-                {booking.status === 'completed' && !booking.review_id && (
+                {/* The booking row carries its own rating once reviewed —
+                    there is no review_id column. */}
+                {booking.status === 'completed' && booking.rating == null && (
                   <button onClick={() => setReviewBooking(booking)}
                     className="flex-1 btn-primary text-xs py-2 flex items-center justify-center gap-1.5">
                     <Star size={13}/> {t('bookings.rate')}
@@ -156,7 +189,7 @@ export default function MyBookings() {
                 <h3 className="font-bold text-gray-900 dark:text-white">{t('bookingsExtra.reviewTitle')}</h3>
                 <button onClick={() => setReviewBooking(null)} className="btn-ghost p-2"><X size={16}/></button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">{reviewBooking.service_name}</p>
+              <p className="text-sm text-gray-500 mb-4">{reviewBooking.service?.title}</p>
               <div className="flex gap-2 justify-center mb-4">
                 {[1,2,3,4,5].map(s => (
                   <button key={s} onClick={() => setRating(s)}>

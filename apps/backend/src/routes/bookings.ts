@@ -100,6 +100,12 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       where,
       orderBy: (upcoming === 'true' || upcoming === '1') ? { booking_date: 'asc' } : { created_at: 'desc' },
       take,
+      // The list needs to say what was booked. Without this the UI has only a
+      // service_id and falls back to a generic label on every row.
+      include: {
+        service: { select: { id: true, title: true, service_type: true, city: true, location: true } },
+        packages: { select: { name_snapshot: true, quantity: true, price_snapshot: true } },
+      },
     })
     return { data, total: data.length }
   })
