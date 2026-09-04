@@ -10,6 +10,10 @@ import { cn } from '@/lib/utils'
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
   confirmed: 'bg-blue-100 text-blue-700',
+  // The subscription webhook creates each monthly delivery order with
+  // status 'processing'. It had no entry here, so those orders rendered
+  // with the grey fallback and an untranslated status key.
+  processing: 'bg-indigo-100 text-indigo-700',
   shipped: 'bg-purple-100 text-purple-700',
   delivered: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700',
@@ -61,7 +65,7 @@ export default function MyOrders() {
                       {t('orders.orderNumber')} #{order.id?.slice(0, 8).toUpperCase()}
                     </p>
                     <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[order.status] || 'bg-gray-100 text-gray-700')}>
-                      {t(`orders.status.${order.status}`)}
+                      {t(`orders.status.${order.status}`, order.status)}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">
