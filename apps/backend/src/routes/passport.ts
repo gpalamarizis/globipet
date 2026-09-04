@@ -1,6 +1,19 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 
+/**
+ * Strip fields that decide who a medical record belongs to.
+ *
+ * Every update below already verifies the caller owns the record, but the
+ * bodies were passed through untouched — so an owner could move a vaccination
+ * or lab result onto a different pet, or rewrite owner_email and hand the row
+ * to someone else. Identity is set once at creation and stays put.
+ */
+function sanitizeMedicalUpdate(body: any) {
+  const { id, pet_id, owner_email, created_at, updated_at, ...rest } = (body ?? {}) as any
+  return rest
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   // ─── HELPERS ──────────────────────────────────────────────────────
@@ -187,7 +200,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const existing = await prisma.vaccination.findUnique({ where: { id: req.params.id } })
     if (!existing || existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.vaccination.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.vaccination.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/vaccination/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -214,7 +227,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const existing = await prisma.healthRecord.findUnique({ where: { id: req.params.id } })
     if (!existing || existing.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.healthRecord.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.healthRecord.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/health/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -267,7 +280,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const r = await prisma.petMedication.findUnique({ where: { id: req.params.id } })
     if (!r || r.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.petMedication.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.petMedication.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/medication/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -289,7 +302,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const r = await prisma.petLabResult.findUnique({ where: { id: req.params.id } })
     if (!r || r.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.petLabResult.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.petLabResult.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/lab/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -311,7 +324,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const r = await prisma.petImaging.findUnique({ where: { id: req.params.id } })
     if (!r || r.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.petImaging.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.petImaging.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/imaging/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -333,7 +346,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const r = await prisma.petSurgery.findUnique({ where: { id: req.params.id } })
     if (!r || r.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.petSurgery.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.petSurgery.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/surgery/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -370,7 +383,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const { email } = req.user as any
     const r = await prisma.petChronicCondition.findUnique({ where: { id: req.params.id } })
     if (!r || r.owner_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    return prisma.petChronicCondition.update({ where: { id: req.params.id }, data: req.body })
+    return prisma.petChronicCondition.update({ where: { id: req.params.id }, data: sanitizeMedicalUpdate(req.body) })
   })
 
   app.delete('/chronic/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {

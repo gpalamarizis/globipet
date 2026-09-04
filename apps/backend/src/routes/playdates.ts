@@ -8,7 +8,10 @@ const routes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const { city, event_type } = req.query as any
 
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { city: true },
+    })
     const searchCity = city || user?.city || ''
 
     const [events, nearbyOwners] = await Promise.all([
@@ -28,7 +31,10 @@ const routes: FastifyPluginAsync = async (app) => {
           city: searchCity ? { contains: searchCity, mode: 'insensitive' } : undefined,
           email: { not: email },
         },
-        select: { id: true, full_name: true, city: true, profile_photo: true, email: true },
+        // The email column is deliberately absent. This endpoint returned it
+        // for every user in a city, which turned "who is nearby" into a
+        // harvestable address list for anyone with an account.
+        select: { id: true, full_name: true, city: true, profile_photo: true },
         take: 20,
       })
     ])
@@ -81,31 +87,45 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   // POST invite user to event
+  //
+  // Accepts invitee_id (the id returned by the nearby list) or invitee_email.
+  // The id path exists because the nearby list no longer hands out addresses;
+  // an organiser who already knows someone's email can still use that.
   app.post('/:eventId/invite', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     const { eventId } = req.params as any
-    const { invitee_email, message } = req.body as any
+    const { invitee_id, invitee_email, message } = req.body as any
+
+    if (!invitee_id && !invitee_email) {
+      return reply.code(400).send({ message: 'Λείπει ο παραλήπτης' })
+    }
 
     const event = await prisma.playdateEvent.findUnique({ where: { id: eventId } })
     if (!event) return reply.code(404).send({ message: 'Event not found' })
     if (event.creator_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
-    const invitee = await prisma.user.findUnique({ where: { email: invitee_email } })
+    const invitee = invitee_id
+      ? await prisma.user.findUnique({ where: { id: String(invitee_id) } })
+      : await prisma.user.findUnique({ where: { email: String(invitee_email).toLowerCase() } })
     if (!invitee) return reply.code(404).send({ message: 'Χρήστης δεν βρέθηκε' })
 
-    const pets = await prisma.pet.findMany({ where: { owner_email: invitee_email }, take: 1 })
+    if (invitee.email === email) {
+      return reply.code(400).send({ message: 'Δεν μπορείς να προσκαλέσεις τον εαυτό σου' })
+    }
+
+    const pets = await prisma.pet.findMany({ where: { owner_email: invitee.email }, take: 1 })
 
     const inv = await prisma.playdateInvitation.upsert({
-      where: { event_id_invitee_email: { event_id: eventId, invitee_email } },
+      where: { event_id_invitee_email: { event_id: eventId, invitee_email: invitee.email } },
       create: {
         event_id: eventId,
-        invitee_email,
+        invitee_email: invitee.email,
         invitee_name: invitee.full_name,
         invitee_photo: invitee.profile_photo,
         pet_name: pets[0]?.name || null,
-        message,
+        message: message ? String(message).slice(0, 500) : null,
       },
-      update: { status: 'pending', message },
+      update: { status: 'pending', message: message ? String(message).slice(0, 500) : null },
     })
     return inv
   })
