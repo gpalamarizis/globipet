@@ -49,23 +49,22 @@ export default function Checkout() {
 
   const placeOrder = useMutation({
     mutationFn: async () => {
+      // Only the product and quantity travel. Prices, names, images, the
+      // delivery fee and the order total are all resolved on the server —
+      // sending them here would be ignored at best and misleading at worst.
       const items = cartItems.map((item: any) => ({
-        product_id:    item.product_id || item.id,
-        product_name:  item.product_name || item.name,
-        product_price: item.product_price ?? item.price ?? 0,
-        product_image: item.product_image || item.image || null,
-        quantity:      item.quantity,
+        product_id: item.product_id || item.id,
+        quantity:   item.quantity,
       }))
       const { data: order } = await api.post('/orders', {
         items,
-        shipping_address: { ...address, shipping_method: shippingMethod, shipping_cost: shipping },
+        shipping_address: { ...address, shipping_method: shippingMethod },
         payment_method: paymentMethod,
-        total_amount: grandTotal,
       })
       if (paymentMethod === 'card') {
+        // The amount charged is the order total the server computed.
         const { data: viva } = await api.post('/orders/viva/checkout', {
           order_id: order.id,
-          total_amount: grandTotal,
         })
         if (viva.checkoutUrl) { window.location.href = viva.checkoutUrl; return }
       }

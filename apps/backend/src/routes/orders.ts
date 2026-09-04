@@ -6,6 +6,31 @@ import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid } from './telehealth.js'
 
+/**
+ * Shipping options, priced on the server.
+ *
+ * The checkout page has the same table and adds the cost to the total it
+ * posts. That total is no longer trusted — prices come from the products
+ * table — so shipping has to be recomputed here too, otherwise the charge
+ * would silently drop the delivery fee and the platform would absorb it.
+ *
+ * Keep in sync with SHIPPING_METHODS in apps/web/src/pages/Checkout.tsx.
+ */
+const SHIPPING_METHODS: Record<string, number> = {
+  boxnow: 2.50,
+  acs:    3.99,
+  elta:   4.50,
+}
+const FREE_SHIPPING_THRESHOLD = 50
+
+function shippingCostFor(method: string | undefined, subtotal: number): number {
+  if (subtotal > FREE_SHIPPING_THRESHOLD) return 0
+  const price = SHIPPING_METHODS[String(method || '').toLowerCase()]
+  // Unknown method falls back to the cheapest option rather than free
+  // delivery, so a typo cannot be used to skip the fee.
+  return price ?? Math.min(...Object.values(SHIPPING_METHODS))
+}
+
 const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   // Get my orders
@@ -104,15 +129,25 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       }
     }))
 
+    // The delivery fee is priced here, from the method the customer chose.
+    const shippingMethod = (shipping_address as any)?.shipping_method
+    const shippingCost = shippingCostFor(shippingMethod, computedTotal)
+
     const order = await prisma.order.create({
       data: {
         user_email: email,
         user_name: full_name || email.split('@')[0],
         items: enrichedItems,
-        // Computed from database prices, not from the request body.
-        total_amount: Math.round(computedTotal * 100) / 100,
+        // Computed from database prices plus server-priced shipping, not from
+        // the request body.
+        total_amount: Math.round((computedTotal + shippingCost) * 100) / 100,
         status: 'pending',
-        shipping_address: shipping_address,
+        shipping_address: {
+          ...(shipping_address ?? {}),
+          // Overwrite whatever the client claimed the delivery cost was.
+          shipping_method: shippingMethod,
+          shipping_cost: shippingCost,
+        },
         payment_method,
         platform_fee_amount: totalPlatformFee > 0 ? Math.round(totalPlatformFee * 100) / 100 : null,
         provider_payout_amount: totalProviderPayout > 0 ? Math.round(totalProviderPayout * 100) / 100 : null,
