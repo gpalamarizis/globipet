@@ -1,8 +1,52 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import Anthropic from '@anthropic-ai/sdk'
+import prisma from '../lib/prisma.js'
+
+const TRIAL_DAYS = 30
 
 const aiRoutes: FastifyPluginAsync = async (app) => {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+  /**
+   * Require an active AI subscription or a live trial.
+   *
+   * AiFeatureGuard on the frontend hides these pages, but the endpoints
+   * themselves only checked for a valid token. Anyone with an account could
+   * call them straight from a terminal and every request bills the platform's
+   * Anthropic account — the guard was decoration, not protection.
+   *
+   * Admins pass through so support can reproduce and test.
+   */
+  async function requireAiAccess(req: any, reply: any) {
+    const u = req.user as any
+    if (u?.role === 'admin') return
+
+    const user = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true },
+    })
+    if (!user) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' })
+
+    if (user.ai_subscription_status === 'active') return
+
+    if (user.ai_subscription_status === 'trial' && user.ai_trial_started_at) {
+      const elapsedDays = (Date.now() - new Date(user.ai_trial_started_at).getTime()) / 86_400_000
+      if (elapsedDays < TRIAL_DAYS) return
+      // Expired mid-session — record it so the rest of the app agrees.
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { ai_subscription_status: 'expired' },
+      })
+    }
+
+    return reply.code(402).send({
+      message: 'Απαιτείται συνδρομή AI για αυτή τη λειτουργία',
+      code: 'ai_subscription_required',
+    })
+  }
+
+  /** Every paid endpoint below goes through authentication then this check. */
+  const aiGuard = [(app as any).authenticate, requireAiAccess]
 
   // Extract the final text block from a response that may include web_search tool blocks
   function extractFinalText(content: any[]): string {
@@ -24,7 +68,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const }
 
   // Pet Health Analysis — now compares against public veterinary reference data via web search
-  app.post('/pet-health', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+  app.post('/pet-health', { preHandler: aiGuard }, async (req: any, reply) => {
     const { image_url, analysis_type, breed, species } = req.body as { image_url: string; analysis_type: 'skin' | 'eye'; breed?: string; species?: string }
     if (!image_url || !analysis_type) return reply.code(400).send({ message: 'Απαιτούνται image_url και analysis_type' })
 
@@ -61,7 +105,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // Pet Emotion Analysis - single frame (image URL or base64)
-  app.post('/emotion', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+  app.post('/emotion', { preHandler: aiGuard }, async (req: any, reply) => {
     const { image_url, image_base64, media_type, species, context } = req.body as any
 
     if (!image_url && !image_base64) return reply.code(400).send({ message: 'Απαιτείται εικόνα' })
@@ -117,7 +161,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
   })
 
   // Pet Emotion - analyze uploaded video frames (multiple frames)
-  app.post('/emotion/video', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+  app.post('/emotion/video', { preHandler: aiGuard }, async (req: any, reply) => {
     const { frames, species, duration_seconds } = req.body as any
     // frames: array of base64 strings (extracted from video on frontend)
     if (!frames || !Array.isArray(frames) || frames.length === 0) return reply.code(400).send({ message: 'Απαιτούνται frames' })
@@ -166,7 +210,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
     }
   })
   // Stool & Urine Analysis
-  app.post('/stool-urine', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+  app.post('/stool-urine', { preHandler: aiGuard }, async (req: any, reply) => {
     const {
       image_url,
       sample_type,   // 'stool' | 'urine'
@@ -256,7 +300,7 @@ ${contextParts}
     }
   })
   // ─── LEGAL Q&A ──────────────────────────────────────────────────
-  app.post('/legal', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+  app.post('/legal', { preHandler: aiGuard }, async (req: any, reply) => {
     const { question, country = 'GR', context } = req.body as any
     if (!question) return reply.code(400).send({ message: 'Απαιτείται ερώτηση' })
 

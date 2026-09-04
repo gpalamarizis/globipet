@@ -261,9 +261,26 @@ export default function PetPassport() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {[['Είδος', pet.species], ['Ράτσα', pet.breed], ['Φύλο', pet.gender], ['Γέννηση', pet.birthday],
-                    ['Χρώμα', pet.color], ['Αποστειρωμένο', pet.is_sterilized ? 'Ναι' : 'Όχι'],
-                    ['Μικροτσίπ', (pet as any).microchip], ['Αριθμός Διαβατηρίου', (pet as any).passport_number]
+                  {/*
+                    Four of the eight entries here read columns that do not
+                    exist on Pet: birthday, is_sterilized, microchip and
+                    passport_number. The first, third and fourth simply
+                    rendered blank and were dropped by the filter.
+
+                    is_sterilized was worse than blank. Undefined is falsy, so
+                    the ternary printed "Όχι" for every animal — a passport
+                    stating, in writing, that a neutered pet is not neutered.
+                    On a document a vet may act on, a confident wrong answer
+                    is the one thing that must not ship. It is out until the
+                    column and its form field exist.
+
+                    Age is what the Pet row actually carries.
+                  */}
+                  {[['Είδος', pet.species], ['Ράτσα', pet.breed], ['Φύλο', pet.gender],
+                    ['Ηλικία', pet.age ? `${pet.age} ετών` : null],
+                    ['Χρώμα', pet.color],
+                    ['Μικροτσίπ', pet.microchip_number],
+                    ['Εμβολιασμοί', pet.vaccination_status]
                   ].filter(([, v]) => v).map(([l, v]) => (
                     <div key={l}><p className="text-xs text-gray-400">{l}</p><p className="font-medium text-gray-900 dark:text-white">{v as string}</p></div>
                   ))}

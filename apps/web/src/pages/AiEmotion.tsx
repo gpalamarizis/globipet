@@ -38,6 +38,10 @@ export default function AiEmotion() {
   const [videoPreview, setVideoPreview] = useState<string | null>(null)
   const [liveInterval, setLiveInterval] = useState<NodeJS.Timeout | null>(null)
   const [frameCount, setFrameCount] = useState(0)
+  const liveIntervalRef = useRef<any>(null)
+  // Each frame is a billed AI request. Live analysis stops on its own after
+  // this many so an unattended camera cannot run up a bill.
+  const MAX_LIVE_FRAMES = 20
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -65,12 +69,24 @@ export default function AiEmotion() {
     }
   }
 
+  /**
+   * Stop the camera and the analysis loop.
+   *
+   * The interval id is kept in a ref as well as in state. The unmount effect
+   * below has an empty dependency array, so it captures whatever stopLive was
+   * on the first render — when liveInterval was still null. clearInterval was
+   * therefore clearing nothing, and the loop kept firing a paid AI request
+   * every few seconds after the user had navigated away, until the tab closed.
+   */
   const stopLive = useCallback(() => {
-    if (liveInterval) clearInterval(liveInterval)
+    if (liveIntervalRef.current) {
+      clearInterval(liveIntervalRef.current)
+      liveIntervalRef.current = null
+    }
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     setIsRecording(false)
     setLiveInterval(null)
-  }, [liveInterval])
+  }, [])
 
   const captureFrame = useCallback((): string | null => {
     if (!videoRef.current || !canvasRef.current) return null
@@ -100,7 +116,21 @@ export default function AiEmotion() {
   }, [captureFrame, species])
 
   const startAnalysis = () => {
-    const interval = setInterval(analyzeFrame, 4000) // κάθε 4 δευτερόλεπτα
+    setFrameCount(0)
+    const interval = setInterval(() => {
+      // The counter lives in state, so read it through the setter to avoid
+      // acting on a stale closure value.
+      setFrameCount(current => {
+        if (current >= MAX_LIVE_FRAMES) {
+          stopLive()
+          toast('Η ζωντανή ανάλυση σταμάτησε αυτόματα', { icon: '⏹️' })
+          return current
+        }
+        analyzeFrame()
+        return current
+      })
+    }, 5000)
+    liveIntervalRef.current = interval
     setLiveInterval(interval)
     analyzeFrame() // αμέσως
     setMode('result_live')
@@ -294,7 +324,7 @@ export default function AiEmotion() {
                     </button>
                   )}
                   {mode === 'result_live' && (
-                    <button onClick={() => { if (liveInterval) clearInterval(liveInterval); setLiveInterval(null) }}
+                    <button onClick={() => stopLive()}
                       className="flex-1 py-2.5 bg-gray-500 text-white rounded-xl font-medium flex items-center justify-center gap-2">
                       <Square size={16} /> Παύση
                     </button>

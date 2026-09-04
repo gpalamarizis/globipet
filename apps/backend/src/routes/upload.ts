@@ -25,7 +25,24 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 // 8-15MB. Με όριο 5MB κανένα δεν θα περνούσε.
 const MAX_VIDEO_SIZE = 25 * 1024 * 1024 // 25 MB
 const isVideo = (mime: string) => mime.startsWith('video/')
-const ALLOWED_FOLDERS = ['uploads', 'pets', 'services', 'products', 'avatars', 'medical', 'reviews', 'community', 'ai-uploads', 'campaigns']
+/**
+ * Folders an upload may be filed under.
+ *
+ * Anything not listed falls back to `uploads`, silently. Five folders the
+ * application actually asks for were missing — profiles, posts, communities,
+ * ai-health and stool-urine — so profile photos, social images and AI scan
+ * uploads all landed in the same bucket as everything else.
+ *
+ * That matters beyond tidiness: AI scans are health-adjacent images. Keeping
+ * them in their own prefix is what makes it possible to apply a separate
+ * retention rule to them later, or to purge them for one user without
+ * touching their profile picture.
+ */
+const ALLOWED_FOLDERS = [
+  'uploads', 'pets', 'services', 'products', 'avatars', 'profiles',
+  'medical', 'reviews', 'community', 'communities', 'posts',
+  'ai-uploads', 'ai-health', 'stool-urine', 'campaigns',
+]
 
 function verifyMagicBytes(mime: string, body: Buffer): boolean {
   const spec = ALLOWED_TYPES[mime]
