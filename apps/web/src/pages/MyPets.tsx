@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Activity, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Activity, MapPin, Edit, Trash2, AlertTriangle, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -101,6 +102,14 @@ export default function MyPets() {
                   {pet.weight && <span>⚖️ {pet.weight}kg</span>}
                   {pet.color && <span>🎨 {pet.color}</span>}
                 </div>
+
+                {/* The detail page holds the medical file, vaccinations and
+                    GPS history. Nothing linked to it before, so all of that
+                    was unreachable from the interface. */}
+                <Link to={`/my-pets/${pet.id}`}
+                  className="w-full btn-primary text-xs py-2 mb-2 flex items-center justify-center gap-1.5">
+                  <FileText size={12} /> Ιατρικός φάκελος
+                </Link>
 
                 <div className="flex gap-2 mb-2">
                   <button onClick={() => setEditPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">

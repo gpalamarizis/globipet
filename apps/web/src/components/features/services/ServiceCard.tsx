@@ -41,7 +41,8 @@ export default function ServiceCard({ service }: { service: Service }) {
 
   // ── #9: vet/provider credentials — years of experience + top specialization ──
   const topSpecialization = service.specializations?.[0]
-  const hasCertifications = (service.certifications?.length || 0) > 0
+  // Service has no certifications column, so this was always false and the
+  // condition below never contributed anything.
 
   return (
     <Link to={`/services/${service.id}`} className="card overflow-hidden group hover:shadow-card-hover transition-all duration-200 block">
@@ -65,7 +66,7 @@ export default function ServiceCard({ service }: { service: Service }) {
         </div>
 
         {/* #9: credentials row */}
-        {(service.years_experience || topSpecialization || hasCertifications) && (
+        {(service.years_experience || topSpecialization) && (
           <div className="flex flex-wrap gap-1 mb-2">
             {service.years_experience && (
               <span className="flex items-center gap-0.5 text-[10px] bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full">

@@ -27,7 +27,7 @@ export default function PetMedicalCenter() {
   const startTrial = useMutation({
     mutationFn: () => api.post('/ai-subscriptions/start-trial'),
     onSuccess: () => {
-      toast.success('Το δωρεάν 15-ήμερο trial ενεργοποιήθηκε! 🎉')
+      toast.success('Το δωρεάν 30-ήμερο trial ενεργοποιήθηκε! 🎉')
       queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] })
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα ενεργοποίησης trial'),
@@ -73,7 +73,7 @@ export default function PetMedicalCenter() {
         disabled={startTrial.isPending}
         className="bg-amber-400 text-gray-900 font-bold text-sm px-6 py-3 rounded-xl hover:bg-amber-300 transition-colors disabled:opacity-60"
       >
-        {startTrial.isPending ? 'Ενεργοποίηση...' : 'Δοκίμασε δωρεάν για 15 μέρες'}
+        {startTrial.isPending ? 'Ενεργοποίηση...' : 'Δοκίμασε δωρεάν για 30 μέρες'}
       </button>
     )
   }
@@ -122,7 +122,7 @@ export default function PetMedicalCenter() {
         <div className="page-container">
           <div className="text-center mb-8">
             <h2 className="section-title mb-2">Συνδρομητικά πλάνα</h2>
-            <p className="text-sm text-gray-500 mb-5">Ξεκίνα με 15 μέρες δωρεάν, μετά επίλεξε το πλάνο που σου ταιριάζει</p>
+            <p className="text-sm text-gray-500 mb-5">Ξεκίνα με 30 μέρες δωρεάν, μετά επίλεξε το πλάνο που σου ταιριάζει</p>
             <div className="inline-flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1">
               <button onClick={() => setBillingCycle('monthly')}
                 className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors ${billingCycle === 'monthly' ? 'bg-brand-900 text-white' : 'text-gray-500'}`}>
@@ -164,11 +164,14 @@ export default function PetMedicalCenter() {
                         </li>
                       ))}
                     </ul>
-                    <button className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    {/* This button had no handler — it looked active and did
+                        nothing. Checkout lives on the pricing page. */}
+                    <Link to={`/pricing?plan=${plan.id}`}
+                      className={`block text-center w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                       plan.is_featured ? 'bg-brand-900 text-white hover:bg-brand-800' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}>
                       Επιλογή πλάνου
-                    </button>
+                    </Link>
                   </div>
                 )
               })}

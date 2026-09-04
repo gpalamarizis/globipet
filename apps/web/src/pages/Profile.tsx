@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
-import { api } from '@/lib/api'
+import { api, uploadFile } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
@@ -92,14 +92,12 @@ export default function Profile() {
   const uploadPhoto = async (file: File) => {
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('folder', 'profiles')
-      const { data } = await api.post('/upload?folder=profiles', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-      await api.patch('/users/me', { profile_photo: data.url })
-      updateUser({ ...user!, profile_photo: data.url })
+      // Setting Content-Type by hand drops the multipart boundary the
+      // browser generates, and the server then cannot parse the body.
+      // uploadFile leaves the header alone.
+      const url = await uploadFile(file, 'profiles')
+      await api.patch('/users/me', { profile_photo: url })
+      updateUser({ ...user!, profile_photo: url })
       toast.success('Φωτογραφία ενημερώθηκε!')
     } catch {
       toast.error('Σφάλμα κατά το upload')
