@@ -4,7 +4,7 @@ import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
-import { markTelehealthPaid } from './telehealth.js'
+import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
 
 /**
  * Shipping options, priced on the server.
@@ -246,6 +246,61 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     }
   }
 
+
+/**
+ * Confirm with Viva that a transaction really paid a given order.
+ *
+ * WHY THIS EXISTS
+ *   Two paths marked orders as paid and neither proved anything.
+ *
+ *   The webhook read the JSON body and trusted it. There is no signature
+ *   check — unlike the Stripe webhook next door, which calls
+ *   constructEvent. So a POST of
+ *     { EventTypeId: 1796, EventData: { MerchantTrns: <order id>,
+ *       StatusId: 'F', TransactionId: 'anything' } }
+ *   marked that order paid. And the order id is not a secret: the customer
+ *   gets it in the response when they create the order. Place an order,
+ *   post the webhook to yourself, receive the goods.
+ *
+ *   The manual verify path called Viva, but only asked "is this transaction
+ *   finished?" — never "is it for this order, and for the right amount?".
+ *   Any successful transaction id, including a €1 telehealth session, could
+ *   confirm a €500 basket.
+ *
+ * Everything is checked against Viva's own record: the transaction exists,
+ * it succeeded, it points back at this order, and it covers the amount.
+ */
+async function vivaPaymentIsValid(orderId: string, transactionId: string): Promise<boolean> {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: orderId } })
+    if (!order) return false
+
+    const tx = await getVivaTransaction(transactionId)
+    if (!tx || tx.statusId !== 'F') return false
+
+    // The transaction must name this order. Viva echoes back the
+    // merchantTrns we sent when the payment order was created.
+    const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
+    if (trns !== orderId) {
+      console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not ${orderId}`)
+      return false
+    }
+
+    // And it must cover the total. Viva reports amounts in euros here; allow
+    // a cent of rounding either way.
+    const paid = Number(tx.amount ?? tx.Amount ?? 0)
+    if (Number.isFinite(paid) && paid + 0.01 < order.total_amount) {
+      console.error(`[viva] transaction ${transactionId} paid ${paid}, order needs ${order.total_amount}`)
+      return false
+    }
+    return true
+  } catch (err: any) {
+    // A verification that cannot complete is a verification that failed.
+    console.error('[viva] verification error:', err?.message)
+    return false
+  }
+}
+
   // Viva webhook - payment confirmation (PUBLIC - no auth)
   app.post('/viva/webhook', async (req: any, reply) => {
     try {
@@ -259,22 +314,33 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         const transactionId = eventData.TransactionId
         const statusId = eventData.StatusId          // 'F' = Finished
 
-        if (merchantTrns && statusId === 'F') {
-          const updated = await prisma.order.updateMany({
-            where: { id: merchantTrns, payment_status: { not: 'paid' } },
-            data: {
-              status: 'confirmed',
-              payment_status: 'paid',
-              payment_ref: String(transactionId),
-            },
-          }).catch(() => null)
-          if (updated && updated.count > 0) {
-            await firePaidSideEffects(merchantTrns)
-          } else {
-            // Not an order — try telehealth (same shared webhook URL handles both)
-            await markTelehealthPaid(merchantTrns, String(transactionId)).catch((err) => {
-              console.error('markTelehealthPaid fallback error:', err)
+        // The webhook is an unauthenticated, unsigned notification. It is
+        // treated as a hint that something happened, never as proof — every
+        // path below re-checks with Viva before touching payment state.
+        //
+        // One URL serves orders and telehealth, so the id is looked up as
+        // each in turn. Verifying it as an order first and giving up on
+        // failure would have silently stopped confirming consultations.
+        if (merchantTrns && statusId === 'F' && transactionId) {
+          const ref = String(merchantTrns)
+          const txn = String(transactionId)
+
+          if (await vivaPaymentIsValid(ref, txn)) {
+            const updated = await prisma.order.updateMany({
+              where: { id: ref, payment_status: { not: 'paid' } },
+              data: {
+                status: 'confirmed',
+                payment_status: 'paid',
+                payment_ref: txn,
+              },
+            }).catch(() => null)
+            if (updated && updated.count > 0) await firePaidSideEffects(ref)
+          } else if (await vivaPaidConsultation(ref, txn)) {
+            await markTelehealthPaid(ref, txn).catch((err) => {
+              console.error('markTelehealthPaid error:', err)
             })
+          } else {
+            console.error(`[viva] webhook for ${ref} could not be verified — ignored`)
           }
         }
       }
@@ -306,8 +372,9 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     const { order_id, transaction_id } = req.body as any
     try {
       if (transaction_id) {
-        const transaction = await getVivaTransaction(transaction_id)
-        if (transaction.statusId === 'F') {
+        // Same check as the webhook: succeeded, for this order, for the
+        // full amount.
+        if (await vivaPaymentIsValid(String(order_id), String(transaction_id))) {
           const updated = await prisma.order.updateMany({
             where: { id: order_id, payment_status: { not: 'paid' } },
             data: { status: 'confirmed', payment_status: 'paid', payment_ref: String(transaction_id) },

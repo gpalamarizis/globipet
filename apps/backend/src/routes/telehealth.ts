@@ -69,6 +69,41 @@ export async function findTelehealthById(id: string) {
   return prisma.telehealthConsultation.findUnique({ where: { id } })
 }
 
+
+/**
+ * Confirm with Viva that a transaction really paid a given consultation.
+ *
+ * The verify route below only asked whether the transaction had succeeded.
+ * It never asked whether it was for this consultation, or for enough money —
+ * so any successful transaction id the caller happened to hold, including a
+ * cheap one of their own, could mark a session paid.
+ */
+export async function vivaPaidConsultation(consultationId: string, transactionId: string): Promise<boolean> {
+  try {
+    const c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
+    if (!c) return false
+
+    const tx = await getVivaTransaction(transactionId)
+    if (!tx || tx.statusId !== 'F') return false
+
+    const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
+    if (trns !== consultationId) {
+      console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not ${consultationId}`)
+      return false
+    }
+
+    const paid = Number(tx.amount ?? tx.Amount ?? 0)
+    if (Number.isFinite(paid) && paid + 0.01 < c.price) {
+      console.error(`[viva] transaction ${transactionId} paid ${paid}, session costs ${c.price}`)
+      return false
+    }
+    return true
+  } catch (err: any) {
+    console.error('[viva] consultation verification error:', err?.message)
+    return false
+  }
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   // GET /telehealth/available-now — public, returns vets currently online
@@ -225,8 +260,7 @@ const routes: FastifyPluginAsync = async (app) => {
         return { paid: true, data: consultation }
       }
       if (transaction_id) {
-        const transaction = await getVivaTransaction(transaction_id)
-        if (transaction.statusId === 'F') {
+        if (await vivaPaidConsultation(String(id), String(transaction_id))) {
           await markTelehealthPaid(id, transaction_id)
           const fresh = await prisma.telehealthConsultation.findUnique({ where: { id } })
           return { paid: true, data: fresh }
