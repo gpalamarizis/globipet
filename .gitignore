@@ -287,3 +287,5 @@ src/lib/i18n.js
 src/store/auth.js
 .vite/
 *.tsbuildinfo
+
+_salvage/
