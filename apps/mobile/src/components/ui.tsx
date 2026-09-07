@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
-  View, Text, TouchableOpacity, ScrollView, ActivityIndicator,
-  StyleSheet, ViewStyle, TextStyle, RefreshControl,
+  View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
+  StyleSheet, ViewStyle, RefreshControl, Animated, KeyboardTypeOptions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft } from 'lucide-react-native'
 import { router } from 'expo-router'
-import { colors, space, radius, font, weight, shadow, icon } from '@/theme'
+import theme, { colors, space, radius, font, weight, shadow, icon, touch } from '@/theme'
+
+const typo = theme.type
 
 /**
  * Κοινά στοιχεία διεπαφής.
@@ -14,6 +16,11 @@ import { colors, space, radius, font, weight, shadow, icon } from '@/theme'
  * ΓΙΑΤΙ
  *   Κάθε οθόνη έγραφε δικό της header, δική της κάρτα, δικό της άδειο
  *   μήνυμα. Το αποτέλεσμα ήταν ασυνεπές. Εδώ ορίζονται μία φορά.
+ *
+ * ΤΙ ΠΡΟΣΤΕΘΗΚΕ (07/09)
+ *   Skeleton, SkeletonRows και Input. Καμία υπάρχουσα εξαγωγή δεν άλλαξε
+ *   συμπεριφορά — οι 17 οθόνες που ήδη τα χρησιμοποιούν δεν χρειάζονται
+ *   καμία αλλαγή.
  */
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -138,6 +145,7 @@ export function Button({
       style={[
         s.btn, pad,
         { backgroundColor: bg },
+        size !== 'sm' && { minHeight: touch.min },
         variant === 'secondary' && { borderWidth: 1, borderColor: colors.border },
         full && { alignSelf: 'stretch' },
         (disabled || loading) && { opacity: 0.5 },
@@ -207,6 +215,98 @@ export function Loading({ label }: { label?: string }) {
     <View style={s.loading}>
       <ActivityIndicator size="large" color={colors.brand} />
       {label ? <Text style={s.loadingLabel}>{label}</Text> : null}
+    </View>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Skeleton — ΝΕΟ
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Ένας σπινάρων κύκλος λέει «περίμενε». Ένα skeleton λέει «περίμενε, και
+ * να τι έρχεται» — η οθόνη δεν αναπηδά όταν φτάσουν τα δεδομένα, γιατί ο
+ * χώρος είναι ήδη δεσμευμένος στο σωστό μέγεθος.
+ */
+export function Skeleton({
+  width = '100%', height = 16, round = radius.sm, style,
+}: { width?: number | string; height?: number; round?: number; style?: ViewStyle }) {
+  const pulse = useRef(new Animated.Value(0.35)).current
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 750, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.35, duration: 750, useNativeDriver: true }),
+    ]))
+    loop.start()
+    return () => loop.stop()
+  }, [pulse])
+
+  return (
+    <Animated.View
+      style={[
+        { width: width as any, height, borderRadius: round,
+          backgroundColor: colors.surfaceAlt, opacity: pulse },
+        style,
+      ]} />
+  )
+}
+
+/** Έτοιμος σκελετός λίστας — τόσες κάρτες όσες χωρούν σε μια οθόνη. */
+export function SkeletonRows({ count = 4, height = 96 }: { count?: number; height?: number }) {
+  return (
+    <View style={{ gap: space.md }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} height={height} round={radius.lg} />
+      ))}
+    </View>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Input — ΝΕΟ
+// ═══════════════════════════════════════════════════════════════════════
+
+type InputProps = {
+  label?: string
+  value: string
+  onChangeText: (v: string) => void
+  placeholder?: string
+  hint?: string
+  error?: string
+  multiline?: boolean
+  secureTextEntry?: boolean
+  keyboardType?: KeyboardTypeOptions
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
+  editable?: boolean
+  style?: ViewStyle
+}
+
+export function Input({
+  label, value, onChangeText, placeholder, hint, error,
+  multiline, secureTextEntry, keyboardType, autoCapitalize, editable = true, style,
+}: InputProps) {
+  return (
+    <View style={[{ marginBottom: space.lg }, style]}>
+      {label ? <Text style={s.inputLabel}>{label}</Text> : null}
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textLight}
+        multiline={multiline}
+        secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        editable={editable}
+        style={[
+          s.input,
+          multiline && { height: 104, textAlignVertical: 'top' },
+          !!error && { borderColor: colors.danger },
+          !editable && { backgroundColor: colors.surfaceAlt, color: colors.textMuted },
+        ]} />
+      {error ? <Text style={s.inputError}>{error}</Text>
+        : hint ? <Text style={s.inputHint}>{hint}</Text> : null}
     </View>
   )
 }
@@ -286,6 +386,21 @@ const s = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 },
   loadingLabel: { fontSize: font.sm, color: colors.textMuted, marginTop: space.md },
 
+  inputLabel: {
+    ...typo.caption, fontWeight: weight.semibold,
+    color: colors.textMuted, marginBottom: space.xs,
+  },
+  input: {
+    minHeight: touch.min,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md, paddingVertical: space.md,
+    ...typo.body, color: colors.text,
+  },
+  inputHint:  { ...typo.caption, color: colors.textLight, marginTop: space.xs },
+  inputError: { ...typo.caption, color: colors.danger, marginTop: space.xs },
+
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: space.md, marginTop: space.sm,
@@ -294,4 +409,7 @@ const s = StyleSheet.create({
   sectionAction: { fontSize: font.sm, fontWeight: weight.semibold, color: colors.brand },
 })
 
-export default { Screen, Card, Button, Badge, EmptyState, Loading, SectionHeader }
+export default {
+  Screen, Card, Button, Badge, EmptyState, Loading,
+  Skeleton, SkeletonRows, Input, SectionHeader,
+}

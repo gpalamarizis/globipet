@@ -13,6 +13,43 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 2, staleTime: 1000 * 60 * 5 } }
 })
 
+/**
+ * Οι οθόνες που ανοίγουν πάνω από τα tabs, αλφαβητικά.
+ *
+ * ΠΡΟΣΟΧΗ: κάθε όνομα εδώ πρέπει να αντιστοιχεί σε υπαρκτό αρχείο μέσα
+ * στο `app/`. Δήλωση για route που δεν υπάρχει ρίχνει «No route named
+ * ... exists in nested children».
+ *
+ * ΤΙ ΑΛΛΑΞΕ (07/09)
+ *   − `social`: είναι tab (`app/(tabs)/social.tsx`), όχι οθόνη ρίζας. Η
+ *     δήλωση εδώ έδειχνε σε ανύπαρκτο route.
+ *   + `language`, `verification`: τα αρχεία υπήρχαν αλλά δεν δηλώνονταν,
+ *     οπότε άνοιγαν χωρίς τις επιλογές των υπολοίπων.
+ *
+ * Το `checkout` προστίθεται εδώ μαζί με το αρχείο του, όχι πριν.
+ */
+const CARD_ROUTES = [
+  'ai-emotion',
+  'ai-health',
+  'bookings',
+  'communities',
+  'inbox',
+  'insurance',
+  'language',
+  'orders',
+  'passport',
+  'playdates',
+  'telehealth',
+  'tracker',
+  'verification',
+] as const
+
+const MODAL_ROUTES = [
+  'auth/forgot-password',
+  'auth/login',
+  'auth/register',
+] as const
+
 export default function RootLayout() {
   // ΚΑΝΟΝΑΣ ΤΩΝ HOOKS: όλα τα hooks πρέπει να καλούνται σε ΚΑΘΕ render,
   // με την ίδια σειρά. Ένα `return` ανάμεσά τους σημαίνει ότι στο πρώτο
@@ -41,21 +78,14 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="auth/register" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="auth/forgot-password" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="telehealth" options={{ presentation: 'card' }} />
-          <Stack.Screen name="tracker" options={{ presentation: 'card' }} />
-          <Stack.Screen name="insurance" options={{ presentation: 'card' }} />
-          <Stack.Screen name="passport" options={{ presentation: 'card' }} />
-          <Stack.Screen name="ai-health" options={{ presentation: 'card' }} />
-          <Stack.Screen name="ai-emotion" options={{ presentation: 'card' }} />
-          <Stack.Screen name="playdates" options={{ presentation: 'card' }} />
-          <Stack.Screen name="communities" options={{ presentation: 'card' }} />
-          <Stack.Screen name="social" options={{ presentation: 'card' }} />
-          <Stack.Screen name="bookings" options={{ presentation: 'card' }} />
-          <Stack.Screen name="orders" options={{ presentation: 'card' }} />
-          <Stack.Screen name="inbox" options={{ presentation: 'card' }} />
+
+          {MODAL_ROUTES.map(name => (
+            <Stack.Screen key={name} name={name} options={{ presentation: 'modal' }} />
+          ))}
+
+          {CARD_ROUTES.map(name => (
+            <Stack.Screen key={name} name={name} options={{ presentation: 'card' }} />
+          ))}
         </Stack>
       </QueryClientProvider>
       </SafeAreaProvider>
