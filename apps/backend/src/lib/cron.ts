@@ -93,6 +93,24 @@ const DELETE_MAP: DeleteEntry[] = [
   { accessor: 'notification',         field: 'user_email' },
   // Τα ζώα τελευταία, γιατί τα ιατρικά δείχνουν σε αυτά
   { accessor: 'pet',                  field: 'owner_email' },
+
+  // ── Προστέθηκαν μετά τον αρχικό χάρτη ──────────────────────────────
+  // Κάθε νέος πίνακας με προσωπικά δεδομένα πρέπει να μπει εδώ ή στον
+  // ANONYMIZE_MAP. Ένα άρθρο 17 που ξεχνά πίνακες δεν είναι διαγραφή.
+  { accessor: 'postLike',             field: 'user_email' },
+  { accessor: 'postComment',          field: 'author_email' },
+  // Απαντήσεις σε νήματα άλλων — δεν πέφτουν με το forumTopic cascade.
+  { accessor: 'forumReply',           field: 'author_email' },
+  { accessor: 'petTracker',           field: 'owner_email' },
+  // Tokens ημερολογίου: δίνουν πρόσβαση στο ημερολόγιο του ανθρώπου.
+  { accessor: 'calendarConnection',   field: 'user_email' },
+  { accessor: 'oAuthState',           field: 'user_email' },
+  { accessor: 'contactMessage',       field: 'user_email' },
+  // Ο κατάλογος στόχευσης μιας καμπάνιας είναι λίστα μάρκετινγκ με το
+  // πρόσωπο μέσα — φεύγει ολόκληρη η εγγραφή.
+  { accessor: 'campaign_audience',    field: 'customer_email' },
+  // Σημειώσεις που κράτησε ο πάροχος για αυτόν τον πελάτη.
+  { accessor: 'customer_notes',       field: 'customer_email' },
 ]
 
 /**
@@ -115,6 +133,20 @@ const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string }[] =
   { accessor: 'playdateEvent',          field: 'creator_email' },
   { accessor: 'product',                field: 'provider_email' },
   { accessor: 'service',                field: 'provider_email' },
+
+  // ── Προστέθηκαν μετά τον αρχικό χάρτη ──────────────────────────────
+  // Συμμετοχή σε εκδήλωση: ο διοργανωτής πρέπει να κρατά τον αριθμό
+  // συμμετεχόντων και το ιστορικό, όχι το όνομα.
+  { accessor: 'eventRegistration',      field: 'user_email', nameField: 'user_name' },
+  // Οικονομικές συνδρομές — φορολογική υποχρέωση διατήρησης.
+  { accessor: 'productSubscription',    field: 'user_id' },
+  { accessor: 'userInsuranceSubscription', field: 'user_id' },
+  // Καμπάνιες παρόχου: ανήκουν στη δραστηριότητά του, όπως οι υπηρεσίες.
+  { accessor: 'campaigns',              field: 'owner_email' },
+  // Μηνύματα παρόχου↔πελάτη: το νήμα ανήκει και στους δύο, οπότε
+  // ανωνυμοποιείται αντί να σβήνεται μονομερώς.
+  { accessor: 'provider_messages',      field: 'customer_email' },
+  { accessor: 'provider_messages',      field: 'provider_email', nameField: 'provider_name' },
 ]
 
 const ANON_EMAIL = (id: string) => `deleted-${id}@anonymized.invalid`
@@ -164,13 +196,41 @@ export function startAccountDeletionCron() {
             if (r.count) counts[d.accessor] = r.count
           }
 
-          // 3) Συναινέσεις
+          // 3) Προσωπικό παρόχου.
+          //    Η γραμμή ανήκει στον εργοδότη — το μητρώο του δεν πρέπει να
+          //    χάσει τη θέση. Φεύγει ο άνθρωπος από μέσα: αποσυνδέεται ο
+          //    λογαριασμός και σβήνονται όνομα, email και τηλέφωνο.
+          const staff = await (prisma as any).providerStaff.updateMany({
+            where: { OR: [{ user_id: userId }, { email }] },
+            data: { user_id: null, email: null, phone: null, full_name: 'Διαγραμμένος χρήστης' },
+          }).catch(() => ({ count: 0 }))
+          if (staff.count) counts['anon:providerStaff'] = staff.count
+
+          // 4) Επαναϋπολογισμός μετρητών.
+          //    Τα σχόλια και οι απαντήσεις του διαγράφηκαν παραπάνω, αλλά τα
+          //    posts και τα νήματα κρατούν denormalised μετρητές. Χωρίς αυτό
+          //    μια δημοσίευση θα έλεγε «3 σχόλια» και θα εμφάνιζε ένα.
+          await prisma.$executeRaw`
+            UPDATE posts p SET
+              comments_count = (SELECT count(*) FROM post_comments c WHERE c.post_id = p.id),
+              likes_count    = (SELECT count(*) FROM post_likes    l WHERE l.post_id = p.id)`
+            .catch((e: any) => console.error('[deletion] post counters:', e?.message))
+          await prisma.$executeRaw`
+            UPDATE forum_topics t SET
+              replies_count = (SELECT count(*) FROM forum_replies r WHERE r.topic_id = t.id)`
+            .catch((e: any) => console.error('[deletion] forum counters:', e?.message))
+          await prisma.$executeRaw`
+            UPDATE communities c SET
+              member_count = (SELECT count(*) FROM community_members m WHERE m.community_id = c.id)`
+            .catch((e: any) => console.error('[deletion] community counters:', e?.message))
+
+          // 5) Συναινέσεις
           await prisma.userConsent.deleteMany({ where: { user_id: userId } })
 
-          // 4) Ο ίδιος ο χρήστης — τελευταίος
+          // 6) Ο ίδιος ο χρήστης — τελευταίος
           await prisma.user.delete({ where: { id: userId } })
 
-          // 5) Το αίτημα διαγράφεται μαζί με τον χρήστη (onDelete: Cascade),
+          // 7) Το αίτημα διαγράφεται μαζί με τον χρήστη (onDelete: Cascade),
           //    οπότε δεν χρειάζεται update εδώ.
           // Η οριστική διαγραφή είναι η πιο μη αναστρέψιμη ενέργεια της
           // πλατφόρμας. Η καταγραφή επιβιώνει του χρήστη — γι' αυτό
@@ -228,6 +288,18 @@ const RETENTION: RetentionRule[] = [
   { label: 'Αρχεία καταγραφής',     table: 'audit_logs',    column: 'created_at', days: 180 },
   { label: 'Αιτήματα διαγραφής',    table: 'account_deletion_requests', column: 'created_at',
     days: 1095, extra: "status IN ('cancelled','executed','failed')" },
+
+  // Τα αποτυπώματα κρατούν hash IP+user agent, όχι email — δεν μπορούν να
+  // στοχευθούν από τη διαγραφή λογαριασμού, γιατί δεν συνδέονται με κανέναν.
+  // Είναι όμως ψευδωνυμοποιημένα προσωπικά δεδομένα και χρειάζονται όριο.
+  // Οι μετρητές στα campaigns/products είναι αθροιστικοί και δεν χάνονται.
+  { label: 'Αποτυπώματα καμπανιών', table: 'campaign_impressions', column: 'created_at', days: 90 },
+  { label: 'Αποτυπώματα προϊόντων', table: 'product_impressions',  column: 'created_at', days: 90 },
+  // States OAuth: ισχύουν δέκα λεπτά. Ό,τι μένει είναι σκουπίδι.
+  { label: 'OAuth states',          table: 'oauth_states',         column: 'created_at', days: 1 },
+  // Μηνύματα επικοινωνίας: κρατούν IP. Δύο χρόνια αρκούν για follow-up.
+  { label: 'Μηνύματα επικοινωνίας', table: 'contact_messages',     column: 'created_at',
+    days: 730, extra: "status IN ('replied','archived')" },
 ]
 
 const BATCH = 5000
