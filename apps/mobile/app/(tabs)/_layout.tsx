@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router'
 import { View, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Home, Search, PawPrint, ShoppingBag, User } from 'lucide-react-native'
-import { colors, radius, font, weight } from '@/theme'
+import { colors, radius, type, weight, space } from '@/theme'
 
 /**
  * Κάτω πλοήγηση.
@@ -14,6 +14,18 @@ import { colors, radius, font, weight } from '@/theme'
  *
  *   Το useSafeAreaInsets διαβάζει την ΠΡΑΓΜΑΤΙΚΗ τιμή της συσκευής και
  *   την προσθέτει στο ύψος. Έτσι δουλεύει παντού, χωρίς έλεγχο μοντέλου.
+ *
+ * ΓΙΑΤΙ ΕΦΥΓΕ ΤΟ allowFontScaling: false
+ *   Οι ετικέτες ήταν στα 10.5px, με σχόλιο ότι το μέγεθος διαλέχτηκε για να
+ *   χωρέσει η λέξη «Κατοικίδια» σε πλάτος 360dp — και με το font scaling
+ *   απενεργοποιημένο ώστε να μη χαλάσει.
+ *
+ *   Αυτό σημαίνει ότι κάποιος που μεγάλωσε τα γράμματα στο τηλέφωνό του
+ *   επειδή δεν βλέπει καλά, δεν τα έβλεπε μεγαλύτερα εδώ. Η ρύθμιση
+ *   προσβασιμότητάς του αγνοούνταν για να χωρέσει μια λέξη.
+ *
+ *   Οι ετικέτες είναι πλέον σύντομες — «Ζώα», «Ψάξε», «Αγορά» — οπότε
+ *   χωράνε άνετα στα 12px και ο έλεγχος επιστρέφει στον χρήστη.
  */
 
 const TABS = [
@@ -28,12 +40,12 @@ const TABS = [
 const HIDDEN = ['social', 'services', 'insurance', 'cart', 'community']
 
 /** Το ύψος της ίδιας της μπάρας, χωρίς την περιοχή του συστήματος. */
-const BAR_CONTENT = 64
+const BAR_CONTENT = 68
 
 function TabIcon({ Icon, focused, color }: any) {
   return (
     <View style={[s.iconWrap, focused && s.iconWrapActive]}>
-      <Icon size={21} color={focused ? colors.brand : color} strokeWidth={focused ? 2.4 : 2} />
+      <Icon size={22} color={focused ? colors.brand : color} strokeWidth={focused ? 2.4 : 2} />
     </View>
   )
 }
@@ -43,8 +55,6 @@ export default function TabLayout() {
 
   // Ελάχιστο 20 ώστε να μη στριμώχνει την ετικέτα πάνω στη γραμμή του
   // συστήματος σε συσκευές με φυσική μπάρα πλοήγησης (Samsung κ.ά.).
-  // Σε Samsung 3-button nav το insets.bottom συχνά είναι μικρό, οπότε
-  // εξασφαλίζουμε άνετο κενό ακόμα και τότε.
   const bottom = Math.max(insets.bottom, 20)
 
   return (
@@ -58,9 +68,7 @@ export default function TabLayout() {
           paddingBottom: bottom,
         }],
         tabBarLabelStyle: s.label,
-        // Το πλήρες πλάτος του tab δίνεται στο label ώστε να χωράνε
-        // "Αναζήτηση" και "Κατοικίδια" χωρίς περικοπή.
-        tabBarItemStyle: { paddingTop: 6, paddingHorizontal: 2 },
+        tabBarItemStyle: { paddingTop: space.sm, paddingHorizontal: 2 },
         tabBarLabelPosition: 'below-icon',
       }}>
 
@@ -85,22 +93,21 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.borderLight,
     borderTopWidth: 1,
-    paddingTop: 4,
+    paddingTop: space.xs,
   },
   label: {
-    // 10.5px χωρά "Κατοικίδια" σε 360dp πλάτος. Το allowFontScaling:false
-    // εμποδίζει το OS να μεγαλώσει τη γραμματοσειρά (accessibility settings)
-    // και να ξαναπροκαλέσει την περικοπή.
-    fontSize: 10.5,
+    ...type.caption,
     fontWeight: weight.semibold,
-    marginTop: 2,
+    marginTop: 3,
     includeFontPadding: false,
   },
   iconWrap: {
-    width: 44, height: 30,
+    width: 48, height: 32,
     alignItems: 'center', justifyContent: 'center',
     borderRadius: radius.md,
   },
+  // Απαλό πορτοκαλί μόνο στο ενεργό — η μία θέση όπου το χρώμα σημαίνει
+  // «εδώ βρίσκεσαι», όχι «πάτα εδώ».
   iconWrapActive: {
     backgroundColor: colors.brandLight,
   },

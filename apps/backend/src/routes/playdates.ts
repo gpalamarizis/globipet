@@ -86,6 +86,62 @@ const routes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send(event)
   })
 
+  /**
+   * Δήλωση συμμετοχής από τον ίδιο τον χρήστη.
+   *
+   * Το mobile καλούσε POST /:id/join από την αρχή. Τέτοιο endpoint δεν
+   * υπήρξε ποτέ — οι βόλτες δούλευαν μόνο με πρόσκληση από τον δημιουργό,
+   * οπότε το κουμπί «Συμμετοχή» δεν έκανε τίποτα.
+   *
+   * Δημιουργείται εγγραφή σε κατάσταση accepted: ο χρήστης δεν χρειάζεται
+   * να αποδεχτεί πρόσκληση που έστειλε ο εαυτός του.
+   */
+  app.post('/:eventId/join', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email, full_name } = req.user as any
+    const { eventId } = req.params as any
+
+    const event = await prisma.playdateEvent.findUnique({ where: { id: eventId } })
+    if (!event) return reply.code(404).send({ message: 'Η βόλτα δεν βρέθηκε' })
+    if (event.status !== 'active') {
+      return reply.code(400).send({ message: 'Η βόλτα δεν δέχεται πλέον συμμετοχές' })
+    }
+    if (event.creator_email === email) {
+      return reply.code(400).send({ message: 'Είσαι ήδη ο διοργανωτής' })
+    }
+
+    const accepted = await prisma.playdateInvitation.count({
+      where: { event_id: eventId, status: 'accepted' },
+    })
+    if (event.max_participants && accepted >= event.max_participants) {
+      return reply.code(409).send({ message: 'Συμπληρώθηκε ο αριθμός συμμετεχόντων' })
+    }
+
+    const pets = await prisma.pet.findMany({ where: { owner_email: email }, take: 1 })
+
+    const inv = await prisma.playdateInvitation.upsert({
+      where: { event_id_invitee_email: { event_id: eventId, invitee_email: email } },
+      create: {
+        event_id: eventId,
+        invitee_email: email,
+        invitee_name: full_name || email.split('@')[0],
+        pet_name: pets[0]?.name || null,
+        status: 'accepted',
+      },
+      update: { status: 'accepted' },
+    })
+    return reply.code(201).send({ data: inv })
+  })
+
+  /** Αποχώρηση. */
+  app.delete('/:eventId/join', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const deleted = await prisma.playdateInvitation.deleteMany({
+      where: { event_id: req.params.eventId, invitee_email: email },
+    })
+    if (deleted.count === 0) return reply.code(404).send({ message: 'Δεν συμμετέχεις' })
+    return reply.code(204).send()
+  })
+
   // POST invite user to event
   //
   // Accepts invitee_id (the id returned by the nearby list) or invitee_email.

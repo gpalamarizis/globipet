@@ -1,141 +1,254 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native'
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Image,
+} from 'react-native'
 import { useRouter } from 'expo-router'
+import { Eye, EyeOff, Mail, Lock, User, Sparkles } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
+import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+
+/**
+ * Εγγραφή.
+ *
+ * ΤΙ ΠΡΟΣΤΕΘΗΚΕ
+ *   Η δωρεάν δοκιμή AI ξεκινά αυτόματα με την εγγραφή. Δεν λεγόταν πουθενά,
+ *   οπότε το πιο δυνατό επιχείρημα για να πατήσει κάποιος «Εγγραφή» ήταν
+ *   αόρατο.
+ *
+ *   Επίσης έλεγχος μήκους κωδικού πριν το αίτημα — ο server τον απορρίπτει
+ *   κάτω από 8 χαρακτήρες και ο χρήστης το μάθαινε μετά την υποβολή.
+ */
+
+const ROLES = [
+  { id: 'user',             label: 'Ιδιοκτήτης', sub: 'Ψάχνω υπηρεσίες' },
+  { id: 'service_provider', label: 'Πάροχος',    sub: 'Προσφέρω υπηρεσίες' },
+]
 
 export default function RegisterScreen() {
   const router = useRouter()
   const { register, loginWithGoogle, loginWithFacebook, isLoading } = useAuthStore()
   const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'user' })
+  const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [facebookLoading, setFacebookLoading] = useState(false)
 
+  const msg = (err: any, fallback: string) =>
+    err?.message || err?.response?.data?.message || fallback
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+
   const handleRegister = async () => {
-    if (!form.full_name || !form.email || !form.password) {
-      Alert.alert('Σφάλμα', 'Συμπληρώστε όλα τα πεδία'); return
+    if (!form.full_name.trim() || !form.email.trim() || !form.password) {
+      Alert.alert('Σφάλμα', 'Συμπλήρωσε όλα τα πεδία'); return
+    }
+    // Ο server απορρίπτει κάτω από 8 — καλύτερα να το πει η φόρμα.
+    if (form.password.length < 8) {
+      Alert.alert('Σφάλμα', 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες'); return
     }
     try {
-      await register(form)
+      await register({ ...form, full_name: form.full_name.trim(), email: form.email.trim() })
       router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα', err.response?.data?.message || 'Σφάλμα εγγραφής')
+      Alert.alert('Σφάλμα εγγραφής', msg(err, 'Δοκίμασε ξανά'))
     }
   }
 
-  const handleGoogleLogin = async () => {
+  const handleGoogle = async () => {
     setGoogleLoading(true)
     try {
-      const signedIn = await loginWithGoogle()
-      if (signedIn) router.replace('/(tabs)')
+      const ok = await loginWithGoogle()
+      if (ok) router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα σύνδεσης με Google', err.message || err.response?.data?.message || 'Κάτι πήγε στραβά')
-    } finally {
-      setGoogleLoading(false)
-    }
+      Alert.alert('Σφάλμα με Google', msg(err, 'Κάτι πήγε στραβά'))
+    } finally { setGoogleLoading(false) }
   }
 
-  const handleFacebookLogin = async () => {
+  const handleFacebook = async () => {
     setFacebookLoading(true)
     try {
-      const signedIn = await loginWithFacebook()
-      if (signedIn) router.replace('/(tabs)')
+      const ok = await loginWithFacebook()
+      if (ok) router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα σύνδεσης με Facebook', err.message || err.response?.data?.message || 'Κάτι πήγε στραβά')
-    } finally {
-      setFacebookLoading(false)
-    }
+      Alert.alert('Σφάλμα με Facebook', msg(err, 'Κάτι πήγε στραβά'))
+    } finally { setFacebookLoading(false) }
   }
 
+  const busy = isLoading || googleLoading || facebookLoading
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-        <Text style={styles.logo}>🐾</Text>
-        <Text style={styles.title}>Εγγραφή</Text>
-        <Text style={styles.subtitle}>Γίνετε μέλος της κοινότητάς μας</Text>
+    <KeyboardAvoidingView style={s.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
 
-        <View style={styles.form}>
-          <TextInput style={styles.input} placeholder="Ονοματεπώνυμο" value={form.full_name}
-            onChangeText={v => setForm(f => ({...f, full_name: v}))} placeholderTextColor="#9CA3AF" />
-          <TextInput style={styles.input} placeholder="Email" value={form.email}
-            onChangeText={v => setForm(f => ({...f, email: v}))} keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#9CA3AF" />
-          <TextInput style={styles.input} placeholder="Κωδικός (τουλάχιστον 8 χαρακτήρες)" value={form.password}
-            onChangeText={v => setForm(f => ({...f, password: v}))} secureTextEntry placeholderTextColor="#9CA3AF" />
+        <View style={s.brand}>
+          <Image source={require('../../assets/icon.png')} style={s.logo} />
+          <Text style={s.title}>Δημιουργία λογαριασμού</Text>
+        </View>
 
-          <Text style={styles.roleLabel}>Τύπος λογαριασμού</Text>
-          <View style={styles.roleRow}>
-            {[{ value: 'user', label: '🐾 Ιδιοκτήτης' }, { value: 'service_provider', label: '🩺 Πάροχος' }].map(r => (
-              <TouchableOpacity key={r.value} style={[styles.roleBtn, form.role === r.value && styles.roleBtnActive]}
-                onPress={() => setForm(f => ({...f, role: r.value}))}>
-                <Text style={[styles.roleBtnText, form.role === r.value && styles.roleBtnTextActive]}>{r.label}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Ο λόγος να πατήσει κανείς εγγραφή, γραμμένος. */}
+        <View style={s.trialBanner}>
+          <Sparkles size={icon.md} color={colors.accent} />
+          <Text style={s.trialText}>
+            30 μέρες δωρεάν όλες οι AI λειτουργίες
+          </Text>
+        </View>
+
+        <View style={s.form}>
+          <View style={s.roleRow}>
+            {ROLES.map(r => {
+              const active = form.role === r.id
+              return (
+                <TouchableOpacity key={r.id} activeOpacity={0.7}
+                  style={[s.role, active && s.roleActive]}
+                  onPress={() => set('role', r.id)}>
+                  <Text style={[s.roleLabel, active && s.roleLabelActive]}>{r.label}</Text>
+                  <Text style={s.roleSub}>{r.sub}</Text>
+                </TouchableOpacity>
+              )
+            })}
           </View>
 
-          <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleRegister} disabled={isLoading}>
-            <Text style={styles.buttonText}>{isLoading ? 'Εγγραφή...' : 'Δημιουργία λογαριασμού'}</Text>
+          <View style={s.field}>
+            <User size={icon.md} color={colors.textLight} />
+            <TextInput style={s.input} placeholder="Ονοματεπώνυμο"
+              value={form.full_name} onChangeText={v => set('full_name', v)}
+              autoComplete="name" placeholderTextColor={colors.textLight} />
+          </View>
+
+          <View style={s.field}>
+            <Mail size={icon.md} color={colors.textLight} />
+            <TextInput style={s.input} placeholder="Email"
+              value={form.email} onChangeText={v => set('email', v)}
+              keyboardType="email-address" autoCapitalize="none" autoComplete="email"
+              placeholderTextColor={colors.textLight} />
+          </View>
+
+          <View style={s.field}>
+            <Lock size={icon.md} color={colors.textLight} />
+            <TextInput style={s.input} placeholder="Κωδικός (8+ χαρακτήρες)"
+              value={form.password} onChangeText={v => set('password', v)}
+              secureTextEntry={!showPassword} autoCapitalize="none"
+              placeholderTextColor={colors.textLight}
+              onSubmitEditing={handleRegister} returnKeyType="go" />
+            <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={10}>
+              {showPassword
+                ? <EyeOff size={icon.md} color={colors.textLight} />
+                : <Eye size={icon.md} color={colors.textLight} />}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={[s.primaryBtn, busy && s.btnDisabled]}
+            activeOpacity={0.85} disabled={busy} onPress={handleRegister}>
+            {isLoading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={s.primaryBtnText}>Εγγραφή</Text>}
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ή</Text>
-            <View style={styles.dividerLine} />
+          <View style={s.divider}>
+            <View style={s.line} /><Text style={s.dividerText}>ή</Text><View style={s.line} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={googleLoading}>
+          <TouchableOpacity style={[s.socialBtn, busy && s.btnDisabled]}
+            activeOpacity={0.85} disabled={busy} onPress={handleGoogle}>
             {googleLoading
-              ? <ActivityIndicator color="#374151" />
-              : <Text style={styles.socialButtonText}>🔵  Εγγραφή με Google</Text>
-            }
+              ? <ActivityIndicator color={colors.text} />
+              : <><Text style={s.googleG}>G</Text>
+                  <Text style={s.socialText}>Συνέχεια με Google</Text></>}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.socialButton, styles.socialButtonFacebook]}
-            onPress={handleFacebookLogin}
-            disabled={facebookLoading}>
+          <TouchableOpacity style={[s.socialBtn, s.fbBtn, busy && s.btnDisabled]}
+            activeOpacity={0.85} disabled={busy} onPress={handleFacebook}>
             {facebookLoading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.socialButtonTextFacebook}>f  Εγγραφή με Facebook</Text>
-            }
+              : <><Text style={s.fbF}>f</Text>
+                  <Text style={[s.socialText, { color: '#fff' }]}>Συνέχεια με Facebook</Text></>}
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Έχετε ήδη λογαριασμό; </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/login')}>
-            <Text style={styles.footerLink}>Σύνδεση</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity activeOpacity={0.7} style={s.footer}
+          onPress={() => router.push('/auth/login' as any)}>
+          <Text style={s.footerText}>
+            Έχεις ήδη λογαριασμό; <Text style={s.footerLink}>Σύνδεση</Text>
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF7ED' },
-  inner: { alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 60 },
-  logo: { fontSize: 48, marginBottom: 8 },
-  title: { fontSize: 28, fontWeight: '800', color: '#E65100', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#6B7280', marginBottom: 28 },
-  form: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
-  input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12, color: '#111827' },
-  roleLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
-  roleRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  roleBtn: { flex: 1, padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' },
-  roleBtnActive: { borderColor: '#E65100', backgroundColor: '#FFF7ED' },
-  roleBtnText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
-  roleBtnTextActive: { color: '#E65100', fontWeight: '700' },
-  button: { backgroundColor: '#E65100', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 4 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
-  dividerText: { marginHorizontal: 12, color: '#9CA3AF', fontSize: 13 },
-  socialButton: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 8 },
-  socialButtonText: { color: '#374151', fontWeight: '500', fontSize: 14 },
-  socialButtonFacebook: { backgroundColor: '#1877F2', borderColor: '#1877F2' },
-  socialButtonTextFacebook: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  footer: { flexDirection: 'row', marginTop: 24 },
-  footerText: { color: '#6B7280', fontSize: 14 },
-  footerLink: { color: '#E65100', fontWeight: '700', fontSize: 14 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.navy },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: space.xl },
+
+  brand: { alignItems: 'center', marginBottom: space.lg },
+  logo: { width: 60, height: 60, borderRadius: radius.lg, marginBottom: space.md },
+  title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+
+  trialBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
+    backgroundColor: 'rgba(251,191,36,0.15)',
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.35)',
+    borderRadius: radius.md,
+    paddingVertical: space.md,
+    marginBottom: space.lg,
+  },
+  trialText: { ...type.body, color: colors.accent, fontWeight: weight.semibold },
+
+  form: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.xl,
+    gap: space.md,
+    ...shadow.lg,
+  },
+  roleRow: { flexDirection: 'row', gap: space.sm },
+  role: {
+    flex: 1, padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1, borderColor: 'transparent',
+  },
+  roleActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
+  roleLabel: { ...type.body, color: colors.text, fontWeight: weight.bold },
+  roleLabelActive: { color: colors.brand },
+  roleSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+
+  field: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    height: touch.comfortable + 4,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+  },
+  input: { flex: 1, ...type.body, color: colors.text, padding: 0 },
+
+  primaryBtn: {
+    height: touch.comfortable + 4, borderRadius: radius.md,
+    backgroundColor: colors.brand,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: space.sm,
+  },
+  primaryBtnText: { ...type.emphasis, color: '#fff', fontWeight: weight.bold },
+  btnDisabled: { opacity: 0.5 },
+
+  divider: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginVertical: space.sm },
+  line: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { ...type.caption, color: colors.textLight },
+
+  socialBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md,
+    height: touch.comfortable + 4, borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  fbBtn: { backgroundColor: '#1877F2', borderColor: '#1877F2' },
+  socialText: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  googleG: { ...type.emphasis, color: '#4285F4', fontWeight: weight.black },
+  fbF: { ...type.emphasis, color: '#fff', fontWeight: weight.black },
+
+  footer: { alignItems: 'center', marginTop: space.xxl },
+  footerText: { ...type.body, color: 'rgba(255,255,255,0.75)' },
+  footerLink: { color: colors.accent, fontWeight: weight.bold },
 })

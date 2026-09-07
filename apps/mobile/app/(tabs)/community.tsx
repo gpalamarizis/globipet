@@ -1,171 +1,177 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
+import { useState, useCallback } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
-import { PawPrint, Building2, Heart, Users, Plus } from 'lucide-react-native'
+import { PawPrint, Building2, MessageSquare, ChevronRight, MapPin, Users } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { useAuthStore } from '../../src/store/auth'
+import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 
+/**
+ * Κοινότητα — επισκόπηση.
+ *
+ * Τρία πράγματα σε μία οθόνη: βόλτες, γειτονιές, ροή. Καθένα δείχνει τα
+ * τρία πρώτα και οδηγεί στη δική του οθόνη — μια οθόνη επισκόπησης που
+ * δείχνει τα πάντα δεν είναι επισκόπηση.
+ */
 export default function CommunityScreen() {
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
+  const qc = useQueryClient()
+  const [refreshing, setRefreshing] = useState(false)
 
-  const { data: playdates } = useQuery({
-    queryKey: ['playdates-mobile'],
-    queryFn: () => api.get('/playdates').then(r => r.data?.events?.slice(0, 3) ?? []),
-    enabled: isAuthenticated,
+  const { data: playdatesData } = useQuery({
+    queryKey: ['playdates-preview'],
+    queryFn: () => api.get('/playdates').then(r => r.data),
+  })
+  const { data: communities = [] } = useQuery({
+    queryKey: ['communities-preview'],
+    queryFn: () => api.get('/communities').then(r => r.data?.communities ?? []),
+  })
+  const { data: posts = [] } = useQuery({
+    queryKey: ['posts-preview'],
+    queryFn: () => api.get('/posts', { params: { limit: 3 } }).then(r => r.data?.data ?? []),
   })
 
-  const { data: communities } = useQuery({
-    queryKey: ['communities-mobile'],
-    queryFn: () => api.get('/communities').then(r => r.data?.communities?.slice(0, 3) ?? []),
-    enabled: isAuthenticated,
-  })
+  const playdates = playdatesData?.events ?? []
 
-  const { data: posts } = useQuery({
-    queryKey: ['social-mobile'],
-    queryFn: () => api.get('/posts?limit=3').then(r => r.data?.data ?? []),
-  })
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['playdates-preview'] }),
+      qc.invalidateQueries({ queryKey: ['communities-preview'] }),
+      qc.invalidateQueries({ queryKey: ['posts-preview'] }),
+    ])
+    setRefreshing(false)
+  }, [qc])
 
-  if (!isAuthenticated) return (
-    <View style={s.center}>
-      <Text style={s.bigEmoji}>🐾</Text>
-      <Text style={s.emptyTitle}>Συνδεθείτε για πρόσβαση</Text>
-      <TouchableOpacity style={s.primaryBtn} onPress={() => router.push('/auth/login' as any)}>
-        <Text style={s.primaryBtnText}>Σύνδεση</Text>
-      </TouchableOpacity>
+  const Section = ({ title, count, route, children }: any) => (
+    <View style={s.section}>
+      <View style={s.sectionHeader}>
+        <Text style={s.sectionTitle}>{title}</Text>
+        <TouchableOpacity style={s.seeAll} activeOpacity={0.7}
+          onPress={() => router.push(route as any)}>
+          <Text style={s.seeAllText}>Όλα{count ? ` (${count})` : ''}</Text>
+          <ChevronRight size={icon.sm} color={colors.brand} />
+        </TouchableOpacity>
+      </View>
+      {children}
     </View>
   )
 
-  const eventTypeEmoji: Record<string, string> = { walk: '🚶', play: '🎾', meetup: '🐾', training: '🎓', other: '✨' }
-
   return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.container} showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 100 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+      }>
+
       <View style={s.header}>
         <Text style={s.title}>Κοινότητα</Text>
-        <Text style={s.subtitle}>Playdates, Κοινότητες & Social</Text>
+        <Text style={s.subtitle}>Βόλτες, γειτονιές και ό,τι συμβαίνει γύρω σου</Text>
       </View>
 
-      {/* Quick actions */}
-      <View style={s.quickRow}>
-        <TouchableOpacity style={s.quickBtn} onPress={() => router.push('/playdates' as any)}>
-          <PawPrint size={20} color="#10B981" />
-          <Text style={[s.quickLabel, { color: '#10B981' }]}>Playdates</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.quickBtn} onPress={() => router.push('/communities' as any)}>
-          <Building2 size={20} color="#8B5CF6" />
-          <Text style={[s.quickLabel, { color: '#8B5CF6' }]}>Κοινότητες</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.quickBtn} onPress={() => router.push('/social' as any)}>
-          <Heart size={20} color="#EF4444" />
-          <Text style={[s.quickLabel, { color: '#EF4444' }]}>Social</Text>
-        </TouchableOpacity>
-      </View>
+      <Section title="Βόλτες & συναντήσεις" count={playdates.length} route="/playdates">
+        {playdates.length === 0
+          ? <Text style={s.emptyLine}>Καμία προγραμματισμένη βόλτα κοντά σου</Text>
+          : playdates.slice(0, 3).map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.card} activeOpacity={0.8}
+                onPress={() => router.push('/playdates' as any)}>
+                <View style={[s.cardIcon, { backgroundColor: colors.category.walking.bg }]}>
+                  <PawPrint size={icon.md} color={colors.category.walking.fg} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.cardTitle} numberOfLines={1}>{p.title}</Text>
+                  <Text style={s.cardSub} numberOfLines={1}>
+                    {[p.date, p.location].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <ChevronRight size={icon.md} color={colors.textLight} />
+              </TouchableOpacity>
+            ))}
+      </Section>
 
-      {/* Playdates */}
-      <View style={s.section}>
-        <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>📅 Playdates</Text>
-          <TouchableOpacity onPress={() => router.push('/playdates' as any)}>
-            <Text style={s.seeAll}>Όλα →</Text>
-          </TouchableOpacity>
-        </View>
-        {playdates?.length === 0 && (
-          <TouchableOpacity style={s.emptyCard} onPress={() => router.push('/playdates' as any)}>
-            <Text style={s.emptyCardText}>+ Δημιούργησε το πρώτο playdate!</Text>
-          </TouchableOpacity>
-        )}
-        {playdates?.map((ev: any) => (
-          <TouchableOpacity key={ev.id} style={s.card} onPress={() => router.push('/playdates' as any)}>
-            <Text style={s.cardEmoji}>{eventTypeEmoji[ev.event_type] || '🐾'}</Text>
-            <View style={s.cardInfo}>
-              <Text style={s.cardTitle}>{ev.title}</Text>
-              <Text style={s.cardSub}>{ev.date} · {ev.location}</Text>
-              <Text style={s.cardSub}>{ev.invitations?.length || 0} συμμετέχοντες</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Section title="Κοινότητες γειτονιάς" count={communities.length} route="/communities">
+        {communities.length === 0
+          ? <Text style={s.emptyLine}>Καμία κοινότητα κοντά σου ακόμη</Text>
+          : communities.slice(0, 3).map((c: any) => (
+              <TouchableOpacity key={c.id} style={s.card} activeOpacity={0.8}
+                onPress={() => router.push('/communities' as any)}>
+                <View style={[s.cardIcon, { backgroundColor: colors.category.photography.bg }]}>
+                  <Building2 size={icon.md} color={colors.category.photography.fg} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.cardTitle} numberOfLines={1}>{c.name}</Text>
+                  <View style={s.metaRow}>
+                    <MapPin size={icon.xs} color={colors.textLight} />
+                    <Text style={s.cardSub}>{c.city}</Text>
+                    <Users size={icon.xs} color={colors.textLight} />
+                    <Text style={s.cardSub}>{c.member_count}</Text>
+                  </View>
+                </View>
+                <ChevronRight size={icon.md} color={colors.textLight} />
+              </TouchableOpacity>
+            ))}
+      </Section>
 
-      {/* Communities */}
-      <View style={s.section}>
-        <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>🏘️ Κοινότητες</Text>
-          <TouchableOpacity onPress={() => router.push('/communities' as any)}>
-            <Text style={s.seeAll}>Όλες →</Text>
-          </TouchableOpacity>
-        </View>
-        {communities?.length === 0 && (
-          <TouchableOpacity style={s.emptyCard} onPress={() => router.push('/communities' as any)}>
-            <Text style={s.emptyCardText}>+ Δημιούργησε κοινότητα στη γειτονιά σου!</Text>
-          </TouchableOpacity>
-        )}
-        {communities?.map((c: any) => (
-          <TouchableOpacity key={c.id} style={s.card} onPress={() => router.push('/communities' as any)}>
-            <Text style={s.cardEmoji}>🏘️</Text>
-            <View style={s.cardInfo}>
-              <Text style={s.cardTitle}>{c.name}</Text>
-              <Text style={s.cardSub}>{c.city} · {c.member_count} μέλη</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Social posts */}
-      <View style={s.section}>
-        <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>❤️ Social Feed</Text>
-          <TouchableOpacity onPress={() => router.push('/social' as any)}>
-            <Text style={s.seeAll}>Όλα →</Text>
-          </TouchableOpacity>
-        </View>
-        {posts?.map((post: any) => (
-          <TouchableOpacity key={post.id} style={s.postCard} onPress={() => router.push('/social' as any)}>
-            <View style={s.postAvatar}>
-              <Text style={s.postAvatarText}>{post.author_name?.[0] || '?'}</Text>
-            </View>
-            <View style={s.postInfo}>
-              <Text style={s.postAuthor}>{post.author_name}</Text>
-              <Text style={s.postContent} numberOfLines={2}>{post.content}</Text>
-              <Text style={s.postMeta}>❤️ {post.likes_count} · 💬 {post.comments_count}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={{ height: 40 }} />
+      <Section title="Τελευταίες δημοσιεύσεις" route="/(tabs)/social">
+        {posts.length === 0
+          ? <Text style={s.emptyLine}>Καμία δημοσίευση ακόμη</Text>
+          : posts.map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.card} activeOpacity={0.8}
+                onPress={() => router.push('/(tabs)/social' as any)}>
+                <View style={[s.cardIcon, { backgroundColor: colors.category.training.bg }]}>
+                  <MessageSquare size={icon.md} color={colors.category.training.fg} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.cardTitle} numberOfLines={1}>{p.author_name}</Text>
+                  <Text style={s.cardSub} numberOfLines={2}>{p.content}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+      </Section>
     </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: '#fff' },
-  title: { fontSize: 28, fontWeight: '800', color: '#111827' },
-  subtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  quickRow: { flexDirection: 'row', gap: 10, padding: 16, backgroundColor: '#fff', marginBottom: 8 },
-  quickBtn: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14 },
-  quickLabel: { fontSize: 11, fontWeight: '700' },
-  section: { marginBottom: 8 },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 16 },
-  seeAll: { fontSize: 13, color: '#E65100', fontWeight: '600' },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  cardEmoji: { fontSize: 28, marginRight: 12 },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  cardSub: { fontSize: 12, color: '#6B7280' },
-  emptyCard: { margin: 16, backgroundColor: '#F3F4F6', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed' },
-  emptyCardText: { color: '#9CA3AF', fontSize: 13 },
-  postCard: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  postAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  postAvatarText: { fontSize: 16, fontWeight: '700', color: '#E65100' },
-  postInfo: { flex: 1 },
-  postAuthor: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  postContent: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
-  postMeta: { fontSize: 11, color: '#9CA3AF' },
-  bigEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyTitle: { fontSize: 16, color: '#374151', fontWeight: '600', marginBottom: 20 },
-  primaryBtn: { backgroundColor: '#E65100', borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14 },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    backgroundColor: colors.navy,
+    paddingTop: space.xxxl + space.lg,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+  },
+  title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+  subtitle: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+
+  section: { paddingHorizontal: space.lg, paddingTop: space.xl },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: space.md,
+  },
+  sectionTitle: { ...type.section, color: colors.text, fontWeight: weight.bold },
+  seeAll: { flexDirection: 'row', alignItems: 'center' },
+  seeAllText: { ...type.body, color: colors.brand, fontWeight: weight.semibold },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  cardIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  cardSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
+
+  emptyLine: {
+    ...type.body, color: colors.textLight,
+    paddingVertical: space.lg, textAlign: 'center',
+  },
 })

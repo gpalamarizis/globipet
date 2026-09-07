@@ -441,6 +441,76 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // GET /admin/users/search — search users for the email composer autocomplete
+
+  // ─── Αιτήσεις επαλήθευσης παρόχων ──────────────────────────────────
+
+  app.get('/verifications', async (req: any) => {
+    const { status } = req.query ?? {}
+    const rows = await prisma.providerVerificationRequest.findMany({
+      where: status ? { status } : {},
+      orderBy: [{ status: 'asc' }, { created_at: 'desc' }],
+      take: 200,
+    })
+    const pending = await prisma.providerVerificationRequest.count({ where: { status: 'pending' } })
+    // Το ΑΦΜ αποθηκεύεται κρυπτογραφημένο· ο διαχειριστής πρέπει να το δει.
+    const data = rows.map(r => ({ ...r, tax_number: r.tax_number ? decryptField(r.tax_number) : null }))
+    return { data, pending }
+  })
+
+  /**
+   * Έγκριση ή απόρριψη.
+   *
+   * Η έγκριση σημαδεύει και τις υπηρεσίες του παρόχου ως επαληθευμένες —
+   * αυτό είναι το σήμα που βλέπει ο πελάτης, όχι η ίδια η αίτηση.
+   */
+  app.patch('/verifications/:id', async (req: any, reply) => {
+    const { status, review_notes } = (req.body ?? {}) as any
+    if (!['approved', 'rejected'].includes(status)) {
+      return reply.code(400).send({ message: 'Η κατάσταση πρέπει να είναι approved ή rejected' })
+    }
+    const existing = await prisma.providerVerificationRequest.findUnique({ where: { id: req.params.id } })
+    if (!existing) return reply.code(404).send({ message: 'Η αίτηση δεν βρέθηκε' })
+
+    const updated = await prisma.providerVerificationRequest.update({
+      where: { id: existing.id },
+      data: {
+        status,
+        review_notes: review_notes ? String(review_notes).slice(0, 2000) : null,
+        reviewed_by: (req.user as any).email,
+        reviewed_at: new Date(),
+      },
+    })
+
+    if (status === 'approved') {
+      await prisma.service.updateMany({
+        where: { provider_email: existing.user_email },
+        data: { is_verified: true },
+      })
+      await prisma.notification.create({
+        data: {
+          user_email: existing.user_email,
+          title: 'Ο λογαριασμός σου επαληθεύτηκε',
+          message: 'Οι υπηρεσίες σου εμφανίζονται πλέον με σήμα επαλήθευσης.',
+          type: 'verification',
+          link: '/provider',
+        },
+      }).catch(() => {})
+    } else {
+      await prisma.notification.create({
+        data: {
+          user_email: existing.user_email,
+          title: 'Η αίτηση επαλήθευσης απορρίφθηκε',
+          // Ο λόγος φτάνει στον πάροχο, ώστε να ξέρει τι να διορθώσει.
+          message: review_notes || 'Επικοινώνησε μαζί μας για λεπτομέρειες.',
+          type: 'verification',
+          link: '/provider',
+        },
+      }).catch(() => {})
+    }
+
+    return { data: updated }
+  })
+
   app.get('/users/search', async (req: any, reply) => {
     const { q, role } = req.query as any
     const where: any = {}

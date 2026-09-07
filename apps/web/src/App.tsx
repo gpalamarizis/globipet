@@ -74,6 +74,7 @@ const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage')
 const AdminAuditLogPage    = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
 const AdminGovernancePage  = lazy(() => import('@/pages/admin/AdminGovernancePage'))
 const AdminTranslationsPage = lazy(() => import('@/pages/admin/AdminTranslationsPage'))
+const AdminVerificationsPage = lazy(() => import('@/pages/admin/AdminVerificationsPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
@@ -270,6 +271,7 @@ export default function App() {
                     menu item fell through to /admin/* and showed the
                     dashboard, so the page was unreachable. */}
                 <Route path="/admin/translations"  element={<AdminTranslationsPage />} />
+                <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

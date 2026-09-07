@@ -1,106 +1,172 @@
-﻿import { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'expo-router'
+import { useState, useCallback } from 'react'
+import {
+  View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image,
+  ScrollView, RefreshControl,
+} from 'react-native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import { Search, X, Star, MapPin } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
+import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
-const O = '#E65100'
+/**
+ * Υπηρεσίες.
+ *
+ * ΤΙ ΑΛΛΑΞΕ
+ *   Τα δέκα φίλτρα ήταν σε wrap που έπιανε τρεις σειρές και έσπρωχνε τα
+ *   αποτελέσματα εκτός οθόνης — έβλεπες τα φίλτρα και κάτω από αυτά ένα
+ *   αποτέλεσμα. Τώρα κυλάνε οριζόντια σε μία σειρά.
+ *
+ *   Η αρχική στέλνει `?type=` όταν πατηθεί ένα πλακίδιο υπηρεσίας. Δεν
+ *   διαβαζόταν, οπότε ο χρήστης πατούσε «Κτηνίατρος» και έβλεπε όλες τις
+ *   υπηρεσίες αδιακρίτως.
+ */
 
 const SERVICE_TYPES = [
-  { id: 'all',         label: 'Όλες',         emoji: '🐾' },
-  { id: 'grooming',    label: 'Περιποίηση',   emoji: '✂️' },
-  { id: 'veterinary',  label: 'Κτηνίατρος',  emoji: '🩺' },
-  { id: 'walking',     label: 'Βόλτες',       emoji: '🚶' },
-  { id: 'pet_sitting', label: 'Φιλοξενία',    emoji: '🏠' },
-  { id: 'training',    label: 'Εκπαίδευση',   emoji: '🎓' },
-  { id: 'pet_taxi',    label: 'Taxi',          emoji: '🚗' },
-  { id: 'photography', label: 'Φωτογράφηση',  emoji: '📸' },
-  { id: 'pharmacy',    label: 'Φαρμακείο',    emoji: '💊' },
-  { id: 'legal',       label: 'Νομικά',        emoji: '⚖️' },
+  { id: 'all',         label: 'Όλες',        emoji: '🐾', tint: 'default' },
+  { id: 'veterinary',  label: 'Κτηνίατρος',  emoji: '🩺', tint: 'veterinary' },
+  { id: 'grooming',    label: 'Περιποίηση',  emoji: '✂️', tint: 'grooming' },
+  { id: 'walking',     label: 'Βόλτες',      emoji: '🚶', tint: 'walking' },
+  { id: 'hosting',     label: 'Φιλοξενία',   emoji: '🏠', tint: 'hosting' },
+  { id: 'training',    label: 'Εκπαίδευση',  emoji: '🎓', tint: 'training' },
+  { id: 'pet_taxi',    label: 'Pet Taxi',    emoji: '🚗', tint: 'pet_taxi' },
+  { id: 'photography', label: 'Φωτογράφιση', emoji: '📸', tint: 'photography' },
+  { id: 'pharmacy',    label: 'Φαρμακείο',   emoji: '💊', tint: 'pharmacy' },
 ]
+
+const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function ServicesScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  // Η αρχική περνά τον τύπο εδώ· χωρίς αυτό το πλακίδιο δεν φιλτράριζε.
+  const { type: initialType } = useLocalSearchParams<{ type?: string }>()
+
   const [search, setSearch] = useState('')
-  const [type, setType] = useState('all')
+  const [serviceType, setServiceType] = useState(initialType || 'all')
+  const [refreshing, setRefreshing] = useState(false)
 
   const { data: services = [], isLoading } = useQuery({
-    queryKey: ['services', type, search],
-    queryFn: () => api.get(`/services?${type !== 'all' ? `service_type=${type}&` : ''}search=${search}&limit=30`).then(r => r.data?.data ?? []),
+    queryKey: ['services', serviceType, search],
+    queryFn: () => api.get('/services', {
+      params: {
+        ...(serviceType !== 'all' ? { service_type: serviceType } : {}),
+        ...(search ? { q: search } : {}),
+        limit: 30,
+      },
+    }).then(r => r.data?.data ?? []),
   })
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await queryClient.invalidateQueries({ queryKey: ['services'] })
+    setRefreshing(false)
+  }, [queryClient])
 
   return (
     <View style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>Υπηρεσίες</Text>
         <View style={s.searchRow}>
-          <Text style={s.searchIcon}>🔍</Text>
-          <TextInput style={s.search} placeholder="Αναζήτηση..." value={search}
-            onChangeText={setSearch} placeholderTextColor="#9CA3AF" />
+          <Search size={icon.md} color={colors.textLight} />
+          <TextInput
+            style={s.search}
+            placeholder="Αναζήτηση παρόχου ή πόλης"
+            value={search}
+            onChangeText={setSearch}
+            placeholderTextColor={colors.textLight}
+            returnKeyType="search"
+          />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}><Text style={s.clearBtn}>✕</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+              <X size={icon.sm} color={colors.textLight} />
+            </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Category filter — wrap, no scroll */}
-      <View style={s.filterContainer}>
-        <View style={s.filterWrap}>
-          {SERVICE_TYPES.map(t => (
-            <TouchableOpacity key={t.id} style={[s.chip, type === t.id && s.chipActive]}
-              onPress={() => setType(t.id)}>
+      {/* Μία σειρά που κυλάει, αντί για τρεις σειρές που τρώνε την οθόνη. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={s.filterRow}
+        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+        {SERVICE_TYPES.map(t => {
+          const active = serviceType === t.id
+          const c = tint(t.tint)
+          return (
+            <TouchableOpacity
+              key={t.id}
+              activeOpacity={0.7}
+              style={[s.chip, active && { backgroundColor: c.bg, borderColor: c.fg }]}
+              onPress={() => setServiceType(t.id)}>
               <Text style={s.chipEmoji}>{t.emoji}</Text>
-              <Text style={[s.chipText, type === t.id && s.chipTextActive]}>{t.label}</Text>
+              <Text style={[s.chipText, active && { color: c.fg, fontWeight: weight.bold }]}>
+                {t.label}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+          )
+        })}
+      </ScrollView>
 
-      {/* Results */}
       <FlatList
         data={services}
         keyExtractor={i => i.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyEmoji}>{isLoading ? '⏳' : '🔍'}</Text>
-            <Text style={s.emptyText}>{isLoading ? 'Φόρτωση...' : 'Δεν βρέθηκαν υπηρεσίες'}</Text>
-          </View>
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }
-        renderItem={({ item }: any) => (
-          <TouchableOpacity style={s.card} onPress={() => router.push(`/services/${item.id}` as any)} activeOpacity={0.7}>
-            {/* Avatar / photo */}
+        ListEmptyComponent={
+          isLoading
+            ? <View>{[0, 1, 2, 3].map(i => (
+                <View key={i} style={s.card}>
+                  <View style={[s.avatar, s.skeleton]} />
+                  <View style={{ flex: 1, gap: space.sm }}>
+                    <View style={[s.skeleton, { height: 15, width: '60%', borderRadius: radius.sm }]} />
+                    <View style={[s.skeleton, { height: 12, width: '40%', borderRadius: radius.sm }]} />
+                  </View>
+                </View>
+              ))}</View>
+            : <View style={s.empty}>
+                <Search size={icon.hero} color={colors.border} />
+                <Text style={s.emptyTitle}>Δεν βρέθηκαν υπηρεσίες</Text>
+                <Text style={s.emptyText}>
+                  {search ? 'Δοκίμασε άλλη αναζήτηση' : 'Δοκίμασε άλλη κατηγορία'}
+                </Text>
+              </View>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={s.card}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/services/${item.id}` as any)}>
             <View style={s.avatar}>
               {item.image_url
                 ? <Image source={{ uri: item.image_url }} style={s.avatarImg} />
-                : <Text style={s.avatarEmoji}>
-                    {item.service_type === 'grooming' ? '✂️' : item.service_type === 'veterinary' ? '🩺' :
-                     item.service_type === 'walking' ? '🚶' : item.service_type === 'training' ? '🎓' :
-                     item.service_type === 'pet_taxi' ? '🚗' : '🐾'}
-                  </Text>
-              }
+                : <Text style={s.avatarEmoji}>🐾</Text>}
             </View>
-            {/* Info */}
-            <View style={s.info}>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.name} numberOfLines={1}>{item.provider_name}</Text>
-              <Text style={s.sub} numberOfLines={1}>
-                {SERVICE_TYPES.find(t => t.id === item.service_type)?.label || item.service_type}
-                {item.city ? ` · ${item.city}` : ''}
-              </Text>
-              <View style={s.ratingRow}>
-                <Text style={s.star}>⭐</Text>
-                <Text style={s.rating}>{item.rating?.toFixed(1) || '5.0'}</Text>
-                <Text style={s.ratingCount}>({item.reviews_count || 0})</Text>
+              {!!item.title && <Text style={s.sub} numberOfLines={1}>{item.title}</Text>}
+              <View style={s.metaRow}>
+                <MapPin size={icon.xs} color={colors.textLight} />
+                <Text style={s.meta} numberOfLines={1}>{item.city}</Text>
+                {item.reviews_count > 0 && (
+                  <>
+                    <Star size={icon.xs} color={colors.accent} fill={colors.accent} />
+                    <Text style={s.meta}>
+                      {item.rating?.toFixed(1)} ({item.reviews_count})
+                    </Text>
+                  </>
+                )}
               </View>
             </View>
-            {/* Price + book */}
-            <View style={s.right}>
+
+            <View style={s.priceBox}>
               <Text style={s.price}>€{item.price}</Text>
-              <View style={s.bookBtn}>
-                <Text style={s.bookText}>Κράτηση</Text>
-              </View>
+              {item.is_verified && <Text style={s.verified}>✓</Text>}
             </View>
           </TouchableOpacity>
         )}
@@ -110,36 +176,67 @@ export default function ServicesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#fff', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  title: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 10 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
-  searchIcon: { fontSize: 15, marginRight: 8 },
-  search: { flex: 1, fontSize: 14, color: '#111827' },
-  clearBtn: { color: '#9CA3AF', fontSize: 16, paddingLeft: 8 },
-  filterContainer: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  filterWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F3F4F6' },
-  chipActive: { backgroundColor: O },
-  chipEmoji: { fontSize: 13 },
-  chipText: { fontSize: 12, color: '#374151', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
-  avatar: { width: 52, height: 52, borderRadius: 14, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', flexShrink: 0 },
-  avatarImg: { width: 52, height: 52, borderRadius: 14 },
-  avatarEmoji: { fontSize: 22 },
-  info: { flex: 1, minWidth: 0 },
-  name: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  sub: { fontSize: 12, color: '#6B7280', marginBottom: 3 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  star: { fontSize: 11 },
-  rating: { fontSize: 12, fontWeight: '700', color: '#111827' },
-  ratingCount: { fontSize: 11, color: '#9CA3AF' },
-  right: { alignItems: 'flex-end', gap: 6, flexShrink: 0 },
-  price: { fontSize: 15, fontWeight: '800', color: O },
-  bookBtn: { backgroundColor: O, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  bookText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  empty: { alignItems: 'center', paddingTop: 60 },
-  emptyEmoji: { fontSize: 40, marginBottom: 10 },
-  emptyText: { color: '#9CA3AF', fontSize: 15 },
+  container: { flex: 1, backgroundColor: colors.bg },
+
+  header: {
+    backgroundColor: colors.navy,
+    paddingTop: space.xxxl + space.lg,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.lg,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+  },
+  title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold, marginBottom: space.md },
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.surface,
+    height: touch.comfortable,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+  },
+  search: { flex: 1, ...type.body, color: colors.text, padding: 0 },
+
+  filterRow: { paddingVertical: space.lg, maxHeight: 68, flexGrow: 0 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    paddingHorizontal: space.lg,
+    height: touch.min,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  chipEmoji: { fontSize: 16 },
+  chipText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  avatar: {
+    width: 60, height: 60, borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: { width: 60, height: 60 },
+  avatarEmoji: { fontSize: 26 },
+
+  name: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
+  sub: { ...type.caption, color: colors.textMuted, marginTop: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
+  meta: { ...type.caption, color: colors.textMuted },
+
+  priceBox: { alignItems: 'flex-end', gap: 2 },
+  price: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold },
+  verified: { ...type.caption, color: colors.success, fontWeight: weight.bold },
+
+  skeleton: { backgroundColor: colors.surfaceAlt },
+
+  empty: { alignItems: 'center', paddingTop: 80, gap: space.sm },
+  emptyTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold, marginTop: space.md },
+  emptyText: { ...type.body, color: colors.textMuted },
 })

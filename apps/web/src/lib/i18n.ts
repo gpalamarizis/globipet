@@ -323,6 +323,7 @@ const el = {
     packages: 'Πακέτα', subscriptions: 'Συνδρομές', commissions: 'Προμήθειες', messages: 'Μηνύματα', aiPlans: 'Πλάνα AI',
     auditLogs: 'Καταγραφές', governance: 'Διακυβέρνηση',
     translations: 'Μεταφράσεις',
+    verifications: 'Επαληθεύσεις',
   },
   adminTranslations: {
     title: 'Μεταφράσεις περιεχομένου',
@@ -1077,6 +1078,7 @@ const en: typeof el = {
     packages: 'Packages', subscriptions: 'Subscriptions', commissions: 'Commissions', messages: 'Messages', aiPlans: 'AI Plans',
     auditLogs: 'Audit logs', governance: 'Governance',
     translations: 'Translations',
+    verifications: 'Verifications',
   },
   adminTranslations: {
     title: 'Content translations',
@@ -1801,6 +1803,7 @@ const es: typeof el = {
     packages: 'Paquetes', subscriptions: 'Suscripciones', commissions: 'Comisiones', messages: 'Mensajes', aiPlans: 'Planes AI',
     auditLogs: 'Registros de auditoría', governance: 'Gobernanza',
     translations: 'Traducciones',
+    verifications: 'Verificaciones',
   },
   adminTranslations: {
     title: 'Traducciones de contenido',
@@ -2525,6 +2528,7 @@ const fr: typeof el = {
     packages: 'Forfaits', subscriptions: 'Abonnements', commissions: 'Commissions', messages: 'Messages', aiPlans: 'Forfaits IA',
     auditLogs: "Journaux d'audit", governance: 'Gouvernance',
     translations: 'Traductions',
+    verifications: 'Vérifications',
   },
   adminTranslations: {
     title: 'Traductions de contenu',
@@ -3249,6 +3253,7 @@ const zh: typeof el = {
     packages: '套餐', subscriptions: '订阅', commissions: '佣金', messages: '消息', aiPlans: 'AI 套餐',
     auditLogs: '审计日志', governance: '治理',
     translations: '翻译',
+    verifications: '认证审核',
   },
   adminTranslations: {
     title: '内容翻译',

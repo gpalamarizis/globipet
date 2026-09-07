@@ -9,7 +9,9 @@ export default function InsuranceScreen() {
   const router = useRouter()
   const { data = [], isLoading } = useQuery({
     queryKey: ['insurance-products'],
-    queryFn: () => api.get('/insurance').then(r => r.data?.data ?? []).catch(() => []),
+    // Το endpoint είναι /insurance/plans. Το σκέτο /insurance δεν υπάρχει
+    // και το .catch το έκρυβε — η οθόνη έδειχνε πάντα άδεια λίστα.
+    queryFn: () => api.get('/insurance/plans').then(r => r.data?.data ?? []),
   })
 
   const mockProducts = [

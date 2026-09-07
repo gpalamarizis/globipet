@@ -1,33 +1,79 @@
-﻿import { useEffect } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, TextInput } from 'react-native'
+import { useEffect, useState, useCallback } from 'react'
+import {
+  View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, RefreshControl,
+} from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, ChevronRight, Plus } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
+import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
-const O = '#E65100'
+/**
+ * Αρχική.
+ *
+ * ΤΙ ΑΛΛΑΞΕ ΚΑΙ ΓΙΑΤΙ
+ *   Υπήρχε ένα πλέγμα δώδεκα ενεργειών σε τέσσερις στήλες, με ετικέτες
+ *   στα 10px και numberOfLines={1}. Λέξεις όπως «Τηλεϊατρική» και
+ *   «Εκπαίδευση» κόβονταν με αποσιωπητικά, και η λύση που είχε εφαρμοστεί
+ *   ήταν να μικρύνει κι άλλο η γραμματοσειρά. Το μέγεθος ήταν το σύμπτωμα:
+ *   το πρόβλημα ήταν δώδεκα πράγματα σε τέσσερις στήλες.
+ *
+ *   Οι δώδεκα ήταν και δύο διαφορετικά είδη ανακατεμένα — υπηρεσίες που
+ *   κλείνεις (κτηνίατρος, περιποίηση) μαζί με λειτουργίες της εφαρμογής
+ *   (AI Υγεία, Φάκελος, Ασφάλιση). Κάποιος που ψάχνει κομμωτήριο και
+ *   κάποιος που ανοίγει τον ιατρικό φάκελο δεν είναι στην ίδια διάθεση.
+ *
+ *   Τώρα: έξι υπηρεσίες σε τρεις στήλες με χρωματιστά πλακίδια και ετικέτες
+ *   δύο γραμμών στα 12px, και οι λειτουργίες χωριστά σε οριζόντια σειρά.
+ *   Τα κατοικίδια ανεβαίνουν πάνω — είναι ο λόγος που ανοίγει κανείς την
+ *   εφαρμογή.
+ */
 
-const QUICK_ACTIONS = [
-  { emoji: '✂️', label: 'Περιποίηση',  route: '/(tabs)/services', type: 'grooming' },
-  { emoji: '🩺', label: 'Κτηνίατρος', route: '/(tabs)/services', type: 'veterinary' },
-  { emoji: '🚶', label: 'Βόλτες',      route: '/(tabs)/services', type: 'walking' },
-  { emoji: '🏠', label: 'Φιλοξενία',  route: '/(tabs)/services', type: 'pet_sitting' },
-  { emoji: '💊', label: 'Φαρμακείο',  route: '/(tabs)/services', type: 'pharmacy' },
-  { emoji: '🎓', label: 'Εκπαίδευση', route: '/(tabs)/services', type: 'training' },
-  { emoji: '🚗', label: 'Pet Taxi',   route: '/(tabs)/services', type: 'pet_taxi' },
-  { emoji: '⚖️', label: 'Νομικά',     route: '/legal', type: 'legal' },
-  { emoji: '💻', label: 'Τηλεϊατρική',route: '/telehealth', type: 'telehealth' },
-  { emoji: '🛡️', label: 'Ασφάλιση',  route: '/insurance', type: 'insurance' },
-  { emoji: '🧠', label: 'AI Υγεία',   route: '/ai-health', type: 'ai' },
-  { emoji: '📋', label: 'Φάκελος',    route: '/passport', type: 'passport' },
-]
+/** Υπηρεσίες που κλείνεις. Έξι, όσες χωράνε σε δύο σειρές των τριών. */
+const SERVICES = [
+  { key: 'veterinary',  emoji: '🩺', label: 'Κτηνίατρος',  type: 'veterinary' },
+  { key: 'grooming',    emoji: '✂️', label: 'Περιποίηση',  type: 'grooming' },
+  { key: 'walking',     emoji: '🚶', label: 'Βόλτες',      type: 'walking' },
+  { key: 'hosting',     emoji: '🏠', label: 'Φιλοξενία',   type: 'hosting' },
+  { key: 'training',    emoji: '🎓', label: 'Εκπαίδευση',  type: 'training' },
+  { key: 'pet_taxi',    emoji: '🚗', label: 'Pet Taxi',    type: 'pet_taxi' },
+] as const
+
+/** Λειτουργίες της εφαρμογής. Οριζόντια σειρά — δεν ανταγωνίζονται τις υπηρεσίες. */
+const FEATURES = [
+  { key: 'ai',        emoji: '🧠', label: 'AI Υγεία',     route: '/ai-health' },
+  { key: 'passport',  emoji: '📋', label: 'Φάκελος',      route: '/passport' },
+  { key: 'telehealth',emoji: '💻', label: 'Τηλεϊατρική',  route: '/telehealth' },
+  { key: 'tracker',   emoji: '📍', label: 'Εντοπισμός',   route: '/tracker' },
+  { key: 'insurance', emoji: '🛡️', label: 'Ασφάλιση',    route: '/insurance' },
+  { key: 'pharmacy',  emoji: '💊', label: 'Φαρμακείο',    route: '/(tabs)/services' },
+] as const
+
+const SPECIES_EMOJI: Record<string, string> = {
+  dog: '🐶', cat: '🐱', bird: '🦜', rabbit: '🐰', fish: '🐠', reptile: '🦎',
+}
+
+/** Το πλακίδιο δανείζεται το χρώμα της κατηγορίας από το θέμα. */
+function tint(key: string) {
+  return (colors.category as any)[key] ?? colors.category.default
+}
 
 export default function HomeScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user, isAuthenticated, loadToken } = useAuthStore()
+  const [refreshing, setRefreshing] = useState(false)
+
   useEffect(() => { loadToken() }, [])
 
-  const { data: services = [] } = useQuery({
+  const { data: pets = [] } = useQuery({
+    queryKey: ['my-pets'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+
+  const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ['featured-services'],
     queryFn: () => api.get('/services?limit=6').then(r => r.data?.data ?? []),
   })
@@ -37,113 +83,221 @@ export default function HomeScreen() {
     queryFn: () => api.get('/products?featured=true&limit=4').then(r => r.data?.data ?? []),
   })
 
+  /**
+   * Τράβηγμα προς τα κάτω για ανανέωση.
+   *
+   * Είναι η πρώτη χειρονομία που δοκιμάζει κάθε χρήστης όταν θέλει φρέσκα
+   * δεδομένα. Δεν υπήρχε πουθενά στην εφαρμογή, και η απουσία της κάνει την
+   * οθόνη να μοιάζει κολλημένη.
+   */
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['my-pets'] }),
+      queryClient.invalidateQueries({ queryKey: ['featured-services'] }),
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] }),
+    ])
+    setRefreshing(false)
+  }, [queryClient])
+
+  const firstName = user?.full_name?.split(' ')[0]
+
   return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-      {/* Header */}
+    <ScrollView
+      style={s.container}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 100 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+      }>
+
+      {/* ── Κεφαλίδα ─────────────────────────────────────────────────
+          Σκούρο μπλε: είναι δομή, όχι ενέργεια. Το πορτοκαλί μένει για
+          τα πράγματα που πατιούνται. */}
       <View style={s.header}>
-        <View style={s.headerTop}>
-          <View style={s.logoBox}>
-            <Image source={require('../../assets/icon.png')} style={s.logo} />
-          </View>
+        <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.greeting} numberOfLines={1}>
-              {isAuthenticated ? `Γεια, ${user?.full_name?.split(' ')[0]}! 👋` : 'Καλώς ήρθατε! 🐾'}
+              {isAuthenticated ? `Γεια σου, ${firstName}` : 'Καλώς ήρθες'}
             </Text>
-            <Text style={s.tagline}>Best care for the best friends</Text>
+            <Text style={s.tagline}>Ό,τι χρειάζεται το κατοικίδιό σου</Text>
           </View>
-          {isAuthenticated && user?.profile_photo && (
-            <Image source={{ uri: user.profile_photo }} style={s.avatar} />
-          )}
+          {isAuthenticated && user?.profile_photo
+            ? <Image source={{ uri: user.profile_photo }} style={s.avatar} />
+            : <Image source={require('../../assets/icon.png')} style={s.avatar} />}
         </View>
 
-        {/* Search */}
-        <TouchableOpacity style={s.searchBar} onPress={() => router.push('/(tabs)/services' as any)}>
-          <Text style={s.searchIcon}>🔍</Text>
-          <Text style={s.searchPlaceholder}>Αναζήτηση υπηρεσίας ή παρόχου...</Text>
+        <TouchableOpacity
+          style={s.search}
+          activeOpacity={0.8}
+          onPress={() => router.push('/(tabs)/services' as any)}>
+          <Search size={icon.md} color={colors.textLight} />
+          <Text style={s.searchText}>Αναζήτηση υπηρεσίας ή παρόχου</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Quick actions grid — 4 per row, wrap */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Υπηρεσίες</Text>
-        <View style={s.actionGrid}>
-          {QUICK_ACTIONS.map(a => (
-            <TouchableOpacity key={a.type} style={s.actionItem}
-              onPress={() => router.push(a.route as any)} activeOpacity={0.7}>
-              <View style={s.actionIcon}>
-                <Text style={s.actionEmoji}>{a.emoji}</Text>
-              </View>
-              <Text style={s.actionLabel} numberOfLines={1}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Featured services */}
-      {services.length > 0 && (
+      {/* ── Τα κατοικίδιά μου ────────────────────────────────────────
+          Πρώτα, γιατί είναι ο λόγος που ανοίγει κανείς την εφαρμογή. */}
+      {isAuthenticated && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Κορυφαίοι Πάροχοι</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/services' as any)}>
-              <Text style={s.seeAll}>Όλοι →</Text>
-            </TouchableOpacity>
+            <Text style={s.sectionTitle}>Τα κατοικίδιά μου</Text>
+            {pets.length > 0 && (
+              <TouchableOpacity onPress={() => router.push('/(tabs)/pets' as any)} style={s.seeAllBtn}>
+                <Text style={s.seeAll}>Όλα</Text>
+                <ChevronRight size={icon.sm} color={colors.brand} />
+              </TouchableOpacity>
+            )}
           </View>
-          {services.slice(0, 4).map((sv: any) => (
-            <TouchableOpacity key={sv.id} style={s.serviceCard}
-              onPress={() => router.push(`/services/${sv.id}` as any)} activeOpacity={0.7}>
-              <View style={s.serviceAvatar}>
-                {sv.image_url
-                  ? <Image source={{ uri: sv.image_url }} style={s.serviceAvatarImg} />
-                  : <Text style={s.serviceAvatarEmoji}>🐾</Text>}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: space.md, paddingRight: space.lg }}>
+            {pets.slice(0, 6).map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.petCard} activeOpacity={0.8}
+                onPress={() => router.push('/(tabs)/pets' as any)}>
+                <View style={s.petAvatar}>
+                  {p.image_url
+                    ? <Image source={{ uri: p.image_url }} style={s.petImg} />
+                    : <Text style={s.petEmoji}>{SPECIES_EMOJI[p.species] ?? '🐾'}</Text>}
+                </View>
+                <Text style={s.petName} numberOfLines={1}>{p.name}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Πάντα τελευταίο, ώστε η προσθήκη να είναι στην ίδια χειρονομία. */}
+            <TouchableOpacity style={s.petCard} activeOpacity={0.8}
+              onPress={() => router.push('/(tabs)/pets' as any)}>
+              <View style={[s.petAvatar, s.petAdd]}>
+                <Plus size={icon.lg} color={colors.brand} />
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.serviceName} numberOfLines={1}>{sv.provider_name}</Text>
-                <Text style={s.serviceSub} numberOfLines={1}>{sv.service_type} · {sv.city}</Text>
-                <Text style={s.serviceRating}>⭐ {sv.rating?.toFixed(1) || '5.0'} · {sv.reviews_count || 0} κριτικές</Text>
-              </View>
-              <Text style={s.servicePrice}>€{sv.price}</Text>
+              <Text style={[s.petName, { color: colors.brand }]}>Προσθήκη</Text>
             </TouchableOpacity>
-          ))}
+          </ScrollView>
         </View>
       )}
 
-      {/* Featured products */}
+      {/* ── Υπηρεσίες ────────────────────────────────────────────────
+          Τρεις στήλες. Χωράνε ολόκληρες οι λέξεις στα 12px, και το
+          πλακίδιο μεγαλώνει αρκετά ώστε να είναι εύκολος στόχος. */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Υπηρεσίες</Text>
+        <View style={s.serviceGrid}>
+          {SERVICES.map(a => {
+            const c = tint(a.key)
+            return (
+              <TouchableOpacity key={a.key} style={s.serviceTile} activeOpacity={0.7}
+                onPress={() => router.push(`/(tabs)/services?type=${a.type}` as any)}>
+                <View style={[s.serviceIcon, { backgroundColor: c.bg }]}>
+                  <Text style={s.serviceEmoji}>{a.emoji}</Text>
+                </View>
+                <Text style={s.serviceLabel} numberOfLines={2}>{a.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      </View>
+
+      {/* ── Λειτουργίες ──────────────────────────────────────────────
+          Οριζόντια, ώστε να μην ανταγωνίζονται οπτικά τις υπηρεσίες. */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Για το κατοικίδιό σου</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: space.sm, paddingRight: space.lg }}>
+          {FEATURES.map(f => (
+            <TouchableOpacity key={f.key} style={s.featureChip} activeOpacity={0.7}
+              onPress={() => router.push(f.route as any)}>
+              <Text style={s.featureEmoji}>{f.emoji}</Text>
+              <Text style={s.featureLabel}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* ── Πάροχοι ──────────────────────────────────────────────────
+          Σκελετοί αντί για κενό. Το μάτι έχει πού να σταθεί όσο φορτώνει,
+          και η ίδια αναμονή μοιάζει συντομότερη. */}
+      <View style={s.section}>
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Κορυφαίοι πάροχοι</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/services' as any)} style={s.seeAllBtn}>
+            <Text style={s.seeAll}>Όλοι</Text>
+            <ChevronRight size={icon.sm} color={colors.brand} />
+          </TouchableOpacity>
+        </View>
+
+        {servicesLoading
+          ? [0, 1, 2].map(i => (
+              <View key={i} style={s.providerCard}>
+                <View style={[s.providerAvatar, s.skeleton]} />
+                <View style={{ flex: 1, gap: space.sm }}>
+                  <View style={[s.skeleton, { height: 14, width: '55%', borderRadius: radius.sm }]} />
+                  <View style={[s.skeleton, { height: 12, width: '35%', borderRadius: radius.sm }]} />
+                </View>
+              </View>
+            ))
+          : services.slice(0, 4).map((sv: any) => (
+              <TouchableOpacity key={sv.id} style={s.providerCard} activeOpacity={0.8}
+                onPress={() => router.push(`/services/${sv.id}` as any)}>
+                <View style={s.providerAvatar}>
+                  {sv.image_url
+                    ? <Image source={{ uri: sv.image_url }} style={s.providerImg} />
+                    : <Text style={s.providerEmoji}>🐾</Text>}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.providerName} numberOfLines={1}>{sv.provider_name}</Text>
+                  <Text style={s.providerSub} numberOfLines={1}>{sv.city}</Text>
+                  <Text style={s.providerRating}>
+                    ⭐ {sv.rating?.toFixed(1) ?? '—'} · {sv.reviews_count ?? 0} κριτικές
+                  </Text>
+                </View>
+                <Text style={s.providerPrice}>€{sv.price}</Text>
+              </TouchableOpacity>
+            ))}
+      </View>
+
+      {/* ── Προϊόντα ─────────────────────────────────────────────────
+          Δύο ανά σειρά, όχι τρία — η φωτογραφία είναι αυτή που πουλάει. */}
       {products.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Προτεινόμενα Προϊόντα</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)}>
-              <Text style={s.seeAll}>Όλα →</Text>
+            <Text style={s.sectionTitle}>Προτεινόμενα</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)} style={s.seeAllBtn}>
+              <Text style={s.seeAll}>Όλα</Text>
+              <ChevronRight size={icon.sm} color={colors.brand} />
             </TouchableOpacity>
           </View>
           <View style={s.productGrid}>
             {products.slice(0, 4).map((p: any) => (
-              <TouchableOpacity key={p.id} style={s.productCard}
-                onPress={() => router.push(`/products/${p.id}` as any)} activeOpacity={0.7}>
-                <View style={s.productImg}>
+              <TouchableOpacity key={p.id} style={s.productCard} activeOpacity={0.8}
+                onPress={() => router.push(`/products/${p.id}` as any)}>
+                <View style={s.productImgBox}>
                   {p.image_url
-                    ? <Image source={{ uri: p.image_url }} style={s.productImgSrc} />
-                    : <Text style={{ fontSize: 28 }}>🛍️</Text>}
+                    ? <Image source={{ uri: p.image_url }} style={s.productImg} />
+                    : <Text style={{ fontSize: 32 }}>🛍️</Text>}
                 </View>
                 <Text style={s.productName} numberOfLines={2}>{p.name}</Text>
-                <Text style={s.productPrice}>€{p.price}</Text>
+                <Text style={s.productPrice}>€{p.sale_price ?? p.price}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
 
-      {/* Not logged in banner */}
+      {/* ── Εγγραφή ──────────────────────────────────────────────── */}
       {!isAuthenticated && (
         <View style={s.authBanner}>
-          <Text style={s.authTitle}>Ξεκινήστε Σήμερα 🐾</Text>
-          <Text style={s.authSub}>Εγγραφείτε δωρεάν και διαχειριστείτε όλα όσα χρειάζεται το κατοικίδιό σας</Text>
+          <Text style={s.authTitle}>Ξεκίνα σήμερα</Text>
+          <Text style={s.authSub}>
+            Εγγραφή δωρεάν — και 30 μέρες AI λειτουργίες χωρίς χρέωση.
+          </Text>
           <View style={s.authBtns}>
-            <TouchableOpacity style={s.authLoginBtn} onPress={() => router.push('/auth/login' as any)}>
-              <Text style={s.authLoginText}>Σύνδεση</Text>
+            <TouchableOpacity style={s.authPrimary} activeOpacity={0.85}
+              onPress={() => router.push('/auth/register' as any)}>
+              <Text style={s.authPrimaryText}>Εγγραφή</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.authRegisterBtn} onPress={() => router.push('/auth/register' as any)}>
-              <Text style={s.authRegisterText}>Εγγραφή</Text>
+            <TouchableOpacity style={s.authSecondary} activeOpacity={0.85}
+              onPress={() => router.push('/auth/login' as any)}>
+              <Text style={s.authSecondaryText}>Σύνδεση</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -153,50 +307,139 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#fff', paddingTop: 52, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  logoBox: { width: 32, height: 32, borderRadius: 8, overflow: 'hidden', flexShrink: 0 },
-  logo: { width: 32, height: 32 },
-  greeting: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  tagline: { fontSize: 10, color: '#9CA3AF', marginTop: 1 },
-  avatar: { width: 30, height: 30, borderRadius: 15, flexShrink: 0 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
-  searchIcon: { fontSize: 13 },
-  searchPlaceholder: { fontSize: 12, color: '#9CA3AF' },
-  section: { marginTop: 14, paddingHorizontal: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#111827', marginBottom: 8 },
-  seeAll: { fontSize: 11, color: O, fontWeight: '600' },
-  // Quick actions - 4 per row
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  actionItem: { width: '22%', alignItems: 'center' },
-  actionIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
-  actionEmoji: { fontSize: 22 },
-  actionLabel: { fontSize: 10, color: '#374151', fontWeight: '600', textAlign: 'center' },
-  // Service cards
-  serviceCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3, gap: 10 },
-  serviceAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-  serviceAvatarImg: { width: 44, height: 44 },
-  serviceAvatarEmoji: { fontSize: 20 },
-  serviceName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  serviceSub: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
-  serviceRating: { fontSize: 11, color: '#6B7280' },
-  servicePrice: { fontSize: 15, fontWeight: '800', color: O, flexShrink: 0 },
-  // Product grid - 2 per row
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  productCard: { width: '47%', backgroundColor: '#fff', borderRadius: 14, padding: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 },
-  productImg: { width: '100%', height: 100, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' },
-  productImgSrc: { width: '100%', height: 100 },
-  productName: { fontSize: 12, fontWeight: '600', color: '#111827', marginBottom: 4 },
-  productPrice: { fontSize: 14, fontWeight: '800', color: O },
-  // Auth banner
-  authBanner: { margin: 16, backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 },
-  authTitle: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 6 },
-  authSub: { fontSize: 12, color: '#6B7280', lineHeight: 18, marginBottom: 14 },
-  authBtns: { flexDirection: 'row', gap: 10 },
-  authLoginBtn: { flex: 1, borderWidth: 1.5, borderColor: O, borderRadius: 12, padding: 12, alignItems: 'center' },
-  authLoginText: { color: O, fontWeight: '700' },
-  authRegisterBtn: { flex: 1, backgroundColor: O, borderRadius: 12, padding: 12, alignItems: 'center' },
-  authRegisterText: { color: '#fff', fontWeight: '700' },
+  container: { flex: 1, backgroundColor: colors.bg },
+
+  header: {
+    backgroundColor: colors.navy,
+    paddingTop: space.xxxl + space.lg,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.lg },
+  greeting: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+  tagline: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  avatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.surfaceAlt },
+
+  search: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.surface,
+    height: touch.comfortable,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+  },
+  searchText: { ...type.body, color: colors.textLight },
+
+  section: { paddingHorizontal: space.lg, paddingTop: space.xxl },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginBottom: space.md },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: space.md },
+  seeAll: { ...type.body, color: colors.brand, fontWeight: weight.semibold },
+
+  // Κατοικίδια
+  petCard: { alignItems: 'center', width: 76 },
+  petAvatar: {
+    width: 68, height: 68, borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space.sm,
+    ...shadow.sm,
+  },
+  petAdd: { backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.brandTint },
+  petImg: { width: 68, height: 68, borderRadius: radius.full },
+  petEmoji: { fontSize: 30 },
+  petName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, textAlign: 'center' },
+
+  // Υπηρεσίες — τρεις στήλες
+  serviceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  serviceTile: { width: '30.5%', alignItems: 'center', paddingVertical: space.sm },
+  serviceIcon: {
+    width: 64, height: 64, borderRadius: radius.lg,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space.sm,
+  },
+  serviceEmoji: { fontSize: 28 },
+  serviceLabel: {
+    ...type.caption, color: colors.text, fontWeight: weight.semibold,
+    textAlign: 'center',
+  },
+
+  // Λειτουργίες
+  featureChip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.surface,
+    paddingVertical: space.md, paddingHorizontal: space.lg,
+    borderRadius: radius.full,
+    minHeight: touch.min,
+    ...shadow.sm,
+  },
+  featureEmoji: { fontSize: 18 },
+  featureLabel: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+
+  // Πάροχοι
+  providerCard: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  providerAvatar: {
+    width: 56, height: 56, borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  providerImg: { width: 56, height: 56, borderRadius: radius.md },
+  providerEmoji: { fontSize: 24 },
+  providerName: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
+  providerSub: { ...type.caption, color: colors.textMuted, marginTop: 1 },
+  providerRating: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  providerPrice: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold },
+
+  skeleton: { backgroundColor: colors.surfaceAlt },
+
+  // Προϊόντα
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  productCard: {
+    width: '47.5%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: space.md,
+    ...shadow.sm,
+  },
+  productImgBox: {
+    height: 110, borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space.sm,
+    overflow: 'hidden',
+  },
+  productImg: { width: '100%', height: '100%' },
+  productName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, minHeight: 32 },
+  productPrice: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold, marginTop: space.xs },
+
+  // Εγγραφή
+  authBanner: {
+    margin: space.lg, marginTop: space.xxl,
+    backgroundColor: colors.navy,
+    borderRadius: radius.xl,
+    padding: space.xl,
+  },
+  authTitle: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+  authSub: { ...type.body, color: 'rgba(255,255,255,0.75)', marginTop: space.sm, marginBottom: space.lg },
+  authBtns: { flexDirection: 'row', gap: space.md },
+  authPrimary: {
+    flex: 1, height: touch.comfortable, borderRadius: radius.md,
+    backgroundColor: colors.brand,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  authPrimaryText: { ...type.emphasis, color: '#fff', fontWeight: weight.bold },
+  authSecondary: {
+    flex: 1, height: touch.comfortable, borderRadius: radius.md,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  authSecondaryText: { ...type.emphasis, color: colors.textOnDark, fontWeight: weight.semibold },
 })

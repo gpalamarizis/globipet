@@ -1,66 +1,106 @@
-﻿import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native'
+import { useCallback, useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Stethoscope, FileText, Brain, Heart, Shield, MapPin,
+  PawPrint, Users, Calendar, ChevronRight,
+} from 'lucide-react-native'
 import { api } from '../../src/lib/api'
+import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 
-const O = '#E65100'
+/**
+ * Ανακάλυψη.
+ *
+ * ΤΙ ΑΛΛΑΞΕ
+ *   Η λίστα περιείχε «Νομική Υποστήριξη» με προορισμό /legal. Τέτοια οθόνη
+ *   δεν υπάρχει στο mobile — ο χρήστης πατούσε και δεν γινόταν τίποτα. Έφυγε
+ *   μέχρι να υπάρξει.
+ *
+ *   Τα εννιά emoji έγιναν εικονίδια με χρώμα κατηγορίας: ένα emoji αλλάζει
+ *   όψη ανά συσκευή και δεν χρωματίζεται.
+ */
 
 const SECTIONS = [
-  { emoji: '💻', title: 'Τηλεϊατρική',       sub: 'Κλείσε online ραντεβού', route: '/telehealth' },
-  { emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας', route: '/passport' },
-  { emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας', route: '/ai-health' },
-  { emoji: '💜', title: 'AI Emotion',          sub: 'Τι νιώθει το ζώο σου', route: '/ai-emotion' },
-  { emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'Ελληνική νομοθεσία', route: '/legal' },
-  { emoji: '🛡️', title: 'Ασφάλιση',          sub: 'Προστασία κατοικιδίου', route: '/insurance' },
-  { emoji: '🗺️', title: 'GPS Tracker',        sub: 'Βρες το κατοικίδιό σου', route: '/tracker' },
-  { emoji: '🐾', title: 'Playdates',           sub: 'Βγες με άλλα κατοικίδια', route: '/playdates' },
-  { emoji: '🏘️', title: 'Κοινότητες',         sub: 'Ομάδες ιδιοκτητών', route: '/communities' },
+  { key: 'telehealth',  Icon: Stethoscope, title: 'Τηλεϊατρική',      sub: 'Κλείσε online ραντεβού',   route: '/telehealth', tint: 'veterinary' },
+  { key: 'passport',    Icon: FileText,    title: 'Ιατρικός φάκελος', sub: 'Πλήρες ιστορικό υγείας',   route: '/passport',   tint: 'pharmacy' },
+  { key: 'ai-health',   Icon: Brain,       title: 'AI Υγεία',          sub: 'Ανάλυση φωτογραφίας',      route: '/ai-health',  tint: 'training' },
+  { key: 'ai-emotion',  Icon: Heart,       title: 'AI Emotion',        sub: 'Τι νιώθει το ζώο σου',     route: '/ai-emotion', tint: 'grooming' },
+  { key: 'insurance',   Icon: Shield,      title: 'Ασφάλιση',          sub: 'Προστασία κατοικιδίου',    route: '/insurance',  tint: 'hosting' },
+  { key: 'tracker',     Icon: MapPin,      title: 'Εντοπισμός GPS',    sub: 'Βρες το κατοικίδιό σου',   route: '/tracker',    tint: 'pet_taxi' },
+  { key: 'playdates',   Icon: PawPrint,    title: 'Playdates',         sub: 'Βγες με άλλα κατοικίδια',  route: '/playdates',  tint: 'walking' },
+  { key: 'communities', Icon: Users,       title: 'Κοινότητες',        sub: 'Ομάδες ιδιοκτητών',        route: '/communities',tint: 'photography' },
 ]
+
+const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function DiscoverScreen() {
   const router = useRouter()
+  const qc = useQueryClient()
+  const [refreshing, setRefreshing] = useState(false)
 
   const { data: events = [] } = useQuery({
-    queryKey: ['events'],
-    queryFn: () => api.get('/events?upcoming=true&limit=3').then(r => r.data?.data ?? []).catch(() => []),
+    queryKey: ['upcoming-events'],
+    queryFn: () => api.get('/events', { params: { upcoming: 'true', limit: 3 } })
+      .then(r => r.data?.data ?? []),
   })
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await qc.invalidateQueries({ queryKey: ['upcoming-events'] })
+    setRefreshing(false)
+  }, [qc])
+
   return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView style={s.container} showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 100 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+      }>
+
       <View style={s.header}>
-        <Text style={s.title}>Εξερεύνηση</Text>
-        <Text style={s.sub}>Ανακάλυψε όλες τις λειτουργίες</Text>
+        <Text style={s.title}>Ανακάλυψε</Text>
+        <Text style={s.subtitle}>Όλα όσα προσφέρει το GlobiPet</Text>
       </View>
 
-      {/* Feature grid */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Λειτουργίες</Text>
-        <View style={s.grid}>
-          {SECTIONS.map(item => (
-            <TouchableOpacity key={item.route} style={s.card} onPress={() => router.push(item.route as any)} activeOpacity={0.7}>
-              <Text style={s.cardEmoji}>{item.emoji}</Text>
-              <Text style={s.cardTitle}>{item.title}</Text>
-              <Text style={s.cardSub} numberOfLines={1}>{item.sub}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Events */}
-      {events.length > 0 && (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Επερχόμενα Events</Text>
-          {events.map((e: any) => (
-            <View key={e.id} style={s.eventCard}>
-              <View style={s.eventLeft}>
-                <Text style={s.eventEmoji}>📅</Text>
+        {SECTIONS.map(({ key, Icon, title, sub, route, tint: t }) => {
+          const c = tint(t)
+          return (
+            <TouchableOpacity key={key} style={s.card} activeOpacity={0.8}
+              onPress={() => router.push(route as any)}>
+              <View style={[s.cardIcon, { backgroundColor: c.bg }]}>
+                <Icon size={icon.lg} color={c.fg} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.eventTitle} numberOfLines={1}>{e.title}</Text>
-                <Text style={s.eventDate}>{e.date} {e.time ? `· ${e.time}` : ''}</Text>
-                {e.location && <Text style={s.eventLoc} numberOfLines={1}>📍 {e.location}</Text>}
+                <Text style={s.cardTitle}>{title}</Text>
+                <Text style={s.cardSub} numberOfLines={1}>{sub}</Text>
               </View>
-            </View>
+              <ChevronRight size={icon.md} color={colors.textLight} />
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {events.length > 0 && (
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Επερχόμενες εκδηλώσεις</Text>
+          {events.map((e: any) => (
+            <TouchableOpacity key={e.id} style={s.eventCard} activeOpacity={0.8}
+              onPress={() => router.push(`/events/${e.id}` as any)}>
+              <View style={s.eventIcon}>
+                <Calendar size={icon.md} color={colors.brand} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.cardTitle} numberOfLines={1}>{e.title}</Text>
+                <Text style={s.cardSub} numberOfLines={1}>
+                  {e.date}{e.city ? ` · ${e.city}` : ''}
+                </Text>
+              </View>
+              <Text style={s.eventPrice}>
+                {e.price > 0 ? `€${e.price}` : 'Δωρεάν'}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -69,21 +109,48 @@ export default function DiscoverScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#fff', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  sub: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
-  section: { paddingHorizontal: 16, marginTop: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { width: '31%', backgroundColor: '#fff', borderRadius: 14, padding: 12, alignItems: 'center', elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
-  cardEmoji: { fontSize: 28, marginBottom: 6 },
-  cardTitle: { fontSize: 11, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 2 },
-  cardSub: { fontSize: 10, color: '#9CA3AF', textAlign: 'center' },
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, gap: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3 },
-  eventLeft: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  eventEmoji: { fontSize: 20 },
-  eventTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  eventDate: { fontSize: 12, color: O, fontWeight: '600', marginBottom: 2 },
-  eventLoc: { fontSize: 12, color: '#6B7280' },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    backgroundColor: colors.navy,
+    paddingTop: space.xxxl + space.lg,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+  },
+  title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+  subtitle: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+
+  section: { paddingHorizontal: space.lg, paddingTop: space.xl },
+  sectionTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginBottom: space.md },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  cardIcon: {
+    width: 48, height: 48, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
+  cardSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+
+  eventCard: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  eventIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    backgroundColor: colors.brandLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  eventPrice: { ...type.body, color: colors.brand, fontWeight: weight.bold },
 })

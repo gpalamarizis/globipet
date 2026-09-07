@@ -1501,3 +1501,27 @@ model ProductImpression {
   @@index([day, product_id], map: "product_impressions_day_idx")
   @@map("product_impressions")
 }
+
+model ProviderVerificationRequest {
+  id               String    @id @default(uuid())
+  user_email       String
+  full_name        String
+  phone            String?
+  // Κρυπτογραφημένο στο επίπεδο εφαρμογής.
+  tax_number       String?
+  city             String?
+  business_name    String?
+  years_experience Int?
+  specializations  String[]  @default([])
+  bio              String?
+  website          String?
+  status           String    @default("pending")
+  review_notes     String?
+  reviewed_by      String?
+  reviewed_at      DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  @@index([status, created_at], map: "provider_verification_status_idx")
+  @@map("provider_verification_requests")
+}
