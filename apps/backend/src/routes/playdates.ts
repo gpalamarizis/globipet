@@ -22,7 +22,13 @@ const routes: FastifyPluginAsync = async (app) => {
           ...(event_type ? { event_type } : {}),
         },
         include: {
-          invitations: { where: { status: 'accepted' }, select: { invitee_name: true, invitee_photo: true, pet_name: true } }
+          // Το invitee_email χρειάζεται για να ξέρει η εφαρμογή αν ο
+          // χρήστης συμμετέχει ήδη — χωρίς αυτό το κουμπί έλεγε πάντα
+          // «Συμμετοχή», ακόμα και σε όποιον είχε ήδη δηλώσει.
+          invitations: {
+            where: { status: 'accepted' },
+            select: { invitee_email: true, invitee_name: true, invitee_photo: true, pet_name: true },
+          }
         },
         orderBy: { date: 'asc' },
       }),

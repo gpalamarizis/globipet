@@ -1,89 +1,193 @@
-﻿import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+﻿import { useState, useCallback } from 'react'
+import { View, Text, StyleSheet, Image, Linking } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { MapPin, Battery, Clock, Navigation, AlertTriangle, Wifi } from 'lucide-react-native'
 import { api } from '../src/lib/api'
+import { useAuthStore } from '../src/store/auth'
+import { Screen, Card, Button, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { colors, space, radius, type, weight, icon } from '@/theme'
 
-const ORANGE = '#E65100'
+/**
+ * Εντοπισμός GPS.
+ *
+ * ΤΙ ΑΛΛΑΞΕ
+ *   Υπήρχε ένα γκρι πλαίσιο με «🗺️ Χάρτης GPS — Η ζωντανή τοποθεσία
+ *   εμφανίζεται εδώ». Δεν εμφανιζόταν ποτέ τίποτα: δεν υπήρχε χάρτης και
+ *   η οθόνη δεν ζητούσε καν θέσεις από τον server. Έδειχνε τα κατοικίδια
+ *   και τίποτα άλλο.
+ *
+ *   Τώρα διαβάζει το /tracker/latest, που επιστρέφει για κάθε ζώο την
+ *   τελευταία θέση και τη συνδεδεμένη συσκευή. Χωρίς ενσωματωμένο χάρτη —
+ *   ο σύνδεσμος ανοίγει τους Χάρτες Google με τις πραγματικές συντεταγμένες,
+ *   που είναι ό,τι χρειάζεται κάποιος που ψάχνει το ζώο του.
+ *
+ *   Μπαταρία και σήμα δείχνουν παύλα όταν η συσκευή δεν έχει στείλει
+ *   ακόμα. Άγνωστο δεν είναι το ίδιο με γεμάτο.
+ */
+
+const SPECIES: Record<string, string> = {
+  dog: '🐶', cat: '🐱', bird: '🦜', rabbit: '🐰', fish: '🐠', reptile: '🦎',
+}
+const emojiFor = (s?: string) => SPECIES[String(s).toLowerCase()] ?? '🐾'
+
+const since = (iso?: string | null) => {
+  if (!iso) return '—'
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'μόλις τώρα'
+  if (m < 60) return `${m} λεπτά πριν`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} ώρες πριν`
+  return `${Math.floor(h / 24)} μέρες πριν`
+}
 
 export default function TrackerScreen() {
   const router = useRouter()
+  const qc = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
+  const [refreshing, setRefreshing] = useState(false)
 
-  const { data: pets = [] } = useQuery({
-    queryKey: ['my-pets'],
-    queryFn: () => api.get('/pets/my').then(r => r.data?.data ?? []).catch(() => []),
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['tracker-latest'],
+    queryFn: () => api.get('/tracker/latest').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+    // Το κολάρο στέλνει με δικό του ρυθμό· η οθόνη ανανεώνεται μόνη της
+    // ώστε να μη χρειάζεται ο χρήστης να τραβάει συνεχώς.
+    refetchInterval: 60_000,
   })
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await qc.invalidateQueries({ queryKey: ['tracker-latest'] })
+    setRefreshing(false)
+  }, [qc])
+
+  const battery = (b: number | null | undefined) =>
+    b == null ? colors.textLight : b > 50 ? colors.success : b > 20 ? colors.warning : colors.danger
+
+  if (!isAuthenticated) return (
+    <Screen title="Εντοπισμός GPS">
+      <EmptyState
+        icon={MapPin}
+        title="Συνδέσου για πρόσβαση"
+        message="Δες πού βρίσκονται τα κατοικίδιά σου."
+        action={<Button label="Σύνδεση" onPress={() => router.push('/auth/login' as any)} />}
+      />
+    </Screen>
+  )
+
   return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={s.backText}>‹</Text></TouchableOpacity>
-        <Text style={s.title}>GPS Tracker</Text>
-        <View style={{ width: 32 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View style={s.mapPlaceholder}>
-          <Text style={s.mapEmoji}>🗺️</Text>
-          <Text style={s.mapTitle}>Χάρτης GPS</Text>
-          <Text style={s.mapSub}>Η ζωντανή τοποθεσία εμφανίζεται εδώ</Text>
-        </View>
-
-        <Text style={s.sectionTitle}>Κατοικίδια</Text>
-        {pets.length === 0 ? (
-          <Text style={s.noData}>Δεν έχετε καταχωρημένα κατοικίδια</Text>
-        ) : (
-          pets.map((pet: any) => (
-            <View key={pet.id} style={s.petCard}>
-              <View style={s.petInfo}>
-                <Text style={s.petEmoji}>{pet.species === 'cat' ? '🐱' : '🐶'}</Text>
-                <View>
-                  <Text style={s.petName}>{pet.name}</Text>
-                  <Text style={s.petBreed}>{pet.breed || pet.species}</Text>
+    <Screen title="Εντοπισμός GPS" onRefresh={onRefresh} refreshing={refreshing}>
+      {isLoading ? (
+        <SkeletonRows count={3} height={120} />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="Κανένα κατοικίδιο"
+          message="Πρόσθεσε πρώτα ένα κατοικίδιο και μετά σύνδεσε τη συσκευή GPS του."
+          action={<Button label="Τα κατοικίδιά μου" onPress={() => router.push('/(tabs)/pets' as any)} />}
+        />
+      ) : (
+        <View style={{ gap: space.md }}>
+          {rows.map(({ pet, location, tracker }: any) => {
+            const lost = pet.is_lost || location?.status === 'lost'
+            return (
+              <Card key={pet.id}>
+                <View style={s.head}>
+                  <View style={s.avatar}>
+                    {pet.image_url
+                      ? <Image source={{ uri: pet.image_url }} style={s.avatarImg} />
+                      : <Text style={s.avatarEmoji}>{emojiFor(pet.species)}</Text>}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={s.nameRow}>
+                      <Text style={s.name} numberOfLines={1}>{pet.name}</Text>
+                      {lost && <Badge label="Χαμένο" tone="danger" />}
+                    </View>
+                    <Text style={s.sub} numberOfLines={1}>
+                      {tracker ? (tracker.name || tracker.device_id) : 'Χωρίς συνδεδεμένη συσκευή'}
+                    </Text>
+                  </View>
+                  {lost && <AlertTriangle size={icon.md} color={colors.danger} />}
                 </View>
-              </View>
-              <View style={s.statusRow}>
-                <View style={[s.statusDot, { backgroundColor: pet.last_location ? '#10B981' : '#D1D5DB' }]} />
-                <Text style={s.statusText}>{pet.last_location ? 'Διαθέσιμο' : 'Χωρίς tracker'}</Text>
-              </View>
-              <TouchableOpacity style={s.trackBtn}
-                onPress={() => Alert.alert('Σύντομα', 'Η σύνδεση GPS tracker θα είναι διαθέσιμη σύντομα. Χρησιμοποιήστε το web app για πλήρη λειτουργία.')}>
-                <Text style={s.trackBtnText}>📍 Εντοπισμός</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
 
-        <View style={s.infoBox}>
-          <Text style={s.infoTitle}>📡 Πώς λειτουργεί</Text>
-          <Text style={s.infoText}>Συνδέστε ένα GPS tracker (Tractive, Weenect κλπ) στο κολάρο του κατοικιδίου σας και παρακολουθείτε την τοποθεσία του σε πραγματικό χρόνο.</Text>
+                <View style={s.stats}>
+                  <View style={s.stat}>
+                    <Battery size={icon.xs} color={battery(tracker?.battery_percent)} />
+                    <Text style={[s.statText, { color: battery(tracker?.battery_percent) }]}>
+                      {tracker?.battery_percent != null ? `${tracker.battery_percent}%` : '—'}
+                    </Text>
+                  </View>
+                  <View style={s.stat}>
+                    <Wifi size={icon.xs} color={colors.textLight} />
+                    <Text style={s.statText}>
+                      {tracker?.signal_strength === 'good' ? 'Καλό'
+                        : tracker?.signal_strength === 'weak' ? 'Ασθενές'
+                        : tracker?.signal_strength === 'none' ? 'Χωρίς σήμα' : '—'}
+                    </Text>
+                  </View>
+                  <View style={s.stat}>
+                    <Clock size={icon.xs} color={colors.textLight} />
+                    <Text style={s.statText}>{since(location?.created_at)}</Text>
+                  </View>
+                </View>
+
+                {location ? (
+                  <>
+                    <Text style={s.coords}>
+                      {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+                    </Text>
+                    <Button
+                      label="Οδηγίες στον χάρτη"
+                      variant="secondary"
+                      full
+                      size="sm"
+                      icon={<Navigation size={icon.sm} color={colors.text} />}
+                      onPress={() => Linking.openURL(
+                        `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`
+                      )}
+                      style={{ marginTop: space.md }}
+                    />
+                  </>
+                ) : (
+                  <Text style={s.noSignal}>
+                    {tracker
+                      ? 'Η συσκευή δεν έχει στείλει θέση ακόμη'
+                      : 'Σύνδεσε συσκευή GPS για ζωντανό εντοπισμό'}
+                  </Text>
+                )}
+              </Card>
+            )
+          })}
         </View>
-      </ScrollView>
-    </View>
+      )}
+    </Screen>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  backText: { color: ORANGE, fontSize: 24, width: 32 },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  mapPlaceholder: { backgroundColor: '#1E293B', borderRadius: 20, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  mapEmoji: { fontSize: 48, marginBottom: 8 },
-  mapTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  mapSub: { fontSize: 13, color: '#94A3B8', marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  noData: { color: '#9CA3AF', fontSize: 14, textAlign: 'center', marginTop: 20 },
-  petCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 },
-  petInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  petEmoji: { fontSize: 32 },
-  petName: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  petBreed: { fontSize: 13, color: '#6B7280' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, color: '#6B7280' },
-  trackBtn: { backgroundColor: '#1E293B', borderRadius: 12, padding: 12, alignItems: 'center' },
-  trackBtnText: { color: '#fff', fontWeight: '700' },
-  infoBox: { backgroundColor: '#F0FDF4', borderRadius: 16, padding: 16, marginTop: 8 },
-  infoTitle: { fontSize: 14, fontWeight: '700', color: '#166534', marginBottom: 8 },
-  infoText: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  avatar: {
+    width: 56, height: 56, borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: { width: 56, height: 56 },
+  avatarEmoji: { fontSize: 26 },
+
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  name: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
+  sub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+
+  stats: {
+    flexDirection: 'row', gap: space.lg,
+    marginTop: space.md, paddingTop: space.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  stat: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  statText: { ...type.caption, color: colors.textMuted },
+
+  coords: { ...type.caption, color: colors.textLight, marginTop: space.md },
+  noSignal: { ...type.caption, color: colors.textLight, marginTop: space.md },
 })

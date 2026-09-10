@@ -1,87 +1,240 @@
-﻿import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Linking } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'expo-router'
+﻿import { useState, useCallback } from 'react'
+import { View, Text, StyleSheet, Linking, Modal, ScrollView, TouchableOpacity } from 'react-native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Shield, Check, Phone, Globe, X, Star } from 'lucide-react-native'
 import { api } from '../src/lib/api'
+import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader } from '@/components/ui'
+import { colors, space, radius, type, weight, icon } from '@/theme'
 
-const ORANGE = '#E65100'
+/**
+ * Ασφάλιση κατοικιδίου.
+ *
+ * ΤΙ ΑΦΑΙΡΕΘΗΚΕ
+ *   Υπήρχε πίνακας `mockProducts` με τρία επινοημένα πλάνα — «Βασικό
+ *   9,99€», «Premium 19,99€», «Ετήσιο 149,99€» — και η γραμμή
+ *   `data.length > 0 ? data : mockProducts`. Όταν η βάση δεν επέστρεφε
+ *   τίποτα, ο πελάτης έβλεπε προϊόντα που δεν υπάρχουν, με τιμές που
+ *   κανείς δεν έχει ορίσει.
+ *
+ *   Ένα άδειο κατάστημα είναι σωστή απάντηση. Ένα γεμάτο με φαντάσματα
+ *   δεν είναι.
+ *
+ * Η αγορά γίνεται στον ασφαλιστή, οπότε το κύριο κουμπί λέει «Δες
+ * λεπτομέρειες», όχι «Αγορά».
+ */
+
+const TIERS: Record<string, { label: string; tone: any }> = {
+  basic:    { label: 'Βασικό',   tone: 'neutral' },
+  standard: { label: 'Standard', tone: 'info' },
+  premium:  { label: 'Premium',  tone: 'brand' },
+}
 
 export default function InsuranceScreen() {
-  const router = useRouter()
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['insurance-products'],
-    // Το endpoint είναι /insurance/plans. Το σκέτο /insurance δεν υπάρχει
-    // και το .catch το έκρυβε — η οθόνη έδειχνε πάντα άδεια λίστα.
+  const qc = useQueryClient()
+  const [selected, setSelected] = useState<any>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const { data: plans = [], isLoading } = useQuery({
+    queryKey: ['insurance-plans'],
+    // Το endpoint είναι /insurance/plans· το σκέτο /insurance δεν υπάρχει.
     queryFn: () => api.get('/insurance/plans').then(r => r.data?.data ?? []),
   })
 
-  const mockProducts = [
-    { id: '1', name: 'Βασικό Πλάνο', price: 9.99, period: 'μήνα', covers: ['Κτηνίατρος', 'Επείγοντα', 'Φάρμακα'], color: '#3B82F6' },
-    { id: '2', name: 'Premium Πλάνο', price: 19.99, period: 'μήνα', covers: ['Κτηνίατρος', 'Επείγοντα', 'Φάρμακα', 'Χειρουργεία', 'Οδοντιατρικά'], color: ORANGE },
-    { id: '3', name: 'Ετήσιο Πλάνο', price: 149.99, period: 'χρόνο', covers: ['Όλα τα παραπάνω', 'Εξωτερικό', 'Τηλεϊατρική'], color: '#8B5CF6' },
-  ]
-
-  const products = data.length > 0 ? data : mockProducts
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await qc.invalidateQueries({ queryKey: ['insurance-plans'] })
+    setRefreshing(false)
+  }, [qc])
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={s.backText}>‹</Text></TouchableOpacity>
-        <Text style={s.title}>Ασφάλιση</Text>
-        <View style={{ width: 32 }} />
-      </View>
+    <Screen title="Ασφάλιση" subtitle="Σύγκρινε πλάνα κάλυψης"
+      onRefresh={onRefresh} refreshing={refreshing}>
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View style={s.heroBanner}>
-          <Text style={s.heroEmoji}>🛡️</Text>
-          <Text style={s.heroTitle}>Προστατέψτε το κατοικίδιό σας</Text>
-          <Text style={s.heroSub}>Επιλέξτε το πλάνο που ταιριάζει στις ανάγκες σας</Text>
+      {isLoading ? (
+        <SkeletonRows count={3} height={140} />
+      ) : plans.length === 0 ? (
+        <EmptyState
+          icon={Shield}
+          title="Κανένα πλάνο διαθέσιμο"
+          message="Δεν υπάρχουν ενεργά προγράμματα ασφάλισης αυτή τη στιγμή."
+        />
+      ) : (
+        <View style={{ gap: space.md }}>
+          {plans.map((plan: any) => {
+            const tier = TIERS[plan.tier] ?? TIERS.basic
+            return (
+              <Card key={plan.id} onPress={() => setSelected(plan)}>
+                {plan.is_featured && (
+                  <View style={s.featured}>
+                    <Star size={icon.xs} color={colors.brand} fill={colors.brand} />
+                    <Text style={s.featuredText}>Προτεινόμενο</Text>
+                  </View>
+                )}
+
+                <View style={s.top}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.provider} numberOfLines={1}>
+                      {plan.provider?.name_el || plan.provider?.name}
+                    </Text>
+                    <Text style={s.name} numberOfLines={1}>
+                      {plan.name_el || plan.name}
+                    </Text>
+                  </View>
+                  <Badge label={tier.label} tone={tier.tone} />
+                </View>
+
+                <View style={s.priceRow}>
+                  <Text style={s.price}>€{plan.price_monthly}</Text>
+                  <Text style={s.unit}>/μήνα</Text>
+                </View>
+
+                <View style={s.specs}>
+                  {plan.annual_limit != null && (
+                    <View style={s.spec}>
+                      <Text style={s.specLabel}>Ετήσιο όριο</Text>
+                      <Text style={s.specValue}>€{plan.annual_limit}</Text>
+                    </View>
+                  )}
+                  {plan.reimbursement_percent != null && (
+                    <View style={s.spec}>
+                      <Text style={s.specLabel}>Αποζημίωση</Text>
+                      <Text style={s.specValue}>{plan.reimbursement_percent}%</Text>
+                    </View>
+                  )}
+                  {plan.deductible != null && (
+                    <View style={s.spec}>
+                      <Text style={s.specLabel}>Απαλλαγή</Text>
+                      <Text style={s.specValue}>€{plan.deductible}</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={s.more}>Δες λεπτομέρειες</Text>
+              </Card>
+            )
+          })}
         </View>
+      )}
 
-        {isLoading ? <ActivityIndicator color={ORANGE} /> :
-          products.map((p: any) => (
-            <View key={p.id} style={[s.card, { borderTopColor: p.color, borderTopWidth: 4 }]}>
-              <Text style={s.planName}>{p.name}</Text>
-              <View style={s.priceRow}>
-                <Text style={[s.price, { color: p.color }]}>€{p.price}</Text>
-                <Text style={s.period}>/{p.period}</Text>
+      <Modal visible={!!selected} animationType="slide" transparent
+        onRequestClose={() => setSelected(null)}>
+        <View style={s.modalWrap}>
+          <View style={s.sheet}>
+            <View style={s.sheetHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.provider} numberOfLines={1}>
+                  {selected?.provider?.name_el || selected?.provider?.name}
+                </Text>
+                <Text style={s.sheetTitle} numberOfLines={2}>
+                  {selected?.name_el || selected?.name}
+                </Text>
               </View>
-              {(p.covers || []).map((c: string) => (
-                <Text key={c} style={s.cover}>✅ {c}</Text>
-              ))}
-              <TouchableOpacity style={[s.btn, { backgroundColor: p.color }]}
-                onPress={() => Alert.alert('Σύντομα', 'Η αγορά ασφάλισης θα είναι διαθέσιμη σύντομα')}>
-                <Text style={s.btnText}>Επιλογή Πλάνου</Text>
+              <TouchableOpacity onPress={() => setSelected(null)} hitSlop={12}>
+                <X size={icon.lg} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-          ))}
 
-        <View style={s.infoBox}>
-          <Text style={s.infoTitle}>ℹ️ Γιατί ασφάλιση κατοικιδίου;</Text>
-          <Text style={s.infoText}>Οι κτηνιατρικές δαπάνες μπορεί να ξεπεράσουν τα €3.000 για σοβαρές παθήσεις. Με ασφάλιση GlobiPet καλύπτεστε έως 80%.</Text>
+            <ScrollView showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: space.xl }}>
+              <View style={s.priceRow}>
+                <Text style={s.price}>€{selected?.price_monthly}</Text>
+                <Text style={s.unit}>/μήνα</Text>
+              </View>
+
+              {!!selected?.description && (
+                <Text style={s.description}>{selected.description}</Text>
+              )}
+
+              {Array.isArray(selected?.features) && selected.features.length > 0 && (
+                <>
+                  <SectionHeader title="Τι καλύπτει" />
+                  {selected.features.map((f: string, i: number) => (
+                    <View key={i} style={s.featureRow}>
+                      <Check size={icon.sm} color={colors.success} />
+                      <Text style={s.featureText}>{f}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {selected?.waiting_period_days != null && (
+                <Text style={s.note}>
+                  Περίοδος αναμονής: {selected.waiting_period_days} ημέρες
+                </Text>
+              )}
+              {selected?.max_age_years != null && (
+                <Text style={s.note}>
+                  Μέγιστη ηλικία εγγραφής: {selected.max_age_years} έτη
+                </Text>
+              )}
+
+              {/* Η αίτηση γίνεται στον ασφαλιστή — δεν προσποιούμαστε ότι
+                  ολοκληρώνεται εδώ. */}
+              {!!selected?.provider?.phone && (
+                <Button
+                  label={selected.provider.phone}
+                  variant="secondary"
+                  full
+                  icon={<Phone size={icon.sm} color={colors.text} />}
+                  onPress={() => Linking.openURL(`tel:${selected.provider.phone}`)}
+                  style={{ marginTop: space.lg }}
+                />
+              )}
+              {!!selected?.provider?.website && (
+                <Button
+                  label="Αίτηση στον ασφαλιστή"
+                  full
+                  icon={<Globe size={icon.sm} color={colors.textOnDark} />}
+                  onPress={() => Linking.openURL(selected.provider.website)}
+                  style={{ marginTop: space.md }}
+                />
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </ScrollView>
-    </View>
+      </Modal>
+    </Screen>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  backText: { color: ORANGE, fontSize: 24, width: 32 },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  heroBanner: { backgroundColor: '#fff', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16 },
-  heroEmoji: { fontSize: 48, marginBottom: 8 },
-  heroTitle: { fontSize: 18, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 4 },
-  heroSub: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, overflow: 'hidden' },
-  planName: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 8 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 16 },
-  price: { fontSize: 32, fontWeight: '900' },
-  period: { fontSize: 16, color: '#6B7280', marginLeft: 4 },
-  cover: { fontSize: 14, color: '#374151', marginBottom: 6 },
-  btn: { borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 16 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  infoBox: { backgroundColor: '#EFF6FF', borderRadius: 16, padding: 16, marginBottom: 24 },
-  infoTitle: { fontSize: 14, fontWeight: '700', color: '#1D4ED8', marginBottom: 8 },
-  infoText: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  featured: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    marginBottom: space.sm,
+  },
+  featuredText: { ...type.caption, color: colors.brand, fontWeight: weight.bold },
+
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  provider: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  name: { ...type.emphasis, color: colors.text, fontWeight: weight.bold, marginTop: 2 },
+
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs, marginTop: space.md },
+  price: { ...type.title, color: colors.brand, fontWeight: weight.bold },
+  unit: { ...type.body, color: colors.textMuted },
+
+  specs: {
+    flexDirection: 'row', gap: space.lg,
+    marginTop: space.md, paddingTop: space.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  spec: { flex: 1 },
+  specLabel: { ...type.caption, color: colors.textLight },
+  specValue: { ...type.body, color: colors.text, fontWeight: weight.bold, marginTop: 2 },
+
+  more: { ...type.body, color: colors.brand, fontWeight: weight.semibold, marginTop: space.md },
+
+  modalWrap: { flex: 1, backgroundColor: 'rgba(15,42,63,0.5)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+    padding: space.xl,
+    maxHeight: '88%',
+  },
+  sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  sheetTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginTop: 2 },
+
+  description: { ...type.body, color: colors.textMuted, marginTop: space.md, lineHeight: 22 },
+  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, marginBottom: space.sm },
+  featureText: { flex: 1, ...type.body, color: colors.text },
+  note: { ...type.caption, color: colors.textLight, marginTop: space.sm },
 })

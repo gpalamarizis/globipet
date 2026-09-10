@@ -26,12 +26,14 @@ const queryClient = new QueryClient({
  *   + `language`, `verification`: τα αρχεία υπήρχαν αλλά δεν δηλώνονταν,
  *     οπότε άνοιγαν χωρίς τις επιλογές των υπολοίπων.
  *
- * Το `checkout` προστίθεται εδώ μαζί με το αρχείο του, όχι πριν.
+ * Το `checkout` προστέθηκε (10/09) μαζί με το app/checkout.tsx.
  */
 const CARD_ROUTES = [
   'ai-emotion',
   'ai-health',
   'bookings',
+  // Προστέθηκε μαζί με το app/checkout.tsx, όπως έλεγε το σχόλιο.
+  'checkout',
   'communities',
   'inbox',
   'insurance',
