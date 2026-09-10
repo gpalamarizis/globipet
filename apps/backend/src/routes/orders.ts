@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { encryptField, decryptField } from '../lib/crypto.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email.js'
@@ -31,6 +32,53 @@ function shippingCostFor(method: string | undefined, subtotal: number): number {
   return price ?? Math.min(...Object.values(SHIPPING_METHODS))
 }
 
+
+/**
+ * Η διεύθυνση παράδοσης είναι προσωπικά δεδομένα.
+ *
+ * Το User.phone και το User.address κρυπτογραφούνται από την αρχή. Η ίδια
+ * ακριβώς πληροφορία όμως — όνομα, τηλέφωνο, οδός, πόλη, ΤΚ — αποθηκευόταν
+ * σε καθαρό κείμενο σε κάθε παραγγελία. Ένα αντίγραφο της βάσης ήταν
+ * κατάλογος διευθύνσεων κατοικίας με τηλέφωνα.
+ *
+ * Κρυπτογραφούνται μόνο τα πεδία του ανθρώπου. Το shipping_method και το
+ * shipping_cost μένουν αναγνώσιμα: χρησιμοποιούνται σε υπολογισμούς και σε
+ * αναφορές εσόδων, και δεν λένε τίποτα για το ποιος είναι ο πελάτης.
+ */
+const ADDRESS_PII = ['full_name', 'phone', 'street', 'address', 'city', 'postal_code', 'notes'] as const
+
+function encryptAddress(addr: any): any {
+  if (!addr || typeof addr !== 'object') return addr
+  const out: any = { ...addr }
+  for (const k of ADDRESS_PII) {
+    if (out[k]) out[k] = encryptField(String(out[k]))
+  }
+  return out
+}
+
+/**
+ * Το decryptField επιστρέφει ακρυπτογράφητο κείμενο αμετάβλητο, οπότε οι
+ * παραγγελίες που γράφτηκαν πριν από αυτή την αλλαγή διαβάζονται κανονικά
+ * χωρίς migration.
+ */
+function decryptAddress(addr: any): any {
+  if (!addr || typeof addr !== 'object') return addr
+  const out: any = { ...addr }
+  for (const k of ADDRESS_PII) {
+    if (out[k]) out[k] = decryptField(String(out[k]))
+  }
+  return out
+}
+
+/** Εφαρμόζεται σε μία παραγγελία ή σε λίστα πριν φύγει προς τον client. */
+function withAddress<T extends { shipping_address?: any }>(order: T): T
+function withAddress<T extends { shipping_address?: any }>(orders: T[]): T[]
+function withAddress(x: any): any {
+  if (Array.isArray(x)) return x.map(o => ({ ...o, shipping_address: decryptAddress(o.shipping_address) }))
+  if (!x) return x
+  return { ...x, shipping_address: decryptAddress(x.shipping_address) }
+}
+
 const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   // Get my orders
@@ -40,7 +88,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       where: { user_email: email },
       orderBy: { created_at: 'desc' },
     })
-    return { data: orders }
+    return { data: withAddress(orders) }
   })
 
   // Get order by ID — only the buyer, a provider with a line in it, or an admin
@@ -57,7 +105,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     if (!isBuyer && !isAdmin && !isSeller) {
       return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση σε αυτή την παραγγελία' })
     }
-    return order
+    return withAddress(order)
   })
 
   // Create order
@@ -142,12 +190,12 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         // the request body.
         total_amount: Math.round((computedTotal + shippingCost) * 100) / 100,
         status: 'pending',
-        shipping_address: {
+        shipping_address: encryptAddress({
           ...(shipping_address ?? {}),
           // Overwrite whatever the client claimed the delivery cost was.
           shipping_method: shippingMethod,
           shipping_cost: shippingCost,
-        },
+        }),
         payment_method,
         platform_fee_amount: totalPlatformFee > 0 ? Math.round(totalPlatformFee * 100) / 100 : null,
         provider_payout_amount: totalProviderPayout > 0 ? Math.round(totalProviderPayout * 100) / 100 : null,
@@ -155,7 +203,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     })
     // Clear cart
     await prisma.cartItem.deleteMany({ where: { user_email: email } })
-    return order
+    return withAddress(order)
   })
 
   // ─── VIVA.COM SMART CHECKOUT ─────────────────────────────────────
@@ -400,7 +448,7 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
       orderBy: { created_at: 'desc' },
       take: 50,
     })
-    return { data: orders }
+    return { data: withAddress(orders) }
   })
 }
 
