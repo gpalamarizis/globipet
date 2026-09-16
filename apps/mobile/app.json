@@ -17,7 +17,12 @@
       "bundleIdentifier": "com.globipet.app",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Η GlobiPet χρησιμοποιεί την κάμερα για φωτογραφίες του κατοικιδίου σου και για την ανάλυση υγείας και συναισθήματος με τεχνητή νοημοσύνη.",
+        "NSPhotoLibraryUsageDescription": "Η GlobiPet ζητά πρόσβαση στις φωτογραφίες σου για να επιλέξεις εικόνα του κατοικιδίου ή αρχείο για ανάλυση.",
+        "NSPhotoLibraryAddUsageDescription": "Η GlobiPet αποθηκεύει στις φωτογραφίες σου εικόνες που δημιουργεί η εφαρμογή, όπως το ψηφιακό διαβατήριο του κατοικιδίου.",
+        "NSMicrophoneUsageDescription": "Η GlobiPet χρησιμοποιεί το μικρόφωνο στις βιντεοκλήσεις τηλεϊατρικής με τον κτηνίατρο.",
+        "NSLocationWhenInUseUsageDescription": "Η GlobiPet χρησιμοποιεί την τοποθεσία σου για να βρεις παρόχους κοντά σου και για τον εντοπισμό του κατοικιδίου."
       }
     },
     "android": {
