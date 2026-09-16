@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
-import { api } from '../lib/api'
+import { api, setAuthToken } from '../lib/api'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
 
@@ -31,6 +31,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
 
+  /**
+   * Καλείται μία φορά από το app/_layout.tsx, πριν εμφανιστεί οποιαδήποτε
+   * οθόνη. Δεν βάζει πια κεφαλίδα στο axios — αυτό το κάνει ο interceptor
+   * του api.ts, ώστε να δουλεύει ακόμα κι αν κάποιο αίτημα προλάβει.
+   */
   loadToken: async () => {
     try {
       const token = await SecureStore.getItemAsync('token')
@@ -38,7 +43,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr)
         set({ token, user, isAuthenticated: true })
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        setAuthToken(token)
       }
     } catch {}
   },
@@ -49,7 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data } = await api.post('/auth/login', { email, password })
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      setAuthToken(data.token)
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
@@ -78,7 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      setAuthToken(data.token)
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -106,7 +111,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      setAuthToken(data.token)
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -121,7 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data: res } = await api.post('/auth/register', data)
       await SecureStore.setItemAsync('token', res.token)
       await SecureStore.setItemAsync('user', JSON.stringify(res.user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${res.token}`
+      setAuthToken(res.token)
       set({ user: res.user, token: res.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
@@ -132,7 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     await SecureStore.deleteItemAsync('token')
     await SecureStore.deleteItemAsync('user')
-    delete api.defaults.headers.common['Authorization']
+    setAuthToken(null)
     set({ user: null, token: null, isAuthenticated: false })
     // Best-effort sign-out from Facebook so the next login prompts again
     signOutFacebook().catch(() => {})

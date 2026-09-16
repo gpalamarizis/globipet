@@ -1,10 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, RefreshControl,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, ChevronRight, Plus } from 'lucide-react-native'
+import {
+  Search, ChevronRight, Plus,
+  Stethoscope, Scissors, Footprints, House, GraduationCap, Car,
+  Brain, FileText, Video, MapPin, ShieldCheck, Pill,
+} from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -30,31 +34,44 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *   εφαρμογή.
  */
 
-/** Υπηρεσίες που κλείνεις. Έξι, όσες χωράνε σε δύο σειρές των τριών. */
+/**
+ * Υπηρεσίες που κλείνεις. Έξι, όσες χωράνε σε δύο σειρές των τριών.
+ *
+ * ΓΙΑΤΙ ΕΦΥΓΑΝ ΤΑ EMOJI
+ *   Τα emoji τα σχεδιάζει το λειτουργικό, όχι εμείς. Σε Samsung δείχνουν
+ *   αλλιώς απ' ό,τι σε Pixel και σε iPhone αλλιώς από τα δύο — και κανένα
+ *   δεν ταιριάζει με τα εικονίδια της κάτω μπάρας, που είναι γραμμικά.
+ *   Το ίδιο εικονίδιο παντού είναι προϋπόθεση για να μοιάζει προϊόν.
+ */
 const SERVICES = [
-  { key: 'veterinary',  emoji: '🩺', label: 'Κτηνίατρος',  type: 'veterinary' },
-  { key: 'grooming',    emoji: '✂️', label: 'Περιποίηση',  type: 'grooming' },
-  { key: 'walking',     emoji: '🚶', label: 'Βόλτες',      type: 'walking' },
-  { key: 'hosting',     emoji: '🏠', label: 'Φιλοξενία',   type: 'hosting' },
-  { key: 'training',    emoji: '🎓', label: 'Εκπαίδευση',  type: 'training' },
-  { key: 'pet_taxi',    emoji: '🚗', label: 'Pet Taxi',    type: 'pet_taxi' },
+  { key: 'veterinary',  Icon: Stethoscope,   label: 'Κτηνίατρος',  type: 'veterinary' },
+  { key: 'grooming',    Icon: Scissors,      label: 'Περιποίηση',  type: 'grooming' },
+  { key: 'walking',     Icon: Footprints,    label: 'Βόλτες',      type: 'walking' },
+  { key: 'hosting',     Icon: House,         label: 'Φιλοξενία',   type: 'hosting' },
+  { key: 'training',    Icon: GraduationCap, label: 'Εκπαίδευση',  type: 'training' },
+  { key: 'pet_taxi',    Icon: Car,           label: 'Μεταφορά',    type: 'pet_taxi' },
 ] as const
 
 /** Λειτουργίες της εφαρμογής. Οριζόντια σειρά — δεν ανταγωνίζονται τις υπηρεσίες. */
 const FEATURES = [
-  { key: 'ai',        emoji: '🧠', label: 'AI Υγεία',     route: '/ai-health' },
-  { key: 'passport',  emoji: '📋', label: 'Φάκελος',      route: '/passport' },
-  { key: 'telehealth',emoji: '💻', label: 'Τηλεϊατρική',  route: '/telehealth' },
-  { key: 'tracker',   emoji: '📍', label: 'Εντοπισμός',   route: '/tracker' },
-  { key: 'insurance', emoji: '🛡️', label: 'Ασφάλιση',    route: '/insurance' },
-  { key: 'pharmacy',  emoji: '💊', label: 'Φαρμακείο',    route: '/(tabs)/services' },
+  { key: 'ai',        Icon: Brain,       label: 'AI Υγεία',     route: '/ai-health' },
+  { key: 'passport',  Icon: FileText,    label: 'Φάκελος',      route: '/passport' },
+  { key: 'telehealth',Icon: Video,       label: 'Τηλεϊατρική',  route: '/telehealth' },
+  { key: 'tracker',   Icon: MapPin,      label: 'Εντοπισμός',   route: '/tracker' },
+  { key: 'insurance', Icon: ShieldCheck, label: 'Ασφάλιση',     route: '/insurance' },
+  { key: 'pharmacy',  Icon: Pill,        label: 'Φαρμακείο',    route: '/(tabs)/services' },
 ] as const
 
 const SPECIES_EMOJI: Record<string, string> = {
   dog: '🐶', cat: '🐱', bird: '🦜', rabbit: '🐰', fish: '🐠', reptile: '🦎',
 }
 
-/** Το πλακίδιο δανείζεται το χρώμα της κατηγορίας από το θέμα. */
+/**
+ * Το πλακίδιο δανείζεται το χρώμα της κατηγορίας από το θέμα.
+ *
+ * Το `fg` μπορεί να μην ορίζεται για κάθε κατηγορία· τότε το εικονίδιο
+ * πέφτει στο σκούρο μπλε, που διαβάζεται πάνω σε κάθε παστέλ φόντο.
+ */
 function tint(key: string) {
   return (colors.category as any)[key] ?? colors.category.default
 }
@@ -62,10 +79,12 @@ function tint(key: string) {
 export default function HomeScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { user, isAuthenticated, loadToken } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
   const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => { loadToken() }, [])
+  // Το loadToken() έφυγε από εδώ. Τρέχει πλέον στο app/_layout.tsx, πριν
+  // εμφανιστεί οποιαδήποτε οθόνη — αλλιώς κάθε άνοιγμα που δεν περνούσε
+  // από την Αρχική έβγαζε 401 και το React Query το κρατούσε στην cache.
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
@@ -106,7 +125,7 @@ export default function HomeScreen() {
     <ScrollView
       style={s.container}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 140 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
@@ -170,7 +189,10 @@ export default function HomeScreen() {
               <View style={[s.petAvatar, s.petAdd]}>
                 <Plus size={icon.lg} color={colors.brand} />
               </View>
-              <Text style={[s.petName, { color: colors.brand }]}>Προσθήκη</Text>
+              {/* «Νέο» και όχι «Προσθήκη»: με μεγαλωμένα γράμματα στις
+                  ρυθμίσεις του τηλεφώνου, η μεγάλη λέξη έσπαγε σε δύο
+                  γραμμές κάτω από το κυκλικό εικονίδιο. */}
+              <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>Νέο</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -188,7 +210,7 @@ export default function HomeScreen() {
               <TouchableOpacity key={a.key} style={s.serviceTile} activeOpacity={0.7}
                 onPress={() => router.push(`/(tabs)/services?type=${a.type}` as any)}>
                 <View style={[s.serviceIcon, { backgroundColor: c.bg }]}>
-                  <Text style={s.serviceEmoji}>{a.emoji}</Text>
+                  <a.Icon size={26} color={c.fg ?? colors.navy} strokeWidth={2} />
                 </View>
                 <Text style={s.serviceLabel} numberOfLines={2}>{a.label}</Text>
               </TouchableOpacity>
@@ -206,7 +228,7 @@ export default function HomeScreen() {
           {FEATURES.map(f => (
             <TouchableOpacity key={f.key} style={s.featureChip} activeOpacity={0.7}
               onPress={() => router.push(f.route as any)}>
-              <Text style={s.featureEmoji}>{f.emoji}</Text>
+              <f.Icon size={icon.sm} color={colors.brand} strokeWidth={2} />
               <Text style={s.featureLabel}>{f.label}</Text>
             </TouchableOpacity>
           ))}
@@ -359,7 +381,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: space.sm,
   },
-  serviceEmoji: { fontSize: 28 },
   serviceLabel: {
     ...type.caption, color: colors.text, fontWeight: weight.semibold,
     textAlign: 'center',
@@ -374,7 +395,6 @@ const s = StyleSheet.create({
     minHeight: touch.min,
     ...shadow.sm,
   },
-  featureEmoji: { fontSize: 18 },
   featureLabel: { ...type.body, color: colors.text, fontWeight: weight.semibold },
 
   // Πάροχοι
