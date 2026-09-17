@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router'
-import { View, StyleSheet } from 'react-native'
+import { View, StyleSheet, Platform, Dimensions, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Home, Search, PawPrint, ShoppingBag, User } from 'lucide-react-native'
 import { colors, radius, type, weight, space } from '@/theme'
@@ -12,8 +12,15 @@ import { colors, radius, type, weight, space } from '@/theme'
  *   Samsung με γραμμή πλοήγησης είναι μεγάλη, σε άλλες μηδενική. Με
  *   σταθερό ύψος, το μενού κρύβεται πίσω από τη γραμμή του συστήματος.
  *
- *   Το useSafeAreaInsets διαβάζει την ΠΡΑΓΜΑΤΙΚΗ τιμή της συσκευής και
- *   την προσθέτει στο ύψος. Έτσι δουλεύει παντού, χωρίς έλεγχο μοντέλου.
+ * ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ useSafeAreaInsets ΜΟΝΟ ΤΟΥ
+ *   Επιστρέφει μηδέν όταν το SafeAreaProvider λείπει, όταν δεν έχει
+ *   προλάβει να μετρήσει, ή σε ορισμένες εκδόσεις του Android. Δύο φορές
+ *   βασιστήκαμε σε αυτό και δύο φορές το μενού βγήκε κάτω από τη γραμμή
+ *   της Samsung — επειδή το `Math.max(insets.bottom, 20)` δίνει 20 όταν
+ *   το inset είναι μηδέν, ενώ η γραμμή θέλει 48.
+ *
+ *   Τώρα το μηδέν δεν το εμπιστευόμαστε: το ξεχωρίζουμε με μέτρηση.
+ *   Δες το bottomSystemSpace παρακάτω.
  *
  * ΓΙΑΤΙ ΕΦΥΓΕ ΤΟ allowFontScaling: false
  *   Οι ετικέτες ήταν στα 10.5px, με σχόλιο ότι το μέγεθος διαλέχτηκε για να
@@ -42,6 +49,44 @@ const HIDDEN = ['social', 'services', 'insurance', 'cart', 'community']
 /** Το ύψος της ίδιας της μπάρας, χωρίς την περιοχή του συστήματος. */
 const BAR_CONTENT = 68
 
+/** Η γραμμή τριών κουμπιών του Android είναι 48dp κατά προδιαγραφή. */
+const ANDROID_NAV_BAR = 48
+
+/**
+ * Πόσος χώρος χρειάζεται κάτω από τις ετικέτες ώστε να μην τις σκεπάσει
+ * η γραμμή του συστήματος.
+ *
+ * Καθαρή συνάρτηση επίτηδες: δέχεται μετρήσεις, δεν τις παίρνει μόνη της,
+ * ώστε να ελέγχεται χωρίς συσκευή.
+ *
+ *   1. Αν το inset δίνει τιμή, είναι η ακριβής τιμή της συσκευής. Τέλος.
+ *
+ *   2. Αν δίνει μηδέν, υπάρχουν δύο εντελώς διαφορετικές καταστάσεις που
+ *      μοιάζουν ίδιες από τον κώδικα, και ξεχωρίζουν μόνο με μέτρηση:
+ *
+ *      α) Το παράθυρο της εφαρμογής σταματά ήδη ΠΑΝΩ από τη γραμμή του
+ *         συστήματος. Τότε το μηδέν είναι σωστό — δεν χρειάζεται τίποτα,
+ *         και κάθε επιπλέον padding είναι κενό λευκό.
+ *
+ *      β) Το παράθυρο απλώνεται ΚΑΤΩ από τη γραμμή (edge-to-edge, που στο
+ *         Android 15+ είναι υποχρεωτικό). Τότε το μηδέν είναι λάθος και το
+ *         μενού κρύβεται. Αυτό μας συνέβη.
+ *
+ *      Η διαφορά φαίνεται στα ύψη: στο (α) η οθόνη είναι αισθητά ψηλότερη
+ *      από το παράθυρο, στο (β) είναι ίδια.
+ */
+export function bottomSystemSpace(
+  insetBottom: number,
+  windowHeight: number,
+  screenHeight: number,
+  os: string = Platform.OS,
+): number {
+  if (insetBottom > 0) return insetBottom
+  if (os !== 'android') return 0
+  const windowCoversWholeScreen = screenHeight - windowHeight < 24
+  return windowCoversWholeScreen ? ANDROID_NAV_BAR : 0
+}
+
 function TabIcon({ Icon, focused, color }: any) {
   return (
     <View style={[s.iconWrap, focused && s.iconWrapActive]}>
@@ -52,10 +97,13 @@ function TabIcon({ Icon, focused, color }: any) {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
 
-  // Ελάχιστο 20 ώστε να μη στριμώχνει την ετικέτα πάνω στη γραμμή του
-  // συστήματος σε συσκευές με φυσική μπάρα πλοήγησης (Samsung κ.ά.).
-  const bottom = Math.max(insets.bottom, 20)
+  const bottom = bottomSystemSpace(
+    insets.bottom,
+    windowHeight,
+    Dimensions.get('screen').height,
+  )
 
   return (
     <Tabs
