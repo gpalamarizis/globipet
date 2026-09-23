@@ -14,6 +14,7 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
 import CookieBanner from '@/components/CookieBanner'
+import PushPrompt from '@/components/PushPrompt'
 
 const Home              = lazy(() => import('@/pages/Home'))
 const Social            = lazy(() => import('@/pages/Social'))
@@ -280,6 +281,9 @@ export default function App() {
         </BrowserRouter>
 
         <CookieBanner />
+        {/* Εμφανίζεται μόνο σε συνδεδεμένο χρήστη που δεν έχει αποφασίσει
+            ακόμα, έξι δευτερόλεπτα μετά, και το πολύ μία φορά τον μήνα. */}
+        <PushPrompt />
         <Toaster position="top-right" toastOptions={{
           duration: 4000,
           style: { borderRadius: '12px', background: '#1a1a1a', color: '#fff', fontSize: '14px' },
