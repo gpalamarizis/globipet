@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { audit } from '../lib/audit.js'
 
 /**
  * Connected WebSocket clients, keyed by the authenticated user's EMAIL.
@@ -174,6 +175,125 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
     })
     broadcastToUser(user_email, { type: 'notification', notification })
     return notification
+  })
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  Ειδοποιήσεις push — συσκευές εκτός εφαρμογής
+  //
+  //  Τα παραπάνω endpoints αφορούν ειδοποιήσεις ΜΕΣΑ στην εφαρμογή, μέσω
+  //  WebSocket: φτάνουν μόνο όσο ο χρήστης έχει ανοιχτή καρτέλα. Τα παρακάτω
+  //  αφορούν ειδοποιήσεις που φτάνουν όταν η εφαρμογή είναι ΚΛΕΙΣΤΗ.
+  //
+  //  Μία εγγραφή ανά συσκευή. Ο ίδιος άνθρωπος έχει κινητό, tablet και δύο
+  //  browsers — και θέλει την ειδοποίηση σε όλα.
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Το δημόσιο κλειδί VAPID, που χρειάζεται ο browser για να δημιουργήσει
+   * συνδρομή. Είναι δημόσιο εξ ορισμού — το ιδιωτικό μένει στον server και
+   * δεν φεύγει ποτέ από εκεί.
+   */
+  app.get('/push/public-key', async (_req, reply) => {
+    const key = process.env.VAPID_PUBLIC_KEY
+    if (!key) {
+      return reply.code(503).send({ message: 'Οι ειδοποιήσεις web δεν έχουν ρυθμιστεί' })
+    }
+    return { public_key: key }
+  })
+
+  /**
+   * Δήλωση συσκευής.
+   *
+   *   mobile → { platform: 'ios' | 'android', token: 'ExponentPushToken[...]' }
+   *   web    → { platform: 'web', endpoint, keys: { p256dh, auth } }
+   *
+   * Είναι idempotent: η ίδια συσκευή που ξαναδηλώνεται δεν δημιουργεί δεύτερη
+   * εγγραφή, ανανεώνει την υπάρχουσα. Αν η συσκευή είχε δηλωθεί από άλλον
+   * χρήστη — κοινό τηλέφωνο, κοινός υπολογιστής — η εγγραφή ΜΕΤΑΦΕΡΕΤΑΙ στον
+   * νέο, ώστε να μη λαμβάνει τις ειδοποιήσεις του προηγούμενου.
+   */
+  app.post('/push/register', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { platform, token, endpoint, keys, device_name } = (req.body ?? {}) as any
+    const user_id = (req.user as any).id
+
+    if (!['ios', 'android', 'web'].includes(platform)) {
+      return reply.code(400).send({ message: 'Άγνωστος τύπος συσκευής' })
+    }
+
+    const name = device_name ? String(device_name).slice(0, 120) : null
+    const now = new Date()
+
+    if (platform === 'web') {
+      const p256dh = keys?.p256dh
+      const auth = keys?.auth
+      if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || !p256dh || !auth) {
+        return reply.code(400).send({ message: 'Ελλιπή στοιχεία συνδρομής' })
+      }
+      const row = await prisma.pushSubscription.upsert({
+        where: { endpoint },
+        create: {
+          user_id, platform, endpoint,
+          p256dh: String(p256dh), auth: String(auth), device_name: name,
+        },
+        update: {
+          user_id, p256dh: String(p256dh), auth: String(auth),
+          device_name: name, last_seen_at: now,
+        },
+      })
+      await audit(req, { action: 'push_subscribe', resource: 'push_subscription', resource_id: row.id, metadata: { platform } })
+      return reply.code(201).send({ data: { id: row.id } })
+    }
+
+    // Τα τοκεν του Expo έχουν σταθερή μορφή. Ο έλεγχος κρατάει έξω σκουπίδια
+    // που θα κατέληγαν σε αποτυχημένες αποστολές για πάντα.
+    if (typeof token !== 'string' || !/^Expo(nent)?PushToken\[.+\]$/.test(token)) {
+      return reply.code(400).send({ message: 'Μη έγκυρο token συσκευής' })
+    }
+
+    const row = await prisma.pushSubscription.upsert({
+      where: { expo_token: token },
+      create: { user_id, platform, expo_token: token, device_name: name },
+      update: { user_id, platform, device_name: name, last_seen_at: now },
+    })
+    await audit(req, { action: 'push_subscribe', resource: 'push_subscription', resource_id: row.id, metadata: { platform } })
+    return reply.code(201).send({ data: { id: row.id } })
+  })
+
+  /**
+   * Διαγραφή συσκευής — τρέχει στην αποσύνδεση.
+   *
+   * Περιορίζεται στις εγγραφές του ίδιου του καλούντος. Αλλιώς οποιοσδήποτε
+   * θα μπορούσε να σβήσει τη συνδρομή άλλου στέλνοντας το τοκεν του, και να
+   * τον αποκόψει σιωπηλά από κάθε ειδοποίηση.
+   */
+  app.delete('/push/register', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { token, endpoint } = (req.body ?? {}) as any
+    if (!token && !endpoint) {
+      return reply.code(400).send({ message: 'Λείπει το token ή το endpoint' })
+    }
+    const deleted = await prisma.pushSubscription.deleteMany({
+      where: {
+        user_id: (req.user as any).id,
+        ...(token ? { expo_token: String(token) } : { endpoint: String(endpoint) }),
+      },
+    })
+    if (deleted.count === 0) {
+      return reply.code(404).send({ message: 'Η συσκευή δεν βρέθηκε' })
+    }
+    await audit(req, { action: 'push_unsubscribe', resource: 'push_subscription', resource_id: (req.user as any).id, metadata: { count: deleted.count } })
+    return reply.code(204).send()
+  })
+
+  /** Οι συσκευές μου — για οθόνη ρυθμίσεων «πού λαμβάνω ειδοποιήσεις». */
+  app.get('/push/devices', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const devices = await prisma.pushSubscription.findMany({
+      where: { user_id: (req.user as any).id },
+      // Τα endpoint και τα κλειδιά ΔΕΝ επιστρέφονται: είναι διαπιστευτήρια
+      // αποστολής, όχι πληροφορία που χρειάζεται η οθόνη.
+      select: { id: true, platform: true, device_name: true, last_seen_at: true, created_at: true },
+      orderBy: { last_seen_at: 'desc' },
+    })
+    return { data: devices }
   })
 }
 

@@ -31,6 +31,18 @@
     <link rel="canonical" href="https://globipet.com" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Εγκατάσταση στην αρχική οθόνη.
+         Στο iOS αυτό ΔΕΝ είναι προαιρετικό: χωρίς manifest και χωρίς
+         display: standalone, το Safari δεν επιτρέπει καθόλου ειδοποιήσεις
+         push. Σε Android και desktop ενεργοποιεί την εγκατάσταση ως
+         εφαρμογή. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- Παλαιότερες εκδόσεις iOS αγνοούν το παραπάνω και θέλουν το δικό τους. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="GlobiPet" />
     <title>GlobiPet — Best care for the best human's friends</title>
   </head>
   <body>
