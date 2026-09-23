@@ -8,6 +8,7 @@ import { api, uploadFile } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
+import NotificationSettingsCard from '@/components/NotificationSettingsCard'
 
 const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
 const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
@@ -290,6 +291,12 @@ export default function Profile() {
           }
         </div>
       )}
+
+      {/* Ειδοποιήσεις — η κάρτα κρύβεται μόνη της σε browser που δεν τις
+          υποστηρίζει, οπότε δεν χρειάζεται έλεγχος εδώ. */}
+      <div className="mt-6">
+        <NotificationSettingsCard />
+      </div>
 
       {/* Change Password — only for users with an actual password (not Google sign-in) */}
       {!hasGoogleAuth && (

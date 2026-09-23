@@ -70,6 +70,25 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
   }
 }
 
+/**
+ * Είναι ήδη ενεργές οι ειδοποιήσεις σε ΑΥΤΟΝ τον browser;
+ *
+ * Ρωτάει τον ίδιο τον browser και όχι το backend: η συνδρομή μπορεί να έχει
+ * ακυρωθεί τοπικά — καθάρισμα δεδομένων, αλλαγή ρυθμίσεων — χωρίς να το
+ * μάθει ποτέ ο server. Η αλήθεια για το «λαμβάνω ειδοποιήσεις εδώ» βρίσκεται
+ * στη συσκευή.
+ */
+export async function hasActiveSubscription(): Promise<boolean> {
+  if (!isPushSupported()) return false
+  try {
+    const registration = await navigator.serviceWorker.getRegistration('/')
+    const subscription = await registration?.pushManager.getSubscription()
+    return !!subscription
+  } catch {
+    return false
+  }
+}
+
 export interface SubscribeResult {
   ok: boolean
   /** Γιατί απέτυχε — για να δείξει η οθόνη το σωστό μήνυμα. */
