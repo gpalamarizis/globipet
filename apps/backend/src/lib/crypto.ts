@@ -13,7 +13,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
  * ─── Key management ────────────────────────────────────────────
  * Keys are supplied via environment variables:
  *   ENCRYPTION_KEY_V1=<64 hex characters = 32 bytes = 256 bits>
- *   ENCRYPTION_KEY_V2=... (when rotating)
+ *   ENCRYPTION_KEY_V2=<the current key — see the rotation note below>
  *
  * The CURRENT_VERSION constant below drives which key is used for *new* writes.
  * Old records continue to be decrypted with their original version's key,
@@ -31,7 +31,20 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
  *   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
  */
 
-const CURRENT_VERSION = 1
+/**
+ * ΠΕΡΙΣΤΡΟΦΗ ΚΛΕΙΔΙΟΥ — 23/09/2026
+ *
+ *   Το ENCRYPTION_KEY_V1 εκτέθηκε σε κονσόλα και πρέπει να θεωρείται
+ *   γνωστό. Η έκδοση ανέβηκε σε 2: κάθε ΝΕΑ εγγραφή κρυπτογραφείται με το
+ *   V2, ενώ οι παλιές συνεχίζουν να διαβάζονται με το V1 — το decryptField
+ *   διαλέγει κλειδί από το πρόθεμα της ίδιας της τιμής.
+ *
+ *   ΤΟ ENCRYPTION_KEY_V1 ΠΡΕΠΕΙ ΝΑ ΜΕΙΝΕΙ ΣΤΟ ΠΕΡΙΒΑΛΛΟΝ μέχρι να τρέξει
+ *   το scripts/reencrypt-user-fields.ts και να αναφέρει μηδέν εγγραφές V1.
+ *   Αν αφαιρεθεί νωρίτερα, κάθε παλιό τηλέφωνο και διεύθυνση γίνεται
+ *   οριστικά αδιάβαστο.
+ */
+const CURRENT_VERSION = 2
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12  // 96 bits, GCM standard
 
