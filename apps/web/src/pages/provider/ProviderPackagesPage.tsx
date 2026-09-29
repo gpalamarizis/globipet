@@ -118,7 +118,7 @@ export default function ProviderPackagesPage() {
           <Plus size={15}/> Δημιουργία υπηρεσίας
         </button>
         <NewServiceModal open={showNewServiceModal} onClose={() => setShowNewServiceModal(false)}
-          onCreated={(id) => {
+          onCreated={(id: string) => {
             queryClient.invalidateQueries({ queryKey: ['provider-packages'] })
             setShowNewServiceModal(false)
             setSelectedServiceId(id)
@@ -286,7 +286,7 @@ export default function ProviderPackagesPage() {
       <ServiceEditModal open={showServiceEditModal} onClose={() => setShowServiceEditModal(false)} service={activeService}
         onSaved={() => { queryClient.invalidateQueries({ queryKey: ['provider-packages'] }); setShowServiceEditModal(false) }}/>
       <NewServiceModal open={showNewServiceModal} onClose={() => setShowNewServiceModal(false)}
-        onCreated={(id) => {
+        onCreated={(id: string) => {
           queryClient.invalidateQueries({ queryKey: ['provider-packages'] })
           setShowNewServiceModal(false)
           setSelectedServiceId(id)

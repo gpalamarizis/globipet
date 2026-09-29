@@ -166,7 +166,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       if (!rows.length) { reply.code(404).send({ message: 'Η καμπάνια δεν βρέθηκε' }); return null }
       if (rows[0].owner_email !== user.email && user.role !== 'admin') {
         audit(req, { action: 'permission_denied', resource: 'campaign',
-                     resourceId: id, outcome: 'denied' })
+                     resource_id: id, outcome: 'denied' })
         reply.code(403).send({ message: 'Η καμπάνια δεν σου ανήκει' }); return null
       }
       return rows[0]
@@ -338,7 +338,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
            ${new Date(b.starts_at)}, ${new Date(b.ends_at)},
            ${Number(b.boost) || 0}, ${b.is_active !== false}, now(), now())`
 
-      audit(req, { action: 'create', resource: 'campaign', resourceId: id,
+      audit(req, { action: 'create', resource: 'campaign', resource_id: id,
                    metadata: { title: b.title, discount: b.discount_type } })
 
       const [row] = await prisma.$queryRaw<any[]>`SELECT * FROM campaigns WHERE id = ${id}`
@@ -377,7 +377,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       }
 
       await prisma.$executeRaw`UPDATE campaigns SET updated_at = now() WHERE id = ${id}`
-      audit(req, { action: 'update', resource: 'campaign', resourceId: id,
+      audit(req, { action: 'update', resource: 'campaign', resource_id: id,
                    metadata: { fields: Object.keys(b) } })
 
       const [row] = await prisma.$queryRaw<any[]>`SELECT * FROM campaigns WHERE id = ${id}`
@@ -388,7 +388,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       const c = await owns(req, reply, req.params.id)
       if (!c) return
       await prisma.$executeRaw`DELETE FROM campaigns WHERE id = ${req.params.id}`
-      audit(req, { action: 'delete', resource: 'campaign', resourceId: req.params.id })
+      audit(req, { action: 'delete', resource: 'campaign', resource_id: req.params.id })
       return { success: true }
     })
 
@@ -492,7 +492,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
           ON CONFLICT (campaign_id, customer_email) DO NOTHING`
       }
       audit(req, { action: 'update', resource: 'campaign_audience',
-                   resourceId: req.params.id, metadata: { count: emails.length } })
+                   resource_id: req.params.id, metadata: { count: emails.length } })
       return { success: true, saved: emails.length }
     })
   })

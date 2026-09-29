@@ -63,8 +63,9 @@ export default function Playdates() {
         ? { invitee_id: inviteUserId, message: inviteMsg }
         : { invitee_email: inviteEmail, message: inviteMsg }),
     onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success('Πρόσκληση στάλθηκε!') },
+    // Ήταν γραμμένο δύο φορές. Το δεύτερο υπερίσχυε, οπότε ο χρήστης
+    // έβλεπε σκέτο «Σφάλμα» αντί για το ειδικό μήνυμα.
     onError: (e: any) => toast.error(e?.message || 'Η πρόσκληση δεν στάλθηκε'),
-    onError: (e: any) => toast.error(e?.message || 'Σφάλμα'),
   })
 
   const respondInvite = useMutation({

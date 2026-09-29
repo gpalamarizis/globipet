@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
+import cookie from '@fastify/cookie'
 import adminCatalogRoutes from './routes/admin-catalog.js'
 import insuranceRoutes from './routes/insurance.js'
 
@@ -105,6 +106,16 @@ await app.register(cors, {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 })
+
+/**
+ * Cookies — χρειάζονται ΜΟΝΟ για το `state` του OAuth.
+ *
+ * Το state είναι η προστασία απέναντι σε CSRF στη ροή σύνδεσης: πρέπει να
+ * δεθεί με τον browser του χρήστη, και το cookie είναι ο μόνος τρόπος να
+ * γίνει αυτό. Υπογράφεται, δεν διαβάζεται από JavaScript, και ζει δέκα
+ * λεπτά. Η συνεδρία ΔΕΝ περνάει από cookie — παραμένει στο JWT.
+ */
+await app.register(cookie, { secret: JWT_SECRET })
 
 await app.register(jwt, { secret: JWT_SECRET })
 

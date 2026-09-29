@@ -189,7 +189,7 @@ const customersRoutes: FastifyPluginAsync = async (app) => {
     }
 
     audit(req, { action: 'create', resource: 'provider_message',
-                 resourceId: batch,
+                 resource_id: batch,
                  metadata: { sent, rejected: rejected.length, campaign: !!campaignId } })
 
     return {
@@ -227,8 +227,8 @@ const customersRoutes: FastifyPluginAsync = async (app) => {
     const pets = await prisma.$queryRaw<any[]>`
       SELECT name, species, breed FROM pets WHERE owner_email = ${customer} LIMIT 20`
 
-    audit(req, { action: 'read', resource: 'customer', resourceId: customer,
-                 subjectEmail: customer, metadata: { bookings: bookings.length } })
+    audit(req, { action: 'read', resource: 'customer', resource_id: customer,
+                 subject_email: customer, metadata: { bookings: bookings.length } })
 
     return { data: { email: customer, bookings, note: note ?? null, messages, pets } }
   })

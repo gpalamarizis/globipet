@@ -17,7 +17,15 @@ import prisma from './prisma.js'
  * • Method/path/IP/user-agent are captured for GDPR breach-investigation.
  */
 
-export type AuditOutcome = 'success' | 'failure' | 'blocked'
+/**
+ * Οι εκβάσεις που καταγράφονται πραγματικά στον κώδικα.
+ *
+ * Τα 'denied' και 'error' χρησιμοποιούνταν ήδη σε τέσσερα σημεία αλλά
+ * έλειπαν από τον τύπο. Είναι ουσιαστικά διαφορετικά από το 'failure':
+ *   denied  — η ενέργεια απορρίφθηκε από έλεγχο δικαιωμάτων
+ *   error   — η ενέργεια έσκασε από τεχνικό σφάλμα, όχι από απόφαση
+ */
+export type AuditOutcome = 'success' | 'failure' | 'blocked' | 'denied' | 'error'
 
 export interface AuditParams {
   action:        string                       // e.g. 'login', 'password_reset_complete', 'data_export'

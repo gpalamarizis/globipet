@@ -58,7 +58,10 @@ export default async function insuranceRoutes(app: FastifyInstance) {
     const translatedPlans = await translateRecords('insurance_plan', plans, lang)
     for (const p of translatedPlans) {
       if (p.provider) {
-        p.provider = await translateRecord('insurance_provider', p.provider, lang)
+        // Το translateRecord επιστρέφει `T | null`. Εδώ το p.provider είναι
+        // ήδη ελεγμένο ως μη κενό και η συνάρτηση επιστρέφει την εγγραφή
+        // αυτούσια αν δεν βρει μετάφραση, οπότε το null δεν προκύπτει ποτέ.
+        p.provider = (await translateRecord('insurance_provider', p.provider, lang)) ?? p.provider
       }
     }
     return reply.send({ data: translatedPlans })

@@ -109,50 +109,51 @@ const queryClient = new QueryClient({
 })
 
 /**
- * OAuth callback processor.
+ * Ολοκλήρωση σύνδεσης μέσω Google ή Facebook.
  *
- * After Google/Facebook login the backend redirects to:
- *   https://globipet.com/?token=<jwt>&user=<url-encoded-json>
+ * ΤΙ ΑΛΛΑΞΕ
+ *   Πριν, το backend επέστρεφε τον χρήστη με το JWT και ολόκληρο το προφίλ
+ *   μέσα στο URL. Έμεναν στο ιστορικό του browser, ταξίδευαν στην κεφαλίδα
+ *   Referer προς κάθε τρίτο script, και καταγράφονταν στα logs του
+ *   Cloudflare και του Railway — ένα τοκεν επτά ημερών σε τέσσερα σημεία
+ *   που δεν ελέγχουμε.
  *
- * WHY MODULE-LEVEL + HARD RELOAD
- *   Two things had to be true for the first paint to show the logged-in
- *   state: (1) the auth store had to see the user before rendering, and
- *   (2) the render itself had to be a fresh one. useEffect and setAuth
- *   satisfied neither in practice. This version:
- *     - Runs at import time (before any React code executes)
- *     - Writes directly to localStorage in the exact shape Zustand's
- *       `persist` middleware expects (key `globipet-auth`)
- *     - Then hard-navigates to the clean URL via location.replace(), so
- *       the entire app boots from scratch with the store hydrating from
- *       the freshly-written localStorage entry
+ *   Τώρα επιστρέφει στο /auth/complete μόνο με έναν τυχαίο κωδικό που ζει
+ *   δύο λεπτά. Τον ανταλλάσσουμε εδώ με POST, οπότε το τοκεν φτάνει στο
+ *   σώμα της απάντησης και δεν γράφεται πουθενά. Ο κωδικός καταναλώνεται
+ *   με την πρώτη χρήση: αν κάποιος τον βρει στο ιστορικό, δεν ισχύει πια.
  *
- *   The hard reload is instant (no network round-trip since the SPA is
- *   already cached) and eliminates every edge case around React lifecycle
- *   timing, Cloudflare cache of a stale bundle, etc.
+ * ΓΙΑΤΙ ΣΕ ΕΠΙΠΕΔΟ MODULE
+ *   Τρέχει πριν από οποιονδήποτε κώδικα React, γράφει κατευθείαν στο
+ *   localStorage με τη μορφή που περιμένει το Zustand, και μετά κάνει σκληρή
+ *   πλοήγηση ώστε η εφαρμογή να ξεκινήσει από την αρχή με τη συνεδρία στη
+ *   θέση της. Ο χειρισμός μέσα σε useEffect άφηνε την πρώτη απεικόνιση
+ *   αποσυνδεδεμένη.
  */
-if (typeof window !== 'undefined') {
-  const params = new URLSearchParams(window.location.search)
-  const token = params.get('token')
-  const userStr = params.get('user')
-  if (token && userStr) {
-    try {
-      const user = JSON.parse(decodeURIComponent(userStr))
-      localStorage.setItem('globipet-auth', JSON.stringify({
-        state: { user, token, isAuthenticated: true },
-        version: 0,
-      }))
-    } catch (err) {
-      console.error('OAuth callback: bad user payload', err)
-    }
-    // Strip credentials from the URL and hard-reload so the app boots
-    // fresh with the store hydrated from localStorage.
-    params.delete('token')
-    params.delete('user')
-    const search = params.toString()
-    const clean = window.location.pathname + (search ? '?' + search : '')
-    window.location.replace(clean)
-    // location.replace() halts further script execution on this page —
-    // the rest of App.tsx will not run until the new page loads.
+if (typeof window !== 'undefined' && window.location.pathname === '/auth/complete') {
+  const code = new URLSearchParams(window.location.search).get('code')
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+
+  if (code) {
+    fetch(`${API}/auth/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('exchange failed')))
+      .then(({ user, token }) => {
+        localStorage.setItem('globipet-auth', JSON.stringify({
+          state: { user, token, isAuthenticated: true },
+          version: 0,
+        }))
+        window.location.replace('/')
+      })
+      .catch(err => {
+        console.error('OAuth exchange failed', err)
+        window.location.replace('/login?error=exchange_failed')
+      })
+  } else {
+    window.location.replace('/login?error=no_code')
   }
 }
 

@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
+import { createHash, randomBytes } from 'crypto'
 import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
@@ -48,6 +49,97 @@ async function autoLinkProviderStaff(userId: string, userEmail: string, req: any
     })
   }
   return unlinked.length
+}
+
+/**
+ * Το reset_token αποθηκεύεται ΚΑΤΑΚΕΡΜΑΤΙΣΜΕΝΟ.
+ *
+ *   Πριν, γραφόταν σε καθαρό κείμενο. Όποιος διάβαζε τη βάση — αντίγραφο
+ *   ασφαλείας, διαρροή, εσωτερικός χρήστης — έπαιρνε άμεσα τον λογαριασμό
+ *   οποιουδήποτε είχε ζητήσει επαναφορά, χωρίς να χρειάζεται κωδικό.
+ *
+ *   Τώρα στο email φεύγει το καθαρό τοκεν και στη βάση μένει μόνο το SHA-256
+ *   του. Η βάση δεν αρκεί πια: το καθαρό τοκεν δεν ανακτάται από το hash.
+ *
+ *   SHA-256 χωρίς salt είναι σωστό ΕΔΩ, σε αντίθεση με τους κωδικούς: το
+ *   τοκεν έχει 256 bit τυχαιότητας και δεν μαντεύεται με λεξικό.
+ */
+function hashResetToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+/**
+ * Προσωρινοί κωδικοί μίας χρήσης για την ολοκλήρωση του OAuth.
+ *
+ * ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ
+ *   Πριν, το callback έστελνε τον χρήστη πίσω με το JWT ΚΑΙ ολόκληρο το
+ *   προφίλ μέσα στο URL. Αυτό κατέληγε στο ιστορικό του browser, στην
+ *   κεφαλίδα Referer προς κάθε τρίτο script, και στα logs του Cloudflare
+ *   και του Railway. Ένα τοκεν επτά ημερών, σε τέσσερα σημεία που δεν
+ *   ελέγχουμε.
+ *
+ *   Τώρα στο URL ταξιδεύει ένας τυχαίος κωδικός που ζει δύο λεπτά και
+ *   καταναλώνεται με την πρώτη χρήση. Το JWT φεύγει στο σώμα της απάντησης
+ *   του /auth/exchange, που δεν καταγράφεται πουθενά.
+ *
+ * ΠΕΡΙΟΡΙΣΜΟΣ
+ *   Η μνήμη είναι της διεργασίας. Με πολλαπλά instances ή με επανεκκίνηση
+ *   μέσα στο δίλεπτο, ο κωδικός χάνεται και ο χρήστης ξαναμπαίνει. Για ένα
+ *   instance, που είναι η τρέχουσα διάταξη, δουλεύει.
+ */
+const OAUTH_CODE_TTL_MS = 120_000
+const oauthCodes = new Map<string, { userId: string; expires: number }>()
+
+function issueOAuthCode(userId: string): string {
+  const code = randomBytes(32).toString('hex')
+  oauthCodes.set(code, { userId, expires: Date.now() + OAUTH_CODE_TTL_MS })
+  // Καθάρισμα ληγμένων με την ευκαιρία — ο πίνακας μένει μικρός χωρίς timer.
+  const now = Date.now()
+  for (const [k, v] of oauthCodes) if (v.expires < now) oauthCodes.delete(k)
+  return code
+}
+
+/** Καταναλώνει τον κωδικό: επιτυχία το πολύ μία φορά. */
+function consumeOAuthCode(code: string): string | null {
+  const entry = oauthCodes.get(code)
+  if (!entry) return null
+  oauthCodes.delete(code)
+  if (entry.expires < Date.now()) return null
+  return entry.userId
+}
+
+/**
+ * Το `state` του OAuth προστατεύει από CSRF: εμποδίζει έναν επιτιθέμενο να
+ * ξεκινήσει ροή σύνδεσης και να την ολοκληρώσει μέσα στον browser του
+ * θύματος, συνδέοντας τον δικό του λογαριασμό Google με τη συνεδρία του.
+ *
+ * Πριν, η τιμή διαβαζόταν από το query αλλά ΔΕΝ παραγόταν και ΔΕΝ
+ * επαληθευόταν ποτέ. Τώρα παράγεται, μπαίνει σε υπογεγραμμένο cookie που
+ * δεν διαβάζεται από JavaScript, και ελέγχεται στην επιστροφή.
+ */
+const STATE_COOKIE = 'gp_oauth_state'
+const STATE_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 600,
+  signed: true,
+}
+
+function setStateCookie(reply: any): string {
+  const state = randomBytes(16).toString('hex')
+  reply.setCookie(STATE_COOKIE, state, STATE_COOKIE_OPTS)
+  return state
+}
+
+/** true μόνο αν το state της επιστροφής ταιριάζει με το cookie. */
+function checkStateCookie(req: any, reply: any, state: unknown): boolean {
+  const raw = req.cookies?.[STATE_COOKIE]
+  reply.clearCookie(STATE_COOKIE, { path: '/' })
+  if (!raw || typeof state !== 'string') return false
+  const unsigned = req.unsignCookie(raw)
+  return unsigned.valid && unsigned.value === state
 }
 
 const authRoutes: FastifyPluginAsync = async (app) => {
@@ -302,6 +394,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       scope: 'openid email profile',
       access_type: 'offline',
       prompt: 'select_account',
+      state: setStateCookie(reply),
     })
     reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
   })
@@ -311,6 +404,10 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     try {
       const { code, state } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
+      if (!checkStateCookie(req, reply, state)) {
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'google', reason: 'state_mismatch' } })
+        return reply.redirect(`${APP_URL}/login?error=state_mismatch`)
+      }
 
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -358,8 +455,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
-      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Google OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=google_failed`)
@@ -374,6 +470,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       redirect_uri: process.env.FACEBOOK_CALLBACK_URL || '',
       scope: 'email,public_profile',
       response_type: 'code',
+      state: setStateCookie(reply),
     })
     reply.redirect(`https://www.facebook.com/v18.0/dialog/oauth?${params}`)
   })
@@ -381,8 +478,12 @@ const authRoutes: FastifyPluginAsync = async (app) => {
   app.get('/facebook/callback', async (req: any, reply) => {
     const APP_URL = process.env.APP_URL || 'https://globipet.com'
     try {
-      const { code } = req.query
+      const { code, state } = req.query
       if (!code) return reply.redirect(`${APP_URL}/login?error=no_code`)
+      if (!checkStateCookie(req, reply, state)) {
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'facebook', reason: 'state_mismatch' } })
+        return reply.redirect(`${APP_URL}/login?error=state_mismatch`)
+      }
 
       const tokenRes = await fetch(
         `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(process.env.FACEBOOK_CALLBACK_URL || '')}&client_secret=${process.env.FACEBOOK_APP_SECRET}&code=${code}`
@@ -422,12 +523,41 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       decryptUserFields(userSafe) // return plaintext to caller
       // Auto-link staff records the employer pre-created for this email
       await autoLinkProviderStaff(user.id, user.email, req)
-      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      reply.redirect(`${APP_URL}?token=${token}&user=${encodeURIComponent(JSON.stringify(userSafe))}`)
+      reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Facebook OAuth error:', err)
       reply.redirect(`${APP_URL}/login?error=facebook_failed`)
     }
+  })
+
+  /**
+   * Ανταλλαγή του προσωρινού κωδικού με το πραγματικό τοκεν.
+   *
+   * Καλείται μία φορά από τη σελίδα /auth/complete, αμέσως μετά την
+   * επιστροφή από Google ή Facebook. Ο κωδικός καταναλώνεται εδώ: δεύτερη
+   * κλήση με τον ίδιο κωδικό αποτυγχάνει, ακόμα κι αν κάποιος τον βρει
+   * στο ιστορικό του browser.
+   */
+  app.post('/exchange', async (req: any, reply) => {
+    const { code } = (req.body ?? {}) as any
+    if (typeof code !== 'string' || !code) {
+      return reply.code(400).send({ message: 'Λείπει ο κωδικός' })
+    }
+
+    const userId = consumeOAuthCode(code)
+    if (!userId) {
+      await audit(req, { action: 'oauth_exchange', resource: 'user', outcome: 'failure', metadata: { reason: 'invalid_or_expired_code' } })
+      return reply.code(400).send({ message: 'Ο σύνδεσμος έληξε. Δοκιμάστε ξανά.' })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) return reply.code(400).send({ message: 'Ο λογαριασμός δεν βρέθηκε' })
+
+    const { password_hash: _, ...userSafe } = user as any
+    decryptUserFields(userSafe)
+    const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
+    await audit(req, { action: 'oauth_exchange', resource: 'user', resource_id: user.id })
+    return { user: userSafe, token }
   })
 
   // Forgot password
@@ -447,7 +577,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { reset_token: token, reset_token_expires: expires }
+      data: { reset_token: hashResetToken(token), reset_token_expires: expires }
     })
 
     const RESEND_KEY = process.env.RESEND_API_KEY
@@ -527,7 +657,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
     }
     const user = await prisma.user.findFirst({
-      where: { reset_token: token, reset_token_expires: { gt: new Date() } }
+      where: { reset_token: hashResetToken(token), reset_token_expires: { gt: new Date() } }
     })
     if (!user) {
       await audit(req, { action: 'password_reset_complete', resource: 'user', outcome: 'failure', metadata: { reason: 'invalid_or_expired_token' } })

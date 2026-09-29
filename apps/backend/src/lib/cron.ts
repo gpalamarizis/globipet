@@ -236,14 +236,14 @@ export function startAccountDeletionCron() {
           // πλατφόρμας. Η καταγραφή επιβιώνει του χρήστη — γι' αυτό
           // κρατάμε το email ως κείμενο, όχι ως ξένο κλειδί.
           auditSystem({ action: 'deletion_executed', resource: 'user',
-                        resourceId: userId, subjectEmail: email,
+                        resource_id: userId, subject_email: email,
                         metadata: counts })
           console.log(`   ✓ ${userId} διαγράφηκε — ${JSON.stringify(counts)}`)
 
         } catch (err: any) {
           auditSystem({ action: 'deletion_executed', resource: 'user',
-                        resourceId: userId, subjectEmail: email,
-                        outcome: 'error', errorMessage: err?.message })
+                        resource_id: userId, subject_email: email,
+                        outcome: 'error', error_message: err?.message })
           console.error(`   ✗ ${userId} απέτυχε: ${err?.message}`)
           await prisma.accountDeletionRequest.update({
             where: { id: req.id },

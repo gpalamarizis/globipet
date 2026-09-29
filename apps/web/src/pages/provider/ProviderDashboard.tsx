@@ -15,7 +15,9 @@ import ProviderTranslationsPage from './ProviderTranslationsPage'
 import ProviderMarketingPage from './ProviderMarketingPage'
 import ProviderCustomersPage from './ProviderCustomersPage'
 
-type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers'
+// Το 'insights' υπήρχε στον πίνακα των καρτελών και στην απεικόνιση,
+// αλλά έλειπε από τον τύπο — ο μεταγλωττιστής θεωρούσε τη σύγκριση αδύνατη.
+type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers' | 'insights'
 
 // Ποιοι τύποι παρόχων πουλάνε ΚΑΙ προϊόντα (τροφές, σαμπουάν, αξεσουάρ).
 // Ένας walker ή sitter δεν έχει κατάστημα — δεν βλέπει καθόλου Προϊόντα

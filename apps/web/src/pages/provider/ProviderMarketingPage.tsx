@@ -464,9 +464,9 @@ export default function ProviderMarketingPage() {
             tab={tab}
             setTab={setTab}
             onClose={() => setDetailFor(null)}
-            onSaveTargets={t => saveTargets.mutate(t)}
-            onSavePlacements={p => savePlacements.mutate(p)}
-            onSaveAudience={a => saveAudience.mutate(a)}
+            onSaveTargets={(t: any) => saveTargets.mutate(t)}
+            onSavePlacements={(p: any) => savePlacements.mutate(p)}
+            onSaveAudience={(a: any) => saveAudience.mutate(a)}
             pending={saveTargets.isPending || savePlacements.isPending || saveAudience.isPending}
           />
         )}

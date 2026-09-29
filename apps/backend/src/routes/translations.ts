@@ -79,7 +79,7 @@ const translationsRoutes: FastifyPluginAsync = async (app) => {
       if (!rows.length) { reply.code(404).send({ message: 'Η εγγραφή δεν βρέθηκε' }); return false }
       if (rows[0].email !== user.email) {
         audit(req, { action: 'permission_denied', resource: 'translation',
-                     resourceId: id, outcome: 'denied', metadata: { entity } })
+                     resource_id: id, outcome: 'denied', metadata: { entity } })
         reply.code(403).send({ message: 'Η εγγραφή δεν σου ανήκει' }); return false
       }
       return true
@@ -157,7 +157,7 @@ const translationsRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      audit(req, { action: 'update', resource: 'translation', resourceId: id,
+      audit(req, { action: 'update', resource: 'translation', resource_id: id,
                    metadata: { entity, saved, removed, fields: touched } })
 
       return { success: true, saved, removed }
@@ -173,7 +173,7 @@ const translationsRoutes: FastifyPluginAsync = async (app) => {
         DELETE FROM translations
          WHERE entity = ${entity} AND entity_id = ${id} AND lang = ${l}`
 
-      audit(req, { action: 'delete', resource: 'translation', resourceId: id,
+      audit(req, { action: 'delete', resource: 'translation', resource_id: id,
                    metadata: { entity, lang: l, removed: n } })
 
       return { success: true, removed: n }

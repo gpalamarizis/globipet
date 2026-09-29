@@ -65,7 +65,7 @@ export default function MyOrders() {
                       {t('orders.orderNumber')} #{order.id?.slice(0, 8).toUpperCase()}
                     </p>
                     <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[order.status] || 'bg-gray-100 text-gray-700')}>
-                      {t(`orders.status.${order.status}`, order.status)}
+                      {String(t(`orders.status.${order.status}`, order.status))}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">

@@ -358,21 +358,73 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(204).send()
   })
 
+  /**
+   * Εργαλείο ανάγνωσης της βάσης για διαχειριστές.
+   *
+   * ΤΙ ΗΤΑΝ ΠΡΙΝ
+   *   Εκτελούσε ΟΠΟΙΟΔΗΠΟΤΕ SQL. Το φίλτρο απέκλειε μόνο DROP, TRUNCATE,
+   *   ALTER, CREATE, GRANT και REVOKE — άρα επέτρεπε DELETE, UPDATE και
+   *   INSERT. Ένα `DELETE FROM bookings` περνούσε. Ένα `SELECT * FROM users`
+   *   επέστρεφε password hashes, τοκεν επαναφοράς και κρυπτογραφημένα πεδία.
+   *   Ένας λογαριασμός διαχειριστή που θα διέρρεε έδινε ολόκληρη τη βάση,
+   *   χωρίς κανένα ίχνος για το τι διαβάστηκε.
+   *
+   * ΤΙ ΕΙΝΑΙ ΤΩΡΑ
+   *   Λίστα επιτρεπόμενων αντί για λίστα απαγορευμένων — η μόνη προσέγγιση
+   *   που αντέχει, γιατί η δεύτερη ξεχνάει πάντα κάτι:
+   *     · μόνο ένα SELECT, χωρίς δεύτερη εντολή μετά από ερωτηματικό
+   *     · καμία στήλη που περιέχει διαπιστευτήρια ή προσωπικά δεδομένα
+   *     · υποχρεωτικό όριο γραμμών
+   *     · κάθε ερώτημα καταγράφεται στο ημερολόγιο ελέγχου
+   */
+  const FORBIDDEN_COLUMNS = /\b(password_hash|reset_token|reset_token_expires|expo_token|endpoint|p256dh|auth|two_factor|api_key|secret)\b/i
+  const MAX_ROWS = 500
+
   app.post('/query', async (req: any, reply) => {
     const { sql } = req.body as any
-    if (!sql) return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })
-    const dangerous = /\b(DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE)\b/i.test(sql)
-    if (dangerous) return reply.code(400).send({ message: 'Επικίνδυνη εντολή SQL δεν επιτρέπεται' })
+    if (!sql || typeof sql !== 'string') {
+      return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })
+    }
+
+    const trimmed = sql.trim().replace(/;\s*$/, '')
+
+    // Μία και μόνο εντολή. Το ερωτηματικό στη μέση σημαίνει δεύτερη εντολή.
+    if (trimmed.includes(';')) {
+      return reply.code(400).send({ message: 'Επιτρέπεται μία μόνο εντολή' })
+    }
+    // Μόνο ανάγνωση. Κάθε άλλη λέξη-κλειδί απορρίπτεται εξ ορισμού.
+    if (!/^(SELECT|WITH)\s/i.test(trimmed)) {
+      return reply.code(400).send({ message: 'Επιτρέπονται μόνο ερωτήματα SELECT' })
+    }
+    if (FORBIDDEN_COLUMNS.test(trimmed)) {
+      return reply.code(400).send({ message: 'Το ερώτημα αναφέρεται σε προστατευμένες στήλες' })
+    }
+    // Το `*` θα έφερνε και τις προστατευμένες στήλες παρακάμπτοντας τον
+    // παραπάνω έλεγχο, οπότε οι στήλες δηλώνονται ρητά.
+    if (/\bselect\s+\*/i.test(trimmed)) {
+      return reply.code(400).send({ message: 'Δήλωσε ρητά τις στήλες αντί για *' })
+    }
+
+    const limited = /\blimit\s+\d+/i.test(trimmed) ? trimmed : `${trimmed} LIMIT ${MAX_ROWS}`
+
     const start = Date.now()
     try {
-      const rows = await prisma.$queryRawUnsafe(sql)
+      const rows = await prisma.$queryRawUnsafe(limited)
       const duration = Date.now() - start
+      await audit(req, {
+        action: 'admin_query', resource: 'database',
+        metadata: { sql: trimmed.slice(0, 500), rows: Array.isArray(rows) ? rows.length : 1, duration },
+      })
       return {
         rows: Array.isArray(rows) ? rows : [rows],
         rowCount: Array.isArray(rows) ? rows.length : 1,
-        duration
+        duration,
       }
     } catch (err: any) {
+      await audit(req, {
+        action: 'admin_query', resource: 'database', outcome: 'failure',
+        metadata: { sql: trimmed.slice(0, 500), error: err.message },
+      })
       return reply.code(400).send({ message: err.message })
     }
   })

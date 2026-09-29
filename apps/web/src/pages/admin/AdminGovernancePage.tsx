@@ -260,7 +260,7 @@ export default function AdminGovernancePage() {
         <SubprocessorEditor
           value={editingSubproc}
           onCancel={() => setEditingSubproc(null)}
-          onSave={p => saveSubproc.mutate(p)}
+          onSave={(p: any) => saveSubproc.mutate(p)}
           t={t}
         />
       )}
@@ -270,7 +270,7 @@ export default function AdminGovernancePage() {
         <BreachEditor
           value={editingBreach}
           onCancel={() => setEditingBreach(null)}
-          onSave={p => saveBreach.mutate(p)}
+          onSave={(p: any) => saveBreach.mutate(p)}
           t={t}
         />
       )}
