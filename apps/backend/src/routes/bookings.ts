@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
+import { createVivaPaymentOrder } from '../lib/viva.js'
 import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
@@ -268,6 +269,66 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     }).catch(() => {})
 
     return reply.code(201).send(booking)
+  })
+
+  /**
+   * Πληρωμή κράτησης μέσω Viva Smart Checkout.
+   *
+   * ΓΙΑΤΙ ΔΕΝ ΥΠΗΡΧΕ
+   *   Οι παραγγελίες προϊόντων και η τηλεϊατρική είχαν ροή πληρωμής· οι
+   *   κρατήσεις υπηρεσιών όχι. Η προμήθεια υπολογιζόταν και αποθηκευόταν σε
+   *   κάθε κράτηση, αλλά χρήμα δεν περνούσε ποτέ από την πλατφόρμα — άρα
+   *   δεν εισπραττόταν ποτέ. Κάθε αναφορά εσόδων που φιλτράρει
+   *   `payment_status: 'paid'` έδειχνε μόνιμα μηδέν για τις υπηρεσίες.
+   *
+   * ΤΙ ΠΡΟΣΤΑΤΕΥΕΙ
+   *   · Μόνο ο πελάτης της κράτησης μπορεί να την πληρώσει.
+   *   · Το ποσό διαβάζεται από τη ΒΑΣΗ, ποτέ από το αίτημα — αλλιώς
+   *     επιστρέφουμε στην ευπάθεια των 0,01 € που είχε ήδη διορθωθεί.
+   *   · Ήδη πληρωμένη κράτηση δεν χρεώνεται δεύτερη φορά.
+   */
+  app.post('/viva/checkout', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { booking_id } = (req.body ?? {}) as any
+    const user = req.user as any
+
+    if (!booking_id || typeof booking_id !== 'string') {
+      return reply.code(400).send({ message: 'Λείπει το αναγνωριστικό κράτησης' })
+    }
+
+    try {
+      const booking = await prisma.booking.findUnique({ where: { id: booking_id } })
+      if (!booking || booking.customer_email !== user.email) {
+        return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+      }
+      if (booking.payment_status === 'paid') {
+        return reply.code(400).send({ message: 'Η κράτηση έχει ήδη πληρωθεί' })
+      }
+      if (booking.status === 'cancelled') {
+        return reply.code(400).send({ message: 'Η κράτηση έχει ακυρωθεί' })
+      }
+      if (!Number.isFinite(booking.total_price) || booking.total_price <= 0) {
+        return reply.code(400).send({ message: 'Το ποσό της κράτησης δεν είναι έγκυρο' })
+      }
+
+      const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
+        // Το ποσό της βάσης, ποτέ του πελάτη.
+        amount: booking.total_price,
+        customerEmail: user.email,
+        customerName: user.full_name,
+        orderId: booking_id,
+        description: `GlobiPet κράτηση #${booking_id.slice(0, 8)}`,
+      })
+
+      await prisma.booking.update({
+        where: { id: booking_id },
+        data: { payment_ref: String(orderCode) },
+      })
+
+      return { checkoutUrl, orderCode }
+    } catch (err: any) {
+      console.error('Viva booking checkout error:', err)
+      return reply.code(500).send({ message: err.message || 'Σφάλμα πληρωμής' })
+    }
   })
 
   /**

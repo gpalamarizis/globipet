@@ -121,6 +121,10 @@ model Booking {
   total_price            Float
   notes                  String?
   payment_status         String           @default("unpaid")
+  /// Αναφορά πληρωμής Viva: πρώτα το orderCode του checkout, και μετά την
+  /// επιβεβαίωση το transactionId — ίδιο μοτίβο με το Order. Χωρίς αυτό το
+  /// πεδίο, καμία κράτηση δεν μπορούσε να πληρωθεί ούτε να επιστραφεί.
+  payment_ref            String?          @db.VarChar(255)
   created_at             DateTime         @default(now())
   updated_at             DateTime         @updatedAt
   booking_date           String

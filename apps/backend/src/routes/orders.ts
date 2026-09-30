@@ -353,6 +353,68 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
   }
 }
 
+/**
+ * Επαληθεύει στο Viva ότι η συναλλαγή αφορά ΑΥΤΗ την κράτηση και καλύπτει
+ * το ποσό της. Ίδια λογική με το vivaPaymentIsValid των παραγγελιών: το
+ * webhook είναι ένδειξη, όχι απόδειξη.
+ */
+async function vivaPaidBooking(bookingId: string, transactionId: string): Promise<boolean> {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+    if (!booking) return false
+
+    const tx = await getVivaTransaction(transactionId)
+    if (!tx || tx.statusId !== 'F') return false
+
+    const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
+    if (trns !== bookingId) {
+      console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not booking ${bookingId}`)
+      return false
+    }
+
+    const paid = Number(tx.amount ?? tx.Amount ?? 0)
+    if (Number.isFinite(paid) && paid + 0.01 < booking.total_price) {
+      console.error(`[viva] transaction ${transactionId} paid ${paid}, booking needs ${booking.total_price}`)
+      return false
+    }
+    return true
+  } catch (err: any) {
+    console.error('[viva] booking verification error:', err?.message)
+    return false
+  }
+}
+
+/** Σημειώνει την κράτηση πληρωμένη και ειδοποιεί τον πάροχο. */
+async function markBookingPaid(bookingId: string, transactionId: string) {
+  // Το updateMany με φίλτρο «όχι ήδη paid» κάνει την πράξη idempotent: το
+  // Viva στέλνει το ίδιο webhook περισσότερες από μία φορές.
+  const updated = await prisma.booking.updateMany({
+    where: { id: bookingId, payment_status: { not: 'paid' } },
+    data: { status: 'confirmed', payment_status: 'paid', payment_ref: transactionId },
+  })
+  if (updated.count === 0) return
+
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+  if (!booking) return
+
+  const notification = await prisma.notification.create({
+    data: {
+      user_email: booking.provider_email,
+      title: 'Πληρωμή κράτησης',
+      message: `${booking.customer_name ?? booking.customer_email} πλήρωσε ${booking.total_price.toFixed(2)}€ · ${booking.booking_date} ${booking.booking_time}`,
+      type: 'booking_paid',
+      link: '/provider',
+    },
+  }).catch(() => null)
+
+  if (notification) {
+    broadcastToUser(booking.provider_email, { type: 'notification', notification })
+    void sendPushToUser(booking.provider_email, {
+      title: notification.title, body: notification.message, url: notification.link ?? '/',
+    })
+  }
+}
+
   // Viva webhook - payment confirmation (PUBLIC - no auth)
   app.post('/viva/webhook', async (req: any, reply) => {
     try {
@@ -390,6 +452,13 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
           } else if (await vivaPaidConsultation(ref, txn)) {
             await markTelehealthPaid(ref, txn).catch((err) => {
               console.error('markTelehealthPaid error:', err)
+            })
+          } else if (await vivaPaidBooking(ref, txn)) {
+            // Τρίτος τύπος στο ίδιο URL: κρατήσεις υπηρεσιών. Δοκιμάζεται
+            // τελευταίος γιατί είναι ο νεότερος — η σειρά δεν έχει σημασία
+            // για την ορθότητα, κάθε έλεγχος επαληθεύει το δικό του id.
+            await markBookingPaid(ref, txn).catch((err) => {
+              console.error('markBookingPaid error:', err)
             })
           } else {
             console.error(`[viva] webhook for ${ref} could not be verified — ignored`)
