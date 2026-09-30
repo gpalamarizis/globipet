@@ -177,6 +177,70 @@ export async function createVivaPaymentOrder(params: CreatePaymentOrderParams): 
 }
 
 /**
+ * Επιστροφή χρημάτων για μια συναλλαγή.
+ *
+ * ΠΟΙΟ ENDPOINT
+ *   Το Smart Checkout δεν έχει δικό του endpoint επιστροφής· χρησιμοποιείται
+ *   το κλασικό `DELETE /api/transactions/{id}` με Basic auth (Merchant ID και
+ *   API Key), γι' αυτό υπάρχει ήδη το `legacy` base URL παραπάνω.
+ *
+ * ΜΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ
+ *   Χωρίς ποσό, το Viva επιστρέφει ΟΛΟΚΛΗΡΗ τη συναλλαγή. Με ποσό, επιστρέφει
+ *   μόνο αυτό. Το ποσό ταξιδεύει σε ΛΕΠΤΑ, όχι σε ευρώ — 12.50 € γίνεται 1250.
+ *   Λάθος εδώ σημαίνει επιστροφή εκατονταπλάσια ή εκατοστή της σωστής.
+ *
+ * ΤΙ ΕΠΙΣΤΡΕΦΕΙ
+ *   Σε επιτυχία, το Viva δίνει νέο TransactionId — τη συναλλαγή της
+ *   επιστροφής. Κρατιέται για ίχνος.
+ */
+export async function refundVivaTransaction(
+  transactionId: string,
+  amountEuros?: number,
+): Promise<{ transactionId: string | null; raw: any }> {
+  const merchantId = process.env.VIVA_MERCHANT_ID
+  const apiKey = process.env.VIVA_API_KEY
+  if (!merchantId || !apiKey) {
+    throw new Error('Λείπουν τα VIVA_MERCHANT_ID / VIVA_API_KEY για επιστροφή χρημάτων')
+  }
+  if (!transactionId) throw new Error('Λείπει το transactionId')
+
+  const { legacy } = getBaseUrls()
+  const params = new URLSearchParams()
+  if (typeof amountEuros === 'number') {
+    if (!Number.isFinite(amountEuros) || amountEuros <= 0) {
+      throw new Error('Μη έγκυρο ποσό επιστροφής')
+    }
+    // Σε λεπτά, στρογγυλοποιημένα — το Viva δεν δέχεται δεκαδικά.
+    params.set('amount', String(Math.round(amountEuros * 100)))
+  }
+  const sourceCode = process.env.VIVA_SOURCE_CODE
+  if (sourceCode) params.set('sourceCode', sourceCode)
+
+  const qs = params.toString()
+  const url = `${legacy}/api/transactions/${encodeURIComponent(transactionId)}${qs ? '?' + qs : ''}`
+  const auth = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { Authorization: `Basic ${auth}` },
+  })
+
+  const text = await res.text()
+  let body: any = null
+  try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+
+  if (!res.ok) {
+    throw new Error(`Viva refund error: ${res.status} ${text}`)
+  }
+  // Το Viva σηματοδοτεί σφάλμα και με 200 όταν ο ErrorCode δεν είναι μηδέν.
+  if (body && typeof body.ErrorCode === 'number' && body.ErrorCode !== 0) {
+    throw new Error(`Viva refund refused: ${body.ErrorCode} ${body.ErrorText ?? ''}`)
+  }
+
+  return { transactionId: body?.TransactionId ?? null, raw: body }
+}
+
+/**
  * Retrieve a transaction by its ID to verify payment.
  */
 export async function getVivaTransaction(transactionId: string): Promise<any> {

@@ -2,6 +2,7 @@
 import prisma from '../lib/prisma.js'
 import bcrypt from 'bcryptjs'
 import { audit } from '../lib/audit.js'
+import { refundVivaTransaction } from '../lib/viva.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { sendPushToUser } from '../lib/push.js'
 
@@ -380,6 +381,106 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
    */
   const FORBIDDEN_COLUMNS = /\b(password_hash|reset_token|reset_token_expires|expo_token|endpoint|p256dh|auth|two_factor|api_key|secret)\b/i
   const MAX_ROWS = 500
+
+
+  /**
+   * Επιστροφή χρημάτων — μόνο διαχειριστής.
+   *
+   * ΓΙΑΤΙ ΜΟΝΟ ΕΔΩ
+   *   Η επιστροφή είναι μη αναστρέψιμη κίνηση χρήματος. Δεν την ξεκινά ο
+   *   πελάτης ούτε ο πάροχος: ο πελάτης θα επέστρεφε τα πάντα, ο πάροχος
+   *   θα μπορούσε να επιστρέψει χρήματα τρίτου. Το αίτημα υποβάλλεται από
+   *   τη σελίδα υποστήριξης και εκτελείται εδώ.
+   *
+   * ΤΙ ΠΡΟΣΤΑΤΕΥΕΙ
+   *   · Η εγγραφή πρέπει να υπάρχει και να είναι ΠΛΗΡΩΜΕΝΗ. Επιστροφή σε
+   *     απλήρωτη κράτηση θα έστελνε χρήματα που δεν εισπράχθηκαν ποτέ.
+   *   · Το ποσό δεν μπορεί να ξεπερνά το πληρωμένο. Χωρίς αυτόν τον έλεγχο
+   *     ένα τυπογραφικό λάθος στέλνει δεκαπλάσιο ποσό.
+   *   · Η κατάσταση γράφεται ΜΕΤΑ την επιβεβαίωση του Viva, ποτέ πριν.
+   *     Αντίστροφα, μια αποτυχία θα άφηνε εγγραφή που λέει «επιστράφηκε»
+   *     ενώ τα χρήματα δεν κουνήθηκαν.
+   */
+  app.post('/refund', async (req: any, reply) => {
+    const { type, id, amount, reason } = (req.body ?? {}) as any
+
+    if (!['order', 'booking', 'telehealth'].includes(type)) {
+      return reply.code(400).send({ message: 'Άγνωστος τύπος συναλλαγής' })
+    }
+    if (!id || typeof id !== 'string') {
+      return reply.code(400).send({ message: 'Λείπει το αναγνωριστικό' })
+    }
+
+    // Κάθε τύπος κρατά το ποσό σε διαφορετικό πεδίο.
+    const loaders: Record<string, () => Promise<any>> = {
+      order: () => prisma.order.findUnique({ where: { id } }),
+      booking: () => prisma.booking.findUnique({ where: { id } }),
+      telehealth: () => prisma.telehealthConsultation.findUnique({ where: { id } }),
+    }
+    const record = await loaders[type]()
+    if (!record) return reply.code(404).send({ message: 'Η συναλλαγή δεν βρέθηκε' })
+
+    if (record.payment_status !== 'paid') {
+      return reply.code(400).send({ message: 'Η συναλλαγή δεν είναι πληρωμένη' })
+    }
+    if (!record.payment_ref) {
+      return reply.code(400).send({ message: 'Δεν υπάρχει αναφορά πληρωμής — η επιστροφή γίνεται χειροκίνητα από το Viva' })
+    }
+
+    const paid = Number(
+      type === 'order' ? record.total_amount
+      : type === 'booking' ? record.total_price
+      : record.price,
+    )
+    if (!Number.isFinite(paid) || paid <= 0) {
+      return reply.code(400).send({ message: 'Το ποσό της συναλλαγής δεν είναι έγκυρο' })
+    }
+
+    let refundAmount: number | undefined
+    if (amount !== undefined && amount !== null && amount !== '') {
+      refundAmount = Number(amount)
+      if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+        return reply.code(400).send({ message: 'Μη έγκυρο ποσό επιστροφής' })
+      }
+      // Μισό λεπτό ανοχής για στρογγυλοποιήσεις, τίποτα παραπάνω.
+      if (refundAmount > paid + 0.005) {
+        return reply.code(400).send({ message: `Το ποσό υπερβαίνει το πληρωμένο (${paid.toFixed(2)} €)` })
+      }
+    }
+
+    let result
+    try {
+      result = await refundVivaTransaction(String(record.payment_ref), refundAmount)
+    } catch (err: any) {
+      await audit(req, {
+        action: 'refund', resource: type, resource_id: id, outcome: 'failure',
+        metadata: { amount: refundAmount ?? paid, error: err?.message },
+      })
+      return reply.code(502).send({ message: 'Η επιστροφή απορρίφθηκε από το Viva', detail: err?.message })
+    }
+
+    // Μερική επιστροφή δεν κάνει τη συναλλαγή επιστραμμένη: ο πελάτης έχει
+    // ακόμα πληρώσει κάτι, και το λογιστικό αποτύπωμα πρέπει να το δείχνει.
+    const full = refundAmount === undefined || refundAmount >= paid - 0.005
+    const newStatus = full ? 'refunded' : 'partially_refunded'
+
+    const writers: Record<string, () => Promise<any>> = {
+      order: () => prisma.order.update({ where: { id }, data: { payment_status: newStatus } }),
+      booking: () => prisma.booking.update({ where: { id }, data: { payment_status: newStatus } }),
+      telehealth: () => prisma.telehealthConsultation.update({ where: { id }, data: { payment_status: newStatus } }),
+    }
+    await writers[type]()
+
+    await audit(req, {
+      action: 'refund', resource: type, resource_id: id,
+      metadata: {
+        amount: refundAmount ?? paid, full, reason: reason ? String(reason).slice(0, 500) : null,
+        viva_refund_transaction: result.transactionId,
+      },
+    })
+
+    return { success: true, amount: refundAmount ?? paid, full, refund_transaction: result.transactionId }
+  })
 
   app.post('/query', async (req: any, reply) => {
     const { sql } = req.body as any
