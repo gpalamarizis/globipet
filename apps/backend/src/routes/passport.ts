@@ -24,6 +24,37 @@ const routes: FastifyPluginAsync = async (app) => {
     return pet
   }
 
+  /**
+   * ΚΡΙΣΙΜΟ — τα πεδία που ορίζει ο ΔΙΑΚΟΜΙΣΤΗΣ δεν επιτρέπεται να
+   * υπερισχύσουν από το σώμα του αιτήματος.
+   *
+   *   Οι εγγραφές γράφονταν ως:
+   *
+   *     data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any
+   *
+   *   Στη JavaScript το τελευταίο κλειδί κερδίζει, οπότε το spread ΣΒΗΝΕ τα
+   *   δύο προηγούμενα. Ο έλεγχος ιδιοκτησίας γινόταν στο ζώο του URL, αλλά
+   *   η εγγραφή πήγαινε σε όποιο ζώο έγραφε ο πελάτης στο σώμα:
+   *
+   *     POST /passport/medication/<δικό-μου-ζώο>
+   *     { "name": "...", "pet_id": "<ζώο-άλλου>" }
+   *
+   *   Το ίδιο και με το owner_email: μπορούσε να αποδώσει ιατρική εγγραφή
+   *   σε τρίτο πρόσωπο.
+   *
+   *   Τώρα το σώμα καθαρίζεται από τα πεδία που ανήκουν στον διακομιστή και
+   *   μπαίνει ΠΡΩΤΟ, ώστε να μην μπορεί να τα πατήσει.
+   */
+  function bodyOf(raw: unknown): Record<string, any> {
+    // Ο τύπος επιστροφής είναι χαλαρός, γι' αυτό κάθε κλήση Prisma παρακάτω
+    // φέρει `as any`: ο client έχει αυστηρό τύπο ανά μοντέλο και το spread
+    // ενός γενικού αντικειμένου σβήνει την πληροφορία των υποχρεωτικών
+    // πεδίων. Ο έλεγχος τιμών παραμένει — τον κάνει το Prisma στην εκτέλεση.
+    const { id, pet_id, owner_email, created_at, updated_at, ...rest } =
+      (raw ?? {}) as Record<string, any>
+    return rest
+  }
+
   // ─── GET FULL PASSPORT ────────────────────────────────────────────
   app.get('/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
@@ -245,8 +276,8 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     const data = req.body as any
     return prisma.petPedigree.upsert({
       where: { pet_id: req.params.petId },
-      create: { pet_id: req.params.petId, owner_email: email, ...data, certifications: data.certifications || [] },
-      update: { ...data, certifications: data.certifications || [] },
+      create: { ...bodyOf(data), certifications: data.certifications || [], pet_id: req.params.petId, owner_email: email } as any,
+      update: { ...bodyOf(data), certifications: data.certifications || [] } as any,
     })
   })
 
@@ -273,7 +304,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/medication/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petMedication.create({ data: { pet_id: req.params.petId, owner_email: email, ...req.body } }))
+    return reply.code(201).send(await prisma.petMedication.create({ data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.patch('/medication/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -295,7 +326,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/lab/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petLabResult.create({ data: { pet_id: req.params.petId, owner_email: email, file_urls: [], ...req.body } }))
+    return reply.code(201).send(await prisma.petLabResult.create({ data: { file_urls: [], ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.patch('/lab/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -317,7 +348,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/imaging/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petImaging.create({ data: { pet_id: req.params.petId, owner_email: email, file_urls: [], ...req.body } }))
+    return reply.code(201).send(await prisma.petImaging.create({ data: { file_urls: [], ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.patch('/imaging/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -339,7 +370,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/surgery/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petSurgery.create({ data: { pet_id: req.params.petId, owner_email: email, file_urls: [], ...req.body } }))
+    return reply.code(201).send(await prisma.petSurgery.create({ data: { file_urls: [], ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.patch('/surgery/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -361,7 +392,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/allergy/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petAllergy.create({ data: { pet_id: req.params.petId, owner_email: email, ...req.body } }))
+    return reply.code(201).send(await prisma.petAllergy.create({ data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.delete('/allergy/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -376,7 +407,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/chronic/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petChronicCondition.create({ data: { pet_id: req.params.petId, owner_email: email, ...req.body } }))
+    return reply.code(201).send(await prisma.petChronicCondition.create({ data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.patch('/chronic/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -398,7 +429,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/dental/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petDentalRecord.create({ data: { pet_id: req.params.petId, owner_email: email, file_urls: [], ...req.body } }))
+    return reply.code(201).send(await prisma.petDentalRecord.create({ data: { file_urls: [], ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.delete('/dental/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -413,7 +444,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/weight/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petWeightRecord.create({ data: { pet_id: req.params.petId, owner_email: email, ...req.body } }))
+    return reply.code(201).send(await prisma.petWeightRecord.create({ data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.delete('/weight/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -428,7 +459,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/genetic/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petGeneticTest.create({ data: { pet_id: req.params.petId, owner_email: email, breeds_detected: [], conditions_found: [], file_urls: [], ...req.body } }))
+    return reply.code(201).send(await prisma.petGeneticTest.create({ data: { breeds_detected: [], conditions_found: [], file_urls: [], ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.delete('/genetic/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -443,7 +474,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/vitals/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    return reply.code(201).send(await prisma.petVitalSigns.create({ data: { pet_id: req.params.petId, owner_email: email, ...req.body } }))
+    return reply.code(201).send(await prisma.petVitalSigns.create({ data: { ...bodyOf(req.body), pet_id: req.params.petId, owner_email: email } as any }))
   })
 
   app.delete('/vitals/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
