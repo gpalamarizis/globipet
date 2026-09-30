@@ -64,6 +64,31 @@ async function autoLinkProviderStaff(userId: string, userEmail: string, req: any
  *   SHA-256 χωρίς salt είναι σωστό ΕΔΩ, σε αντίθεση με τους κωδικούς: το
  *   τοκεν έχει 256 bit τυχαιότητας και δεν μαντεύεται με λεξικό.
  */
+/**
+ * ΚΡΙΣΙΜΟ — ο ρόλος ΔΕΝ διαβάζεται ποτέ αυτούσιος από το αίτημα.
+ *
+ *   Η εγγραφή έπαιρνε `role` κατευθείαν από το σώμα και το έγραφε στη βάση.
+ *   Οποιοσδήποτε μπορούσε να στείλει:
+ *
+ *     POST /api/auth/register { ..., "role": "admin" }
+ *
+ *   και να γίνει διαχειριστής. Από εκεί είχε πρόσβαση σε ολόκληρο το
+ *   /api/admin — διαχείριση χρηστών, παραγγελίες, και το endpoint που
+ *   εκτελεί SQL πάνω στη βάση παραγωγής.
+ *
+ *   Δεν υπήρχε καμία ένδειξη επίθεσης στον κώδικα· η τρύπα απλώς ήταν
+ *   ανοιχτή. Επιτρέπονται πλέον μόνο οι τρεις ρόλοι που μπορεί θεμιτά να
+ *   διαλέξει κάποιος στη φόρμα εγγραφής. Ο ρόλος διαχειριστή αποδίδεται
+ *   μόνο από άλλον διαχειριστή.
+ */
+const SELF_ASSIGNABLE_ROLES = ['user', 'service_provider', 'both'] as const
+
+function safeRole(input: unknown): string {
+  return typeof input === 'string' && (SELF_ASSIGNABLE_ROLES as readonly string[]).includes(input)
+    ? input
+    : 'user'
+}
+
 function hashResetToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
 }
@@ -189,7 +214,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         full_name,
         email,
         password_hash,
-        role: role || 'user',
+        role: safeRole(role),
         preferred_language: preferred_language || 'el',
         birth_date: dob,
         // Sensitive fields encrypted at rest
