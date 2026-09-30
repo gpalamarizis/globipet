@@ -6,6 +6,7 @@ import { calculateCommission } from '../lib/commission.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
+import { sendPushToUser } from '../lib/push.js'
 
 /**
  * Shipping options, priced on the server.
@@ -288,6 +289,9 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
           },
         })
         broadcastToUser(providerEmail, { type: 'notification', notification })
+        void sendPushToUser(providerEmail, {
+          title: notification.title, body: notification.message, url: notification.link ?? '/',
+        })
       }
     } catch (err: any) {
       console.error('firePaidSideEffects error:', err)

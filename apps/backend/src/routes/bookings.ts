@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
+import { sendPushToUser } from '../lib/push.js'
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
   /**
@@ -257,7 +258,14 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         type: 'new_booking',
         link: '/provider',
       },
-    }).then(notification => broadcastToUser(service.provider_email, { type: 'notification', notification })).catch(() => {})
+    }).then(notification => {
+      broadcastToUser(service.provider_email, { type: 'notification', notification })
+      // Και εκτός εφαρμογής. Το void σημαίνει ότι δεν περιμένουμε: μια
+      // αποτυχία ειδοποίησης δεν πρέπει ποτέ να ρίξει την κράτηση.
+      void sendPushToUser(service.provider_email, {
+        title: notification.title, body: notification.message, url: notification.link ?? '/',
+      })
+    }).catch(() => {})
 
     return reply.code(201).send(booking)
   })

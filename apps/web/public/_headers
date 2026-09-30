@@ -2,11 +2,12 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-/*.js
-  Cache-Control: public, max-age=31536000, immutable
-
-/*.css
-  Cache-Control: public, max-age=31536000, immutable
+# ΓΙΑΤΙ ΕΦΥΓΑΝ ΤΑ /*.js ΚΑΙ /*.css
+#
+#   Έπιαναν ΚΑΘΕ αρχείο .js και .css στη ρίζα, όχι μόνο τα χτισμένα, και τα
+#   κλείδωναν για έναν χρόνο. Τα αρχεία του Vite έχουν ήδη hash στο όνομα
+#   και καλύπτονται από τον κανόνα /assets/* παραπάνω· οτιδήποτε άλλο στη
+#   ρίζα δεν πρέπει να κλειδώνεται — ο service worker το έπαθε ήδη.
 
 # Ο service worker ΔΕΝ κάνει cache.
 # Το /*.js παραπάνω τον έπιανε και τον κλείδωνε για έναν χρόνο, που σημαίνει
@@ -16,6 +17,21 @@
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
   Service-Worker-Allowed: /
+
+# ΤΟ HTML ΠΟΤΕ ΣΤΗΝ CACHE
+#
+#   Το index.html είναι ο κατάλογος: λέει ποια αρχεία assets ισχύουν αυτή τη
+#   στιγμή. Αν αποθηκευτεί, ο browser ζητά αρχεία προηγούμενου build που δεν
+#   υπάρχουν πια, και η σελίδα βγάζει λευκή οθόνη με «Failed to load module
+#   script». Ακριβώς αυτό συνέβη στις 29/09.
+#
+#   Τα assets είναι ασφαλές να μένουν για πάντα επειδή έχουν hash στο όνομα.
+#   Το HTML όχι, ποτέ.
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
 
 # Το manifest αλλάζει σπάνια αλλά πρέπει να μπορεί να ανανεωθεί.
 /manifest.webmanifest

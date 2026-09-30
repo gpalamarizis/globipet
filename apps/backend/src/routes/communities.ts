@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { sendPushToUser } from '../lib/push.js'
 
 // Haversine formula για απόσταση σε km
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -219,6 +220,16 @@ const routes: FastifyPluginAsync = async (app) => {
           link: `/communities/${community.id}`,
         }))
       })
+      // Το createMany δεν επιστρέφει εγγραφές, οπότε η αποστολή γίνεται με
+      // βρόχο. Δεν περιμένουμε καμία: ο χρήστης που δημιουργεί την κοινότητα
+      // δεν έχει λόγο να περιμένει τις ειδοποιήσεις των άλλων.
+      for (const u of toInvite) {
+        void sendPushToUser(u.email, {
+          title: 'Νέα κοινότητα κοντά σου!',
+          body: `Η κοινότητα "${name}" δημιουργήθηκε κοντά σου. Γίνε μέλος!`,
+          url: `/communities/${community.id}`,
+        })
+      }
     }
 
     return reply.code(201).send({ ...community, nearbyInvited: toInvite.length })

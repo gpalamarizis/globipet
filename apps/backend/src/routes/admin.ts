@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js'
 import bcrypt from 'bcryptjs'
 import { audit } from '../lib/audit.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
+import { sendPushToUser } from '../lib/push.js'
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req, reply) => {
@@ -547,6 +548,11 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
           link: '/provider',
         },
       }).catch(() => {})
+      void sendPushToUser(existing.user_email, {
+        title: 'Ο λογαριασμός σου επαληθεύτηκε',
+        body: 'Οι υπηρεσίες σου εμφανίζονται πλέον με σήμα επαλήθευσης.',
+        url: '/provider',
+      })
     } else {
       await prisma.notification.create({
         data: {

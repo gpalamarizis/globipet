@@ -4,6 +4,7 @@ import prisma from '../lib/prisma.js'
 import { broadcastToUser } from './notifications.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscriptionFailedEmail } from '../lib/email.js'
+import { sendPushToUser } from '../lib/push.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 
@@ -140,6 +141,9 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               // This previously passed user_id, so subscription notifications
               // were written to the database but never reached the browser.
               broadcastToUser(productSub.user.email, { type: 'notification', notification })
+              void sendPushToUser(productSub.user.email, {
+                title: notification.title, body: notification.message, url: notification.link ?? '/',
+              })
 
               sendSubscriptionRenewedEmail(productSub.user.email, {
                 customerName: productSub.user.full_name,
@@ -156,7 +160,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                     type: 'new_order',
                     link: '/provider',
                   },
-                }).then(n => broadcastToUser(providerEmail, { type: 'notification', notification: n })).catch(() => {})
+                }).then(n => {
+                  broadcastToUser(providerEmail, { type: 'notification', notification: n })
+                  void sendPushToUser(providerEmail, {
+                    title: n.title, body: n.message, url: n.link ?? '/',
+                  })
+                }).catch(() => {})
               }
             }
           }
@@ -189,6 +198,9 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               // This previously passed user_id, so subscription notifications
               // were written to the database but never reached the browser.
               broadcastToUser(productSub.user.email, { type: 'notification', notification })
+              void sendPushToUser(productSub.user.email, {
+                title: notification.title, body: notification.message, url: notification.link ?? '/',
+              })
 
               sendSubscriptionFailedEmail(productSub.user.email, {
                 customerName: productSub.user.full_name,

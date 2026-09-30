@@ -4,6 +4,7 @@ import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
+import { sendPushToUser } from '../lib/push.js'
 
 // Fires once when a consultation is confirmed paid: generates the meeting room,
 // sends customer + provider emails, and notifies the provider in-app.
@@ -50,6 +51,12 @@ export async function markTelehealthPaid(consultationId: string, transactionId: 
   }).then(notification => {
     // Standard notification push
     broadcastToUser(consultation.provider_email, { type: 'notification', notification })
+    // Η τηλεϊατρική είναι η πιο επείγουσα ειδοποίηση της πλατφόρμας: ο
+    // ασθενής έχει ήδη πληρώσει και περιμένει. Πρέπει να φτάσει και με
+    // κλειστή εφαρμογή.
+    void sendPushToUser(consultation.provider_email, {
+      title: notification.title, body: notification.message, url: notification.link ?? '/',
+    })
     // Also send dedicated incoming_call event so provider UI can show a prominent alert
     broadcastToUser(consultation.provider_email, {
       type: 'incoming_call',

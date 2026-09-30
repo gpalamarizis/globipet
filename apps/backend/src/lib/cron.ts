@@ -2,6 +2,7 @@ import cron from 'node-cron'
 import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
+import { sendPushToUser } from './push.js'
 
 export function startAiTrialExpiryCron() {
   // Runs once a day at 09:00 server time
@@ -37,6 +38,9 @@ export function startAiTrialExpiryCron() {
         // This passed user.id, so the trial-expiry notification was written
         // to the database but never reached an open browser.
         broadcastToUser(user.email, { type: 'notification', notification })
+        void sendPushToUser(user.email, {
+          title: notification.title, body: notification.message, url: notification.link ?? '/',
+        })
       }
 
       if (expiredTrialUsers.length > 0) {
