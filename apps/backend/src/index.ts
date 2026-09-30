@@ -59,7 +59,25 @@ import userRightsRoutes from './routes/user-rights.js'
 import userConsentsRoutes from './routes/user-consents.js'
 import governanceRoutes from './routes/governance.js'
 
-const app = Fastify({ logger: process.env.NODE_ENV === 'development' })
+/**
+ * ΤΟ trustProxy ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ ΕΔΩ
+ *
+ *   Ο διακομιστής τρέχει πίσω από Railway και Cloudflare. Χωρίς αυτό, το
+ *   request.ip επιστρέφει τη διεύθυνση του proxy και όχι του χρήστη — που
+ *   σημαίνει ότι το rate limiting μετράει ΟΛΟΥΣ τους χρήστες ως έναν, και
+ *   το ημερολόγιο ελέγχου καταγράφει πάντα την ίδια IP.
+ *
+ *   Εμπιστευόμαστε ΕΝΑΝ μόνο proxy, τον πλησιέστερο. Το σκέτο `true` θα
+ *   εμπιστευόταν ολόκληρη την αλυσίδα X-Forwarded-For, που τη γράφει ο
+ *   πελάτης — ακριβώς η ευπάθεια GHSA-444r-cwp2-x5xf που διορθώνει αυτή η
+ *   αναβάθμιση. Η συνάρτηση δέχεται τη διεύθυνση και τον αριθμό άλματος
+ *   μετρημένο από τα δεξιά: το 0 είναι ο διπλανός proxy, οπότε `hop < 1`
+ *   σταματά ακριβώς εκεί.
+ */
+const app = Fastify({
+  logger: process.env.NODE_ENV === 'development',
+  trustProxy: (_address: string, hop: number) => hop < 1,
+})
 
 // ─── JWT secret hardening ─────────────────────────────
 // Refuse to start in production without a strong secret (min 32 chars, no default fallback)
