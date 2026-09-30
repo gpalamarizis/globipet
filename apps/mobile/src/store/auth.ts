@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import { api, setAuthToken } from '../lib/api'
+import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
 
@@ -55,6 +56,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
+      void registerPushToken()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
@@ -84,6 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
+      void registerPushToken()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -112,6 +115,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('token', data.token)
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
+      void registerPushToken()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -127,6 +131,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('token', res.token)
       await SecureStore.setItemAsync('user', JSON.stringify(res.user))
       setAuthToken(res.token)
+      void registerPushToken()
       set({ user: res.user, token: res.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
@@ -135,6 +140,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // ΠΡΩΤΑ η διαγραφή της συσκευής, όσο το τοκεν ισχύει ακόμα. Αντίστροφα,
+    // το αίτημα φεύγει χωρίς ταυτοποίηση και η συσκευή μένει εγγεγραμμένη:
+    // ο επόμενος που θα συνδεθεί εδώ θα έπαιρνε τις ειδοποιήσεις του
+    // προηγούμενου.
+    await unregisterPushToken()
     await SecureStore.deleteItemAsync('token')
     await SecureStore.deleteItemAsync('user')
     setAuthToken(null)

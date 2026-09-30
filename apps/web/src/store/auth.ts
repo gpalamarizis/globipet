@@ -25,6 +25,15 @@ interface RegisterData {
   password: string
   role?: 'user' | 'service_provider' | 'both'
   preferred_language?: string
+  /**
+   * Ημερομηνία γέννησης σε μορφή YYYY-MM-DD.
+   *
+   * Υποχρεωτική στην πράξη: ο διακομιστής απορρίπτει την εγγραφή χωρίς αυτήν
+   * και για κάθε ηλικία κάτω των 15, που είναι το όριο συγκατάθεσης ανηλίκου
+   * στην Ελλάδα. Δηλώνεται προαιρετική εδώ ώστε να μη σπάσουν τυχόν άλλοι
+   * καλούντες — ο έλεγχος είναι ούτως ή άλλως στο backend.
+   */
+  birth_date?: string
 }
 
 // Sync user's preferred language with i18n

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as SplashScreen from 'expo-splash-screen'
 import { useAppFonts } from '@/fonts'
 import { useAuthStore } from '../src/store/auth'
+import { registerPushToken, usePushRouting } from '../src/lib/notifications'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -75,8 +76,19 @@ export default function RootLayout() {
   const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
-    useAuthStore.getState().loadToken().finally(() => setAuthReady(true))
+    useAuthStore.getState().loadToken().finally(() => {
+      setAuthReady(true)
+      // Η δήλωση της συσκευής γίνεται ΜΕΤΑ τη φόρτωση του τοκεν, αλλιώς το
+      // αίτημα φεύγει χωρίς ταυτοποίηση. Δεν περιμένουμε το αποτέλεσμα: αν
+      // ο χρήστης αρνηθεί την άδεια ή πέσει το δίκτυο, η εφαρμογή ανοίγει
+      // κανονικά.
+      if (useAuthStore.getState().isAuthenticated) void registerPushToken()
+    })
   }, [])
+
+  // Στέλνει τον χρήστη στη σωστή οθόνη όταν πατήσει ειδοποίηση — και όταν η
+  // εφαρμογή ήταν κλειστή και όταν ήταν ήδη ανοιχτή.
+  usePushRouting()
 
   useEffect(() => {
     // Το splash κρύβεται όταν είναι έτοιμες ΚΑΙ οι γραμματοσειρές ΚΑΙ η

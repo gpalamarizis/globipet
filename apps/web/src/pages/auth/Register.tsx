@@ -8,6 +8,25 @@ import toast from 'react-hot-toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { api } from '@/lib/api'
 
+/** Ηλικία σε συμπληρωμένα έτη. Επιστρέφει -1 για κενή ή άκυρη ημερομηνία. */
+function ageFrom(iso: string): number {
+  if (!iso) return -1
+  const dob = new Date(iso)
+  if (Number.isNaN(dob.getTime())) return -1
+  const now = new Date()
+  let age = now.getFullYear() - dob.getFullYear()
+  const m = now.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--
+  return age
+}
+
+/** Η τελευταία ημερομηνία που αντιστοιχεί σε 15 ετών — όριο του πεδίου. */
+function maxBirthDate(): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 15)
+  return d.toISOString().slice(0, 10)
+}
+
 export default function Register() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -19,6 +38,7 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [role, setRole] = useState<'user' | 'service_provider' | 'both'>('user')
   const [showPass, setShowPass] = useState(false)
 
@@ -28,8 +48,14 @@ export default function Register() {
       toast.error(t('authExtraLogin.passwordMismatch'))
       return
     }
+    // Έλεγχος ηλικίας και εδώ, για να μη φτάσει ο χρήστης στο σφάλμα του
+    // διακομιστή. Η πραγματική δικλείδα είναι στο backend.
+    if (ageFrom(birthDate) < 15) {
+      toast.error('Πρέπει να είσαι τουλάχιστον 15 ετών για να δημιουργήσεις λογαριασμό')
+      return
+    }
     try {
-      await register({ full_name: fullName, email, password, role })
+      await register({ full_name: fullName, email, password, role, birth_date: birthDate })
       // If user came from /trial, auto-start the AI trial with the chosen plan
       if (redirectTo === '/trial' && trialPlanId) {
         try {
@@ -98,13 +124,19 @@ export default function Register() {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.password')}</label>
               <div className="relative">
-                <input type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                <input type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
               </div>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.confirmPassword')}</label>
               <input type={showPass ? 'text' : 'password'} className="input" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ημερομηνία γέννησης</label>
+              <input type="date" className="input" value={birthDate} max={maxBirthDate()}
+                onChange={e => setBirthDate(e.target.value)} required />
+              <p className="text-xs text-gray-400 mt-1">Απαιτείται ελάχιστη ηλικία 15 ετών.</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.iAm')}</label>

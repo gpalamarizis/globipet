@@ -146,7 +146,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Register
   app.post('/register', async (req, reply) => {
-    const { full_name, email, password, role, preferred_language, phone } = req.body as any
+    const { full_name, email, password, role, preferred_language, phone, birth_date } = req.body as any
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
       await audit(req, { action: 'register', resource: 'user', outcome: 'failure', metadata: { reason: 'email_taken', email } })
@@ -154,6 +154,34 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     }
     if (!password || typeof password !== 'string' || password.length < 8) {
       return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
+    }
+
+    /**
+     * Ελάχιστη ηλικία 15 ετών.
+     *
+     * Ο GDPR αφήνει σε κάθε κράτος να ορίσει το όριο συγκατάθεσης ανηλίκου
+     * ανάμεσα σε 13 και 16· η Ελλάδα το έχει θέσει στα 15. Κάτω από αυτό
+     * απαιτείται συγκατάθεση γονέα, που η πλατφόρμα δεν υποστηρίζει.
+     *
+     * Ο έλεγχος γίνεται ΕΔΩ και όχι μόνο στη φόρμα: το frontend είναι
+     * ευκολία για τον χρήστη, δεν είναι δικλείδα — οποιοσδήποτε μπορεί να
+     * στείλει αίτημα κατευθείαν στο API.
+     */
+    const dob = birth_date ? new Date(birth_date) : null
+    if (!dob || Number.isNaN(dob.getTime())) {
+      return reply.code(400).send({ message: 'Η ημερομηνία γέννησης είναι υποχρεωτική' })
+    }
+    const now = new Date()
+    let age = now.getFullYear() - dob.getFullYear()
+    const monthDiff = now.getMonth() - dob.getMonth()
+    // Αν δεν έχουν κλείσει ακόμα τα γενέθλια φέτος, ο χρόνος δεν μετράει.
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age--
+    if (age < 15) {
+      await audit(req, { action: 'register', resource: 'user', outcome: 'failure', metadata: { reason: 'under_age' } })
+      return reply.code(403).send({ message: 'Πρέπει να είσαι τουλάχιστον 15 ετών για να δημιουργήσεις λογαριασμό' })
+    }
+    if (age > 120) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
     }
     const password_hash = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
@@ -163,6 +191,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         password_hash,
         role: role || 'user',
         preferred_language: preferred_language || 'el',
+        birth_date: dob,
         // Sensitive fields encrypted at rest
         phone: encryptField(phone) as any,
         // Every new account starts a 30-day AI trial automatically.
