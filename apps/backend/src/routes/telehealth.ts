@@ -5,6 +5,7 @@ import { calculateCommission } from '../lib/commission.js'
 import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
+import { serverError } from '../lib/errors.js'
 
 // Fires once when a consultation is confirmed paid: generates the meeting room,
 // sends customer + provider emails, and notifies the provider in-app.
@@ -251,7 +252,7 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send({ data: consultation, checkoutUrl })
     } catch (err: any) {
       console.error('Telehealth Viva checkout error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα δημιουργίας πληρωμής: ' + err.message })
+      return serverError(reply, err, 'telehealth-checkout', 'Η πληρωμή δεν ξεκίνησε.')
     }
   })
 
@@ -276,7 +277,7 @@ const routes: FastifyPluginAsync = async (app) => {
       return { paid: false, data: consultation }
     } catch (err: any) {
       console.error('Telehealth verify error:', err)
-      return reply.code(500).send({ message: err.message })
+      return serverError(reply, err, 'telehealth')
     }
   })
 

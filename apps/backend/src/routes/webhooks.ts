@@ -5,6 +5,7 @@ import { broadcastToUser } from './notifications.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscriptionFailedEmail } from '../lib/email.js'
 import { sendPushToUser } from '../lib/push.js'
+import { serverError } from '../lib/errors.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 
@@ -224,7 +225,7 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ received: true })
     } catch (err: any) {
       console.error('Stripe webhook handler error:', err)
-      return reply.code(500).send({ message: err.message })
+      return serverError(reply, err, 'webhook')
     }
   })
 }

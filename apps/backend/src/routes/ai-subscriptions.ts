@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
 import { sendAiTrialStartedEmail } from '../lib/email.js'
+import { serverError } from '../lib/errors.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const TRIAL_DAYS = 30
@@ -150,7 +151,7 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ data: { checkout_url: session.url } })
     } catch (err: any) {
       console.error('Stripe AI checkout error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα δημιουργίας συνδρομής: ' + err.message })
+      return serverError(reply, err, 'ai-subscription-create', 'Η συνδρομή δεν δημιουργήθηκε.')
     }
   })
 

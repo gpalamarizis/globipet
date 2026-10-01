@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
+import { serverError } from '../lib/errors.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const SETTING_KEY = 'food_subscription_discount_percent'
@@ -64,7 +65,7 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ data: { checkout_url: session.url } })
     } catch (err: any) {
       console.error('Stripe checkout error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα δημιουργίας συνδρομής: ' + err.message })
+      return serverError(reply, err, 'subscription-create', 'Η συνδρομή δεν δημιουργήθηκε.')
     }
   })
 

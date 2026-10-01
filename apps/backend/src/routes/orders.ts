@@ -7,6 +7,7 @@ import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
 import { sendPushToUser } from '../lib/push.js'
+import { serverError } from '../lib/errors.js'
 
 /**
  * Shipping options, priced on the server.
@@ -239,7 +240,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       return { checkoutUrl, orderCode }
     } catch (err: any) {
       console.error('Viva checkout error:', err)
-      return reply.code(500).send({ message: err.message || 'Σφάλμα πληρωμής' })
+      return serverError(reply, err, 'order-checkout', 'Η πληρωμή δεν ξεκίνησε.')
     }
   })
 
@@ -509,7 +510,7 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
       return { paid: false, order_id }
     } catch (err: any) {
       console.error('Viva verify error:', err)
-      return reply.code(500).send({ message: err.message })
+      return serverError(reply, err, 'order')
     }
   })
 

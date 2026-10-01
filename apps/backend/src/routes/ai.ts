@@ -1,6 +1,7 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import Anthropic from '@anthropic-ai/sdk'
 import prisma from '../lib/prisma.js'
+import { serverError } from '../lib/errors.js'
 
 const TRIAL_DAYS = 30
 
@@ -100,7 +101,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI health error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
+      return serverError(reply, err, 'ai-analysis', 'Η ανάλυση δεν ολοκληρώθηκε.')
     }
   })
 
@@ -156,7 +157,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI emotion error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
+      return serverError(reply, err, 'ai-analysis', 'Η ανάλυση δεν ολοκληρώθηκε.')
     }
   })
 
@@ -206,7 +207,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI emotion video error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
+      return serverError(reply, err, 'ai-analysis', 'Η ανάλυση δεν ολοκληρώθηκε.')
     }
   })
   // Stool & Urine Analysis
@@ -296,7 +297,7 @@ ${contextParts}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI stool/urine error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα ανάλυσης: ' + err.message })
+      return serverError(reply, err, 'ai-analysis', 'Η ανάλυση δεν ολοκληρώθηκε.')
     }
   })
   // ─── LEGAL Q&A ──────────────────────────────────────────────────
@@ -390,7 +391,7 @@ ${contextParts}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI legal error:', err)
-      return reply.code(500).send({ message: 'Σφάλμα: ' + err.message })
+      return serverError(reply, err, 'ai', 'Η ενέργεια δεν ολοκληρώθηκε.')
     }
   })
 }

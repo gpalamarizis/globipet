@@ -5,6 +5,7 @@ import { createVivaPaymentOrder } from '../lib/viva.js'
 import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
+import { serverError } from '../lib/errors.js'
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
   /**
@@ -327,7 +328,7 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       return { checkoutUrl, orderCode }
     } catch (err: any) {
       console.error('Viva booking checkout error:', err)
-      return reply.code(500).send({ message: err.message || 'Σφάλμα πληρωμής' })
+      return serverError(reply, err, 'booking-checkout', 'Η πληρωμή δεν ξεκίνησε.')
     }
   })
 
