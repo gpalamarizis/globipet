@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { createHash, randomBytes } from 'crypto'
+import { z } from 'zod'
+import { parseBody, text, email as emailField, phone, language } from '../lib/validate.js'
 import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
@@ -82,6 +84,31 @@ async function autoLinkProviderStaff(userId: string, userEmail: string, req: any
  *   μόνο από άλλον διαχειριστή.
  */
 const SELF_ASSIGNABLE_ROLES = ['user', 'service_provider', 'both'] as const
+
+/** Σχήματα εισόδου. Ό,τι δεν δηλώνεται εδώ, δεν φτάνει ποτέ στη βάση. */
+const registerSchema = z.object({
+  full_name: text(2, 120, 'ονοματεπώνυμο'),
+  email: emailField,
+  password: z.string().min(8, 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες')
+    .max(200, 'Ο κωδικός είναι υπερβολικά μεγάλος'),
+  role: z.string().optional(),
+  preferred_language: language.optional(),
+  phone: phone.optional(),
+  birth_date: z.string().optional(),
+})
+
+const loginSchema = z.object({
+  email: emailField,
+  password: z.string().min(1, 'Ο κωδικός είναι υποχρεωτικός').max(200),
+})
+
+const forgotSchema = z.object({ email: emailField })
+
+const resetSchema = z.object({
+  // Το τοκεν παράγεται από εμάς με 32 τυχαία bytes σε δεκαεξαδικό.
+  token: z.string().regex(/^[a-f0-9]{64}$/i, 'Μη έγκυρος σύνδεσμος επαναφοράς'),
+  password: z.string().min(8, 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες').max(200),
+})
 
 function safeRole(input: unknown): string {
   return typeof input === 'string' && (SELF_ASSIGNABLE_ROLES as readonly string[]).includes(input)
@@ -171,7 +198,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Register
   app.post('/register', async (req, reply) => {
-    const { full_name, email, password, role, preferred_language, phone, birth_date } = req.body as any
+    const parsed = parseBody(registerSchema, req.body, reply)
+    if (!parsed) return
+    const { full_name, email, password, role, preferred_language, phone, birth_date } = parsed
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
       await audit(req, { action: 'register', resource: 'user', outcome: 'failure', metadata: { reason: 'email_taken', email } })
@@ -241,7 +270,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Login
   app.post('/login', async (req, reply) => {
-    const { email, password } = req.body as any
+    const parsed = parseBody(loginSchema, req.body, reply)
+    if (!parsed) return
+    const { email, password } = parsed
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || !user.password_hash) {
       await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'no_such_user', email } })
@@ -616,7 +647,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Forgot password
   app.post('/forgot-password', async (req: any, reply) => {
-    const { email } = req.body as any
+    const parsed = parseBody(forgotSchema, req.body, reply)
+    if (!parsed) return
+    const { email } = parsed
     const user = await prisma.user.findUnique({ where: { email } })
     // Always return success message to prevent user enumeration
     if (!user) {
@@ -705,7 +738,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // Reset password
   app.post('/reset-password', async (req: any, reply) => {
-    const { token, password } = req.body as any
+    const parsed = parseBody(resetSchema, req.body, reply)
+    if (!parsed) return
+    const { token, password } = parsed
     if (!token || !password) return reply.code(400).send({ message: 'Λείπουν στοιχεία' })
     if (typeof password !== 'string' || password.length < 8) {
       return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })

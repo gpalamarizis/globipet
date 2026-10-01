@@ -3,6 +3,32 @@ import bcrypt from 'bcryptjs'
 import prisma from '../lib/prisma.js'
 import { encryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { z } from 'zod'
+import { parseBody, text, httpUrl, phone, language } from '../lib/validate.js'
+
+/**
+ * Ενημέρωση προφίλ.
+ *
+ * Η λίστα επιτρεπόμενων πεδίων υπήρχε ήδη και είναι σωστή — κρατάει έξω
+ * τον ρόλο και το email. Αυτό που έλειπε ήταν έλεγχος ΤΙΜΩΝ: τίποτα δεν
+ * εμπόδιζε ένα ονοματεπώνυμο δέκα μεγαβάιτ ή μια «ιστοσελίδα» που ξεκινά
+ * με javascript: και γίνεται εκτελέσιμος σύνδεσμος στο δημόσιο προφίλ
+ * ενός παρόχου.
+ *
+ * Όλα προαιρετικά: είναι μερική ενημέρωση, ο χρήστης στέλνει μόνο όσα
+ * αλλάζει.
+ */
+const profileSchema = z.object({
+  full_name: text(2, 120, 'ονοματεπώνυμο').optional(),
+  bio: z.string().trim().max(2000, 'Το βιογραφικό ξεπερνά τους 2000 χαρακτήρες').optional(),
+  phone: phone.optional(),
+  city: z.string().trim().max(120).optional(),
+  country: z.string().trim().max(120).optional(),
+  website: httpUrl.optional(),
+  profile_photo: z.string().trim().max(1000).optional(),
+  preferred_language: language.optional(),
+  address: z.string().trim().max(500).optional(),
+}).strict()
 
 const usersRoutes: FastifyPluginAsync = async (app) => {
 
@@ -43,10 +69,14 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /users/me — recommended partial-update endpoint used by the web/mobile client
   app.patch('/me', { preHandler: [(app as any).authenticate] }, async (req, reply) => {
     const { email, id } = req.user as any
-    const allowedFields = ['full_name', 'bio', 'phone', 'city', 'country', 'website', 'profile_photo', 'preferred_language', 'address']
+    const parsed = parseBody(profileSchema, req.body, reply)
+    if (!parsed) return
+
+    // Μόνο τα πεδία που στάλθηκαν πραγματικά — το zod αφήνει τα υπόλοιπα
+    // undefined και το Prisma θα τα έγραφε ως null.
     const updateData: any = {}
-    for (const key of allowedFields) {
-      if ((req.body as any)[key] !== undefined) updateData[key] = (req.body as any)[key]
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value !== undefined) updateData[key] = value
     }
     if (Object.keys(updateData).length === 0) {
       return reply.code(400).send({ message: 'Δεν υπάρχουν πεδία για ενημέρωση' })
