@@ -3,6 +3,23 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 import prisma from '../lib/prisma.js'
 
 /**
+ * Η κατάσταση της τοποθεσίας δέχεται ΜΟΝΟ γνωστές τιμές.
+ *
+ *   Στο ένα από τα δύο σημεία γραφόταν `status || 'safe'`, δηλαδή ό,τι
+ *   έστελνε ο πελάτης. Η στήλη είναι ελεύθερο κείμενο, οπότε μπορούσε να
+ *   γεμίσει με οτιδήποτε — και κάθε φίλτρο ή μέτρηση πάνω της να βγάζει
+ *   λάθος αποτέλεσμα. Το άλλο σημείο το έκανε σωστά αλλά με δική του
+ *   λογική· τώρα και τα δύο περνούν από εδώ.
+ */
+const LOCATION_STATUSES = ['safe', 'lost', 'moving', 'home'] as const
+
+function safeStatus(input: unknown): string {
+  return typeof input === 'string' && (LOCATION_STATUSES as readonly string[]).includes(input)
+    ? input
+    : 'safe'
+}
+
+/**
  * Pet tracking — position history plus the registry of physical GPS collars.
  *
  *   OWNER (authenticated)
@@ -111,7 +128,7 @@ const routes: FastifyPluginAsync = async (app) => {
           tracker_id: tracker.id,
           latitude: lat,
           longitude: lng,
-          status: status === 'lost' ? 'lost' : 'safe',
+          status: safeStatus(status),
         },
       }),
       prisma.petTracker.update({
@@ -346,7 +363,7 @@ const routes: FastifyPluginAsync = async (app) => {
           owner_email: email,
           latitude: lat,
           longitude: lng,
-          status: status || 'safe',
+          status: safeStatus(status),
         }
       })
       return reply.code(201).send({ data: location })

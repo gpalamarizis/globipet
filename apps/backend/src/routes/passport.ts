@@ -45,6 +45,39 @@ const routes: FastifyPluginAsync = async (app) => {
    *   Τώρα το σώμα καθαρίζεται από τα πεδία που ανήκουν στον διακομιστή και
    *   μπαίνει ΠΡΩΤΟ, ώστε να μην μπορεί να τα πατήσει.
    */
+  /**
+   * Όρια τιμών στον ιατρικό φάκελο.
+   *
+   *   Τα endpoints έπαιρναν κάθε πεδίο χωρίς όριο. Το Prisma απορρίπτει
+   *   λάθος τύπους, αλλά δέχεται χαρά ένα όνομα φαρμάκου ενός μεγαβάιτ ή
+   *   σημειώσεις που γεμίζουν τη στήλη. Δεν είναι παραβίαση ασφαλείας —
+   *   είναι τρόπος να φουσκώσει η βάση και να σπάσουν οι οθόνες.
+   *
+   *   Κόβουμε αντί να απορρίπτουμε: μια ιατρική εγγραφή που χάνεται επειδή
+   *   το πεδίο ήταν δύο χαρακτήρες πάνω από το όριο είναι χειρότερη από μια
+   *   που αποθηκεύτηκε κομμένη.
+   */
+  const MAX_TEXT = 2000
+  const MAX_SHORT = 255
+  const SHORT_FIELDS = ['name', 'title', 'type', 'brand', 'dosage', 'frequency',
+    'unit', 'result', 'severity', 'status', 'veterinarian', 'clinic', 'lab']
+
+  function clampStrings(obj: Record<string, any>): Record<string, any> {
+    const out: Record<string, any> = {}
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === 'string') {
+        out[k] = v.trim().slice(0, SHORT_FIELDS.includes(k) ? MAX_SHORT : MAX_TEXT)
+      } else if (Array.isArray(v)) {
+        // Οι λίστες αρχείων και ευρημάτων: το πολύ 50 στοιχεία, κάθε ένα
+        // σύντομο. Χωρίς όριο, μια λίστα χιλίων URL περνάει αυτούσια.
+        out[k] = v.slice(0, 50).map(x => typeof x === 'string' ? x.trim().slice(0, 1000) : x)
+      } else {
+        out[k] = v
+      }
+    }
+    return out
+  }
+
   function bodyOf(raw: unknown): Record<string, any> {
     // Ο τύπος επιστροφής είναι χαλαρός, γι' αυτό κάθε κλήση Prisma παρακάτω
     // φέρει `as any`: ο client έχει αυστηρό τύπο ανά μοντέλο και το spread
@@ -52,7 +85,7 @@ const routes: FastifyPluginAsync = async (app) => {
     // πεδίων. Ο έλεγχος τιμών παραμένει — τον κάνει το Prisma στην εκτέλεση.
     const { id, pet_id, owner_email, created_at, updated_at, ...rest } =
       (raw ?? {}) as Record<string, any>
-    return rest
+    return clampStrings(rest)
   }
 
   // ─── GET FULL PASSPORT ────────────────────────────────────────────
