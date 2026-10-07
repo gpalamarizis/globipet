@@ -291,3 +291,6 @@ src/store/auth.js
 _salvage/
 credentials.json
 backend-logs.json
+credentials.json
+*.jks
+*.keystore
