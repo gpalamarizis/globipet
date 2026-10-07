@@ -289,3 +289,5 @@ src/store/auth.js
 *.tsbuildinfo
 
 _salvage/
+credentials.json
+backend-logs.json
