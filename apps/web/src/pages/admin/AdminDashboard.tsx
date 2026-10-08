@@ -575,7 +575,14 @@ function DatabaseTab() {
       <div className="card p-4">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle size={14} className="text-orange-500" />
-          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Προσοχή: Μόνο για διαχειριστές. Τα DELETE/DROP queries είναι μη αναστρέψιμα.</p>
+          {/* Η παλιά προειδοποίηση έλεγε ότι τα DELETE/DROP είναι μη
+              αναστρέψιμα. Δεν ισχύει πια: το backend δέχεται μόνο SELECT
+              και WITH. Μια προειδοποίηση που περιγράφει δύναμη που δεν
+              υπάρχει είναι χειρότερη από καμία — ο διαχειριστής μαθαίνει
+              να αγνοεί τις προειδοποιήσεις. */}
+          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+            Μόνο ερωτήματα ανάγνωσης (SELECT). Οι στήλες δηλώνονται ρητά, όχι με *. Κάθε εκτέλεση καταγράφεται.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 mb-3">
           {quickQueries.map(q => (
