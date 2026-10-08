@@ -86,12 +86,28 @@ export async function getPushToken(): Promise<string | null> {
   return data
 }
 
-/** Δηλώνει τη συσκευή στο backend. Καλείται μετά από κάθε σύνδεση. */
+/**
+ * Δηλώνει τη συσκευή στο backend. Καλείται μετά από κάθε σύνδεση.
+ *
+ * Η ΔΙΑΔΡΟΜΗ ΗΤΑΝ ΛΑΘΟΣ
+ *   Έστελνε σε /notifications/register· το backend ακούει στο
+ *   /notifications/push/register. Το 404 καταπινόταν από το catch
+ *   παρακάτω, οπότε το τοκεν δεν έφτανε ΠΟΤΕ και καμία ειδοποίηση δεν
+ *   παραδιδόταν σε κινητό — χωρίς κανένα ορατό σημάδι.
+ *
+ *   Το device_name εμφανίζεται στη λίστα «πού λαμβάνω ειδοποιήσεις»:
+ *   χωρίς αυτό ο χρήστης βλέπει ανώνυμες εγγραφές και δεν ξέρει ποια
+ *   συσκευή να αποσυνδέσει.
+ */
 export async function registerPushToken(): Promise<void> {
   try {
     const token = await getPushToken()
     if (!token) return
-    await api.post('/notifications/register', { token, platform: Platform.OS })
+    await api.post('/notifications/push/register', {
+      token,
+      platform: Platform.OS,
+      device_name: Device.deviceName || Device.modelName || undefined,
+    })
   } catch {
     // σιωπηλά: δες το σχόλιο στην κορυφή
   }
@@ -107,7 +123,7 @@ export async function registerPushToken(): Promise<void> {
 export async function unregisterPushToken(): Promise<void> {
   try {
     if (!cachedToken) return
-    await api.delete('/notifications/register', { data: { token: cachedToken } })
+    await api.delete('/notifications/push/register', { data: { token: cachedToken } })
   } catch {
     // σιωπηλά
   }
