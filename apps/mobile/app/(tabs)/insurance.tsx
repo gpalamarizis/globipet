@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal,
   Linking, RefreshControl,
@@ -17,18 +18,19 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  */
 
 const PET_TYPES = [
-  { id: '',    label: 'Όλα',    emoji: '🐾' },
-  { id: 'dog', label: 'Σκύλοι', emoji: '🐶' },
-  { id: 'cat', label: 'Γάτες',  emoji: '🐱' },
+  { id: '',    labelKey: 'marketplace.categories.all',    emoji: '🐾' },
+  { id: 'dog', labelKey: 'insurance.dogs', emoji: '🐶' },
+  { id: 'cat', labelKey: 'insurance.cats',  emoji: '🐱' },
 ]
 
-const TIERS: Record<string, { label: string; bg: string; fg: string }> = {
-  basic:    { label: 'Βασικό',  bg: colors.surfaceAlt, fg: colors.textMuted },
-  standard: { label: 'Standard', bg: colors.infoBg,    fg: colors.info },
-  premium:  { label: 'Premium',  bg: colors.brandLight, fg: colors.brand },
+const TIERS: Record<string, { labelKey: string; bg: string; fg: string }> = {
+  basic:    { labelKey: 'insurance.basic',  bg: colors.surfaceAlt, fg: colors.textMuted },
+  standard: { labelKey: 'insurance.standard', bg: colors.infoBg,    fg: colors.info },
+  premium:  { labelKey: 'insurance.premium',  bg: colors.brandLight, fg: colors.brand },
 }
 
 export default function InsuranceScreen() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [petType, setPetType] = useState('')
   const [selected, setSelected] = useState<any>(null)
@@ -50,21 +52,21 @@ export default function InsuranceScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Ασφάλιση</Text>
-        <Text style={s.subtitle}>Σύγκρινε πλάνα κάλυψης για το κατοικίδιό σου</Text>
+        <Text style={s.title}>{t('cat.insurance')}</Text>
+        <Text style={s.subtitle}>{t('insurance.subtitle')}</Text>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         style={s.filterRow}
         contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
-        {PET_TYPES.map(t => {
-          const active = petType === t.id
+        {PET_TYPES.map(pt => {
+          const active = petType === pt.id
           return (
-            <TouchableOpacity key={t.id || 'all'} activeOpacity={0.7}
+            <TouchableOpacity key={pt.id || 'all'} activeOpacity={0.7}
               style={[s.chip, active && s.chipActive]}
-              onPress={() => setPetType(t.id)}>
-              <Text style={s.chipEmoji}>{t.emoji}</Text>
-              <Text style={[s.chipText, active && s.chipTextActive]}>{t.label}</Text>
+              onPress={() => setPetType(pt.id)}>
+              <Text style={s.chipEmoji}>{pt.emoji}</Text>
+              <Text style={[s.chipText, active && s.chipTextActive]}>{t(pt.labelKey)}</Text>
             </TouchableOpacity>
           )
         })}
@@ -85,8 +87,8 @@ export default function InsuranceScreen() {
           : plans.length === 0
             ? <View style={s.empty}>
                 <Shield size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Κανένα πλάνο</Text>
-                <Text style={s.emptyText}>Δοκίμασε άλλο είδος κατοικιδίου.</Text>
+                <Text style={s.emptyTitle}>{t('insurance.no_plans')}</Text>
+                <Text style={s.emptyText}>{t('insurance.try_other_species')}</Text>
               </View>
             : plans.map((plan: any) => {
                 const tier = TIERS[plan.tier] ?? TIERS.basic
@@ -97,7 +99,7 @@ export default function InsuranceScreen() {
                     {plan.is_featured && (
                       <View style={s.featuredTag}>
                         <Star size={icon.xs} color="#fff" fill="#fff" />
-                        <Text style={s.featuredText}>Προτεινόμενο</Text>
+                        <Text style={s.featuredText}>{t('insurance.recommended')}</Text>
                       </View>
                     )}
 
@@ -111,37 +113,37 @@ export default function InsuranceScreen() {
                         </Text>
                       </View>
                       <View style={[s.tierTag, { backgroundColor: tier.bg }]}>
-                        <Text style={[s.tierText, { color: tier.fg }]}>{tier.label}</Text>
+                        <Text style={[s.tierText, { color: tier.fg }]}>{t(tier.labelKey)}</Text>
                       </View>
                     </View>
 
                     <View style={s.priceRow}>
                       <Text style={s.price}>€{plan.price_monthly}</Text>
-                      <Text style={s.priceUnit}>/μήνα</Text>
+                      <Text style={s.priceUnit}>{t('insurance.per_month')}</Text>
                     </View>
 
                     <View style={s.specs}>
                       {plan.annual_limit != null && (
                         <View style={s.spec}>
-                          <Text style={s.specLabel}>Ετήσιο όριο</Text>
+                          <Text style={s.specLabel}>{t('insurance.annual_limit')}</Text>
                           <Text style={s.specValue}>€{plan.annual_limit}</Text>
                         </View>
                       )}
                       {plan.reimbursement_percent != null && (
                         <View style={s.spec}>
-                          <Text style={s.specLabel}>Αποζημίωση</Text>
+                          <Text style={s.specLabel}>{t('insurance.reimbursement')}</Text>
                           <Text style={s.specValue}>{plan.reimbursement_percent}%</Text>
                         </View>
                       )}
                       {plan.deductible != null && (
                         <View style={s.spec}>
-                          <Text style={s.specLabel}>Απαλλαγή</Text>
+                          <Text style={s.specLabel}>{t('insurance.deductible')}</Text>
                           <Text style={s.specValue}>€{plan.deductible}</Text>
                         </View>
                       )}
                     </View>
 
-                    <Text style={s.moreLink}>Δες λεπτομέρειες</Text>
+                    <Text style={s.moreLink}>{t('insurance.see_details')}</Text>
                   </TouchableOpacity>
                 )
               })}
@@ -170,7 +172,7 @@ export default function InsuranceScreen() {
               contentContainerStyle={{ paddingBottom: space.xl }}>
               <View style={s.priceRow}>
                 <Text style={s.price}>€{selected?.price_monthly}</Text>
-                <Text style={s.priceUnit}>/μήνα</Text>
+                <Text style={s.priceUnit}>{t('insurance.per_month')}</Text>
               </View>
 
               {!!selected?.description && (
@@ -179,7 +181,7 @@ export default function InsuranceScreen() {
 
               {Array.isArray(selected?.features) && selected.features.length > 0 && (
                 <>
-                  <Text style={s.label}>Τι καλύπτει</Text>
+                  <Text style={s.label}>{t('insurance.what_covered')}</Text>
                   {selected.features.map((f: string, i: number) => (
                     <View key={i} style={s.featureRow}>
                       <Check size={icon.sm} color={colors.success} />
@@ -191,12 +193,12 @@ export default function InsuranceScreen() {
 
               {selected?.waiting_period_days != null && (
                 <Text style={s.note}>
-                  Περίοδος αναμονής: {selected.waiting_period_days} ημέρες
+                  {t('insurance.waiting_period', { count: selected.waiting_period_days })}
                 </Text>
               )}
               {selected?.max_age_years != null && (
                 <Text style={s.note}>
-                  Μέγιστη ηλικία εγγραφής: {selected.max_age_years} έτη
+                  {t('insurance.max_age', { count: selected.max_age_years })}
                 </Text>
               )}
 
@@ -213,7 +215,7 @@ export default function InsuranceScreen() {
                 <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
                   onPress={() => Linking.openURL(selected.provider.website)}>
                   <Globe size={icon.sm} color="#fff" />
-                  <Text style={s.primaryBtnText}>Αίτηση στον ασφαλιστή</Text>
+                  <Text style={s.primaryBtnText}>{t('insurance.apply')}</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>

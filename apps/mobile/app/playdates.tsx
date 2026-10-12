@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { View, Text, StyleSheet, Image, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -38,6 +39,7 @@ const fmtDate = (d?: string) => {
 }
 
 export default function PlaydatesScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
@@ -55,13 +57,13 @@ export default function PlaydatesScreen() {
   const join = useMutation({
     mutationFn: (id: string) => api.post(`/playdates/${id}/join`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Δεν ήταν δυνατή η συμμετοχή'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('play.join_failed')),
   })
 
   const leave = useMutation({
     mutationFn: (id: string) => api.delete(`/playdates/${id}/join`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Δεν ήταν δυνατή η αποχώρηση'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('play.leave_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -75,8 +77,8 @@ export default function PlaydatesScreen() {
     (ev.invitations ?? []).some((i: any) => i.invitee_email === user?.email)
 
   return (
-    <Screen title="Βόλτες & συναντήσεις"
-      subtitle={data?.userCity ? `Κοντά στην ${data.userCity}` : undefined}
+    <Screen title={t('community.walks_meetups')}
+      subtitle={data?.userCity ? t('play.near_city', { city: data.userCity }) : undefined}
       onRefresh={onRefresh} refreshing={refreshing}>
 
       {isLoading ? (
@@ -84,8 +86,8 @@ export default function PlaydatesScreen() {
       ) : events.length === 0 ? (
         <EmptyState
           icon={PawPrint}
-          title="Καμία βόλτα κοντά σου"
-          message="Δημιούργησε την πρώτη και κάλεσε άλλους ιδιοκτήτες."
+          title={t('play.none')}
+          message={t('play.create_first')}
         />
       ) : (
         <View style={{ gap: space.md }}>
@@ -103,7 +105,7 @@ export default function PlaydatesScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={s.titleRow}>
                       <Text style={s.title} numberOfLines={1}>{ev.title}</Text>
-                      {mine && <Badge label="Δική σου" tone="brand" />}
+                      {mine && <Badge label={t('play.mine')} tone="brand" />}
                     </View>
                     <View style={s.metaRow}>
                       <MapPin size={icon.xs} color={colors.textLight} />
@@ -143,7 +145,7 @@ export default function PlaydatesScreen() {
 
                 {isAuthenticated && !mine && (
                   <Button
-                    label={joined ? 'Αποχώρηση' : full ? 'Συμπληρώθηκε' : 'Συμμετοχή'}
+                    label={joined ? t('play.leave') : full ? t('play.full') : t('play.join')}
                     variant={joined ? 'secondary' : 'primary'}
                     size="sm"
                     full
@@ -154,7 +156,7 @@ export default function PlaydatesScreen() {
                   />
                 )}
                 {!isAuthenticated && (
-                  <Button label="Συνδέσου για συμμετοχή" variant="secondary" size="sm" full
+                  <Button label={t('play.login_join')} variant="secondary" size="sm" full
                     onPress={() => router.push('/auth/login' as any)}
                     style={{ marginTop: space.md }} />
                 )}
@@ -167,7 +169,7 @@ export default function PlaydatesScreen() {
       {/* Ιδιοκτήτες κοντά — χωρίς email, το endpoint δεν το επιστρέφει πια. */}
       {nearby.length > 0 && (
         <>
-          <SectionHeader title="Ιδιοκτήτες κοντά σου" />
+          <SectionHeader title={t('play.near_you')} />
           <View style={s.ownerRow}>
             {nearby.slice(0, 8).map((o: any) => (
               <View key={o.id} style={s.owner}>

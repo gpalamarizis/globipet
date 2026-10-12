@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl,
 } from 'react-native'
@@ -75,6 +76,7 @@ const Empty = ({ text }: { text: string }) => (
 )
 
 export default function PassportScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -124,10 +126,10 @@ export default function PassportScreen() {
   const overdue = vaccinations.filter((v: any) => isOverdue(v.next_due_date))
 
   const TABS = [
-    { id: 'identity', label: 'Ταυτότητα', count: null },
-    { id: 'vaccines', label: 'Εμβόλια',   count: vaccinations.length },
-    { id: 'medical',  label: 'Ιατρικά',   count: medicalCount },
-    { id: 'watch',    label: 'Παρακολούθηση', count: watchCount },
+    { id: 'identity', label: t('passport.identity'), count: null },
+    { id: 'vaccines', label: t('passport.vaccines'),   count: vaccinations.length },
+    { id: 'medical',  label: t('passport.medical'),   count: medicalCount },
+    { id: 'watch',    label: t('passport.monitoring'), count: watchCount },
   ] as const
 
   if (!isAuthenticated) return (
@@ -136,14 +138,14 @@ export default function PassportScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Ιατρικός φάκελος</Text>
+        <Text style={s.title}>{t('discover.medical_record')}</Text>
       </View>
       <View style={s.empty}>
         <FileText size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Συνδέσου για πρόσβαση</Text>
+        <Text style={s.emptyTitle}>{t('pets.login_required')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -155,7 +157,7 @@ export default function PassportScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Ιατρικός φάκελος</Text>
+        <Text style={s.title}>{t('discover.medical_record')}</Text>
       </View>
 
       {/* Επιλογή κατοικιδίου */}
@@ -176,21 +178,21 @@ export default function PassportScreen() {
       {!activePetId ? (
         <View style={s.empty}>
           <PawPrint size={icon.hero} color={colors.border} />
-          <Text style={s.emptyTitle}>Διάλεξε κατοικίδιο</Text>
-          <Text style={s.emptyText}>Ο φάκελος ανοίγει ανά ζώο.</Text>
+          <Text style={s.emptyTitle}>{t('passport.choose_pet')}</Text>
+          <Text style={s.emptyText}>{t('passport.record_per_pet')}</Text>
         </View>
       ) : (
         <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={s.tabRow} contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
-            {TABS.map(t => (
-              <TouchableOpacity key={t.id} activeOpacity={0.7}
-                style={[s.tab, tab === t.id && s.tabActive]}
-                onPress={() => setTab(t.id as any)}>
-                <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>{t.label}</Text>
-                {t.count != null && t.count > 0 && (
-                  <View style={[s.tabCount, tab === t.id && s.tabCountActive]}>
-                    <Text style={[s.tabCountText, tab === t.id && { color: '#fff' }]}>{t.count}</Text>
+            {TABS.map(tb => (
+              <TouchableOpacity key={tb.id} activeOpacity={0.7}
+                style={[s.tab, tab === tb.id && s.tabActive]}
+                onPress={() => setTab(tb.id as any)}>
+                <Text style={[s.tabText, tab === tb.id && s.tabTextActive]}>{tb.label}</Text>
+                {tb.count != null && tb.count > 0 && (
+                  <View style={[s.tabCount, tab === tb.id && s.tabCountActive]}>
+                    <Text style={[s.tabCountText, tab === tb.id && { color: '#fff' }]}>{tb.count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -209,7 +211,7 @@ export default function PassportScreen() {
                 {overdue.length > 0 && (
                   <TouchableOpacity style={s.alert} activeOpacity={0.7} onPress={() => setTab('vaccines')}>
                     <Syringe size={icon.sm} color={colors.warning} />
-                    <Text style={s.alertText}>{overdue.length} εμβόλια εκκρεμούν</Text>
+                    <Text style={s.alertText}>{t('passport.vaccines_due', { count: overdue.length })}</Text>
                   </TouchableOpacity>
                 )}
                 {allergies.length > 0 && (
@@ -217,14 +219,14 @@ export default function PassportScreen() {
                     onPress={() => setTab('watch')}>
                     <ShieldAlert size={icon.sm} color={colors.danger} />
                     <Text style={[s.alertText, { color: colors.danger }]}>
-                      {allergies.length} αλλεργίες
+                      {t('passport.allergy_count', { count: allergies.length })}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
             )}
 
-            {isLoading && <Text style={s.emptyLine}>Φόρτωση…</Text>}
+            {isLoading && <Text style={s.emptyLine}>{t('common.loading_dots')}</Text>}
 
             {tab === 'identity' && pet && (
               <>
@@ -238,26 +240,26 @@ export default function PassportScreen() {
                   <Text style={s.petSub}>{pet.breed || pet.species}</Text>
                 </View>
 
-                <Card icon={FileText} title="Στοιχεία">
+                <Card icon={FileText} title={t('passport.details')}>
                   {[
-                    ['Είδος', pet.species],
-                    ['Ράτσα', pet.breed],
-                    ['Φύλο', pet.gender === 'male' ? 'Αρσενικό' : pet.gender === 'female' ? 'Θηλυκό' : null],
-                    ['Ηλικία', pet.age ? `${pet.age} ετών` : null],
-                    ['Βάρος', pet.weight ? `${pet.weight} kg` : null],
-                    ['Χρώμα', pet.color],
+                    [t('pets.species'), pet.species],
+                    [t('pets.breed'), pet.breed],
+                    [t('pets.gender'), pet.gender === 'male' ? t('passport.male') : pet.gender === 'female' ? t('passport.female') : null],
+                    [t('passport.age'), pet.age ? t('pets.age_years', { count: pet.age }) : null],
+                    [t('passport.weight'), pet.weight ? `${pet.weight} kg` : null],
+                    [t('pets.color'), pet.color],
                     ['Microchip', pet.microchip_number],
                     // Τρεις καταστάσεις: το null σημαίνει «κανείς δεν το είπε»
                     // και η γραμμή δεν εμφανίζεται καθόλου.
-                    ['Στειρωμένο', pet.is_sterilized === true ? 'Ναι'
-                      : pet.is_sterilized === false ? 'Όχι' : null],
+                    [t('pets.neutered'), pet.is_sterilized === true ? t('common.yes')
+                      : pet.is_sterilized === false ? t('common.no') : null],
                   ].filter(([, v]) => v).map(([k, v]) => (
                     <Row key={String(k)} title={String(k)} right={String(v)} />
                   ))}
                 </Card>
 
                 {travel.length > 0 && (
-                  <Card icon={FileText} title="Διαβατήριο & ταξίδια" count={travel.length}>
+                  <Card icon={FileText} title={t('passport.travel')} count={travel.length}>
                     {travel.map((t: any) => (
                       <Row key={t.id}
                         title={`${t.origin_city || ''} → ${t.destination_city || t.destination_country || ''}`}
@@ -270,15 +272,15 @@ export default function PassportScreen() {
             )}
 
             {tab === 'vaccines' && (
-              <Card icon={Syringe} title="Εμβόλια" count={vaccinations.length}>
+              <Card icon={Syringe} title={t('passport.vaccines')} count={vaccinations.length}>
                 {vaccinations.length === 0
-                  ? <Empty text="Κανένα εμβόλιο καταχωρημένο" />
+                  ? <Empty text={t('passport.no_vaccines')} />
                   : vaccinations.map((v: any) => {
                       const due = isOverdue(v.next_due_date)
                       return (
                         <Row key={v.id}
                           title={v.vaccine_name}
-                          subtitle={[`Χορηγήθηκε ${fmt(v.date_administered)}`, v.vet_name]
+                          subtitle={[t('passport.administered', { date: fmt(v.date_administered) }), v.vet_name]
                             .filter(Boolean).join(' · ')}
                           right={v.next_due_date ? `${due ? '⚠ ' : ''}${fmt(v.next_due_date)}` : undefined}
                           tone={due ? 'warn' : undefined} />
@@ -290,7 +292,7 @@ export default function PassportScreen() {
             {tab === 'medical' && (
               <>
                 {medications.filter((m: any) => m.is_active).length > 0 && (
-                  <Card icon={Activity} title="Ενεργή αγωγή">
+                  <Card icon={Activity} title={t('passport.active_treatment')}>
                     {medications.filter((m: any) => m.is_active).map((m: any) => (
                       <Row key={m.id} title={m.name}
                         subtitle={[m.dosage, m.frequency].filter(Boolean).join(' · ')}
@@ -299,9 +301,9 @@ export default function PassportScreen() {
                   </Card>
                 )}
 
-                <Card icon={Stethoscope} title="Επισκέψεις" count={healthRecords.length}>
+                <Card icon={Stethoscope} title={t('passport.visits')} count={healthRecords.length}>
                   {healthRecords.length === 0
-                    ? <Empty text="Καμία καταχώρηση" />
+                    ? <Empty text={t('passport.no_entries')} />
                     : healthRecords.map((h: any) => (
                         <Row key={h.id} title={h.title}
                           subtitle={[h.record_type, h.vet_name, h.clinic_name]
@@ -311,7 +313,7 @@ export default function PassportScreen() {
                 </Card>
 
                 {labResults.length > 0 && (
-                  <Card icon={Activity} title="Εργαστηριακά" count={labResults.length}>
+                  <Card icon={Activity} title={t('passport.lab')} count={labResults.length}>
                     {labResults.map((l: any) => (
                       <Row key={l.id} title={l.test_name}
                         subtitle={l.result_summary} right={fmt(l.test_date)} />
@@ -320,7 +322,7 @@ export default function PassportScreen() {
                 )}
 
                 {imaging.length > 0 && (
-                  <Card icon={Activity} title="Απεικονιστικά" count={imaging.length}>
+                  <Card icon={Activity} title={t('passport.imaging')} count={imaging.length}>
                     {imaging.map((im: any) => (
                       <Row key={im.id} title={im.imaging_type}
                         subtitle={im.findings} right={fmt(im.date)} />
@@ -329,7 +331,7 @@ export default function PassportScreen() {
                 )}
 
                 {surgeries.length > 0 && (
-                  <Card icon={Activity} title="Χειρουργεία" count={surgeries.length}>
+                  <Card icon={Activity} title={t('passport.surgeries')} count={surgeries.length}>
                     {surgeries.map((sg: any) => (
                       <Row key={sg.id} title={sg.procedure_name}
                         subtitle={sg.surgeon_name} right={fmt(sg.date)} />
@@ -338,7 +340,7 @@ export default function PassportScreen() {
                 )}
 
                 {dental.length > 0 && (
-                  <Card icon={Activity} title="Οδοντιατρικά" count={dental.length}>
+                  <Card icon={Activity} title={t('passport.dental')} count={dental.length}>
                     {dental.map((d: any) => (
                       <Row key={d.id} title={d.procedure}
                         subtitle={d.notes} right={fmt(d.date)} />
@@ -346,14 +348,14 @@ export default function PassportScreen() {
                   </Card>
                 )}
 
-                {medicalCount === 0 && <Empty text="Κανένα ιατρικό ιστορικό ακόμη" />}
+                {medicalCount === 0 && <Empty text={t('passport.no_history')} />}
               </>
             )}
 
             {tab === 'watch' && (
               <>
                 {allergies.length > 0 && (
-                  <Card icon={ShieldAlert} title="Αλλεργίες" count={allergies.length}>
+                  <Card icon={ShieldAlert} title={t('passport.allergies')} count={allergies.length}>
                     {allergies.map((a: any) => (
                       <Row key={a.id} title={a.allergen}
                         subtitle={[a.reaction, a.treatment].filter(Boolean).join(' · ')}
@@ -363,7 +365,7 @@ export default function PassportScreen() {
                 )}
 
                 {chronic.length > 0 && (
-                  <Card icon={Activity} title="Χρόνιες παθήσεις" count={chronic.length}>
+                  <Card icon={Activity} title={t('passport.chronic')} count={chronic.length}>
                     {chronic.map((c: any) => (
                       <Row key={c.id} title={c.condition}
                         subtitle={[c.status, c.treatment_plan].filter(Boolean).join(' · ')}
@@ -373,7 +375,7 @@ export default function PassportScreen() {
                 )}
 
                 {weights.length > 0 && (
-                  <Card icon={Activity} title="Βάρος" count={weights.length}>
+                  <Card icon={Activity} title={t('passport.weight')} count={weights.length}>
                     {weights.slice(-10).reverse().map((w: any) => (
                       <Row key={w.id} title={`${w.weight_kg} kg`}
                         subtitle={w.notes} right={fmt(w.date)} />
@@ -381,7 +383,7 @@ export default function PassportScreen() {
                   </Card>
                 )}
 
-                {watchCount === 0 && <Empty text="Τίποτα υπό παρακολούθηση" />}
+                {watchCount === 0 && <Empty text={t('passport.nothing_monitored')} />}
               </>
             )}
           </ScrollView>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
@@ -14,6 +15,7 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  * δείχνει τα πάντα δεν είναι επισκόπηση.
  */
 export default function CommunityScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -49,7 +51,7 @@ export default function CommunityScreen() {
         <Text style={s.sectionTitle}>{title}</Text>
         <TouchableOpacity style={s.seeAll} activeOpacity={0.7}
           onPress={() => router.push(route as any)}>
-          <Text style={s.seeAllText}>Όλα{count ? ` (${count})` : ''}</Text>
+          <Text style={s.seeAllText}>{count ? t('common.see_all_count', { count }) : t('common.see_all')}</Text>
           <ChevronRight size={icon.sm} color={colors.brand} />
         </TouchableOpacity>
       </View>
@@ -65,13 +67,13 @@ export default function CommunityScreen() {
       }>
 
       <View style={s.header}>
-        <Text style={s.title}>Κοινότητα</Text>
-        <Text style={s.subtitle}>Βόλτες, γειτονιές και ό,τι συμβαίνει γύρω σου</Text>
+        <Text style={s.title}>{t('tabs.community')}</Text>
+        <Text style={s.subtitle}>{t('community.subtitle')}</Text>
       </View>
 
-      <Section title="Βόλτες & συναντήσεις" count={playdates.length} route="/playdates">
+      <Section title={t('community.walks_meetups')} count={playdates.length} route="/playdates">
         {playdates.length === 0
-          ? <Text style={s.emptyLine}>Καμία προγραμματισμένη βόλτα κοντά σου</Text>
+          ? <Text style={s.emptyLine}>{t('community.no_walks')}</Text>
           : playdates.slice(0, 3).map((p: any) => (
               <TouchableOpacity key={p.id} style={s.card} activeOpacity={0.8}
                 onPress={() => router.push('/playdates' as any)}>
@@ -89,9 +91,9 @@ export default function CommunityScreen() {
             ))}
       </Section>
 
-      <Section title="Κοινότητες γειτονιάς" count={communities.length} route="/communities">
+      <Section title={t('community.neighbourhoods')} count={communities.length} route="/communities">
         {communities.length === 0
-          ? <Text style={s.emptyLine}>Καμία κοινότητα κοντά σου ακόμη</Text>
+          ? <Text style={s.emptyLine}>{t('community.no_communities')}</Text>
           : communities.slice(0, 3).map((c: any) => (
               <TouchableOpacity key={c.id} style={s.card} activeOpacity={0.8}
                 onPress={() => router.push('/communities' as any)}>
@@ -112,9 +114,9 @@ export default function CommunityScreen() {
             ))}
       </Section>
 
-      <Section title="Τελευταίες δημοσιεύσεις" route="/(tabs)/social">
+      <Section title={t('community.latest_posts')} route="/(tabs)/social">
         {posts.length === 0
-          ? <Text style={s.emptyLine}>Καμία δημοσίευση ακόμη</Text>
+          ? <Text style={s.emptyLine}>{t('community.no_posts_yet')}</Text>
           : posts.map((p: any) => (
               <TouchableOpacity key={p.id} style={s.card} activeOpacity={0.8}
                 onPress={() => router.push('/(tabs)/social' as any)}>

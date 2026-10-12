@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, Modal,
   StyleSheet, ScrollView,
@@ -38,6 +39,7 @@ type Message = {
 }
 
 export default function InboxScreen() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [open, setOpen] = useState<Message | null>(null)
 
@@ -69,10 +71,10 @@ export default function InboxScreen() {
   const when = (iso: string) => {
     const d = new Date(iso)
     const h = Math.round((Date.now() - d.getTime()) / 36e5)
-    if (h < 1) return 'μόλις τώρα'
-    if (h < 24) return `πριν ${h}${h === 1 ? ' ώρα' : ' ώρες'}`
+    if (h < 1) return t('common.just_now')
+    if (h < 24) return h === 1 ? t('inbox.hour_ago_one') : t('inbox.hours_ago', { count: h })
     const days = Math.round(h / 24)
-    if (days < 7) return `πριν ${days}${days === 1 ? ' μέρα' : ' μέρες'}`
+    if (days < 7) return days === 1 ? t('inbox.day_ago_one') : t('inbox.days_ago', { count: days })
     return d.toLocaleDateString('el-GR')
   }
 
@@ -112,17 +114,17 @@ export default function InboxScreen() {
 
   return (
     <Screen
-      title="Μηνύματα"
-      subtitle={unread > 0 ? `${unread} νέα` : 'Από τους παρόχους σου'}
+      title={t('inbox.title')}
+      subtitle={unread > 0 ? t('inbox.unread_count', { count: unread }) : t('inbox.from_providers')}
       scroll={false}>
 
       {isLoading ? (
-        <Loading label="Φόρτωση μηνυμάτων..." />
+        <Loading label={t('inbox.loading')} />
       ) : messages.length === 0 ? (
         <EmptyState
           icon={InboxIcon}
-          title="Κανένα μήνυμα"
-          message="Εδώ θα βλέπεις προσφορές και ενημερώσεις από τους παρόχους που έχεις χρησιμοποιήσει." />
+          title={t('inbox.none')}
+          message={t('inbox.none_hint')} />
       ) : (
         <FlatList
           data={messages}
@@ -165,7 +167,7 @@ export default function InboxScreen() {
                   <View style={s.offerTop}>
                     <Sparkles size={icon.sm} color={colors.brand} />
                     <Text style={s.offerTitle}>
-                      {open.campaign_title || 'Ειδική προσφορά'}
+                      {open.campaign_title || t('inbox.special_offer')}
                     </Text>
                   </View>
 
@@ -178,16 +180,16 @@ export default function InboxScreen() {
                       <View style={s.offerTime}>
                         <Clock size={icon.xs} color={colors.textMuted} />
                         <Text style={s.offerTimeText}>
-                          Ισχύει για {left} {left === 1 ? 'ακόμα μέρα' : 'ακόμα μέρες'}
+                          {left === 1 ? t('inbox.valid_day_one') : t('inbox.valid_days', { count: left })}
                         </Text>
                       </View>
                     ) : (
-                      <Text style={s.offerExpired}>Η προσφορά έληξε</Text>
+                      <Text style={s.offerExpired}>{t('inbox.offer_expired')}</Text>
                     )
                   })()}
 
                   <Button
-                    label="Δες τις υπηρεσίες"
+                    label={t('inbox.see_services')}
                     full
                     icon={<ArrowRight size={icon.sm} color={colors.textOnDark} />}
                     onPress={() => { setOpen(null); router.push('/(tabs)/services') }}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Image,
@@ -19,6 +20,7 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *   ο χρήστης να βλέπει «Λανθασμένος κωδικός» αντί για γενικό μήνυμα.
  */
 export default function LoginScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { login, loginWithGoogle, loginWithFacebook, isLoading } = useAuthStore()
   const [email, setEmail] = useState('')
@@ -32,13 +34,13 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Σφάλμα', 'Συμπλήρωσε email και κωδικό'); return
+      Alert.alert(t('common.error'), t('auth.enter_both')); return
     }
     try {
       await login(email.trim(), password)
       router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα σύνδεσης', msg(err, 'Λανθασμένα στοιχεία'))
+      Alert.alert(t('auth.login_error'), msg(err, t('auth.wrong_credentials')))
     }
   }
 
@@ -48,7 +50,7 @@ export default function LoginScreen() {
       const signedIn = await loginWithGoogle()
       if (signedIn) router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα σύνδεσης με Google', msg(err, 'Κάτι πήγε στραβά'))
+      Alert.alert(t('auth.err_google'), msg(err, t('common.something_wrong')))
     } finally { setGoogleLoading(false) }
   }
 
@@ -58,7 +60,7 @@ export default function LoginScreen() {
       const signedIn = await loginWithFacebook()
       if (signedIn) router.replace('/(tabs)')
     } catch (err: any) {
-      Alert.alert('Σφάλμα σύνδεσης με Facebook', msg(err, 'Κάτι πήγε στραβά'))
+      Alert.alert(t('auth.err_facebook'), msg(err, t('common.something_wrong')))
     } finally { setFacebookLoading(false) }
   }
 
@@ -72,8 +74,8 @@ export default function LoginScreen() {
 
         <View style={s.brand}>
           <Image source={require('../../assets/icon.png')} style={s.logo} />
-          <Text style={s.title}>Καλώς ήρθες</Text>
-          <Text style={s.subtitle}>Συνδέσου για να συνεχίσεις</Text>
+          <Text style={s.title}>{t('home.welcome')}</Text>
+          <Text style={s.subtitle}>{t('auth.login_to_continue')}</Text>
         </View>
 
         <View style={s.form}>
@@ -81,7 +83,7 @@ export default function LoginScreen() {
             <Mail size={icon.md} color={colors.textLight} />
             <TextInput
               style={s.input}
-              placeholder="Email"
+              placeholder={t('auth.email')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -95,7 +97,7 @@ export default function LoginScreen() {
             <Lock size={icon.md} color={colors.textLight} />
             <TextInput
               style={s.input}
-              placeholder="Κωδικός"
+              placeholder={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -113,7 +115,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity activeOpacity={0.7}
             onPress={() => router.push('/auth/forgot-password' as any)}>
-            <Text style={s.forgot}>Ξέχασες τον κωδικό σου;</Text>
+            <Text style={s.forgot}>{t('auth.forgot_q')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -123,12 +125,12 @@ export default function LoginScreen() {
             onPress={handleLogin}>
             {isLoading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={s.primaryBtnText}>Σύνδεση</Text>}
+              : <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>}
           </TouchableOpacity>
 
           <View style={s.divider}>
             <View style={s.line} />
-            <Text style={s.dividerText}>ή</Text>
+            <Text style={s.dividerText}>{t('auth.or')}</Text>
             <View style={s.line} />
           </View>
 
@@ -141,7 +143,7 @@ export default function LoginScreen() {
               ? <ActivityIndicator color={colors.text} />
               : <>
                   <Text style={s.googleG}>G</Text>
-                  <Text style={s.socialText}>Συνέχεια με Google</Text>
+                  <Text style={s.socialText}>{t('auth.continue_google')}</Text>
                 </>}
           </TouchableOpacity>
 
@@ -154,15 +156,14 @@ export default function LoginScreen() {
               ? <ActivityIndicator color="#fff" />
               : <>
                   <Text style={s.fbF}>f</Text>
-                  <Text style={[s.socialText, { color: '#fff' }]}>Συνέχεια με Facebook</Text>
+                  <Text style={[s.socialText, { color: '#fff' }]}>{t('auth.continue_facebook')}</Text>
                 </>}
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity activeOpacity={0.7} style={s.footer}
           onPress={() => router.push('/auth/register' as any)}>
-          <Text style={s.footerText}>
-            Δεν έχεις λογαριασμό; <Text style={s.footerLink}>Εγγραφή</Text>
+          <Text style={s.footerText}>{t('auth.no_account_q')}<Text style={s.footerLink}>{t('auth.register')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

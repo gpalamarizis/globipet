@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback } from 'react'
 import { View, Text, StyleSheet, Image, Linking } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MapPin, Battery, Clock, Navigation, AlertTriangle, Wifi } from 'lucide-react-native'
@@ -31,17 +32,23 @@ const SPECIES: Record<string, string> = {
 }
 const emojiFor = (s?: string) => SPECIES[String(s).toLowerCase()] ?? '🐾'
 
-const since = (iso?: string | null) => {
+/**
+ * Σχετικός χρόνος. Το t περνιέται ως παράμετρος επειδή η συνάρτηση ζει
+ * εκτός component: εκεί δεν υπάρχει hook, και σταθερό κείμενο θα κλείδωνε
+ * στη γλώσσα της πρώτης φόρτωσης.
+ */
+const since = (iso: string | null | undefined, t: (k: string, o?: any) => string) => {
   if (!iso) return '—'
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return 'μόλις τώρα'
-  if (m < 60) return `${m} λεπτά πριν`
+  if (m < 1) return t('common.just_now')
+  if (m < 60) return t('tracker.mins_ago', { count: m })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h} ώρες πριν`
-  return `${Math.floor(h / 24)} μέρες πριν`
+  if (h < 24) return t('tracker.hours_ago', { count: h })
+  return t('tracker.days_ago', { count: Math.floor(h / 24) })
 }
 
 export default function TrackerScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -66,26 +73,26 @@ export default function TrackerScreen() {
     b == null ? colors.textLight : b > 50 ? colors.success : b > 20 ? colors.warning : colors.danger
 
   if (!isAuthenticated) return (
-    <Screen title="Εντοπισμός GPS">
+    <Screen title={t('discover.gps_tracking')}>
       <EmptyState
         icon={MapPin}
-        title="Συνδέσου για πρόσβαση"
-        message="Δες πού βρίσκονται τα κατοικίδιά σου."
-        action={<Button label="Σύνδεση" onPress={() => router.push('/auth/login' as any)} />}
+        title={t('pets.login_required')}
+        message={t('tracker.subtitle')}
+        action={<Button label={t('auth.sign_in')} onPress={() => router.push('/auth/login' as any)} />}
       />
     </Screen>
   )
 
   return (
-    <Screen title="Εντοπισμός GPS" onRefresh={onRefresh} refreshing={refreshing}>
+    <Screen title={t('discover.gps_tracking')} onRefresh={onRefresh} refreshing={refreshing}>
       {isLoading ? (
         <SkeletonRows count={3} height={120} />
       ) : rows.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="Κανένα κατοικίδιο"
-          message="Πρόσθεσε πρώτα ένα κατοικίδιο και μετά σύνδεσε τη συσκευή GPS του."
-          action={<Button label="Τα κατοικίδιά μου" onPress={() => router.push('/(tabs)/pets' as any)} />}
+          title={t('tracker.no_pet')}
+          message={t('tracker.add_pet_first')}
+          action={<Button label={t('home.my_pets')} onPress={() => router.push('/(tabs)/pets' as any)} />}
         />
       ) : (
         <View style={{ gap: space.md }}>
@@ -102,10 +109,10 @@ export default function TrackerScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={s.nameRow}>
                       <Text style={s.name} numberOfLines={1}>{pet.name}</Text>
-                      {lost && <Badge label="Χαμένο" tone="danger" />}
+                      {lost && <Badge label={t('pets.lost')} tone="danger" />}
                     </View>
                     <Text style={s.sub} numberOfLines={1}>
-                      {tracker ? (tracker.name || tracker.device_id) : 'Χωρίς συνδεδεμένη συσκευή'}
+                      {tracker ? (tracker.name || tracker.device_id) : t('tracker.no_device')}
                     </Text>
                   </View>
                   {lost && <AlertTriangle size={icon.md} color={colors.danger} />}
@@ -121,14 +128,14 @@ export default function TrackerScreen() {
                   <View style={s.stat}>
                     <Wifi size={icon.xs} color={colors.textLight} />
                     <Text style={s.statText}>
-                      {tracker?.signal_strength === 'good' ? 'Καλό'
-                        : tracker?.signal_strength === 'weak' ? 'Ασθενές'
-                        : tracker?.signal_strength === 'none' ? 'Χωρίς σήμα' : '—'}
+                      {tracker?.signal_strength === 'good' ? t('tracker.signal_ok')
+                        : tracker?.signal_strength === 'weak' ? t('tracker.signal_weak')
+                        : tracker?.signal_strength === 'none' ? t('tracker.signal_none') : '—'}
                     </Text>
                   </View>
                   <View style={s.stat}>
                     <Clock size={icon.xs} color={colors.textLight} />
-                    <Text style={s.statText}>{since(location?.created_at)}</Text>
+                    <Text style={s.statText}>{since(location?.created_at, t)}</Text>
                   </View>
                 </View>
 
@@ -138,7 +145,7 @@ export default function TrackerScreen() {
                       {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
                     </Text>
                     <Button
-                      label="Οδηγίες στον χάρτη"
+                      label={t('tracker.directions')}
                       variant="secondary"
                       full
                       size="sm"
@@ -152,8 +159,8 @@ export default function TrackerScreen() {
                 ) : (
                   <Text style={s.noSignal}>
                     {tracker
-                      ? 'Η συσκευή δεν έχει στείλει θέση ακόμη'
-                      : 'Σύνδεσε συσκευή GPS για ζωντανό εντοπισμό'}
+                      ? t('tracker.no_position')
+                      : t('tracker.connect_device')}
                   </Text>
                 )}
               </Card>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -16,19 +17,20 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  * ίδιο είτε ο λογαριασμός υπάρχει είτε όχι.
  */
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
 
   const submit = async () => {
-    if (!email.trim()) { Alert.alert('Σφάλμα', 'Συμπλήρωσε το email σου'); return }
+    if (!email.trim()) { Alert.alert(t('common.error'), t('auth.enter_email')); return }
     setLoading(true)
     try {
       await api.post('/auth/forgot-password', { email: email.trim() })
       setSent(true)
     } catch (err: any) {
-      Alert.alert('Σφάλμα', err?.message || 'Παρουσιάστηκε πρόβλημα. Δοκίμασε ξανά.')
+      Alert.alert(t('common.error'), err?.message || t('common.problem_try_again'))
     } finally { setLoading(false) }
   }
 
@@ -46,28 +48,25 @@ export default function ForgotPasswordScreen() {
             <View style={s.successIcon}>
               <CheckCircle2 size={icon.hero} color={colors.success} />
             </View>
-            <Text style={s.title}>Έλεγξε το email σου</Text>
+            <Text style={s.title}>{t('auth.check_email')}</Text>
             <Text style={s.sub}>
-              Αν υπάρχει λογαριασμός με τη διεύθυνση {email.trim()}, θα λάβεις
-              σύνδεσμο επαναφοράς μέσα σε λίγα λεπτά.
+              {t('auth.reset_sent_to', { email: email.trim() })}
             </Text>
             <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
               onPress={() => router.replace('/auth/login' as any)}>
-              <Text style={s.primaryBtnText}>Επιστροφή στη σύνδεση</Text>
+              <Text style={s.primaryBtnText}>{t('auth.back_to_signin')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={s.card}>
-            <Text style={s.title}>Ξέχασες τον κωδικό;</Text>
-            <Text style={s.sub}>
-              Γράψε το email σου και θα σου στείλουμε σύνδεσμο επαναφοράς.
-            </Text>
+            <Text style={s.title}>{t('auth.forgot_title')}</Text>
+            <Text style={s.sub}>{t('auth.forgot_desc')}</Text>
 
             <View style={s.field}>
               <Mail size={icon.md} color={colors.textLight} />
               <TextInput
                 style={s.input}
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -84,7 +83,7 @@ export default function ForgotPasswordScreen() {
               activeOpacity={0.85} disabled={loading} onPress={submit}>
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={s.primaryBtnText}>Αποστολή συνδέσμου</Text>}
+                : <Text style={s.primaryBtnText}>{t('auth.send_link')}</Text>}
             </TouchableOpacity>
           </View>
         )}

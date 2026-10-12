@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -35,13 +36,14 @@ type Customer = {
 }
 
 const SORTS = [
-  { value: 'last',     label: 'Πρόσφατοι' },
-  { value: 'spent',    label: 'Περισσότερα έξοδα' },
-  { value: 'bookings', label: 'Περισσότερες κρατήσεις' },
-  { value: 'name',     label: 'Αλφαβητικά' },
+  { value: 'last',     labelKey: 'providerCus.sortRecent' },
+  { value: 'spent',    labelKey: 'providerCus.sortSpent' },
+  { value: 'bookings', labelKey: 'providerCus.sortBookings' },
+  { value: 'name',     labelKey: 'providerCus.sortName' },
 ]
 
 export default function ProviderCustomersPage() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [q, setQ] = useState('')
   const [sort, setSort] = useState('last')
@@ -91,22 +93,22 @@ export default function ProviderCustomersPage() {
     }),
     onSuccess: (r: any) => {
       const { sent = 0, rejected } = r?.data ?? {}
-      toast.success(`Στάλθηκε σε ${sent} πελάτες`)
-      if (rejected?.length) toast(`${rejected.length} δεν είναι πελάτες σου`, { icon: '⚠️' })
+      toast.success(t('providerCus.sentTo', { count: sent }))
+      if (rejected?.length) toast(t('providerCus.rejectedNote', { count: rejected.length }), { icon: '⚠️' })
       setComposing(false); setSelected(new Set()); setMsg({ subject: '', body: '', campaign_id: '' })
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Σφάλμα αποστολής'),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('providerCus.errSend')),
   })
 
   const saveNote = useMutation({
     mutationFn: (body: any) =>
       api.put(`/customers/${encodeURIComponent(detailFor!.email)}/note`, body),
     onSuccess: () => {
-      toast.success('Η σημείωση αποθηκεύτηκε')
+      toast.success(t('providerCus.noteSaved'))
       qc.invalidateQueries({ queryKey: ['customer', detailFor?.email] })
       qc.invalidateQueries({ queryKey: ['customers'] })
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Σφάλμα'),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('providerCus.error')),
   })
 
   // ── Επιλογή ─────────────────────────────────────────────────────────
@@ -131,16 +133,12 @@ export default function ProviderCustomersPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Users size={18} className="text-brand-900" />
-            Πελάτες
-          </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Όσοι έκαναν κράτηση σε εσένα. Επίλεξε και στείλε μήνυμα ή προσφορά.
-          </p>
+            <Users size={18} className="text-brand-900" />{t('providerCus.title')}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{t('providerCus.subtitle')}</p>
         </div>
         {selected.size > 0 && (
           <button onClick={() => setComposing(true)} className="btn-primary flex items-center gap-2 text-sm">
-            <Send size={15} /> Μήνυμα σε {selected.size}
+            <Send size={15} /> {t('providerCus.msgTo', { count: selected.size })}
           </button>
         )}
       </div>
@@ -150,35 +148,32 @@ export default function ProviderCustomersPage() {
         <div className="flex gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input pl-9" placeholder="Αναζήτηση ονόματος ή email..."
+            <input className="input pl-9" placeholder={t('providerCus.search')}
               value={q} onChange={e => setQ(e.target.value)} />
           </div>
           <select className="input w-auto" value={sort} onChange={e => setSort(e.target.value)}>
-            {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {SORTS.map(so => <option key={so.value} value={so.value}>{t(so.labelKey)}</option>)}
           </select>
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn('btn-secondary flex items-center gap-1.5 text-sm',
               hasFilters && 'border-brand-400 text-brand-900')}>
-            <Filter size={14} /> Φίλτρα
-          </button>
+            <Filter size={14} />{t('providerCus.filters')}</button>
         </div>
 
         {showFilters && (
           <div className="grid sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
             <div>
-              <label className="label">Ελάχιστες κρατήσεις</label>
+              <label className="label">{t('providerCus.minBookings')}</label>
               <input className="input text-sm" type="number" min={0} placeholder="—"
                 value={minBookings} onChange={e => setMinBookings(e.target.value)} />
             </div>
             <div>
-              <label className="label">Ελάχιστα έξοδα (€)</label>
+              <label className="label">{t('providerCus.minSpend')}</label>
               <input className="input text-sm" type="number" min={0} placeholder="—"
                 value={minSpent} onChange={e => setMinSpent(e.target.value)} />
             </div>
             <div className="flex items-end pb-1">
-              <button onClick={clearFilters} className="btn-ghost text-sm" disabled={!hasFilters}>
-                Καθαρισμός
-              </button>
+              <button onClick={clearFilters} className="btn-ghost text-sm" disabled={!hasFilters}>{t('providerCus.clear')}</button>
             </div>
           </div>
         )}
@@ -186,16 +181,16 @@ export default function ProviderCustomersPage() {
 
       {/* Λίστα */}
       {isLoading ? (
-        <div className="card p-12 text-center text-gray-500">Φόρτωση...</div>
+        <div className="card p-12 text-center text-gray-500">{t('providerCus.loading')}</div>
       ) : customers.length === 0 ? (
         <div className="card p-12 text-center">
           <Users size={40} className="mx-auto text-gray-300 mb-3" />
           <p className="font-medium text-gray-700 dark:text-gray-300">
-            {hasFilters ? 'Κανένας πελάτης με αυτά τα κριτήρια' : 'Δεν έχεις ακόμα πελάτες'}
+            {hasFilters ? t('providerCus.noMatch') : t('providerCus.empty')}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {hasFilters ? 'Δοκίμασε να χαλαρώσεις τα φίλτρα.'
-                        : 'Θα εμφανιστούν εδώ μόλις κάποιος κάνει κράτηση.'}
+            {hasFilters ? t('providerCus.relaxFilters')
+                        : t('providerCus.emptyHint')}
           </p>
         </div>
       ) : (
@@ -203,9 +198,9 @@ export default function ProviderCustomersPage() {
           <button onClick={toggleAll}
             className="w-full flex items-center gap-3 p-3 text-left text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
             {allSelected ? <CheckSquare size={16} className="text-brand-900" /> : <Square size={16} />}
-            {allSelected ? 'Αποεπιλογή όλων' : `Επιλογή όλων (${customers.length})`}
+            {allSelected ? t('providerCus.deselectAll') : t('providerCus.selectAll', { count: customers.length })}
             {selected.size > 0 && (
-              <span className="ml-auto text-brand-900 font-medium">{selected.size} επιλεγμένοι</span>
+              <span className="ml-auto text-brand-900 font-medium">{t('providerCus.selectedCount', { count: selected.size })}</span>
             )}
           </button>
 
@@ -228,15 +223,15 @@ export default function ProviderCustomersPage() {
                         {c.name || c.email}
                       </span>
                       {c.note && <StickyNote size={12} className="text-amber-500 shrink-0" />}
-                      {(c.tags ?? []).slice(0, 2).map(t => (
-                        <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                          {t}
+                      {(c.tags ?? []).slice(0, 2).map(tag => (
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                          {tag}
                         </span>
                       ))}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
                       <span className="inline-flex items-center gap-1">
-                        <Calendar size={11} /> {c.bookings} κρατήσεις
+                        <Calendar size={11} /> {t('providerCus.bookingCount', { count: c.bookings })}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Euro size={11} /> {money(c.spent)}
@@ -252,7 +247,7 @@ export default function ProviderCustomersPage() {
                         </span>
                       )}
                       {c.cancelled > 0 && (
-                        <span className="text-red-400">{c.cancelled} ακυρώσεις</span>
+                        <span className="text-red-400">{t('providerCus.cancelCount', { count: c.cancelled })}</span>
                       )}
                     </div>
                   </button>
@@ -292,50 +287,48 @@ export default function ProviderCustomersPage() {
               onClick={e => e.stopPropagation()}>
 
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-lg font-display font-bold">Μήνυμα</h3>
+                <h3 className="text-lg font-display font-bold">{t('providerCus.message')}</h3>
                 <button onClick={() => setComposing(false)} className="btn-ghost p-2"><X size={18} /></button>
               </div>
               <p className="text-sm text-gray-500 mb-5">
-                Προς {selected.size} {selected.size === 1 ? 'πελάτη' : 'πελάτες'}.
-                Θα το δουν στις ειδοποιήσεις τους μέσα στην πλατφόρμα.
+                {t('providerCus.toRecipients')} {selected.size} {selected.size === 1 ? t('providerCus.customer') : t('providerCus.customers')}.
+                {t('providerCus.inAppNote')}
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="label">Θέμα</label>
+                  <label className="label">{t('providerCus.subject')}</label>
                   <input className="input" value={msg.subject}
-                    placeholder="π.χ. Ειδική προσφορά για εσάς"
+                    placeholder={t('providerCus.phSubject')}
                     onChange={e => setMsg({ ...msg, subject: e.target.value })} />
                 </div>
 
                 <div>
-                  <label className="label">Μήνυμα *</label>
+                  <label className="label">{t('providerCus.messageReq')}</label>
                   <textarea className="input" rows={5} value={msg.body} required
                     onChange={e => setMsg({ ...msg, body: e.target.value })} />
                 </div>
 
                 <div>
-                  <label className="label">Συνοδευτική προσφορά</label>
+                  <label className="label">{t('providerCus.attachedOffer')}</label>
                   <select className="input" value={msg.campaign_id}
                     onChange={e => setMsg({ ...msg, campaign_id: e.target.value })}>
-                    <option value="">— χωρίς —</option>
+                    <option value="">{t('providerCus.none')}</option>
                     {campaigns.filter((c: any) => c.discount_type).map((c: any) => (
                       <option key={c.id} value={c.id}>
                         {c.title} ({c.discount_type === 'percent' ? `-${c.discount_value}%` : `-${c.discount_value}€`})
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Ο πελάτης θα δει την προσφορά μαζί με το μήνυμα.
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{t('providerCus.offerHint')}</p>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-5">
-                <button onClick={() => setComposing(false)} className="btn-secondary">Ακύρωση</button>
+                <button onClick={() => setComposing(false)} className="btn-secondary">{t('providerCus.cancel')}</button>
                 <button onClick={() => send.mutate()} className="btn-primary"
                   disabled={send.isPending || !msg.body.trim()}>
-                  {send.isPending ? 'Αποστολή...' : `Αποστολή σε ${selected.size}`}
+                  {send.isPending ? t('providerCus.sending') : t('providerCus.send', { count: selected.size })}
                 </button>
               </div>
             </motion.div>
@@ -351,6 +344,7 @@ export default function ProviderCustomersPage() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pending }: any) {
+  const { t } = useTranslation()
   const [note, setNote] = useState<string | null>(null)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[] | null>(null)
@@ -380,8 +374,7 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
           </div>
           <div className="flex gap-1.5 shrink-0">
             <button onClick={onMessage} className="btn-secondary flex items-center gap-1.5 text-sm">
-              <Send size={14} /> Μήνυμα
-            </button>
+              <Send size={14} />{t('providerCus.message')}</button>
             <button onClick={onClose} className="btn-ghost p-2"><X size={18} /></button>
           </div>
         </div>
@@ -389,10 +382,10 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
         {/* Σύνοψη */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
           {[
-            ['Κρατήσεις', customer.bookings],
-            ['Ολοκληρωμένες', customer.completed],
-            ['Έξοδα', `${Math.round(customer.spent)}€`],
-            ['Βαθμολογία', customer.avg_rating > 0 ? Number(customer.avg_rating).toFixed(1) : '—'],
+            [t('providerCus.bookings'), customer.bookings],
+            [t('providerCus.completed'), customer.completed],
+            [t('providerCus.spend'), `${Math.round(customer.spent)}€`],
+            [t('providerCus.rating'), customer.avg_rating > 0 ? Number(customer.avg_rating).toFixed(1) : '—'],
           ].map(([label, value]) => (
             <div key={label as string} className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
               <p className="text-lg font-bold text-gray-900 dark:text-white">{value}</p>
@@ -404,14 +397,13 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
         {/* Σημείωση */}
         <div className="mb-5">
           <label className="label flex items-center gap-1.5">
-            <StickyNote size={14} /> Σημείωση — τη βλέπεις μόνο εσύ
-          </label>
+            <StickyNote size={14} />{t('providerCus.note')}</label>
           <textarea className="input" rows={3} value={N}
-            placeholder="π.χ. Ο Ρέξ φοβάται τη μηχανή κουρέματος"
+            placeholder={t('providerCus.phNote')}
             onChange={e => setNote(e.target.value)} />
 
           <div className="flex gap-2 mt-2">
-            <input className="input flex-1 text-sm" placeholder="Ετικέτα"
+            <input className="input flex-1 text-sm" placeholder={t('providerCus.tag')}
               value={tagInput} onChange={e => setTagInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }} />
             <button type="button" onClick={addTag} className="btn-secondary text-sm px-4">
@@ -433,18 +425,14 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
 
           <div className="flex justify-end mt-2">
             <button onClick={() => onSaveNote({ note: N, tags: T })}
-              className="btn-primary text-sm" disabled={pending}>
-              Αποθήκευση σημείωσης
-            </button>
+              className="btn-primary text-sm" disabled={pending}>{t('providerCus.saveNote')}</button>
           </div>
         </div>
 
         {/* Ζώα */}
         {detail?.pets?.length > 0 && (
           <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
-              Τα ζώα του
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{t('providerCus.theirPets')}</p>
             <div className="flex flex-wrap gap-1.5">
               {detail.pets.map((p: any, i: number) => (
                 <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
@@ -458,9 +446,7 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
 
         {/* Κρατήσεις */}
         <div className="mb-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
-            Ιστορικό κρατήσεων
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{t('providerCus.bookingHistory')}</p>
           <div className="rounded-xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 max-h-56 overflow-y-auto">
             {(detail?.bookings ?? []).map((b: any) => (
               <div key={b.id} className="flex items-center gap-3 p-2.5 text-sm">
@@ -478,8 +464,8 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
                   b.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   : b.status === 'cancelled' ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
                   : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400')}>
-                  {b.status === 'completed' ? 'ολοκληρώθηκε'
-                    : b.status === 'cancelled' ? 'ακυρώθηκε' : 'επιβεβαιωμένη'}
+                  {b.status === 'completed' ? t('providerCus.stCompleted')
+                    : b.status === 'cancelled' ? t('providerCus.stCancelled') : t('providerCus.stConfirmed')}
                 </span>
               </div>
             ))}
@@ -490,8 +476,7 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
         {detail?.messages?.length > 0 && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 flex items-center gap-1.5">
-              <MessageSquare size={12} /> Μηνύματα που έστειλες
-            </p>
+              <MessageSquare size={12} />{t('providerCus.sentMessages')}</p>
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {detail.messages.map((m: any) => (
                 <div key={m.id} className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-2.5">
@@ -499,7 +484,7 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
                     {m.subject && <span className="text-sm font-medium">{m.subject}</span>}
                     <span className={cn('text-[11px] ml-auto',
                       m.read_at ? 'text-green-600' : 'text-gray-400')}>
-                      {m.read_at ? 'διαβάστηκε' : 'μη αναγνωσμένο'}
+                      {m.read_at ? t('providerCus.read') : t('providerCus.unread')}
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">{m.body}</p>

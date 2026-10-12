@@ -1,5 +1,6 @@
 ﻿import { useState, useMemo } from 'react'
 import { View, Text, StyleSheet, Alert, Linking, TouchableOpacity } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Package, Truck, CreditCard, Check } from 'lucide-react-native'
@@ -26,13 +27,14 @@ import { colors, space, radius, type, weight, icon, touch } from '@/theme'
  */
 
 const SHIPPING = [
-  { id: 'boxnow', label: 'BOX NOW', sub: 'Θυρίδα, 1-2 εργάσιμες', price: 2.50 },
-  { id: 'acs',    label: 'ACS',     sub: 'Στο σπίτι, 1-3 εργάσιμες', price: 3.99 },
-  { id: 'elta',   label: 'ΕΛΤΑ',    sub: 'Στο σπίτι, 3-5 εργάσιμες', price: 4.50 },
+  { id: 'boxnow', label: 'BOX NOW', subKey: 'checkout.locker', price: 2.50 },
+  { id: 'acs',    label: 'ACS',     subKey: 'checkout.home_1_3', price: 3.99 },
+  { id: 'elta',   labelKey: 'checkout.elta',    subKey: 'checkout.home_3_5', price: 4.50 },
 ]
 const FREE_OVER = 50
 
 export default function CheckoutScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
@@ -72,7 +74,7 @@ export default function CheckoutScreen() {
         payment_method: 'viva',
       })
       const orderId = created?.data?.id ?? created?.id
-      if (!orderId) throw new Error('Δεν δημιουργήθηκε παραγγελία')
+      if (!orderId) throw new Error(t('checkout.err_no_order'))
 
       // 2. Η σελίδα πληρωμής χρεώνει το αποθηκευμένο σύνολο, όχι ποσό από εδώ.
       const { data: pay } = await api.post('/orders/viva/checkout', { order_id: orderId })
@@ -82,7 +84,7 @@ export default function CheckoutScreen() {
       qc.invalidateQueries({ queryKey: ['cart'] })
       qc.invalidateQueries({ queryKey: ['my-orders'] })
       if (!url) {
-        Alert.alert('Σφάλμα', 'Δεν δημιουργήθηκε σελίδα πληρωμής. Δες τις παραγγελίες σου.')
+        Alert.alert(t('common.error'), t('checkout.err_no_page'))
         router.replace('/orders' as any)
         return
       }
@@ -93,52 +95,52 @@ export default function CheckoutScreen() {
         // την κατάστασή της αντί για άδειο καλάθι.
         router.replace('/orders' as any)
       } else {
-        Alert.alert('Σφάλμα', 'Δεν ήταν δυνατό το άνοιγμα της σελίδας πληρωμής.')
+        Alert.alert(t('common.error'), t('checkout.err_open_page'))
       }
     },
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Η παραγγελία δεν ολοκληρώθηκε'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('checkout.err_order')),
   })
 
   const ready = addr.full_name.trim() && addr.phone.trim()
     && addr.street.trim() && addr.city.trim() && addr.postal_code.trim()
 
   if (!isAuthenticated) return (
-    <Screen title="Ολοκλήρωση">
-      <EmptyState icon={CreditCard} title="Συνδέσου για να ολοκληρώσεις"
-        action={<Button label="Σύνδεση" onPress={() => router.push('/auth/login' as any)} />} />
+    <Screen title={t('checkout.title')}>
+      <EmptyState icon={CreditCard} title={t('checkout.login_prompt')}
+        action={<Button label={t('auth.sign_in')} onPress={() => router.push('/auth/login' as any)} />} />
     </Screen>
   )
 
-  if (isLoading) return <Screen title="Ολοκλήρωση"><Loading label="Φόρτωση καλαθιού…" /></Screen>
+  if (isLoading) return <Screen title={t('checkout.title')}><Loading label={t('checkout.loading_cart')} /></Screen>
 
   if (items.length === 0) return (
-    <Screen title="Ολοκλήρωση">
-      <EmptyState icon={Package} title="Το καλάθι είναι άδειο"
-        action={<Button label="Στο κατάστημα"
+    <Screen title={t('checkout.title')}>
+      <EmptyState icon={Package} title={t('cart.empty')}
+        action={<Button label={t('cart.go_to_shop')}
           onPress={() => router.replace('/(tabs)/marketplace' as any)} />} />
     </Screen>
   )
 
   return (
-    <Screen title="Ολοκλήρωση" subtitle={`${items.length} προϊόντα`}>
+    <Screen title={t('checkout.title')} subtitle={t('checkout.item_count', { count: items.length })}>
 
-      <SectionHeader title="Παράδοση" />
-      <Input label="Ονοματεπώνυμο" value={addr.full_name}
+      <SectionHeader title={t('checkout.delivery')} />
+      <Input label={t('auth.full_name')} value={addr.full_name}
         onChangeText={v => setAddr(a => ({ ...a, full_name: v }))} />
-      <Input label="Τηλέφωνο" value={addr.phone} keyboardType="phone-pad"
+      <Input label={t('common.phone')} value={addr.phone} keyboardType="phone-pad"
         onChangeText={v => setAddr(a => ({ ...a, phone: v }))} />
-      <Input label="Διεύθυνση" value={addr.street}
+      <Input label={t('checkout.address')} value={addr.street}
         onChangeText={v => setAddr(a => ({ ...a, street: v }))}
-        placeholder="Οδός και αριθμός" />
-      <Input label="Πόλη" value={addr.city}
+        placeholder={t('checkout.street')} />
+      <Input label={t('common.city')} value={addr.city}
         onChangeText={v => setAddr(a => ({ ...a, city: v }))} />
-      <Input label="Ταχυδρομικός κώδικας" value={addr.postal_code} keyboardType="number-pad"
+      <Input label={t('checkout.postcode')} value={addr.postal_code} keyboardType="number-pad"
         onChangeText={v => setAddr(a => ({ ...a, postal_code: v }))} />
-      <Input label="Σχόλια" value={addr.notes} multiline
+      <Input label={t('checkout.notes')} value={addr.notes} multiline
         onChangeText={v => setAddr(a => ({ ...a, notes: v }))}
-        placeholder="Προαιρετικό — όροφος, κουδούνι, ώρες" />
+        placeholder={t('checkout.notes_hint')} />
 
-      <SectionHeader title="Τρόπος αποστολής" />
+      <SectionHeader title={t('checkout.shipping_method')} />
       <View style={{ gap: space.sm, marginBottom: space.lg }}>
         {SHIPPING.map(m => {
           const active = method === m.id
@@ -150,10 +152,10 @@ export default function CheckoutScreen() {
                   <Truck size={icon.md} color={active ? colors.brand : colors.textLight} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[s.shipLabel, active && s.shipLabelActive]}>{m.label}</Text>
-                    <Text style={s.shipSub}>{m.sub}</Text>
+                    <Text style={s.shipSub}>{t(m.subKey)}</Text>
                   </View>
                   <Text style={[s.shipPrice, free && s.free]}>
-                    {free ? 'Δωρεάν' : `€${m.price.toFixed(2)}`}
+                    {free ? t('discover.free') : `€${m.price.toFixed(2)}`}
                   </Text>
                   {active && <Check size={icon.sm} color={colors.brand} />}
                 </View>
@@ -163,37 +165,36 @@ export default function CheckoutScreen() {
         })}
       </View>
 
-      <SectionHeader title="Σύνοψη" />
+      <SectionHeader title={t('checkout.summary')} />
       <Card>
         <View style={s.line}>
-          <Text style={s.lineLabel}>Προϊόντα</Text>
+          <Text style={s.lineLabel}>{t('checkout.products')}</Text>
           <Text style={s.lineValue}>€{subtotal.toFixed(2)}</Text>
         </View>
         <View style={s.line}>
-          <Text style={s.lineLabel}>Μεταφορικά</Text>
+          <Text style={s.lineLabel}>{t('checkout.shipping')}</Text>
           <Text style={[s.lineValue, shipping === 0 && s.free]}>
-            {shipping === 0 ? 'Δωρεάν' : `€${shipping.toFixed(2)}`}
+            {shipping === 0 ? t('discover.free') : `€${shipping.toFixed(2)}`}
           </Text>
         </View>
         {subtotal <= FREE_OVER && (
           // Λέγεται πριν την πληρωμή, όχι μετά — τότε δεν βοηθά κανέναν.
           <Text style={s.hint}>
-            Δωρεάν αποστολή για παραγγελίες άνω των €{FREE_OVER}
+            {t('checkout.free_over', { amount: FREE_OVER })}
           </Text>
         )}
         <View style={[s.line, s.totalLine]}>
-          <Text style={s.totalLabel}>Σύνολο</Text>
+          <Text style={s.totalLabel}>{t('common.total')}</Text>
           <Text style={s.total}>€{total.toFixed(2)}</Text>
         </View>
       </Card>
 
       <Text style={s.note}>
-        Θα μεταφερθείς στη σελίδα πληρωμής του Viva. Η παραγγελία
-        επιβεβαιώνεται μόλις ολοκληρωθεί η χρέωση.
+        {t('checkout.viva_note')}
       </Text>
 
       <Button
-        label={complete.isPending ? 'Δημιουργία παραγγελίας…' : `Πληρωμή €${total.toFixed(2)}`}
+        label={complete.isPending ? t('checkout.creating_order') : t('checkout.pay_amount', { amount: total.toFixed(2) })}
         full
         loading={complete.isPending}
         disabled={!ready}
@@ -202,7 +203,7 @@ export default function CheckoutScreen() {
         style={{ marginTop: space.lg }}
       />
       {!ready && (
-        <Text style={s.missing}>Συμπλήρωσε τα στοιχεία παράδοσης για να συνεχίσεις</Text>
+        <Text style={s.missing}>{t('checkout.fill_delivery')}</Text>
       )}
     </Screen>
   )

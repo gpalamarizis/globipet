@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback } from 'react'
 import { View, Text, StyleSheet, Image, Modal, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Stethoscope, Star, X, Video } from 'lucide-react-native'
@@ -23,6 +24,7 @@ import { colors, space, radius, type, weight, icon, touch } from '@/theme'
  *   χρησιμοποιείται είναι παραπλανητική για όποιον διαβάσει τον κώδικα.
  */
 export default function TelehealthScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -57,16 +59,16 @@ export default function TelehealthScreen() {
       const url = res.data?.checkoutUrl
       setSelected(null)
       if (!url) {
-        Alert.alert('Σφάλμα', 'Δεν δημιουργήθηκε σελίδα πληρωμής. Δοκίμασε ξανά.')
+        Alert.alert(t('common.error'), t('tele.err_no_page'))
         return
       }
       // Άνοιγμα του πραγματικού checkout αντί για μήνυμα «σύντομα».
       const ok = await Linking.canOpenURL(url)
       if (ok) Linking.openURL(url)
-      else Alert.alert('Σφάλμα', 'Δεν ήταν δυνατό το άνοιγμα της σελίδας πληρωμής.')
+      else Alert.alert(t('common.error'), t('checkout.err_open_page'))
     },
     onError: (e: any) =>
-      Alert.alert('Σφάλμα', e?.message || 'Δεν ήταν δυνατή η κράτηση'),
+      Alert.alert(t('common.error'), e?.message || t('tele.err_book')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -88,18 +90,18 @@ export default function TelehealthScreen() {
   }
 
   return (
-    <Screen title="Τηλεϊατρική" subtitle="Κτηνίατρος με βιντεοκλήση"
+    <Screen title={t('profile.menu.telehealth')} subtitle={t('tele.title')}
       onRefresh={onRefresh} refreshing={refreshing}>
 
       <View style={s.tabs}>
         {[
-          { id: 'now', label: 'Διαθέσιμοι τώρα' },
-          { id: 'scheduled', label: 'Προγραμματισμένο' },
-        ].map(t => (
-          <TouchableOpacity key={t.id} activeOpacity={0.7}
-            style={[s.tab, tab === t.id && s.tabActive]}
-            onPress={() => setTab(t.id as any)}>
-            <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>{t.label}</Text>
+          { id: 'now', label: t('tele.available_now') },
+          { id: 'scheduled', label: t('tele.scheduled_label') },
+        ].map(opt => (
+          <TouchableOpacity key={opt.id} activeOpacity={0.7}
+            style={[s.tab, tab === opt.id && s.tabActive]}
+            onPress={() => setTab(opt.id as any)}>
+            <Text style={[s.tabText, tab === opt.id && s.tabTextActive]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -109,12 +111,12 @@ export default function TelehealthScreen() {
       ) : vets.length === 0 ? (
         <EmptyState
           icon={Stethoscope}
-          title={tab === 'now' ? 'Κανένας διαθέσιμος αυτή τη στιγμή' : 'Κανένας κτηνίατρος'}
+          title={tab === 'now' ? t('tele.none_available') : t('tele.no_vets')}
           message={tab === 'now'
-            ? 'Δοκίμασε προγραμματισμένο ραντεβού για αργότερα.'
-            : 'Δεν υπάρχουν εγγεγραμμένοι κτηνίατροι.'}
+            ? t('tele.try_scheduled')
+            : t('tele.none_registered')}
           action={tab === 'now'
-            ? <Button label="Προγραμματισμένο" variant="secondary"
+            ? <Button label={t('tele.scheduled_label')} variant="secondary"
                 onPress={() => setTab('scheduled')} />
             : undefined}
         />
@@ -132,7 +134,7 @@ export default function TelehealthScreen() {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={s.nameRow}>
                     <Text style={s.name} numberOfLines={1}>{vet.provider_name}</Text>
-                    {tab === 'now' && <Badge label="Online" tone="success" />}
+                    {tab === 'now' && <Badge label={t('tele.online')} tone="success" />}
                   </View>
                   <Text style={s.sub} numberOfLines={1}>{vet.city}</Text>
                   {vet.reviews_count > 0 && (
@@ -161,7 +163,7 @@ export default function TelehealthScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.sheetTitle} numberOfLines={1}>{selected?.provider_name}</Text>
                 <Text style={s.sub}>
-                  {tab === 'now' ? 'Άμεση συνεδρία · 30 λεπτά' : 'Προγραμματισμένη · 30 λεπτά'}
+                  {tab === 'now' ? t('tele.instant') : t('tele.scheduled')}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setSelected(null)} hitSlop={12}>
@@ -172,26 +174,25 @@ export default function TelehealthScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               {tab === 'scheduled' && (
                 <>
-                  <Input label="Ημερομηνία" value={date} onChangeText={setDate}
+                  <Input label={t('tele.date')} value={date} onChangeText={setDate}
                     placeholder="2026-09-15" />
-                  <Input label="Ώρα" value={time} onChangeText={setTime}
+                  <Input label={t('tele.time')} value={time} onChangeText={setTime}
                     placeholder="10:00" keyboardType="numbers-and-punctuation" />
                 </>
               )}
 
               <View style={s.totalRow}>
-                <Text style={s.totalLabel}>Κόστος συνεδρίας</Text>
+                <Text style={s.totalLabel}>{t('tele.session_cost')}</Text>
                 <Text style={s.total}>€{selected?.price}</Text>
               </View>
 
               {/* Ο χρήστης πρέπει να ξέρει ότι φεύγει από την εφαρμογή. */}
               <Text style={s.note}>
-                Θα μεταφερθείς στη σελίδα πληρωμής του Viva. Ο σύνδεσμος της
-                βιντεοκλήσης ενεργοποιείται μόλις ολοκληρωθεί η πληρωμή.
+                {t('tele.viva_note')}
               </Text>
 
               <Button
-                label={book.isPending ? 'Δημιουργία…' : 'Κράτηση και πληρωμή'}
+                label={book.isPending ? t('tele.creating') : t('tele.book_pay')}
                 full
                 loading={book.isPending}
                 disabled={tab === 'scheduled' && (!date || !time)}

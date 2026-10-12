@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback } from 'react'
 import { View, Text, StyleSheet, Linking, Modal, ScrollView, TouchableOpacity } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Shield, Check, Phone, Globe, X, Star } from 'lucide-react-native'
 import { api } from '../src/lib/api'
@@ -23,13 +24,14 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * λεπτομέρειες», όχι «Αγορά».
  */
 
-const TIERS: Record<string, { label: string; tone: any }> = {
-  basic:    { label: 'Βασικό',   tone: 'neutral' },
-  standard: { label: 'Standard', tone: 'info' },
-  premium:  { label: 'Premium',  tone: 'brand' },
+const TIERS: Record<string, { labelKey: string; tone: any }> = {
+  basic:    { labelKey: 'insurance.basic',   tone: 'neutral' },
+  standard: { labelKey: 'insurance.standard', tone: 'info' },
+  premium:  { labelKey: 'insurance.premium',  tone: 'brand' },
 }
 
 export default function InsuranceScreen() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [selected, setSelected] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -47,7 +49,7 @@ export default function InsuranceScreen() {
   }, [qc])
 
   return (
-    <Screen title="Ασφάλιση" subtitle="Σύγκρινε πλάνα κάλυψης"
+    <Screen title={t('cat.insurance')} subtitle={t('ins.compare')}
       onRefresh={onRefresh} refreshing={refreshing}>
 
       {isLoading ? (
@@ -55,8 +57,8 @@ export default function InsuranceScreen() {
       ) : plans.length === 0 ? (
         <EmptyState
           icon={Shield}
-          title="Κανένα πλάνο διαθέσιμο"
-          message="Δεν υπάρχουν ενεργά προγράμματα ασφάλισης αυτή τη στιγμή."
+          title={t('ins.no_plans')}
+          message={t('ins.none_active')}
         />
       ) : (
         <View style={{ gap: space.md }}>
@@ -67,7 +69,7 @@ export default function InsuranceScreen() {
                 {plan.is_featured && (
                   <View style={s.featured}>
                     <Star size={icon.xs} color={colors.brand} fill={colors.brand} />
-                    <Text style={s.featuredText}>Προτεινόμενο</Text>
+                    <Text style={s.featuredText}>{t('insurance.recommended')}</Text>
                   </View>
                 )}
 
@@ -80,36 +82,36 @@ export default function InsuranceScreen() {
                       {plan.name_el || plan.name}
                     </Text>
                   </View>
-                  <Badge label={tier.label} tone={tier.tone} />
+                  <Badge label={t(tier.labelKey)} tone={tier.tone} />
                 </View>
 
                 <View style={s.priceRow}>
                   <Text style={s.price}>€{plan.price_monthly}</Text>
-                  <Text style={s.unit}>/μήνα</Text>
+                  <Text style={s.unit}>{t('insurance.per_month')}</Text>
                 </View>
 
                 <View style={s.specs}>
                   {plan.annual_limit != null && (
                     <View style={s.spec}>
-                      <Text style={s.specLabel}>Ετήσιο όριο</Text>
+                      <Text style={s.specLabel}>{t('insurance.annual_limit')}</Text>
                       <Text style={s.specValue}>€{plan.annual_limit}</Text>
                     </View>
                   )}
                   {plan.reimbursement_percent != null && (
                     <View style={s.spec}>
-                      <Text style={s.specLabel}>Αποζημίωση</Text>
+                      <Text style={s.specLabel}>{t('insurance.reimbursement')}</Text>
                       <Text style={s.specValue}>{plan.reimbursement_percent}%</Text>
                     </View>
                   )}
                   {plan.deductible != null && (
                     <View style={s.spec}>
-                      <Text style={s.specLabel}>Απαλλαγή</Text>
+                      <Text style={s.specLabel}>{t('insurance.deductible')}</Text>
                       <Text style={s.specValue}>€{plan.deductible}</Text>
                     </View>
                   )}
                 </View>
 
-                <Text style={s.more}>Δες λεπτομέρειες</Text>
+                <Text style={s.more}>{t('insurance.see_details')}</Text>
               </Card>
             )
           })}
@@ -138,7 +140,7 @@ export default function InsuranceScreen() {
               contentContainerStyle={{ paddingBottom: space.xl }}>
               <View style={s.priceRow}>
                 <Text style={s.price}>€{selected?.price_monthly}</Text>
-                <Text style={s.unit}>/μήνα</Text>
+                <Text style={s.unit}>{t('insurance.per_month')}</Text>
               </View>
 
               {!!selected?.description && (
@@ -147,7 +149,7 @@ export default function InsuranceScreen() {
 
               {Array.isArray(selected?.features) && selected.features.length > 0 && (
                 <>
-                  <SectionHeader title="Τι καλύπτει" />
+                  <SectionHeader title={t('insurance.what_covered')} />
                   {selected.features.map((f: string, i: number) => (
                     <View key={i} style={s.featureRow}>
                       <Check size={icon.sm} color={colors.success} />
@@ -159,12 +161,12 @@ export default function InsuranceScreen() {
 
               {selected?.waiting_period_days != null && (
                 <Text style={s.note}>
-                  Περίοδος αναμονής: {selected.waiting_period_days} ημέρες
+                  {t('ins.waiting_days', { count: selected.waiting_period_days })}
                 </Text>
               )}
               {selected?.max_age_years != null && (
                 <Text style={s.note}>
-                  Μέγιστη ηλικία εγγραφής: {selected.max_age_years} έτη
+                  {t('ins.max_age_years', { count: selected.max_age_years })}
                 </Text>
               )}
 
@@ -182,7 +184,7 @@ export default function InsuranceScreen() {
               )}
               {!!selected?.provider?.website && (
                 <Button
-                  label="Αίτηση στον ασφαλιστή"
+                  label={t('insurance.apply')}
                   full
                   icon={<Globe size={icon.sm} color={colors.textOnDark} />}
                   onPress={() => Linking.openURL(selected.provider.website)}

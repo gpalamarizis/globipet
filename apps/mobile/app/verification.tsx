@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import { View, Text, StyleSheet, Alert } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BadgeCheck, Clock, CheckCircle2, XCircle } from 'lucide-react-native'
@@ -22,15 +23,16 @@ import { colors, space, type, weight, icon } from '@/theme'
  */
 
 const STATUS = {
-  pending:  { label: 'Σε εξέταση', tone: 'warning' as const, Icon: Clock,
-              text: 'Η αίτησή σου εξετάζεται. Θα ενημερωθείς με ειδοποίηση.' },
-  approved: { label: 'Εγκρίθηκε',  tone: 'success' as const, Icon: CheckCircle2,
-              text: 'Οι υπηρεσίες σου εμφανίζονται με σήμα επαλήθευσης.' },
-  rejected: { label: 'Απορρίφθηκε', tone: 'danger' as const, Icon: XCircle,
-              text: 'Μπορείς να υποβάλεις νέα αίτηση αφού διορθώσεις τα παρακάτω.' },
+  pending:  { labelKey: 'ver.under_review', tone: 'warning' as const, Icon: Clock,
+              textKey: 'ver.under_review_note' },
+  approved: { labelKey: 'ver.approved',  tone: 'success' as const, Icon: CheckCircle2,
+              textKey: 'ver.verified_services' },
+  rejected: { labelKey: 'ver.rejected', tone: 'danger' as const, Icon: XCircle,
+              textKey: 'ver.resubmit' },
 }
 
 export default function VerificationScreen() {
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
@@ -56,21 +58,21 @@ export default function VerificationScreen() {
     mutationFn: () => api.post('/provider/verification-request', form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-verification'] })
-      Alert.alert('Η αίτηση υποβλήθηκε',
-        'Θα την εξετάσουμε και θα σε ενημερώσουμε με ειδοποίηση.',
-        [{ text: 'Εντάξει', onPress: () => router.back() }])
+      Alert.alert(t('ver.submitted'),
+        t('ver.submitted_note'),
+        [{ text: t('common.ok'), onPress: () => router.back() }])
     },
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Κάτι πήγε στραβά'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('common.something_wrong')),
   })
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   if (!isAuthenticated) return (
-    <Screen title="Επαλήθευση">
+    <Screen title={t('ver.verification')}>
       <EmptyState
         icon={BadgeCheck}
-        title="Συνδέσου για να συνεχίσεις"
-        action={<Button label="Σύνδεση" onPress={() => router.push('/auth/login' as any)} />}
+        title={t('auth.login_to_continue')}
+        action={<Button label={t('auth.sign_in')} onPress={() => router.push('/auth/login' as any)} />}
       />
     </Screen>
   )
@@ -79,17 +81,22 @@ export default function VerificationScreen() {
   if (!isLoading && request && request.status !== 'rejected') {
     const st = (STATUS as any)[request.status] ?? STATUS.pending
     return (
-      <Screen title="Επαλήθευση">
+      <Screen title={t('ver.verification')}>
         <Card>
           <View style={s.statusHead}>
             <st.Icon size={icon.xl} color={
               request.status === 'approved' ? colors.success : colors.warning} />
-            <Badge label={st.label} tone={st.tone} />
+            <Badge label={t(st.labelKey)} tone={st.tone} />
           </View>
-          <Text style={s.statusText}>{st.text}</Text>
+          <Text style={s.statusText}>{t(st.textKey)}</Text>
           <Text style={s.statusDate}>
-            Υποβλήθηκε {new Date(request.created_at).toLocaleDateString('el-GR', {
-              day: '2-digit', month: 'long', year: 'numeric',
+            {/* Η μορφή ημερομηνίας ακολουθεί τη γλώσσα της εφαρμογής, όχι
+                σταθερά τα ελληνικά: αλλιώς ο Άγγλος πάροχος βλέπει
+                «15 Οκτωβρίου» μέσα σε αγγλικό κείμενο. */}
+            {t('ver.submitted_on', {
+              date: new Date(request.created_at).toLocaleDateString(i18n.language, {
+                day: '2-digit', month: 'long', year: 'numeric',
+              }),
             })}
           </Text>
         </Card>
@@ -98,14 +105,14 @@ export default function VerificationScreen() {
   }
 
   return (
-    <Screen title="Επαλήθευση παρόχου"
-      subtitle="Το σήμα επαλήθευσης αυξάνει την εμπιστοσύνη">
+    <Screen title={t('ver.title')}
+      subtitle={t('ver.badge_trust')}>
 
       {request?.status === 'rejected' && (
         <Card style={{ marginBottom: space.lg, borderColor: colors.danger }}>
           <View style={s.statusHead}>
             <XCircle size={icon.lg} color={colors.danger} />
-            <Badge label="Προηγούμενη αίτηση απορρίφθηκε" tone="danger" />
+            <Badge label={t('ver.rejected_before')} tone="danger" />
           </View>
           {/* Ο λόγος που έδωσε ο διαχειριστής — χωρίς αυτόν ο πάροχος
               ξαναϋποβάλλει το ίδιο λάθος. */}
@@ -115,39 +122,39 @@ export default function VerificationScreen() {
         </Card>
       )}
 
-      <SectionHeader title="Στοιχεία επικοινωνίας" />
-      <Input label="Ονοματεπώνυμο" value={form.full_name}
+      <SectionHeader title={t('ver.contact')} />
+      <Input label={t('auth.full_name')} value={form.full_name}
         onChangeText={v => set('full_name', v)} />
-      <Input label="Τηλέφωνο" value={form.phone}
+      <Input label={t('common.phone')} value={form.phone}
         onChangeText={v => set('phone', v)} keyboardType="phone-pad" />
-      <Input label="Πόλη" value={form.city}
+      <Input label={t('common.city')} value={form.city}
         onChangeText={v => set('city', v)} />
 
-      <SectionHeader title="Επιχείρηση" />
-      <Input label="Επωνυμία" value={form.business_name}
+      <SectionHeader title={t('ver.business')} />
+      <Input label={t('ver.legal_name')} value={form.business_name}
         onChangeText={v => set('business_name', v)}
-        placeholder="Προαιρετικό" />
-      <Input label="ΑΦΜ" value={form.tax_number}
+        placeholder={t('pets.optional')} />
+      <Input label={t('ver.vat')} value={form.tax_number}
         onChangeText={v => set('tax_number', v)}
         keyboardType="number-pad"
-        hint="Αποθηκεύεται κρυπτογραφημένο και το βλέπει μόνο ο έλεγχος." />
-      <Input label="Ιστοσελίδα" value={form.website}
+        hint={t('ver.vat_note')} />
+      <Input label={t('ver.website')} value={form.website}
         onChangeText={v => set('website', v)}
         placeholder="https://" autoCapitalize="none" />
 
-      <SectionHeader title="Εμπειρία" />
-      <Input label="Χρόνια εμπειρίας" value={form.years_experience}
+      <SectionHeader title={t('ver.experience')} />
+      <Input label={t('ver.years')} value={form.years_experience}
         onChangeText={v => set('years_experience', v.replace(/[^0-9]/g, ''))}
         keyboardType="number-pad" />
-      <Input label="Ειδικότητες" value={form.specializations}
+      <Input label={t('ver.specialties')} value={form.specializations}
         onChangeText={v => set('specializations', v)}
-        hint="Χωρισμένες με κόμμα, π.χ. Χειρουργική, Δερματολογία" />
-      <Input label="Λίγα λόγια" value={form.bio}
+        hint={t('ver.specialties_hint')} />
+      <Input label={t('ver.about')} value={form.bio}
         onChangeText={v => set('bio', v)} multiline
-        placeholder="Τι προσφέρεις και σε ποιους" />
+        placeholder={t('ver.what_you_offer')} />
 
       <Button
-        label={submit.isPending ? 'Υποβολή…' : 'Υποβολή αίτησης'}
+        label={submit.isPending ? t('ver.submitting') : t('ver.submit')}
         full
         loading={submit.isPending}
         disabled={!form.full_name.trim()}

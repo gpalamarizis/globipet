@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
   FlatList, Image, RefreshControl,
@@ -24,15 +25,16 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  */
 
 const CATEGORIES = [
-  { id: 'all',         label: 'Όλα',       emoji: '🛍️' },
-  { id: 'food',        label: 'Τροφές',    emoji: '🦴' },
-  { id: 'toys',        label: 'Παιχνίδια', emoji: '🎾' },
-  { id: 'accessories', label: 'Αξεσουάρ',  emoji: '🎀' },
-  { id: 'health',      label: 'Υγεία',     emoji: '💊' },
-  { id: 'hygiene',     label: 'Υγιεινή',   emoji: '🛁' },
+  { id: 'all',         labelKey: 'marketplace.categories.all',       emoji: '🛍️' },
+  { id: 'food',        labelKey: 'marketplace.categories.food',    emoji: '🦴' },
+  { id: 'toys',        labelKey: 'marketplace.categories.toys', emoji: '🎾' },
+  { id: 'accessories', labelKey: 'marketplace.categories.accessories',  emoji: '🎀' },
+  { id: 'health',      labelKey: 'marketplace.categories.health',     emoji: '💊' },
+  { id: 'hygiene',     labelKey: 'cat.hygiene',   emoji: '🛁' },
 ]
 
 export default function MarketplaceScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -79,7 +81,7 @@ export default function MarketplaceScreen() {
     <View style={s.container}>
       <View style={s.header}>
         <View style={s.headerRow}>
-          <Text style={s.title}>Κατάστημα</Text>
+          <Text style={s.title}>{t('marketplace.title')}</Text>
           <TouchableOpacity
             style={s.cartBtn}
             activeOpacity={0.8}
@@ -92,7 +94,7 @@ export default function MarketplaceScreen() {
           <Search size={icon.md} color={colors.textLight} />
           <TextInput
             style={s.search}
-            placeholder="Αναζήτηση προϊόντος"
+            placeholder={t('marketplace.search_product')}
             value={search}
             onChangeText={setSearch}
             placeholderTextColor={colors.textLight}
@@ -120,7 +122,7 @@ export default function MarketplaceScreen() {
               style={[s.chip, active && s.chipActive]}
               onPress={() => setCategory(c.id)}>
               <Text style={s.chipEmoji}>{c.emoji}</Text>
-              <Text style={[s.chipText, active && s.chipTextActive]}>{c.label}</Text>
+              <Text style={[s.chipText, active && s.chipTextActive]}>{t(c.labelKey)}</Text>
             </TouchableOpacity>
           )
         })}
@@ -149,9 +151,9 @@ export default function MarketplaceScreen() {
               </View>
             : <View style={s.empty}>
                 <Package size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Δεν βρέθηκαν προϊόντα</Text>
+                <Text style={s.emptyTitle}>{t('marketplace.no_products')}</Text>
                 <Text style={s.emptyText}>
-                  {search ? 'Δοκίμασε άλλη αναζήτηση' : 'Δοκίμασε άλλη κατηγορία'}
+                  {search ? t('common.try_another_search') : t('common.try_another_category')}
                 </Text>
               </View>
         }
@@ -198,10 +200,10 @@ export default function MarketplaceScreen() {
                 disabled={busy || item.stock === 0}
                 onPress={() => handleAdd(item.id)}>
                 <Text style={[s.addText, justAdded && s.addTextDone]}>
-                  {item.stock === 0 ? 'Εξαντλήθηκε'
-                    : justAdded ? '✓ Προστέθηκε'
+                  {item.stock === 0 ? t('marketplace.out_of_stock')
+                    : justAdded ? t('marketplace.added')
                     : busy ? '…'
-                    : 'Στο καλάθι'}
+                    : t('marketplace.in_cart')}
                 </Text>
               </TouchableOpacity>
             </TouchableOpacity>

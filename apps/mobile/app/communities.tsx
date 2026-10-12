@@ -1,4 +1,5 @@
 import { View, Text, FlatList, StyleSheet, Alert, RefreshControl } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Users, Lock, Bird, Cat, Dog, Rabbit, PawPrint, Check } from 'lucide-react-native'
@@ -21,15 +22,16 @@ const typo = theme.type
  *   ήταν κοινό: πατούσες σε μία και «φόρτωναν» όλες.
  */
 
-const TYPES: Record<string, { Icon: any; label: string }> = {
-  dogs:    { Icon: Dog,      label: 'Σκύλοι' },
-  cats:    { Icon: Cat,      label: 'Γάτες' },
-  birds:   { Icon: Bird,     label: 'Πουλιά' },
-  rabbits: { Icon: Rabbit,   label: 'Κουνέλια' },
-  general: { Icon: PawPrint, label: 'Γενικά' },
+const TYPES: Record<string, { Icon: any; labelKey: string }> = {
+  dogs:    { Icon: Dog,      labelKey: 'insurance.dogs' },
+  cats:    { Icon: Cat,      labelKey: 'insurance.cats' },
+  birds:   { Icon: Bird,     labelKey: 'com.birds' },
+  rabbits: { Icon: Rabbit,   labelKey: 'com.rabbits' },
+  general: { Icon: PawPrint, labelKey: 'com.general' },
 }
 
 export default function CommunitiesScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -43,10 +45,10 @@ export default function CommunitiesScreen() {
     mutationFn: (id: string) => api.post(`/communities/${id}/join`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['communities'] })
-      Alert.alert('Έγινε', 'Είσαι πλέον μέλος της κοινότητας.')
+      Alert.alert(t('com.joined'), t('com.joined_msg'))
     },
     onError: (e: any) =>
-      Alert.alert('Δεν έγινε η εγγραφή', e?.response?.data?.message || 'Δοκίμασε ξανά σε λίγο.'),
+      Alert.alert(t('com.join_failed'), e?.response?.data?.message || t('common.try_again_later')),
   })
 
   const renderItem = ({ item: c }: { item: any }) => {
@@ -65,19 +67,19 @@ export default function CommunitiesScreen() {
             <View style={s.meta}>
               <Users size={icon.xs} color={colors.textMuted} />
               <Text style={s.metaText}>
-                {c.members_count || 0} {c.members_count === 1 ? 'μέλος' : 'μέλη'}
+                {c.members_count || 0} {c.members_count === 1 ? t('com.member_one') : t('com.members')}
               </Text>
               {c.is_private ? (
                 <>
                   <Lock size={icon.xs} color={colors.textMuted} />
-                  <Text style={s.metaText}>Κλειστή</Text>
+                  <Text style={s.metaText}>{t('com.closed')}</Text>
                 </>
               ) : null}
             </View>
           </View>
 
           {c.is_member ? (
-            <Badge label="Μέλος" tone="success" />
+            <Badge label={t('com.member')} tone="success" />
           ) : null}
         </View>
 
@@ -87,7 +89,7 @@ export default function CommunitiesScreen() {
 
         {isAuthenticated && !c.is_member ? (
           <Button
-            label="Εγγραφή"
+            label={t('auth.register')}
             full
             loading={pending}
             icon={pending ? undefined : <Check size={icon.sm} color={colors.textOnDark} />}
@@ -99,7 +101,7 @@ export default function CommunitiesScreen() {
   }
 
   return (
-    <Screen title="Κοινότητες" subtitle="Βρες ανθρώπους με τα ίδια κατοικίδια" scroll={false}>
+    <Screen title={t('discover.communities')} subtitle={t('com.subtitle')} scroll={false}>
       {isLoading ? (
         <View style={{ padding: space.lg }}>
           <SkeletonRows count={4} height={140} />
@@ -107,10 +109,10 @@ export default function CommunitiesScreen() {
       ) : data.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Καμία κοινότητα ακόμα"
-          message="Μόλις δημιουργηθεί η πρώτη κοινότητα, θα εμφανιστεί εδώ."
+          title={t('com.none')}
+          message={t('com.none_hint')}
           action={!isAuthenticated
-            ? <Button label="Σύνδεση" onPress={() => router.push('/auth/login')} />
+            ? <Button label={t('auth.sign_in')} onPress={() => router.push('/auth/login')} />
             : undefined} />
       ) : (
         <FlatList

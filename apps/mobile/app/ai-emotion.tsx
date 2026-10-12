@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { Camera, Images, Sparkles, X } from 'lucide-react-native'
@@ -18,18 +19,19 @@ const typo = theme.type
  *   πλέον: `mediaTypes: ['images']`.
  */
 
-const EMOTIONS: Record<string, { emoji: string; label: string }> = {
-  happy:    { emoji: '😊', label: 'Χαρούμενο' },
-  sad:      { emoji: '😢', label: 'Λυπημένο' },
-  anxious:  { emoji: '😰', label: 'Αγχωμένο' },
-  angry:    { emoji: '😠', label: 'Θυμωμένο' },
-  neutral:  { emoji: '😐', label: 'Ουδέτερο' },
-  excited:  { emoji: '🎉', label: 'Ενθουσιασμένο' },
-  tired:    { emoji: '😴', label: 'Κουρασμένο' },
-  playful:  { emoji: '🎾', label: 'Παιχνιδιάρικο' },
+const EMOTIONS: Record<string, { emoji: string; labelKey: string }> = {
+  happy:    { emoji: '😊', labelKey: 'emo.happy' },
+  sad:      { emoji: '😢', labelKey: 'emo.sad' },
+  anxious:  { emoji: '😰', labelKey: 'emo.anxious' },
+  angry:    { emoji: '😠', labelKey: 'emo.angry' },
+  neutral:  { emoji: '😐', labelKey: 'emo.neutral' },
+  excited:  { emoji: '🎉', labelKey: 'emo.excited' },
+  tired:    { emoji: '😴', labelKey: 'emo.tired' },
+  playful:  { emoji: '🎾', labelKey: 'emo.playful' },
 }
 
 export default function AiEmotionScreen() {
+  const { t } = useTranslation()
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -41,10 +43,10 @@ export default function AiEmotionScreen() {
 
     if (!permission.granted) {
       Alert.alert(
-        'Χρειάζεται άδεια',
+        t('ai.need_permission'),
         fromCamera
-          ? 'Δώσε πρόσβαση στην κάμερα για να τραβήξεις φωτογραφία.'
-          : 'Δώσε πρόσβαση στις φωτογραφίες για να επιλέξεις εικόνα.')
+          ? t('ai.perm_camera')
+          : t('ai.perm_photos'))
       return
     }
 
@@ -75,7 +77,7 @@ export default function AiEmotionScreen() {
       const res = await api.post('/ai/emotion', { image_url: imageUrl })
       setResult(res.data)
     } catch (err: any) {
-      Alert.alert('Δεν έγινε η ανάλυση', err?.response?.data?.message || 'Δοκίμασε ξανά σε λίγο.')
+      Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later'))
     } finally {
       setAnalyzing(false)
     }
@@ -86,7 +88,7 @@ export default function AiEmotionScreen() {
   const emotion = result?.primary_emotion ? EMOTIONS[result.primary_emotion] : null
 
   return (
-    <Screen title="Συναίσθημα" subtitle="Ανάλυση από φωτογραφία">
+    <Screen title={t('emo.emotion')} subtitle={t('emo.from_photo')}>
 
       {/* ── Εικόνα ─────────────────────────────────────────────── */}
       {imageUri ? (
@@ -98,18 +100,16 @@ export default function AiEmotionScreen() {
         </View>
       ) : (
         <View style={s.dropzone}>
-          <Text style={s.dropTitle}>Τι νιώθει το κατοικίδιό σου;</Text>
-          <Text style={s.dropText}>
-            Μια καθαρή φωτογραφία του προσώπου δίνει την πιο αξιόπιστη ανάλυση.
-          </Text>
+          <Text style={s.dropTitle}>{t('emo.subtitle')}</Text>
+          <Text style={s.dropText}>{t('emo.face_hint')}</Text>
           <View style={s.pickRow}>
             <TouchableOpacity style={s.pick} onPress={() => pick(true)} activeOpacity={0.7}>
               <Camera size={icon.md} color={colors.brand} />
-              <Text style={s.pickLabel}>Κάμερα</Text>
+              <Text style={s.pickLabel}>{t('ai.camera')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.pick} onPress={() => pick(false)} activeOpacity={0.7}>
               <Images size={icon.md} color={colors.brand} />
-              <Text style={s.pickLabel}>Φωτογραφίες</Text>
+              <Text style={s.pickLabel}>{t('ai.photos')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -118,7 +118,7 @@ export default function AiEmotionScreen() {
       {/* ── Ενέργεια ───────────────────────────────────────────── */}
       {imageUri && !result ? (
         <Button
-          label="Ανάλυση συναισθήματος"
+          label={t('emo.title')}
           full
           loading={analyzing}
           icon={analyzing ? undefined : <Sparkles size={icon.sm} color={colors.textOnDark} />}
@@ -140,11 +140,11 @@ export default function AiEmotionScreen() {
           <Card style={{ alignItems: 'center' }}>
             <Text style={s.emoji}>{emotion?.emoji || '🐾'}</Text>
             <Text style={s.emotion}>
-              {result.primary_emotion_el || emotion?.label || result.primary_emotion}
+              {result.primary_emotion_el || (emotion ? t(emotion.labelKey) : result.primary_emotion)}
             </Text>
             {typeof result.confidence === 'number' ? (
               <Text style={s.confidence}>
-                Βεβαιότητα {Math.round(result.confidence * 100)} τοις εκατό
+                {t('emo.confidence', { pct: Math.round(result.confidence * 100) })}
               </Text>
             ) : null}
           </Card>
@@ -157,7 +157,7 @@ export default function AiEmotionScreen() {
 
           {result.recommendations?.length > 0 ? (
             <Card>
-              <Text style={s.cardTitle}>Τι μπορείς να κάνεις</Text>
+              <Text style={s.cardTitle}>{t('emo.what_to_do')}</Text>
               {result.recommendations.map((r: string, i: number) => (
                 <View key={i} style={s.bullet}>
                   <View style={s.dot} />
@@ -167,7 +167,7 @@ export default function AiEmotionScreen() {
             </Card>
           ) : null}
 
-          <Button label="Νέα φωτογραφία" variant="secondary" full onPress={reset} />
+          <Button label={t('ai.new_photo')} variant="secondary" full onPress={reset} />
         </View>
       ) : null}
     </Screen>

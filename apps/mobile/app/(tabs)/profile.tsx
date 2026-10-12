@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import {
   PawPrint, Calendar, Package, MapPin, Stethoscope, Globe,
@@ -19,41 +20,40 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  */
 
 const MENU = [
-  { key: 'pets',       Icon: PawPrint,    label: 'Τα κατοικίδιά μου', route: '/(tabs)/pets' },
-  { key: 'bookings',   Icon: Calendar,    label: 'Κρατήσεις',         route: '/bookings' },
-  { key: 'orders',     Icon: Package,     label: 'Παραγγελίες',       route: '/orders' },
-  { key: 'passport',   Icon: ShieldCheck, label: 'Ιατρικός φάκελος',  route: '/passport' },
-  { key: 'tracker',    Icon: MapPin,      label: 'Εντοπισμός GPS',    route: '/tracker' },
-  { key: 'telehealth', Icon: Stethoscope, label: 'Τηλεϊατρική',       route: '/telehealth' },
-  { key: 'language',   Icon: Globe,       label: 'Γλώσσα',            route: '/language' },
+  { key: 'pets',       Icon: PawPrint,    labelKey: 'home.my_pets', route: '/(tabs)/pets' },
+  { key: 'bookings',   Icon: Calendar,    labelKey: 'profile.menu.bookings',         route: '/bookings' },
+  { key: 'orders',     Icon: Package,     labelKey: 'profile.menu.orders',       route: '/orders' },
+  { key: 'passport',   Icon: ShieldCheck, labelKey: 'discover.medical_record',  route: '/passport' },
+  { key: 'tracker',    Icon: MapPin,      labelKey: 'discover.gps_tracking',    route: '/tracker' },
+  { key: 'telehealth', Icon: Stethoscope, labelKey: 'profile.menu.telehealth',       route: '/telehealth' },
+  { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
 ]
 
 export default function ProfileScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
 
   const confirmLogout = () => {
-    Alert.alert('Αποσύνδεση', 'Θέλεις να αποσυνδεθείς;', [
-      { text: 'Άκυρο', style: 'cancel' },
-      { text: 'Αποσύνδεση', style: 'destructive', onPress: () => logout() },
+    Alert.alert(t('profile.logout_title'), t('profile.logout_question'), [
+      { text: t('common.dismiss'), style: 'cancel' },
+      { text: t('profile.logout_title'), style: 'destructive', onPress: () => logout() },
     ])
   }
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={s.header}><Text style={s.title}>Προφίλ</Text></View>
+      <View style={s.header}><Text style={s.title}>{t('tabs.profile')}</Text></View>
       <View style={s.empty}>
         <UserIcon size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Δεν είσαι συνδεδεμένος</Text>
-        <Text style={s.emptyText}>
-          Συνδέσου για να δεις τα κατοικίδια, τις κρατήσεις και τις παραγγελίες σου.
-        </Text>
+        <Text style={s.emptyTitle}>{t('profile.not_logged_in')}</Text>
+        <Text style={s.emptyText}>{t('profile.login_prompt')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
         <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/auth/register' as any)}>
-          <Text style={s.linkText}>Δεν έχεις λογαριασμό; Εγγραφή</Text>
+          <Text style={s.linkText}>{t('profile.no_account')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -80,13 +80,13 @@ export default function ProfileScreen() {
       </View>
 
       <View style={s.menu}>
-        {MENU.map(({ key, Icon, label, route }) => (
+        {MENU.map(({ key, Icon, labelKey, route }) => (
           <TouchableOpacity key={key} style={s.row} activeOpacity={0.7}
             onPress={() => router.push(route as any)}>
             <View style={s.rowIcon}>
               <Icon size={icon.md} color={colors.brand} />
             </View>
-            <Text style={s.rowLabel}>{label}</Text>
+            <Text style={s.rowLabel}>{t(labelKey)}</Text>
             <ChevronRight size={icon.md} color={colors.textLight} />
           </TouchableOpacity>
         ))}
@@ -94,7 +94,7 @@ export default function ProfileScreen() {
 
       <TouchableOpacity style={s.logout} activeOpacity={0.7} onPress={confirmLogout}>
         <LogOut size={icon.md} color={colors.danger} />
-        <Text style={s.logoutText}>Αποσύνδεση</Text>
+        <Text style={s.logoutText}>{t('profile.logout_title')}</Text>
       </TouchableOpacity>
     </ScrollView>
   )

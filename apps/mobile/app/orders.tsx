@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Image,
 } from 'react-native'
@@ -17,16 +18,17 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  * εμφανίζονταν γκρι με ακατέργαστο κείμενο.
  */
 
-const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
-  pending:    { label: 'Σε αναμονή',   bg: colors.warningBg,  fg: colors.warning },
-  confirmed:  { label: 'Επιβεβαιώθηκε', bg: colors.infoBg,    fg: colors.info },
-  processing: { label: 'Σε επεξεργασία', bg: colors.infoBg,   fg: colors.info },
-  shipped:    { label: 'Απεστάλη',     bg: colors.category.photography.bg, fg: colors.category.photography.fg },
-  delivered:  { label: 'Παραδόθηκε',   bg: colors.successBg,  fg: colors.success },
-  cancelled:  { label: 'Ακυρώθηκε',    bg: colors.dangerBg,   fg: colors.danger },
+const STATUS: Record<string, { labelKey: string; bg: string; fg: string }> = {
+  pending:    { labelKey: 'status.pending',   bg: colors.warningBg,  fg: colors.warning },
+  confirmed:  { labelKey: 'orders.confirmed', bg: colors.infoBg,    fg: colors.info },
+  processing: { labelKey: 'orders.processing', bg: colors.infoBg,   fg: colors.info },
+  shipped:    { labelKey: 'orders.shipped',     bg: colors.category.photography.bg, fg: colors.category.photography.fg },
+  delivered:  { labelKey: 'orders.delivered',   bg: colors.successBg,  fg: colors.success },
+  cancelled:  { labelKey: 'status.cancelled',    bg: colors.dangerBg,   fg: colors.danger },
 }
 
 export default function OrdersScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -57,14 +59,14 @@ export default function OrdersScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Παραγγελίες</Text>
+        <Text style={s.title}>{t('profile.menu.orders')}</Text>
       </View>
       <View style={s.empty}>
         <Package size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Συνδέσου για να δεις τις παραγγελίες σου</Text>
+        <Text style={s.emptyTitle}>{t('orders.login_prompt')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -76,7 +78,7 @@ export default function OrdersScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Παραγγελίες</Text>
+        <Text style={s.title}>{t('profile.menu.orders')}</Text>
       </View>
 
       <FlatList
@@ -97,11 +99,11 @@ export default function OrdersScreen() {
               ))}</View>
             : <View style={s.empty}>
                 <Package size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Καμία παραγγελία ακόμη</Text>
-                <Text style={s.emptyText}>Ό,τι παραγγείλεις θα εμφανίζεται εδώ.</Text>
+                <Text style={s.emptyTitle}>{t('orders.none')}</Text>
+                <Text style={s.emptyText}>{t('orders.none_hint')}</Text>
                 <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
                   onPress={() => router.push('/(tabs)/marketplace' as any)}>
-                  <Text style={s.primaryBtnText}>Στο κατάστημα</Text>
+                  <Text style={s.primaryBtnText}>{t('cart.go_to_shop')}</Text>
                 </TouchableOpacity>
               </View>
         }
@@ -116,7 +118,7 @@ export default function OrdersScreen() {
                   <Text style={s.date}>{fmtDate(item.created_at)}</Text>
                 </View>
                 <View style={[s.statusTag, { backgroundColor: st.bg }]}>
-                  <Text style={[s.statusText, { color: st.fg }]}>{st.label}</Text>
+                  <Text style={[s.statusText, { color: st.fg }]}>{t(st.labelKey)}</Text>
                 </View>
               </View>
 
@@ -135,19 +137,19 @@ export default function OrdersScreen() {
                   </View>
                 ))}
                 {items.length > 3 && (
-                  <Text style={s.more}>και {items.length - 3} ακόμη</Text>
+                  <Text style={s.more}>{t('orders.and_more', { count: items.length - 3 })}</Text>
                 )}
               </View>
 
               {!!item.tracking_number && (
                 <View style={s.tracking}>
                   <Truck size={icon.sm} color={colors.info} />
-                  <Text style={s.trackingText}>Παρακολούθηση: {item.tracking_number}</Text>
+                  <Text style={s.trackingText}>{t('orders.tracking', { code: item.tracking_number })}</Text>
                 </View>
               )}
 
               <View style={s.cardFooter}>
-                <Text style={s.totalLabel}>Σύνολο</Text>
+                <Text style={s.totalLabel}>{t('common.total')}</Text>
                 <Text style={s.total}>€{item.total_amount?.toFixed(2)}</Text>
               </View>
             </View>

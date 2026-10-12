@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
   FlatList, Image, Modal, Alert, RefreshControl, KeyboardAvoidingView, Platform,
@@ -25,12 +26,12 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  */
 
 const SPECIES = [
-  { id: 'dog',     label: 'Σκύλος',  emoji: '🐶' },
-  { id: 'cat',     label: 'Γάτα',    emoji: '🐱' },
-  { id: 'bird',    label: 'Πουλί',   emoji: '🦜' },
-  { id: 'rabbit',  label: 'Κουνέλι', emoji: '🐰' },
-  { id: 'fish',    label: 'Ψάρι',    emoji: '🐠' },
-  { id: 'reptile', label: 'Ερπετό',  emoji: '🦎' },
+  { id: 'dog',     labelKey: 'pets.kind_dog',  emoji: '🐶' },
+  { id: 'cat',     labelKey: 'pets.kind_cat',    emoji: '🐱' },
+  { id: 'bird',    labelKey: 'pets.kind_bird',   emoji: '🦜' },
+  { id: 'rabbit',  labelKey: 'pets.kind_rabbit', emoji: '🐰' },
+  { id: 'fish',    labelKey: 'pets.kind_fish',    emoji: '🐠' },
+  { id: 'reptile', labelKey: 'pets.kind_reptile',  emoji: '🦎' },
 ]
 
 const emojiFor = (s: string) => SPECIES.find(x => x.id === s)?.emoji ?? '🐾'
@@ -41,6 +42,7 @@ const EMPTY_FORM = {
 }
 
 export default function PetsScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -72,7 +74,7 @@ export default function PetsScreen() {
       setForm(EMPTY_FORM)
     },
     onError: (e: any) =>
-      Alert.alert('Σφάλμα', e?.message || 'Δεν ήταν δυνατή η προσθήκη'),
+      Alert.alert(t('common.error'), e?.message || t('pets.add_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -83,14 +85,14 @@ export default function PetsScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={s.header}><Text style={s.title}>Κατοικίδια</Text></View>
+      <View style={s.header}><Text style={s.title}>{t('tabs.pets')}</Text></View>
       <View style={s.empty}>
         <PawPrint size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Συνδέσου για πρόσβαση</Text>
-        <Text style={s.emptyText}>Τα κατοικίδιά σου και ο φάκελός τους σε ένα μέρος.</Text>
+        <Text style={s.emptyTitle}>{t('pets.login_required')}</Text>
+        <Text style={s.emptyText}>{t('pets.subtitle')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -100,7 +102,7 @@ export default function PetsScreen() {
     <View style={s.container}>
       <View style={s.header}>
         <View style={s.headerRow}>
-          <Text style={s.title}>Κατοικίδια</Text>
+          <Text style={s.title}>{t('tabs.pets')}</Text>
           <TouchableOpacity style={s.addBtn} activeOpacity={0.8} onPress={() => setShowAdd(true)}>
             <Plus size={icon.md} color={colors.textOnDark} />
           </TouchableOpacity>
@@ -128,13 +130,11 @@ export default function PetsScreen() {
               ))}</View>
             : <View style={s.empty}>
                 <PawPrint size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Κανένα κατοικίδιο ακόμη</Text>
-                <Text style={s.emptyText}>
-                  Πρόσθεσε το πρώτο σου για να κρατάς εμβόλια, ιστορικό και ραντεβού.
-                </Text>
+                <Text style={s.emptyTitle}>{t('pets.none_yet')}</Text>
+                <Text style={s.emptyText}>{t('pets.add_first')}</Text>
                 <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
                   onPress={() => setShowAdd(true)}>
-                  <Text style={s.primaryBtnText}>Προσθήκη κατοικιδίου</Text>
+                  <Text style={s.primaryBtnText}>{t('pets.add_button')}</Text>
                 </TouchableOpacity>
               </View>
         }
@@ -153,15 +153,15 @@ export default function PetsScreen() {
                 {item.is_lost && (
                   <View style={s.lostTag}>
                     <AlertTriangle size={icon.xs} color={colors.danger} />
-                    <Text style={s.lostText}>Χαμένο</Text>
+                    <Text style={s.lostText}>{t('pets.lost')}</Text>
                   </View>
                 )}
               </View>
               <Text style={s.sub} numberOfLines={1}>
-                {[item.breed || item.species, item.age && `${item.age} ετών`]
+                {[item.breed || item.species, item.age && t('pets.age_years', { count: item.age })]
                   .filter(Boolean).join(' · ')}
               </Text>
-              <Text style={s.link}>Ιατρικός φάκελος</Text>
+              <Text style={s.link}>{t('discover.medical_record')}</Text>
             </View>
 
             <ChevronRight size={icon.md} color={colors.textLight} />
@@ -177,7 +177,7 @@ export default function PetsScreen() {
           style={s.modalWrap}>
           <View style={s.sheet}>
             <View style={s.sheetHeader}>
-              <Text style={s.sheetTitle}>Νέο κατοικίδιο</Text>
+              <Text style={s.sheetTitle}>{t('pets.new_pet')}</Text>
               <TouchableOpacity onPress={() => setShowAdd(false)} hitSlop={10}>
                 <X size={icon.lg} color={colors.textMuted} />
               </TouchableOpacity>
@@ -186,12 +186,12 @@ export default function PetsScreen() {
             <ScrollView showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: space.xl }}>
 
-              <Text style={s.label}>Όνομα</Text>
+              <Text style={s.label}>{t('pets.name_label')}</Text>
               <TextInput style={s.input} value={form.name}
                 onChangeText={v => setForm(f => ({ ...f, name: v }))}
-                placeholder="π.χ. Ρέξ" placeholderTextColor={colors.textLight} />
+                placeholder={t('pets.name_placeholder')} placeholderTextColor={colors.textLight} />
 
-              <Text style={s.label}>Είδος</Text>
+              <Text style={s.label}>{t('pets.species')}</Text>
               <View style={s.optionGrid}>
                 {SPECIES.map(sp => {
                   const active = form.species === sp.id
@@ -200,25 +200,25 @@ export default function PetsScreen() {
                       style={[s.option, active && s.optionActive]}
                       onPress={() => setForm(f => ({ ...f, species: sp.id }))}>
                       <Text style={s.optionEmoji}>{sp.emoji}</Text>
-                      <Text style={[s.optionText, active && s.optionTextActive]}>{sp.label}</Text>
+                      <Text style={[s.optionText, active && s.optionTextActive]}>{t(sp.labelKey)}</Text>
                     </TouchableOpacity>
                   )
                 })}
               </View>
 
-              <Text style={s.label}>Ράτσα</Text>
+              <Text style={s.label}>{t('pets.breed')}</Text>
               <TextInput style={s.input} value={form.breed}
                 onChangeText={v => setForm(f => ({ ...f, breed: v }))}
-                placeholder="Προαιρετικό" placeholderTextColor={colors.textLight} />
+                placeholder={t('pets.optional')} placeholderTextColor={colors.textLight} />
 
-              <Text style={s.label}>Ηλικία (έτη)</Text>
+              <Text style={s.label}>{t('pets.age')}</Text>
               <TextInput style={s.input} value={form.age} keyboardType="decimal-pad"
                 onChangeText={v => setForm(f => ({ ...f, age: v.replace(',', '.') }))}
-                placeholder="π.χ. 3" placeholderTextColor={colors.textLight} />
+                placeholder={t('pets.age_placeholder')} placeholderTextColor={colors.textLight} />
 
-              <Text style={s.label}>Φύλο</Text>
+              <Text style={s.label}>{t('pets.gender')}</Text>
               <View style={s.row}>
-                {[{ id: 'male', l: '♂ Αρσενικό' }, { id: 'female', l: '♀ Θηλυκό' }].map(g => (
+                {[{ id: 'male', l: t('pets.male') }, { id: 'female', l: t('pets.female') }].map(g => (
                   <TouchableOpacity key={g.id} activeOpacity={0.7}
                     style={[s.pill, form.gender === g.id && s.pillActive]}
                     onPress={() => setForm(f => ({ ...f, gender: g.id }))}>
@@ -229,9 +229,9 @@ export default function PetsScreen() {
 
               {/* Τρεις επιλογές, όχι checkbox: «δεν γνωρίζω» είναι πραγματική
                   απάντηση, και το κενό δεν πρέπει να καταγράφεται ως «όχι». */}
-              <Text style={s.label}>Στειρωμένο</Text>
+              <Text style={s.label}>{t('pets.neutered')}</Text>
               <View style={s.row}>
-                {[{ v: 'yes', l: 'Ναι' }, { v: 'no', l: 'Όχι' }, { v: '', l: 'Δεν γνωρίζω' }].map(o => (
+                {[{ v: 'yes', l: t('common.yes') }, { v: 'no', l: t('common.no') }, { v: '', l: t('pets.unknown') }].map(o => (
                   <TouchableOpacity key={o.v || 'unknown'} activeOpacity={0.7}
                     style={[s.pill, form.is_sterilized === o.v && s.pillActive]}
                     onPress={() => setForm(f => ({ ...f, is_sterilized: o.v as any }))}>
@@ -249,7 +249,7 @@ export default function PetsScreen() {
                 disabled={!form.name.trim() || addPet.isPending}
                 onPress={() => addPet.mutate()}>
                 <Text style={s.primaryBtnText}>
-                  {addPet.isPending ? 'Αποθήκευση…' : 'Αποθήκευση'}
+                  {addPet.isPending ? t('pets.saving_short') : t('common.save')}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

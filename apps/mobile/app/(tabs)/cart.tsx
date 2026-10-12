@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Image,
   RefreshControl, Alert,
@@ -21,6 +22,7 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *   στο τέλος.
  */
 export default function CartScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -40,13 +42,13 @@ export default function CartScreen() {
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
       api.patch(`/cart/${id}`, { quantity }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Δεν ενημερώθηκε'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('cart.update_failed')),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/cart/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Δεν αφαιρέθηκε'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('cart.remove_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -57,13 +59,13 @@ export default function CartScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={s.header}><Text style={s.title}>Καλάθι</Text></View>
+      <View style={s.header}><Text style={s.title}>{t('cart.title')}</Text></View>
       <View style={s.empty}>
         <ShoppingCart size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Συνδέσου για να δεις το καλάθι σου</Text>
+        <Text style={s.emptyTitle}>{t('cart.login_required')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -72,10 +74,10 @@ export default function CartScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Καλάθι</Text>
+        <Text style={s.title}>{t('cart.title')}</Text>
         {items.length > 0 && (
           <Text style={s.subtitle}>
-            {items.length} {items.length === 1 ? 'προϊόν' : 'προϊόντα'}
+            {items.length} {items.length === 1 ? t('cart.item') : t('cart.items')}
           </Text>
         )}
       </View>
@@ -101,11 +103,11 @@ export default function CartScreen() {
               ))}</View>
             : <View style={s.empty}>
                 <ShoppingCart size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Το καλάθι είναι άδειο</Text>
-                <Text style={s.emptyText}>Βρες τροφές, παιχνίδια και ό,τι άλλο χρειάζεται.</Text>
+                <Text style={s.emptyTitle}>{t('cart.empty')}</Text>
+                <Text style={s.emptyText}>{t('cart.empty_hint')}</Text>
                 <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
                   onPress={() => router.push('/(tabs)/marketplace' as any)}>
-                  <Text style={s.primaryBtnText}>Στο κατάστημα</Text>
+                  <Text style={s.primaryBtnText}>{t('cart.go_to_shop')}</Text>
                 </TouchableOpacity>
               </View>
         }
@@ -160,12 +162,12 @@ export default function CartScreen() {
         <View style={s.footer}>
           <View style={s.totalRow}>
             <View>
-              <Text style={s.totalLabel}>Σύνολο προϊόντων</Text>
+              <Text style={s.totalLabel}>{t('cart.subtotal')}</Text>
               {/* Λέγεται ρητά, ώστε το ποσό στο checkout να μην ξαφνιάζει. */}
               <Text style={s.shippingNote}>
                 {subtotal > FREE_SHIPPING_OVER
-                  ? 'Δωρεάν αποστολή'
-                  : 'Τα μεταφορικά υπολογίζονται στο επόμενο βήμα'}
+                  ? t('cart.free_shipping')
+                  : t('cart.shipping_note')}
               </Text>
             </View>
             <Text style={s.total}>€{subtotal.toFixed(2)}</Text>
@@ -173,7 +175,7 @@ export default function CartScreen() {
 
           <TouchableOpacity style={s.checkout} activeOpacity={0.85}
             onPress={() => router.push('/checkout' as any)}>
-            <Text style={s.checkoutText}>Ολοκλήρωση αγοράς</Text>
+            <Text style={s.checkoutText}>{t('cart.checkout')}</Text>
           </TouchableOpacity>
         </View>
       )}

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image,
   ScrollView, RefreshControl,
@@ -23,20 +24,21 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  */
 
 const SERVICE_TYPES = [
-  { id: 'all',         label: 'Όλες',        emoji: '🐾', tint: 'default' },
-  { id: 'veterinary',  label: 'Κτηνίατρος',  emoji: '🩺', tint: 'veterinary' },
-  { id: 'grooming',    label: 'Περιποίηση',  emoji: '✂️', tint: 'grooming' },
-  { id: 'walking',     label: 'Βόλτες',      emoji: '🚶', tint: 'walking' },
-  { id: 'hosting',     label: 'Φιλοξενία',   emoji: '🏠', tint: 'hosting' },
-  { id: 'training',    label: 'Εκπαίδευση',  emoji: '🎓', tint: 'training' },
-  { id: 'pet_taxi',    label: 'Pet Taxi',    emoji: '🚗', tint: 'pet_taxi' },
-  { id: 'photography', label: 'Φωτογράφιση', emoji: '📸', tint: 'photography' },
-  { id: 'pharmacy',    label: 'Φαρμακείο',   emoji: '💊', tint: 'pharmacy' },
+  { id: 'all',         labelKey: 'services.types.all',        emoji: '🐾', tint: 'default' },
+  { id: 'veterinary',  labelKey: 'services.categories.veterinary',  emoji: '🩺', tint: 'veterinary' },
+  { id: 'grooming',    labelKey: 'cat.grooming',  emoji: '✂️', tint: 'grooming' },
+  { id: 'walking',     labelKey: 'services.categories.walking',      emoji: '🚶', tint: 'walking' },
+  { id: 'hosting',     labelKey: 'cat.boarding',   emoji: '🏠', tint: 'hosting' },
+  { id: 'training',    labelKey: 'services.categories.training',  emoji: '🎓', tint: 'training' },
+  { id: 'pet_taxi',    labelKey: 'services.categories.pet_taxi', emoji: '🚗', tint: 'pet_taxi' },
+  { id: 'photography', labelKey: 'cat.photography', emoji: '📸', tint: 'photography' },
+  { id: 'pharmacy',    labelKey: 'cat.pharmacy',   emoji: '💊', tint: 'pharmacy' },
 ]
 
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function ServicesScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const queryClient = useQueryClient()
   // Η αρχική περνά τον τύπο εδώ· χωρίς αυτό το πλακίδιο δεν φιλτράριζε.
@@ -66,12 +68,12 @@ export default function ServicesScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Υπηρεσίες</Text>
+        <Text style={s.title}>{t('services.title')}</Text>
         <View style={s.searchRow}>
           <Search size={icon.md} color={colors.textLight} />
           <TextInput
             style={s.search}
-            placeholder="Αναζήτηση παρόχου ή πόλης"
+            placeholder={t('services.search_provider')}
             value={search}
             onChangeText={setSearch}
             placeholderTextColor={colors.textLight}
@@ -91,18 +93,18 @@ export default function ServicesScreen() {
         showsHorizontalScrollIndicator={false}
         style={s.filterRow}
         contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
-        {SERVICE_TYPES.map(t => {
-          const active = serviceType === t.id
-          const c = tint(t.tint)
+        {SERVICE_TYPES.map(sv => {
+          const active = serviceType === sv.id
+          const c = tint(sv.tint)
           return (
             <TouchableOpacity
-              key={t.id}
+              key={sv.id}
               activeOpacity={0.7}
               style={[s.chip, active && { backgroundColor: c.bg, borderColor: c.fg }]}
-              onPress={() => setServiceType(t.id)}>
-              <Text style={s.chipEmoji}>{t.emoji}</Text>
+              onPress={() => setServiceType(sv.id)}>
+              <Text style={s.chipEmoji}>{sv.emoji}</Text>
               <Text style={[s.chipText, active && { color: c.fg, fontWeight: weight.bold }]}>
-                {t.label}
+                {t(sv.labelKey)}
               </Text>
             </TouchableOpacity>
           )
@@ -130,9 +132,9 @@ export default function ServicesScreen() {
               ))}</View>
             : <View style={s.empty}>
                 <Search size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Δεν βρέθηκαν υπηρεσίες</Text>
+                <Text style={s.emptyTitle}>{t('services.no_services')}</Text>
                 <Text style={s.emptyText}>
-                  {search ? 'Δοκίμασε άλλη αναζήτηση' : 'Δοκίμασε άλλη κατηγορία'}
+                  {search ? t('common.try_another_search') : t('common.try_another_category')}
                 </Text>
               </View>
         }

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl,
 } from 'react-native'
@@ -21,6 +22,7 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  *   όταν η δημοσίευση είναι ήδη αγαπημένη.
  */
 export default function SocialScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -56,8 +58,8 @@ export default function SocialScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Κοινότητα</Text>
-        <Text style={s.subtitle}>Τι μοιράζονται οι άλλοι ιδιοκτήτες</Text>
+        <Text style={s.title}>{t('tabs.community')}</Text>
+        <Text style={s.subtitle}>{t('social.what_others_share')}</Text>
       </View>
 
       <FlatList
@@ -81,8 +83,8 @@ export default function SocialScreen() {
               ))}</View>
             : <View style={s.empty}>
                 <Users size={icon.hero} color={colors.border} />
-                <Text style={s.emptyTitle}>Καμία δημοσίευση ακόμη</Text>
-                <Text style={s.emptyText}>Γίνε ο πρώτος που θα μοιραστεί κάτι.</Text>
+                <Text style={s.emptyTitle}>{t('community.no_posts_yet')}</Text>
+                <Text style={s.emptyText}>{t('social.be_first')}</Text>
               </View>
         }
         renderItem={({ item }) => (
@@ -95,7 +97,7 @@ export default function SocialScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.author} numberOfLines={1}>{item.author_name}</Text>
-                {!!item.pet_name && <Text style={s.petName}>με {item.pet_name}</Text>}
+                {!!item.pet_name && <Text style={s.petName}>{t('social.with_pet', { name: item.pet_name })}</Text>}
               </View>
             </View>
 

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,19 +23,20 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  */
 
 const SECTIONS = [
-  { key: 'telehealth',  Icon: Stethoscope, title: 'Τηλεϊατρική',      sub: 'Κλείσε online ραντεβού',   route: '/telehealth', tint: 'veterinary' },
-  { key: 'passport',    Icon: FileText,    title: 'Ιατρικός φάκελος', sub: 'Πλήρες ιστορικό υγείας',   route: '/passport',   tint: 'pharmacy' },
-  { key: 'ai-health',   Icon: Brain,       title: 'AI Υγεία',          sub: 'Ανάλυση φωτογραφίας',      route: '/ai-health',  tint: 'training' },
-  { key: 'ai-emotion',  Icon: Heart,       title: 'AI Emotion',        sub: 'Τι νιώθει το ζώο σου',     route: '/ai-emotion', tint: 'grooming' },
-  { key: 'insurance',   Icon: Shield,      title: 'Ασφάλιση',          sub: 'Προστασία κατοικιδίου',    route: '/insurance',  tint: 'hosting' },
-  { key: 'tracker',     Icon: MapPin,      title: 'Εντοπισμός GPS',    sub: 'Βρες το κατοικίδιό σου',   route: '/tracker',    tint: 'pet_taxi' },
-  { key: 'playdates',   Icon: PawPrint,    title: 'Playdates',         sub: 'Βγες με άλλα κατοικίδια',  route: '/playdates',  tint: 'walking' },
-  { key: 'communities', Icon: Users,       title: 'Κοινότητες',        sub: 'Ομάδες ιδιοκτητών',        route: '/communities',tint: 'photography' },
+  { key: 'telehealth',  Icon: Stethoscope, titleKey: 'profile.menu.telehealth',      subKey: 'discover.book_online',   route: '/telehealth', tint: 'veterinary' },
+  { key: 'passport',    Icon: FileText,    titleKey: 'discover.medical_record', subKey: 'discover.full_history',   route: '/passport',   tint: 'pharmacy' },
+  { key: 'ai-health',   Icon: Brain,       titleKey: 'cat.ai_health',          subKey: 'discover.photo_analysis',      route: '/ai-health',  tint: 'training' },
+  { key: 'ai-emotion',  Icon: Heart,       titleKey: 'discover.ai_emotion',        subKey: 'discover.how_pet_feels',     route: '/ai-emotion', tint: 'grooming' },
+  { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
+  { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },
+  { key: 'playdates',   Icon: PawPrint,    titleKey: 'discover.playdates',         subKey: 'discover.meet_other_pets',  route: '/playdates',  tint: 'walking' },
+  { key: 'communities', Icon: Users,       titleKey: 'discover.communities',        subKey: 'discover.owner_groups',        route: '/communities',tint: 'photography' },
 ]
 
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function DiscoverScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -59,13 +61,13 @@ export default function DiscoverScreen() {
       }>
 
       <View style={s.header}>
-        <Text style={s.title}>Ανακάλυψε</Text>
-        <Text style={s.subtitle}>Όλα όσα προσφέρει το GlobiPet</Text>
+        <Text style={s.title}>{t('discover.title')}</Text>
+        <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
       </View>
 
       <View style={s.section}>
-        {SECTIONS.map(({ key, Icon, title, sub, route, tint: t }) => {
-          const c = tint(t)
+        {SECTIONS.map(({ key, Icon, titleKey, subKey, route, tint: tn }) => {
+          const c = tint(tn)
           return (
             <TouchableOpacity key={key} style={s.card} activeOpacity={0.8}
               onPress={() => router.push(route as any)}>
@@ -73,8 +75,8 @@ export default function DiscoverScreen() {
                 <Icon size={icon.lg} color={c.fg} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.cardTitle}>{title}</Text>
-                <Text style={s.cardSub} numberOfLines={1}>{sub}</Text>
+                <Text style={s.cardTitle}>{t(titleKey)}</Text>
+                <Text style={s.cardSub} numberOfLines={1}>{t(subKey)}</Text>
               </View>
               <ChevronRight size={icon.md} color={colors.textLight} />
             </TouchableOpacity>
@@ -84,7 +86,7 @@ export default function DiscoverScreen() {
 
       {events.length > 0 && (
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Επερχόμενες εκδηλώσεις</Text>
+          <Text style={s.sectionTitle}>{t('discover.upcoming_events')}</Text>
           {events.map((e: any) => (
             <TouchableOpacity key={e.id} style={s.eventCard} activeOpacity={0.8}
               onPress={() => router.push(`/events/${e.id}` as any)}>
@@ -98,7 +100,7 @@ export default function DiscoverScreen() {
                 </Text>
               </View>
               <Text style={s.eventPrice}>
-                {e.price > 0 ? `€${e.price}` : 'Δωρεάν'}
+                {e.price > 0 ? `€${e.price}` : t('discover.free')}
               </Text>
             </TouchableOpacity>
           ))}

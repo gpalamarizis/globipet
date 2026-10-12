@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import { useAppFonts } from '@/fonts'
 import { useAuthStore } from '../src/store/auth'
 import { registerPushToken, usePushRouting } from '../src/lib/notifications'
+import { initI18n } from '../lib/i18n'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -75,6 +76,23 @@ export default function RootLayout() {
    */
   const [authReady, setAuthReady] = useState(false)
 
+  /**
+   * ΓΙΑΤΙ ΑΡΧΙΚΟΠΟΙΕΙΤΑΙ ΕΔΩ Η ΓΛΩΣΣΑ
+   *   Η initI18n() δεν καλούνταν ΠΟΥΘΕΝΑ. Το i18next έμενε χωρίς πόρους,
+   *   οπότε η οθόνη /language καλούσε changeLanguage() σε κάτι που δεν είχε
+   *   ξεκινήσει ποτέ: ο χρήστης διάλεγε γλώσσα και δεν άλλαζε τίποτα.
+   *
+   *   Είναι ασύγχρονη επειδή διαβάζει την αποθηκευμένη επιλογή από το
+   *   SecureStore. Περιμένουμε πριν δείξουμε οθόνη, όπως και με τις
+   *   γραμματοσειρές — αλλιώς η πρώτη απόδοση γίνεται στα ελληνικά και
+   *   μετά αναβοσβήνει στη σωστή γλώσσα.
+   */
+  const [i18nReady, setI18nReady] = useState(false)
+
+  useEffect(() => {
+    initI18n().finally(() => setI18nReady(true))
+  }, [])
+
   useEffect(() => {
     useAuthStore.getState().loadToken().finally(() => {
       setAuthReady(true)
@@ -94,11 +112,11 @@ export default function RootLayout() {
     // Το splash κρύβεται όταν είναι έτοιμες ΚΑΙ οι γραμματοσειρές ΚΑΙ η
     // σύνδεση, ώστε ο χρήστης να μη δει ούτε το κείμενο να αλλάζει ούτε
     // την εφαρμογή να τον θεωρεί για μια στιγμή επισκέπτη.
-    if (fontsReady && authReady) SplashScreen.hideAsync().catch(() => {})
-  }, [fontsReady, authReady])
+    if (fontsReady && authReady && i18nReady) SplashScreen.hideAsync().catch(() => {})
+  }, [fontsReady, authReady, i18nReady])
 
   // Το return έρχεται ΜΕΤΑ από όλα τα hooks.
-  if (!fontsReady || !authReady) return null
+  if (!fontsReady || !authReady || !i18nReady) return null
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

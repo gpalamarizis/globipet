@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native'
 import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
@@ -33,12 +34,13 @@ const MEDICAL_CENTER_URL = 'https://globipet.com/medical-center'
 type AnalysisType = 'skin' | 'eye'
 
 const SEVERITY = {
-  high:   { label: 'Υψηλή',  tone: 'danger'  as const },
-  medium: { label: 'Μέτρια', tone: 'warning' as const },
-  low:    { label: 'Χαμηλή', tone: 'success' as const },
+  high:   { labelKey: 'ai.sev_high',  tone: 'danger'  as const },
+  medium: { labelKey: 'ai.sev_medium', tone: 'warning' as const },
+  low:    { labelKey: 'ai.sev_low', tone: 'success' as const },
 }
 
 export default function AiHealthScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
@@ -57,7 +59,7 @@ export default function AiHealthScreen() {
     mutationFn: () => api.post('/ai-subscriptions/start-trial'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
     onError: (e: any) =>
-      Alert.alert('Δεν ξεκίνησε η δοκιμή', e?.response?.data?.message || 'Δοκίμασε ξανά σε λίγο.'),
+      Alert.alert(t('ai.trial_failed'), e?.response?.data?.message || t('common.try_again_later')),
   })
 
   const canUseAi =
@@ -70,10 +72,10 @@ export default function AiHealthScreen() {
 
     if (!permission.granted) {
       Alert.alert(
-        'Χρειάζεται άδεια',
+        t('ai.need_permission'),
         fromCamera
-          ? 'Δώσε πρόσβαση στην κάμερα για να τραβήξεις φωτογραφία.'
-          : 'Δώσε πρόσβαση στις φωτογραφίες για να επιλέξεις εικόνα.')
+          ? t('ai.perm_camera')
+          : t('ai.perm_photos'))
       return
     }
 
@@ -89,7 +91,7 @@ export default function AiHealthScreen() {
 
   const analyze = useMutation({
     mutationFn: async () => {
-      if (!imageUri) throw new Error('Δεν επιλέχθηκε φωτογραφία')
+      if (!imageUri) throw new Error(t('ai.no_photo'))
 
       const formData = new FormData()
       const filename = imageUri.split('/').pop() || 'photo.jpg'
@@ -108,20 +110,18 @@ export default function AiHealthScreen() {
     },
     onSuccess: setResult,
     onError: (err: any) =>
-      Alert.alert('Δεν έγινε η ανάλυση', err?.response?.data?.message || 'Δοκίμασε ξανά σε λίγο.'),
+      Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later')),
   })
 
   // ── Πύλη: χωρίς σύνδεση ──────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <Screen title="Έλεγχος υγείας">
+      <Screen title={t('ai.health_title')}>
         <View style={s.gate}>
           <View style={s.gateIcon}><Brain size={icon.xl} color={colors.brand} /></View>
-          <Text style={s.gateTitle}>Χρειάζεται σύνδεση</Text>
-          <Text style={s.gateText}>
-            Ο έλεγχος υγείας συνδέεται με τα κατοικίδιά σου, οπότε χρειάζεται λογαριασμό.
-          </Text>
-          <Button label="Σύνδεση" full onPress={() => router.push('/auth/login')}
+          <Text style={s.gateTitle}>{t('ai.need_login')}</Text>
+          <Text style={s.gateText}>{t('ai.login_reason')}</Text>
+          <Button label={t('auth.sign_in')} full onPress={() => router.push('/auth/login')}
             style={{ marginTop: space.xl }} />
         </View>
       </Screen>
@@ -131,7 +131,7 @@ export default function AiHealthScreen() {
   // ── Όσο φορτώνει η κατάσταση συνδρομής ───────────────────────────
   if (statusLoading) {
     return (
-      <Screen title="Έλεγχος υγείας">
+      <Screen title={t('ai.health_title')}>
         <View style={{ gap: space.md }}>
           <Skeleton height={56} round={radius.md} />
           <Skeleton height={200} round={radius.xl} />
@@ -145,23 +145,23 @@ export default function AiHealthScreen() {
   if (!canUseAi) {
     const expired = status?.ai_subscription_status === 'expired'
     return (
-      <Screen title="Έλεγχος υγείας">
+      <Screen title={t('ai.health_title')}>
         <View style={s.gate}>
           <View style={s.gateIcon}><Brain size={icon.xl} color={colors.brand} /></View>
           <Text style={s.gateTitle}>
-            {expired ? 'Η δοκιμή σου έληξε' : 'Δοκίμασέ το δωρεάν'}
+            {expired ? t('ai.trial_over') : t('ai.try_free')}
           </Text>
           <Text style={s.gateText}>
             {expired
-              ? 'Με συνδρομή συνεχίζεις να χρησιμοποιείς όλα τα εργαλεία υγείας με AI.'
-              : 'Τριάντα ημέρες πρόσβαση σε όλα τα εργαλεία υγείας με AI, χωρίς χρέωση.'}
+              ? t('ai.trial_sub')
+              : t('ai.trial_desc')}
           </Text>
           {expired ? (
-            <Button label="Δες τα πλάνα συνδρομής" full
+            <Button label={t('ai.see_plans')} full
               onPress={() => Linking.openURL(MEDICAL_CENTER_URL)}
               style={{ marginTop: space.xl }} />
           ) : (
-            <Button label="Ξεκίνα τη δοκιμή" full
+            <Button label={t('ai.start_trial')} full
               loading={startTrial.isPending}
               onPress={() => startTrial.mutate()}
               style={{ marginTop: space.xl }} />
@@ -174,11 +174,11 @@ export default function AiHealthScreen() {
   const severity = result?.severity ? SEVERITY[result.severity as keyof typeof SEVERITY] : null
 
   return (
-    <Screen title="Έλεγχος υγείας" subtitle="Ανάλυση φωτογραφίας με AI">
+    <Screen title={t('ai.health_title')} subtitle={t('ai.photo_ai')}>
 
       {/* ── Τι εξετάζουμε ──────────────────────────────────────── */}
       <View style={s.typeRow}>
-        {([['skin', 'Δέρμα'], ['eye', 'Μάτι']] as const).map(([key, label]) => (
+        {([['skin', t('ai.skin')], ['eye', t('ai.eye')]] as const).map(([key, label]) => (
           <TouchableOpacity
             key={key}
             onPress={() => setAnalysisType(key)}
@@ -202,25 +202,25 @@ export default function AiHealthScreen() {
         <View style={s.dropzone}>
           <Text style={s.dropTitle}>
             {analysisType === 'skin'
-              ? 'Φωτογράφισε το σημείο του δέρματος'
-              : 'Φωτογράφισε το μάτι από κοντά'}
+              ? t('ai.photo_skin')
+              : t('ai.photo_eye')}
           </Text>
-          <Text style={s.dropText}>Καλός φωτισμός και σταθερό χέρι βοηθούν την ανάλυση.</Text>
+          <Text style={s.dropText}>{t('ai.light_hint')}</Text>
           <View style={s.pickRow}>
             <TouchableOpacity style={s.pick} onPress={() => pick(true)} activeOpacity={0.7}>
               <Camera size={icon.md} color={colors.brand} />
-              <Text style={s.pickLabel}>Κάμερα</Text>
+              <Text style={s.pickLabel}>{t('ai.camera')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.pick} onPress={() => pick(false)} activeOpacity={0.7}>
               <Images size={icon.md} color={colors.brand} />
-              <Text style={s.pickLabel}>Φωτογραφίες</Text>
+              <Text style={s.pickLabel}>{t('ai.photos')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       {imageUri && !result ? (
-        <Button label="Ανάλυση με AI" full
+        <Button label={t('ai.analyse')} full
           loading={analyze.isPending}
           onPress={() => analyze.mutate()}
           style={{ marginTop: space.lg }} />
@@ -239,14 +239,14 @@ export default function AiHealthScreen() {
         <View style={{ gap: space.md, marginTop: space.xl }}>
 
           <Card>
-            <Text style={s.label}>Σοβαρότητα</Text>
-            <Badge label={severity?.label || 'Άγνωστη'} tone={severity?.tone || 'neutral'}
+            <Text style={s.label}>{t('ai.severity')}</Text>
+            <Badge label={severity ? t(severity.labelKey) : t('ai.sev_unknown')} tone={severity?.tone || 'neutral'}
               style={{ marginTop: space.xs }} />
           </Card>
 
           {result.findings?.length > 0 ? (
             <Card>
-              <Text style={s.label}>Ευρήματα</Text>
+              <Text style={s.label}>{t('ai.findings')}</Text>
               {result.findings.map((f: string, i: number) => (
                 <View key={i} style={s.bullet}>
                   <View style={s.dot} />
@@ -258,7 +258,7 @@ export default function AiHealthScreen() {
 
           {result.conditions?.length > 0 ? (
             <Card>
-              <Text style={s.label}>Πιθανές καταστάσεις</Text>
+              <Text style={s.label}>{t('ai.possible')}</Text>
               {result.conditions.map((c: string, i: number) => (
                 <View key={i} style={s.bullet}>
                   <View style={s.dot} />
@@ -270,7 +270,7 @@ export default function AiHealthScreen() {
 
           {result.recommendation ? (
             <Card>
-              <Text style={s.label}>Σύσταση</Text>
+              <Text style={s.label}>{t('ai.recommendation')}</Text>
               <Text style={s.body}>{result.recommendation}</Text>
             </Card>
           ) : null}
@@ -284,7 +284,7 @@ export default function AiHealthScreen() {
 
           {result.comparison_sources?.length > 0 ? (
             <Card>
-              <Text style={s.label}>Πηγές σύγκρισης</Text>
+              <Text style={s.label}>{t('ai.sources')}</Text>
               {result.comparison_sources.map((src: string, i: number) => (
                 <Text key={i} style={s.source}>{src}</Text>
               ))}
@@ -295,7 +295,7 @@ export default function AiHealthScreen() {
             <Text style={s.disclaimer}>{result.disclaimer}</Text>
           ) : null}
 
-          <Button label="Νέα φωτογραφία" variant="secondary" full
+          <Button label={t('ai.new_photo')} variant="secondary" full
             onPress={() => { setImageUri(null); setResult(null) }} />
         </View>
       ) : null}

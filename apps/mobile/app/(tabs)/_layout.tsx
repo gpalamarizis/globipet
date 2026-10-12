@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { View, StyleSheet, Platform, Dimensions, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Home, Search, PawPrint, ShoppingBag, User } from 'lucide-react-native'
@@ -36,11 +37,11 @@ import { colors, radius, type, weight, space } from '@/theme'
  */
 
 const TABS = [
-  { name: 'index',       title: 'Αρχική',   Icon: Home },
-  { name: 'discover',    title: 'Ψάξε',     Icon: Search },
-  { name: 'pets',        title: 'Ζώα',      Icon: PawPrint },
-  { name: 'marketplace', title: 'Αγορά',    Icon: ShoppingBag },
-  { name: 'profile',     title: 'Προφίλ',   Icon: User },
+  { name: 'index',       titleKey: 'tabs.home',   Icon: Home },
+  { name: 'discover',    titleKey: 'tabs.discover',     Icon: Search },
+  { name: 'pets',        titleKey: 'tabs.animals',      Icon: PawPrint },
+  { name: 'marketplace', titleKey: 'tabs.shop',    Icon: ShoppingBag },
+  { name: 'profile',     titleKey: 'tabs.profile',   Icon: User },
 ]
 
 /** Οθόνες που υπάρχουν στον φάκελο αλλά δεν εμφανίζονται στη μπάρα. */
@@ -96,6 +97,7 @@ function TabIcon({ Icon, focused, color }: any) {
 }
 
 export default function TabLayout() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
 
@@ -120,10 +122,10 @@ export default function TabLayout() {
         tabBarLabelPosition: 'below-icon',
       }}>
 
-      {TABS.map(({ name, title, Icon }) => (
+      {TABS.map(({ name, titleKey, Icon }) => (
         <Tabs.Screen key={name} name={name}
           options={{
-            title,
+            title: t(titleKey),
             tabBarIcon: ({ color, focused }) =>
               <TabIcon Icon={Icon} focused={focused} color={color} />,
           }} />

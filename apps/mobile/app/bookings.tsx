@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert,
 } from 'react-native'
@@ -21,20 +22,21 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *   φίλτρα upcoming/past.
  */
 
-const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
-  pending:   { label: 'Σε αναμονή',  bg: colors.warningBg, fg: colors.warning },
-  confirmed: { label: 'Επιβεβαιωμένη', bg: colors.infoBg,  fg: colors.info },
-  completed: { label: 'Ολοκληρώθηκε', bg: colors.successBg, fg: colors.success },
-  cancelled: { label: 'Ακυρώθηκε',   bg: colors.dangerBg,  fg: colors.danger },
-  no_show:   { label: 'Δεν προσήλθε', bg: colors.surfaceAlt, fg: colors.textMuted },
+const STATUS: Record<string, { labelKey: string; bg: string; fg: string }> = {
+  pending:   { labelKey: 'status.pending',  bg: colors.warningBg, fg: colors.warning },
+  confirmed: { labelKey: 'status.confirmed', bg: colors.infoBg,  fg: colors.info },
+  completed: { labelKey: 'status.completed', bg: colors.successBg, fg: colors.success },
+  cancelled: { labelKey: 'status.cancelled',   bg: colors.dangerBg,  fg: colors.danger },
+  no_show:   { labelKey: 'status.no_show', bg: colors.surfaceAlt, fg: colors.textMuted },
 }
 
 const TABS = [
-  { id: 'upcoming', label: 'Επερχόμενες' },
-  { id: 'past',     label: 'Ιστορικό' },
+  { id: 'upcoming', labelKey: 'bookings.upcoming' },
+  { id: 'past',     labelKey: 'bookings.history' },
 ]
 
 export default function BookingsScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -52,7 +54,7 @@ export default function BookingsScreen() {
   const cancel = useMutation({
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-bookings'] }),
-    onError: (e: any) => Alert.alert('Σφάλμα', e?.message || 'Δεν ακυρώθηκε'),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('bookings.cancel_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -62,9 +64,9 @@ export default function BookingsScreen() {
   }, [qc])
 
   const confirmCancel = (id: string) =>
-    Alert.alert('Ακύρωση κράτησης', 'Θέλεις να ακυρώσεις αυτή την κράτηση;', [
-      { text: 'Όχι', style: 'cancel' },
-      { text: 'Ακύρωση κράτησης', style: 'destructive', onPress: () => cancel.mutate(id) },
+    Alert.alert(t('bookings.cancel'), t('bookings.cancel_q'), [
+      { text: t('common.no'), style: 'cancel' },
+      { text: t('bookings.cancel'), style: 'destructive', onPress: () => cancel.mutate(id) },
     ])
 
   const fmtDate = (d?: string) => {
@@ -80,14 +82,14 @@ export default function BookingsScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Κρατήσεις</Text>
+        <Text style={s.title}>{t('profile.menu.bookings')}</Text>
       </View>
       <View style={s.empty}>
         <Calendar size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>Συνδέσου για να δεις τις κρατήσεις σου</Text>
+        <Text style={s.emptyTitle}>{t('bookings.login_prompt')}</Text>
         <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>Σύνδεση</Text>
+          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -99,15 +101,15 @@ export default function BookingsScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <ArrowLeft size={icon.lg} color={colors.textOnDark} />
         </TouchableOpacity>
-        <Text style={s.title}>Κρατήσεις</Text>
+        <Text style={s.title}>{t('profile.menu.bookings')}</Text>
       </View>
 
       <View style={s.tabs}>
-        {TABS.map(t => (
-          <TouchableOpacity key={t.id} activeOpacity={0.7}
-            style={[s.tab, tab === t.id && s.tabActive]}
-            onPress={() => setTab(t.id)}>
-            <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>{t.label}</Text>
+        {TABS.map(tb => (
+          <TouchableOpacity key={tb.id} activeOpacity={0.7}
+            style={[s.tab, tab === tb.id && s.tabActive]}
+            onPress={() => setTab(tb.id)}>
+            <Text style={[s.tabText, tab === tb.id && s.tabTextActive]}>{t(tb.labelKey)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -131,14 +133,14 @@ export default function BookingsScreen() {
             : <View style={s.empty}>
                 <Calendar size={icon.hero} color={colors.border} />
                 <Text style={s.emptyTitle}>
-                  {tab === 'upcoming' ? 'Καμία επερχόμενη κράτηση' : 'Κανένα ιστορικό'}
+                  {tab === 'upcoming' ? t('bookings.none_upcoming') : t('bookings.none_history')}
                 </Text>
                 {tab === 'upcoming' && (
                   <>
-                    <Text style={s.emptyText}>Βρες κτηνίατρο, κομμωτήριο ή βόλτα.</Text>
+                    <Text style={s.emptyText}>{t('bookings.find_hint')}</Text>
                     <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
                       onPress={() => router.push('/(tabs)/services' as any)}>
-                      <Text style={s.primaryBtnText}>Δες υπηρεσίες</Text>
+                      <Text style={s.primaryBtnText}>{t('bookings.see_services')}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -153,12 +155,12 @@ export default function BookingsScreen() {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   {/* Ο τίτλος έρχεται από τη σχέση, όχι από ανύπαρκτη στήλη. */}
                   <Text style={s.service} numberOfLines={1}>
-                    {item.service?.title || 'Κράτηση'}
+                    {item.service?.title || t('services.book')}
                   </Text>
                   <Text style={s.provider} numberOfLines={1}>{item.provider_name}</Text>
                 </View>
                 <View style={[s.statusTag, { backgroundColor: st.bg }]}>
-                  <Text style={[s.statusText, { color: st.fg }]}>{st.label}</Text>
+                  <Text style={[s.statusText, { color: st.fg }]}>{t(st.labelKey)}</Text>
                 </View>
               </View>
 
@@ -192,7 +194,7 @@ export default function BookingsScreen() {
                   <TouchableOpacity style={s.cancelBtn} activeOpacity={0.7}
                     disabled={cancel.isPending}
                     onPress={() => confirmCancel(item.id)}>
-                    <Text style={s.cancelText}>Ακύρωση</Text>
+                    <Text style={s.cancelText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

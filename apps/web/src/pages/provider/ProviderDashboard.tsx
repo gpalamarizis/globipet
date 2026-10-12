@@ -25,19 +25,26 @@ type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calend
 const PRODUCT_TYPES = ['veterinary', 'grooming', 'boarding', 'training']
 
 // Οι 8 τύποι υπηρεσιών, όπως ακριβώς αποθηκεύονται στο services.service_type
+// Οι 8 τύποι υπηρεσιών, όπως ακριβώς αποθηκεύονται στο services.service_type.
+//
+// Κρατάμε ΚΛΕΙΔΙ μετάφρασης, όχι έτοιμο κείμενο: η σταθερά αποτιμάται μία
+// φορά όταν φορτώνει το αρχείο, οπότε μεταφρασμένο κείμενο εδώ θα κλείδωνε
+// στη γλώσσα της πρώτης φόρτωσης και δεν θα άλλαζε ποτέ. Η μετάφραση
+// γίνεται τη στιγμή της απόδοσης.
 const SERVICE_TYPES = [
-  { value: 'veterinary',  label: 'Κτηνιατρείο' },
-  { value: 'grooming',    label: 'Grooming' },
-  { value: 'walking',     label: 'Βόλτα' },
-  { value: 'sitting',     label: 'Φύλαξη (sitting)' },
-  { value: 'boarding',    label: 'Φιλοξενία (boarding)' },
-  { value: 'training',    label: 'Εκπαίδευση' },
-  { value: 'transport',   label: 'Μεταφορά' },
-  { value: 'photography', label: 'Φωτογράφιση' },
+  { value: 'veterinary',  labelKey: 'providerDash.catVeterinary' },
+  { value: 'grooming',    labelKey: 'providerDash.catGrooming' },
+  { value: 'walking',     labelKey: 'providerDash.catWalking' },
+  { value: 'sitting',     labelKey: 'providerDash.catSitting' },
+  { value: 'boarding',    labelKey: 'providerDash.catBoarding' },
+  { value: 'training',    labelKey: 'providerDash.catTraining' },
+  { value: 'transport',   labelKey: 'providerDash.catTransport' },
+  { value: 'photography', labelKey: 'providerDash.catPhoto' },
 ]
 
 // ─── Import Tab ───────────────────────────────────────────────────
 function ImportTab() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<any[]>([])
@@ -67,12 +74,12 @@ function ImportTab() {
         }
       } else if (ext === 'docx' || ext === 'doc') {
         // For Word files, show manual entry guidance
-        toast('Αρχείο Word εντοπίστηκε. Θα εξαχθούν δεδομένα αυτόματα.')
-        setColumns(['Όνομα', 'Τιμή', 'Περιγραφή', 'Κατηγορία'])
-        setPreview([{ 'Όνομα': 'Παράδειγμα', 'Τιμή': '10', 'Περιγραφή': 'Περιγραφή', 'Κατηγορία': 'other' }])
+        toast(t('providerDash.wordDetected'))
+        setColumns([t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.category')])
+        setPreview([{ [t('providerDash.colName')]: t('providerDash.sampleName'), [t('providerDash.colPrice')]: '10', [t('providerDash.colDesc')]: t('providerDash.description'), [t('providerDash.colCategory')]: 'other' }])
       }
     } catch (err) {
-      toast.error('Σφάλμα ανάγνωσης αρχείου')
+      toast.error(t('providerDash.errFileRead'))
     }
   }
 
@@ -82,18 +89,18 @@ function ImportTab() {
     try {
       const endpoint = importType === 'products' ? '/products/bulk' : '/services/bulk'
       const items = preview.map(row => ({
-        name: row['Όνομα'] || row['name'] || row['Name'] || Object.values(row)[0],
-        price: parseFloat(row['Τιμή'] || row['price'] || row['Price'] || '0'),
-        description: row['Περιγραφή'] || row['description'] || row['Description'] || '',
-        category: row['Κατηγορία'] || row['category'] || row['Category'] || 'other',
+        name: row[t('providerDash.name')] || row['name'] || row['Name'] || Object.values(row)[0],
+        price: parseFloat(row[t('providerDash.price')] || row['price'] || row['Price'] || '0'),
+        description: row[t('providerDash.description')] || row['description'] || row['Description'] || '',
+        category: row[t('providerDash.category')] || row['category'] || row['Category'] || 'other',
       }))
       await api.post(endpoint, { items })
-      toast.success(`${items.length} εγγραφές εισήχθησαν επιτυχώς!`)
+      toast.success(t('providerDash.importedOk', { count: items.length }))
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
       setFile(null); setPreview([]); setColumns([])
     } catch {
-      toast.error('Σφάλμα εισαγωγής δεδομένων')
+      toast.error(t('providerDash.errImport'))
     } finally {
       setImporting(false)
     }
@@ -101,24 +108,24 @@ function ImportTab() {
 
   const downloadTemplate = (type: 'products' | 'services') => {
     const headers = type === 'products'
-      ? ['Όνομα', 'Τιμή', 'Περιγραφή', 'Κατηγορία', 'Απόθεμα']
-      : ['Όνομα', 'Τιμή', 'Περιγραφή', 'Τύπος', 'Διάρκεια (λεπτά)']
-    const ws = XLSX.utils.aoa_to_sheet([headers, headers.map(() => 'Παράδειγμα')])
+      ? [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.category'), t('providerDash.stock')]
+      : [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.type'), t('providerDash.durationMin')]
+    const ws = XLSX.utils.aoa_to_sheet([headers, headers.map(() => t('providerDash.sampleName'))])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Template')
     XLSX.writeFile(wb, `globipet_${type}_template.xlsx`)
-    toast.success('Template κατεβάστηκε!')
+    toast.success(t('providerDash.templateDownloaded'))
   }
 
   return (
     <div className="space-y-6">
       {/* Import type */}
       <div className="card p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Τύπος εισαγωγής</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('providerDash.importType')}</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
           {[
-            { value: 'products', label: 'Προϊόντα', icon: Package, desc: 'Εισαγωγή προϊόντων marketplace' },
-            { value: 'services', label: 'Υπηρεσίες', icon: Scissors, desc: 'Εισαγωγή υπηρεσιών' },
+            { value: 'products', label: t('providerDash.tabProducts'), icon: Package, desc: t('providerDash.importProducts') },
+            { value: 'services', label: t('providerDash.tabServices'), icon: Scissors, desc: t('providerDash.importServices') },
           ].map(opt => (
             <button key={opt.value} onClick={() => setImportType(opt.value as any)}
               className={cn('p-4 rounded-xl border text-left transition-all', importType === opt.value ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-200 dark:border-gray-700')}>
@@ -132,17 +139,15 @@ function ImportTab() {
         {/* Download templates */}
         <div className="flex gap-3">
           <button onClick={() => downloadTemplate('products')} className="flex items-center gap-2 text-xs text-brand-900 hover:underline">
-            <Download size={13} /> Template Προϊόντων (.xlsx)
-          </button>
+            <Download size={13} />{t('providerDash.templateProducts')}</button>
           <button onClick={() => downloadTemplate('services')} className="flex items-center gap-2 text-xs text-brand-900 hover:underline">
-            <Download size={13} /> Template Υπηρεσιών (.xlsx)
-          </button>
+            <Download size={13} />{t('providerDash.templateServices')}</button>
         </div>
       </div>
 
       {/* Upload zone */}
       <div className="card p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Ανέβασμα αρχείου</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('providerDash.uploadFile')}</h3>
         <div
           onClick={() => fileRef.current?.click()}
           className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-10 text-center cursor-pointer hover:border-brand-300 hover:bg-brand-50/30 dark:hover:bg-brand-900/10 transition-all">
@@ -150,7 +155,7 @@ function ImportTab() {
             <FileSpreadsheet size={32} className="text-green-500" />
             <FileText size={32} className="text-blue-500" />
           </div>
-          <p className="font-medium text-gray-700 dark:text-gray-300">Σύρετε αρχείο ή κλικ για επιλογή</p>
+          <p className="font-medium text-gray-700 dark:text-gray-300">{t('providerDash.dropHint')}</p>
           <p className="text-sm text-gray-400 mt-1">Excel (.xlsx, .xls), CSV, Word (.docx)</p>
           {file && <p className="text-sm text-brand-900 font-medium mt-3">✓ {file.name}</p>}
         </div>
@@ -162,10 +167,9 @@ function ImportTab() {
       {preview.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Προεπισκόπηση ({preview.length} εγγραφές)</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('providerDash.previewCount', { count: preview.length })}</h3>
             <div className="flex items-center gap-2 text-xs text-green-600">
-              <CheckCircle size={14} /> Έτοιμο για εισαγωγή
-            </div>
+              <CheckCircle size={14} />{t('providerDash.readyToImport')}</div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -181,7 +185,7 @@ function ImportTab() {
           </div>
           <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end">
             <button onClick={doImport} disabled={importing} className="btn-primary flex items-center gap-2">
-              <Upload size={16} /> {importing ? 'Εισαγωγή...' : `Εισαγωγή ${preview.length} εγγραφών`}
+              <Upload size={16} /> {importing ? t('providerDash.importing') : t('providerDash.importRecords', { count: preview.length })}
             </button>
           </div>
         </div>
@@ -192,6 +196,7 @@ function ImportTab() {
 
 // ─── Calendar Tab ─────────────────────────────────────────────────
 function CalendarTab() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [syncing, setSyncing] = useState(false)
@@ -223,10 +228,10 @@ function CalendarTab() {
     try {
       const { data } = await api.get(`/calendar/${provider}/connect`)
       const url = data?.data?.url
-      if (!url) throw new Error('Δεν επιστράφηκε διεύθυνση σύνδεσης')
+      if (!url) throw new Error(t('providerDash.errNoAuthUrl'))
       window.open(url, '_blank', 'width=520,height=640')
     } catch (err: any) {
-      toast.error(err?.message || 'Δεν ήταν δυνατή η σύνδεση')
+      toast.error(err?.message || t('providerDash.errConnect'))
     } finally { setSyncing(false) }
   }
 
@@ -234,9 +239,9 @@ function CalendarTab() {
     try {
       await api.delete(`/calendar/${provider}`)
       queryClient.invalidateQueries({ queryKey: ['calendar-connections'] })
-      toast.success('Η σύνδεση αφαιρέθηκε')
+      toast.success(t('providerDash.connectionRemoved'))
     } catch (err: any) {
-      toast.error(err?.message || 'Σφάλμα')
+      toast.error(err?.message || t('providerDash.error'))
     }
   }
 
@@ -271,8 +276,8 @@ function CalendarTab() {
     <div className="space-y-6">
       {/* Calendar sync */}
       <div className="card p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Συγχρονισμός Ημερολογίου</h3>
-        <p className="text-sm text-gray-500 mb-4">Συνδέστε το ημερολόγιό σας για αυτόματο συγχρονισμό κρατήσεων</p>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('providerDash.calendarSync')}</h3>
+        <p className="text-sm text-gray-500 mb-4">{t('providerDash.calendarSyncHint')}</p>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={syncGoogle}
             className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
@@ -281,7 +286,7 @@ function CalendarTab() {
               <p className="font-medium text-sm text-gray-900 dark:text-white">Google Calendar</p>
               {/* Say what pressing this will do, not what it is. */}
               <p className={cn('text-xs', connected('google') ? 'text-green-600' : 'text-gray-500')}>
-                {connected('google') ? '✓ Συνδεδεμένο — πάτα για αποσύνδεση' : 'Σύνδεση με Google'}
+                {connected('google') ? t('providerDash.connectedHint') : t('providerDash.connectGoogle')}
               </p>
             </div>
           </button>
@@ -291,7 +296,7 @@ function CalendarTab() {
             <div className="text-left">
               <p className="font-medium text-sm text-gray-900 dark:text-white">Microsoft Outlook</p>
               <p className={cn('text-xs', connected('outlook') ? 'text-green-600' : 'text-gray-500')}>
-                {connected('outlook') ? '✓ Συνδεδεμένο — πάτα για αποσύνδεση' : 'Σύνδεση με Microsoft'}
+                {connected('outlook') ? t('providerDash.connectedHint') : t('providerDash.connectMicrosoft')}
               </p>
             </div>
           </button>
@@ -310,7 +315,7 @@ function CalendarTab() {
           </div>
         </div>
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {['Κυ','Δε','Τρ','Τε','Πέ','Πα','Σά'].map(d => (
+          {[t('providerDash.dSun'),t('providerDash.dMon'),t('providerDash.dTue'),t('providerDash.dWed'),t('providerDash.dThu'),t('providerDash.dFri'),t('providerDash.dSat')].map(d => (
             <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
           ))}
         </div>
@@ -342,9 +347,9 @@ function CalendarTab() {
 
       {/* Upcoming bookings */}
       <div className="card p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Επερχόμενες Κρατήσεις</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('providerDash.upcomingBookings')}</h3>
         {bookings.length === 0 ? (
-          <p className="text-center text-gray-400 py-6 text-sm">Δεν υπάρχουν κρατήσεις</p>
+          <p className="text-center text-gray-400 py-6 text-sm">{t('providerDash.noBookings')}</p>
         ) : bookings.slice(0, 5).map((b: any) => (
           <div key={b.id} className="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
             <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center shrink-0">
@@ -354,7 +359,7 @@ function CalendarTab() {
               {/* service_name and user_name are not columns — the title comes
                   from the included service relation and the customer column
                   is customer_name. Both rendered blank before. */}
-              <p className="font-medium text-sm text-gray-900 dark:text-white">{b.service?.title || 'Κράτηση'}</p>
+              <p className="font-medium text-sm text-gray-900 dark:text-white">{b.service?.title || t('providerDash.booking')}</p>
               <p className="text-xs text-gray-500">
                 {b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}
               </p>
@@ -362,7 +367,7 @@ function CalendarTab() {
             <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
               b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
               b.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600')}>
-              {b.status === 'confirmed' ? 'Επιβεβ.' : b.status === 'pending' ? 'Εκκρεμεί' : b.status}
+              {b.status === 'confirmed' ? t('providerDash.confirmShort') : b.status === 'pending' ? t('providerDash.pending') : b.status}
             </span>
           </div>
         ))}
@@ -373,6 +378,7 @@ function CalendarTab() {
 
 // ─── Services Tab ─────────────────────────────────────────────────
 function ServicesTab() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
@@ -400,55 +406,54 @@ function ServicesTab() {
       title: form.name,
       description: form.description || form.name,
       service_type: form.service_type,
-      city: (user as any)?.city || 'Αθήνα',
+      city: (user as any)?.city || t('providerDash.sampleCity'),
       price: parseFloat(form.price) || 0,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
-      toast.success('Υπηρεσία προστέθηκε!')
+      toast.success(t('providerDash.serviceAdded'))
       setShowForm(false)
       setForm({ name: '', description: '', price: '', service_type: providerType, duration_minutes: '60' })
     },
-    onError: () => toast.error('Σφάλμα προσθήκης υπηρεσίας'),
+    onError: () => toast.error(t('providerDash.errAddService')),
   })
 
   const deleteService = useMutation({
     mutationFn: (id: string) => api.delete(`/services/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-services'] }); toast.success('Υπηρεσία διαγράφηκε') },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-services'] }); toast.success(t('providerDash.serviceDeleted')) },
   })
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">{services.length} υπηρεσίες</p>
+        <p className="text-sm text-gray-500">{services.length} {t('providerDash.tabServices')}</p>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={16} /> Νέα Υπηρεσία
-        </button>
+          <Plus size={16} />{t('providerDash.newService')}</button>
       </div>
 
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="card p-5">
-            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">Νέα Υπηρεσία</h3>
+            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('providerDash.newService')}</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα</label><input className="input" placeholder="π.χ. Grooming Σκύλου" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Τύπος</label>
+              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.name')}</label><input className="input" placeholder={t('providerDash.phService')} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.type')}</label>
                 {/* Οι τιμές ΠΡΕΠΕΙ να ταιριάζουν με το services.service_type της βάσης.
                     Πριν υπήρχαν 'pet_sitting' και 'pet_taxi' που δεν υπάρχουν πουθενά. */}
                 <select className="input" value={form.service_type}
                         onChange={e => setForm(f => ({...f, service_type: e.target.value}))}>
-                  <option value="">— επίλεξε —</option>
-                  {SERVICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  <option value="">{t('providerDash.choose')}</option>
+                  {SERVICE_TYPES.map(st => <option key={st.value} value={st.value}>{t(st.labelKey)}</option>)}
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Τιμή (€)</label><input className="input" type="number" placeholder="25" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Διάρκεια (λεπτά)</label><input className="input" type="number" placeholder="60" value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label><textarea className="input resize-none" rows={2} placeholder="Περιγραφή υπηρεσίας..." value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.priceEur')}</label><input className="input" type="number" placeholder="25" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.durationMin')}</label><input className="input" type="number" placeholder="60" value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.description')}</label><textarea className="input resize-none" rows={2} placeholder={t('providerDash.phServiceDesc')} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Ακύρωση</button>
+              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">{t('providerDash.cancel')}</button>
               <button onClick={() => addService.mutate()} disabled={!form.name || !form.price || addService.isPending} className="btn-primary flex-1">
-                {addService.isPending ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                {addService.isPending ? t('providerDash.saving') : t('providerDash.save')}
               </button>
             </div>
           </motion.div>
@@ -460,8 +465,8 @@ function ServicesTab() {
         : services.length === 0 ? (
           <div className="card p-10 text-center">
             <Scissors size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">Δεν έχετε υπηρεσίες ακόμα</p>
-            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">Προσθήκη πρώτης υπηρεσίας</button>
+            <p className="text-gray-500">{t('providerDash.noServices')}</p>
+            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">{t('providerDash.addFirstService')}</button>
           </div>
         ) : services.map((s: any) => (
           <div key={s.id} className="card p-4 flex items-center gap-4">
@@ -470,12 +475,12 @@ function ServicesTab() {
             </div>
             <div className="flex-1">
               <p className="font-medium text-gray-900 dark:text-white">{s.name}</p>
-              <p className="text-xs text-gray-500">{s.type} · {s.duration_minutes} λεπτά</p>
+              <p className="text-xs text-gray-500">{s.type} · {s.duration_minutes} {t('providerDash.minutes')}</p>
             </div>
             <p className="font-bold text-gray-900 dark:text-white">€{s.price}</p>
             <div className="flex gap-1">
               <button className="btn-ghost p-2"><Edit size={14} className="text-gray-400"/></button>
-              <button onClick={() => { if(confirm('Διαγραφή;')) deleteService.mutate(s.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
+              <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteService.mutate(s.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
             </div>
           </div>
         ))}
@@ -486,6 +491,7 @@ function ServicesTab() {
 
 // ─── Products Tab ─────────────────────────────────────────────────
 function ProductsTab() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
@@ -502,7 +508,7 @@ function ProductsTab() {
     mutationFn: () => api.post('/products', { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
-      toast.success('Προϊόν προστέθηκε!')
+      toast.success(t('providerDash.productAdded'))
       setShowForm(false)
       setForm({ name: '', description: '', price: '', category: 'food', stock: '0' })
     },
@@ -510,37 +516,36 @@ function ProductsTab() {
 
   const deleteProduct = useMutation({
     mutationFn: (id: string) => api.delete(`/products/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-products'] }); toast.success('Προϊόν διαγράφηκε') },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-products'] }); toast.success(t('providerDash.productDeleted')) },
   })
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">{products.length} προϊόντα</p>
+        <p className="text-sm text-gray-500">{products.length} {t('providerDash.tabProducts')}</p>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={16} /> Νέο Προϊόν
-        </button>
+          <Plus size={16} />{t('providerDash.newProduct')}</button>
       </div>
 
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="card p-5">
-            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">Νέο Προϊόν</h3>
+            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('providerDash.newProduct')}</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα</label><input className="input" placeholder="π.χ. Royal Canin Adult" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Κατηγορία</label>
+              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.name')}</label><input className="input" placeholder={t('providerDash.phProduct')} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.category')}</label>
                 <select className="input" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
                   {['food','toys','accessories','health','grooming','training','housing','other'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Τιμή (€)</label><input className="input" type="number" placeholder="15.99" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Απόθεμα</label><input className="input" type="number" placeholder="100" value={form.stock} onChange={e => setForm(f => ({...f, stock: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label><textarea className="input resize-none" rows={2} placeholder="Περιγραφή προϊόντος..." value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.priceEur')}</label><input className="input" type="number" placeholder="15.99" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.stock')}</label><input className="input" type="number" placeholder="100" value={form.stock} onChange={e => setForm(f => ({...f, stock: e.target.value}))} /></div>
+              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.description')}</label><textarea className="input resize-none" rows={2} placeholder={t('providerDash.phProductDesc')} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
             </div>
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Ακύρωση</button>
+              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">{t('providerDash.cancel')}</button>
               <button onClick={() => addProduct.mutate()} disabled={!form.name || !form.price || addProduct.isPending} className="btn-primary flex-1">
-                {addProduct.isPending ? 'Αποθήκευση...' : 'Αποθήκευση'}
+                {addProduct.isPending ? t('providerDash.saving') : t('providerDash.save')}
               </button>
             </div>
           </motion.div>
@@ -552,8 +557,8 @@ function ProductsTab() {
         : products.length === 0 ? (
           <div className="card p-10 text-center">
             <Package size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">Δεν έχετε προϊόντα ακόμα</p>
-            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">Προσθήκη πρώτου προϊόντος</button>
+            <p className="text-gray-500">{t('providerDash.noProducts')}</p>
+            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">{t('providerDash.addFirstProduct')}</button>
           </div>
         ) : products.map((p: any) => (
           <div key={p.id} className="card p-4 flex items-center gap-4">
@@ -561,12 +566,12 @@ function ProductsTab() {
               : <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-xl">📦</div>}
             <div className="flex-1">
               <p className="font-medium text-gray-900 dark:text-white">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.category} · Απόθεμα: {p.stock ?? '—'}</p>
+              <p className="text-xs text-gray-500">{p.category} · {t('providerDash.stock')}: {p.stock ?? '—'}</p>
             </div>
             <p className="font-bold text-gray-900 dark:text-white">€{p.price}</p>
             <div className="flex gap-1">
               <button className="btn-ghost p-2"><Edit size={14} className="text-gray-400"/></button>
-              <button onClick={() => { if(confirm('Διαγραφή;')) deleteProduct.mutate(p.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
+              <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteProduct.mutate(p.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
             </div>
           </div>
         ))}
@@ -577,6 +582,7 @@ function ProductsTab() {
 
 // ─── Main Provider Dashboard ──────────────────────────────────────
 export default function ProviderDashboard() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
@@ -602,9 +608,9 @@ export default function ProviderDashboard() {
   const toggleAvailability = useMutation({
     mutationFn: (is_available: boolean) => api.patch('/telehealth/availability', { is_available }),
     onSuccess: (_, is_available) => {
-      toast.success(is_available ? '🟢 Είστε πλέον διαθέσιμος για τηλεϊατρική' : '⚫ Απενεργοποιήσατε τη διαθεσιμότητα')
+      toast.success(is_available ? t('providerDash.teleOn') : t('providerDash.teleOffMsg'))
     },
-    onError: () => toast.error('Σφάλμα αλλαγής διαθεσιμότητας'),
+    onError: () => toast.error(t('providerDash.errAvailability')),
   })
 
   // Ο τύπος του παρόχου καθορίζει ποιες καρτέλες βλέπει.
@@ -621,17 +627,17 @@ export default function ProviderDashboard() {
   }, [sellsProducts, activeTab])
 
   const tabs = [
-    { id: 'overview',  label: 'Επισκόπηση', icon: TrendingUp },
-    { id: 'services',  label: 'Υπηρεσίες',  icon: Scissors },
-    { id: 'staff',     label: isClinic ? 'Γιατροί' : 'Προσωπικό', icon: Stethoscope },
-    ...(sellsProducts ? [{ id: 'products', label: 'Προϊόντα', icon: Package }] : []),
-    { id: 'bookings',  label: 'Κρατήσεις',  icon: Clock },
-    { id: 'calendar',  label: 'Ημερολόγιο', icon: Calendar },
-    { id: 'marketing',    label: 'Καμπάνιες',   icon: Megaphone },
-    { id: 'customers',    label: 'Πελάτες',     icon: Users },
-    { id: 'translations', label: 'Μεταφράσεις', icon: Languages },
+    { id: 'overview',  label: t('providerDash.tabOverview'), icon: TrendingUp },
+    { id: 'services',  label: t('providerDash.tabServices'),  icon: Scissors },
+    { id: 'staff',     label: isClinic ? t('providerDash.tabDoctors') : t('providerDash.tabStaff'), icon: Stethoscope },
+    ...(sellsProducts ? [{ id: 'products', label: t('providerDash.tabProducts'), icon: Package }] : []),
+    { id: 'bookings',  label: t('providerDash.tabBookings'),  icon: Clock },
+    { id: 'calendar',  label: t('providerDash.tabCalendar'), icon: Calendar },
+    { id: 'marketing',    label: t('providerDash.tabCampaigns'),   icon: Megaphone },
+    { id: 'customers',    label: t('providerDash.tabCustomers'),     icon: Users },
+    { id: 'translations', label: t('providerDash.tabTranslations'), icon: Languages },
     // The insights page existed with no way to reach it.
-    ...(sellsProducts ? [{ id: 'insights', label: 'Στατιστικά', icon: BarChart3 }] : []),
+    ...(sellsProducts ? [{ id: 'insights', label: t('providerDash.tabInsights'), icon: BarChart3 }] : []),
     ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
   ]
 
@@ -641,7 +647,7 @@ export default function ProviderDashboard() {
         <div className="flex items-center gap-3">
           {/* Επιστροφή στο site. Στη γραμμή του τίτλου ώστε να είναι ορατή —
               κάτω από τη μπάρα πλοήγησης κρυβόταν. */}
-          <Link to="/" title="Επιστροφή στο GlobiPet"
+          <Link to="/" title={t('providerDash.backToGlobiPet')}
             className="w-10 h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-brand-900 hover:border-brand-400 dark:hover:text-yellow-400 transition-colors shrink-0">
             <ArrowLeft size={18} />
           </Link>
@@ -650,7 +656,7 @@ export default function ProviderDashboard() {
             {getInitials(user?.full_name || 'P')}
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Dashboard Παρόχου</h1>
+            <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('providerDash.title')}</h1>
             <p className="text-sm text-gray-500">{user?.full_name} · {user?.email}</p>
           </div>
         </div>
@@ -668,7 +674,7 @@ export default function ProviderDashboard() {
             )}>
             <Video size={16} />
             <span className={cn('w-2 h-2 rounded-full', isAvailableNow ? 'bg-white animate-pulse' : 'bg-gray-400')} />
-            {isAvailableNow ? 'Διαθέσιμος για Τηλεϊατρική' : 'Εκτός Τηλεϊατρικής'}
+            {isAvailableNow ? t('providerDash.teleAvailable') : t('providerDash.teleOff')}
           </button>
         )}
       </div>
@@ -701,10 +707,10 @@ export default function ProviderDashboard() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Συνολικές κρατήσεις', value: stats?.bookings ?? '0', icon: Calendar, color: 'bg-blue-500' },
-              { label: 'Συνολικά έσοδα', value: `€${stats?.revenue ?? '0'}`, icon: TrendingUp, color: 'bg-green-500' },
-              { label: 'Υπηρεσίες', value: stats?.services ?? '0', icon: Scissors, color: 'bg-orange-500' },
-              { label: 'Αξιολόγηση', value: stats?.rating ?? '—', icon: Star, color: 'bg-yellow-500' },
+              { label: t('providerDash.totalBookings'), value: stats?.bookings ?? '0', icon: Calendar, color: 'bg-blue-500' },
+              { label: t('providerDash.totalRevenue'), value: `€${stats?.revenue ?? '0'}`, icon: TrendingUp, color: 'bg-green-500' },
+              { label: t('providerDash.tabServices'), value: stats?.services ?? '0', icon: Scissors, color: 'bg-orange-500' },
+              { label: t('providerDash.rating'), value: stats?.rating ?? '—', icon: Star, color: 'bg-yellow-500' },
             ].map((s, i) => (
               <div key={i} className="card p-5">
                 <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', s.color)}>
@@ -717,20 +723,20 @@ export default function ProviderDashboard() {
           </div>
 
           <div className="card p-5">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Γρήγορες ενέργειες</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('providerDash.quickActions')}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { label: 'Προσθήκη υπηρεσίας', tab: 'services' as Tab, icon: Scissors },
-                { label: isClinic ? 'Γιατροί & προσωπικό' : 'Προσωπικό', tab: 'staff' as Tab, icon: Stethoscope },
-                { label: 'Καμπάνιες', tab: 'marketing' as Tab, icon: Megaphone },
-                { label: 'Πελάτες', tab: 'customers' as Tab, icon: Users },
-                { label: 'Μεταφράσεις', tab: 'translations' as Tab, icon: Languages },
+                { label: t('providerDash.addService'), tab: 'services' as Tab, icon: Scissors },
+                { label: isClinic ? t('providerDash.doctorsStaff') : t('providerDash.tabStaff'), tab: 'staff' as Tab, icon: Stethoscope },
+                { label: t('providerDash.tabCampaigns'), tab: 'marketing' as Tab, icon: Megaphone },
+                { label: t('providerDash.tabCustomers'), tab: 'customers' as Tab, icon: Users },
+                { label: t('providerDash.tabTranslations'), tab: 'translations' as Tab, icon: Languages },
                 ...(sellsProducts ? [
-                  { label: 'Προσθήκη προϊόντος', tab: 'products' as Tab, icon: Package },
-                  { label: 'Import από Excel', tab: 'import' as Tab, icon: FileSpreadsheet },
+                  { label: t('providerDash.addProduct'), tab: 'products' as Tab, icon: Package },
+                  { label: t('providerDash.importExcel'), tab: 'import' as Tab, icon: FileSpreadsheet },
                 ] : []),
-                { label: 'Κρατήσεις', tab: 'bookings' as Tab, icon: Clock },
-                { label: 'Ημερολόγιο', tab: 'calendar' as Tab, icon: Calendar },
+                { label: t('providerDash.tabBookings'), tab: 'bookings' as Tab, icon: Clock },
+                { label: t('providerDash.tabCalendar'), tab: 'calendar' as Tab, icon: Calendar },
                 { label: 'Google Calendar', tab: 'calendar' as Tab, icon: Calendar },
               ].map((item, i) => (
                 <button key={i} onClick={() => setActiveTab(item.tab)}
@@ -752,7 +758,7 @@ export default function ProviderDashboard() {
       {activeTab === 'bookings' && (
         <div className="card p-5 text-center py-12">
           <Clock size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Οι κρατήσεις θα εμφανιστούν εδώ</p>
+          <p className="text-gray-500">{t('providerDash.bookingsWillAppear')}</p>
         </div>
       )}
     </div>

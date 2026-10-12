@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, RefreshControl,
 } from 'react-native'
@@ -44,22 +45,22 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *   Το ίδιο εικονίδιο παντού είναι προϋπόθεση για να μοιάζει προϊόν.
  */
 const SERVICES = [
-  { key: 'veterinary',  Icon: Stethoscope,   label: 'Κτηνίατρος',  type: 'veterinary' },
-  { key: 'grooming',    Icon: Scissors,      label: 'Περιποίηση',  type: 'grooming' },
-  { key: 'walking',     Icon: Footprints,    label: 'Βόλτες',      type: 'walking' },
-  { key: 'hosting',     Icon: House,         label: 'Φιλοξενία',   type: 'hosting' },
-  { key: 'training',    Icon: GraduationCap, label: 'Εκπαίδευση',  type: 'training' },
-  { key: 'pet_taxi',    Icon: Car,           label: 'Μεταφορά',    type: 'pet_taxi' },
+  { key: 'veterinary',  Icon: Stethoscope,   labelKey: 'services.categories.veterinary',  type: 'veterinary' },
+  { key: 'grooming',    Icon: Scissors,      labelKey: 'cat.grooming',  type: 'grooming' },
+  { key: 'walking',     Icon: Footprints,    labelKey: 'services.categories.walking',      type: 'walking' },
+  { key: 'hosting',     Icon: House,         labelKey: 'cat.boarding',   type: 'hosting' },
+  { key: 'training',    Icon: GraduationCap, labelKey: 'services.categories.training',  type: 'training' },
+  { key: 'pet_taxi',    Icon: Car,           labelKey: 'cat.transport',    type: 'pet_taxi' },
 ] as const
 
 /** Λειτουργίες της εφαρμογής. Οριζόντια σειρά — δεν ανταγωνίζονται τις υπηρεσίες. */
 const FEATURES = [
-  { key: 'ai',        Icon: Brain,       label: 'AI Υγεία',     route: '/ai-health' },
-  { key: 'passport',  Icon: FileText,    label: 'Φάκελος',      route: '/passport' },
-  { key: 'telehealth',Icon: Video,       label: 'Τηλεϊατρική',  route: '/telehealth' },
-  { key: 'tracker',   Icon: MapPin,      label: 'Εντοπισμός',   route: '/tracker' },
-  { key: 'insurance', Icon: ShieldCheck, label: 'Ασφάλιση',     route: '/insurance' },
-  { key: 'pharmacy',  Icon: Pill,        label: 'Φαρμακείο',    route: '/(tabs)/services' },
+  { key: 'ai',        Icon: Brain,       labelKey: 'cat.ai_health',     route: '/ai-health' },
+  { key: 'passport',  Icon: FileText,    labelKey: 'home.record',      route: '/passport' },
+  { key: 'telehealth',Icon: Video,       labelKey: 'profile.menu.telehealth',  route: '/telehealth' },
+  { key: 'tracker',   Icon: MapPin,      labelKey: 'home.tracking',   route: '/tracker' },
+  { key: 'insurance', Icon: ShieldCheck, labelKey: 'cat.insurance',     route: '/insurance' },
+  { key: 'pharmacy',  Icon: Pill,        labelKey: 'cat.pharmacy',    route: '/(tabs)/services' },
 ] as const
 
 const SPECIES_EMOJI: Record<string, string> = {
@@ -77,6 +78,7 @@ function tint(key: string) {
 }
 
 export default function HomeScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const queryClient = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
@@ -137,9 +139,9 @@ export default function HomeScreen() {
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.greeting} numberOfLines={1}>
-              {isAuthenticated ? `Γεια σου, ${firstName}` : 'Καλώς ήρθες'}
+              {isAuthenticated ? t('home.greeting_name', { name: firstName }) : t('home.welcome')}
             </Text>
-            <Text style={s.tagline}>Ό,τι χρειάζεται το κατοικίδιό σου</Text>
+            <Text style={s.tagline}>{t('home.everything_pet_needs')}</Text>
           </View>
           {isAuthenticated && user?.profile_photo
             ? <Image source={{ uri: user.profile_photo }} style={s.avatar} />
@@ -151,7 +153,7 @@ export default function HomeScreen() {
           activeOpacity={0.8}
           onPress={() => router.push('/(tabs)/services' as any)}>
           <Search size={icon.md} color={colors.textLight} />
-          <Text style={s.searchText}>Αναζήτηση υπηρεσίας ή παρόχου</Text>
+          <Text style={s.searchText}>{t('home.search_placeholder')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -160,10 +162,10 @@ export default function HomeScreen() {
       {isAuthenticated && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Τα κατοικίδιά μου</Text>
+            <Text style={s.sectionTitle}>{t('home.my_pets')}</Text>
             {pets.length > 0 && (
               <TouchableOpacity onPress={() => router.push('/(tabs)/pets' as any)} style={s.seeAllBtn}>
-                <Text style={s.seeAll}>Όλα</Text>
+                <Text style={s.seeAll}>{t('marketplace.categories.all')}</Text>
                 <ChevronRight size={icon.sm} color={colors.brand} />
               </TouchableOpacity>
             )}
@@ -192,7 +194,7 @@ export default function HomeScreen() {
               {/* «Νέο» και όχι «Προσθήκη»: με μεγαλωμένα γράμματα στις
                   ρυθμίσεις του τηλεφώνου, η μεγάλη λέξη έσπαγε σε δύο
                   γραμμές κάτω από το κυκλικό εικονίδιο. */}
-              <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>Νέο</Text>
+              <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>{t('home.new')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -202,7 +204,7 @@ export default function HomeScreen() {
           Τρεις στήλες. Χωράνε ολόκληρες οι λέξεις στα 12px, και το
           πλακίδιο μεγαλώνει αρκετά ώστε να είναι εύκολος στόχος. */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Υπηρεσίες</Text>
+        <Text style={s.sectionTitle}>{t('services.title')}</Text>
         <View style={s.serviceGrid}>
           {SERVICES.map(a => {
             const c = tint(a.key)
@@ -212,7 +214,7 @@ export default function HomeScreen() {
                 <View style={[s.serviceIcon, { backgroundColor: c.bg }]}>
                   <a.Icon size={26} color={c.fg ?? colors.navy} strokeWidth={2} />
                 </View>
-                <Text style={s.serviceLabel} numberOfLines={2}>{a.label}</Text>
+                <Text style={s.serviceLabel} numberOfLines={2}>{t(a.labelKey)}</Text>
               </TouchableOpacity>
             )
           })}
@@ -222,14 +224,14 @@ export default function HomeScreen() {
       {/* ── Λειτουργίες ──────────────────────────────────────────────
           Οριζόντια, ώστε να μην ανταγωνίζονται οπτικά τις υπηρεσίες. */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Για το κατοικίδιό σου</Text>
+        <Text style={s.sectionTitle}>{t('home.for_your_pet')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: space.sm, paddingRight: space.lg }}>
           {FEATURES.map(f => (
             <TouchableOpacity key={f.key} style={s.featureChip} activeOpacity={0.7}
               onPress={() => router.push(f.route as any)}>
               <f.Icon size={icon.sm} color={colors.brand} strokeWidth={2} />
-              <Text style={s.featureLabel}>{f.label}</Text>
+              <Text style={s.featureLabel}>{t(f.labelKey)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -240,9 +242,9 @@ export default function HomeScreen() {
           και η ίδια αναμονή μοιάζει συντομότερη. */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
-          <Text style={s.sectionTitle}>Κορυφαίοι πάροχοι</Text>
+          <Text style={s.sectionTitle}>{t('home.top_providers')}</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/services' as any)} style={s.seeAllBtn}>
-            <Text style={s.seeAll}>Όλοι</Text>
+            <Text style={s.seeAll}>{t('home.all')}</Text>
             <ChevronRight size={icon.sm} color={colors.brand} />
           </TouchableOpacity>
         </View>
@@ -269,7 +271,7 @@ export default function HomeScreen() {
                   <Text style={s.providerName} numberOfLines={1}>{sv.provider_name}</Text>
                   <Text style={s.providerSub} numberOfLines={1}>{sv.city}</Text>
                   <Text style={s.providerRating}>
-                    ⭐ {sv.rating?.toFixed(1) ?? '—'} · {sv.reviews_count ?? 0} κριτικές
+                    ⭐ {sv.rating?.toFixed(1) ?? '—'} · {t('home.reviews_count', { count: sv.reviews_count ?? 0 })}
                   </Text>
                 </View>
                 <Text style={s.providerPrice}>€{sv.price}</Text>
@@ -282,9 +284,9 @@ export default function HomeScreen() {
       {products.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Προτεινόμενα</Text>
+            <Text style={s.sectionTitle}>{t('home.recommended')}</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)} style={s.seeAllBtn}>
-              <Text style={s.seeAll}>Όλα</Text>
+              <Text style={s.seeAll}>{t('marketplace.categories.all')}</Text>
               <ChevronRight size={icon.sm} color={colors.brand} />
             </TouchableOpacity>
           </View>
@@ -308,18 +310,16 @@ export default function HomeScreen() {
       {/* ── Εγγραφή ──────────────────────────────────────────────── */}
       {!isAuthenticated && (
         <View style={s.authBanner}>
-          <Text style={s.authTitle}>Ξεκίνα σήμερα</Text>
-          <Text style={s.authSub}>
-            Εγγραφή δωρεάν — και 30 μέρες AI λειτουργίες χωρίς χρέωση.
-          </Text>
+          <Text style={s.authTitle}>{t('home.start_today')}</Text>
+          <Text style={s.authSub}>{t('home.free_signup')}</Text>
           <View style={s.authBtns}>
             <TouchableOpacity style={s.authPrimary} activeOpacity={0.85}
               onPress={() => router.push('/auth/register' as any)}>
-              <Text style={s.authPrimaryText}>Εγγραφή</Text>
+              <Text style={s.authPrimaryText}>{t('auth.register')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.authSecondary} activeOpacity={0.85}
               onPress={() => router.push('/auth/login' as any)}>
-              <Text style={s.authSecondaryText}>Σύνδεση</Text>
+              <Text style={s.authSecondaryText}>{t('auth.sign_in')}</Text>
             </TouchableOpacity>
           </View>
         </View>
