@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { langOf, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
 import { sendPushToUser } from '../lib/push.js'
 
@@ -201,7 +202,7 @@ const routes: FastifyPluginAsync = async (app) => {
         latitude:  { gte: box.minLat, lte: box.maxLat },
         longitude: { gte: box.minLng, lte: box.maxLng },
       },
-      select: { email: true, latitude: true, longitude: true },
+      select: { email: true, latitude: true, longitude: true, preferred_language: true },
       take: 1000,
     })
 
@@ -211,11 +212,13 @@ const routes: FastifyPluginAsync = async (app) => {
     )
 
     if (toInvite.length > 0) {
+      // Κάθε παραλήπτης στη ΔΙΚΗ ΤΟΥ γλώσσα. Η γλώσσα έρχεται από το ίδιο
+      // ερώτημα παραπάνω, οπότε δεν υπάρχει επιπλέον κόστος ανά χρήστη.
       await prisma.notification.createMany({
         data: toInvite.map(u => ({
           user_email: u.email,
-          title: 'Νέα κοινότητα κοντά σου!',
-          message: `Η κοινότητα "${name}" δημιουργήθηκε κοντά σου. Γίνε μέλος!`,
+          title: notifyTitle('community', langOf(u.preferred_language)),
+          message: notifyMsg.communityCreated(langOf(u.preferred_language), name),
           type: 'community',
           link: `/communities/${community.id}`,
         }))

@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '../lib/email.js'
@@ -41,11 +42,12 @@ export async function markTelehealthPaid(consultationId: string, transactionId: 
     payoutAmount: consultation.provider_payout_amount || 0,
   }).catch(() => {})
 
+  const nLang = await langOfUser(consultation.provider_email)
   prisma.notification.create({
     data: {
       user_email: consultation.provider_email,
-      title: '🔔 Ασθενής σε περιμένει!',
-      message: `${consultation.client_name} πλήρωσε και σε περιμένει για τηλεϊατρική · ${consultation.scheduled_date} ${consultation.scheduled_time}`,
+      title: notifyTitle('incoming_call', nLang),
+      message: notifyMsg.incomingCall(nLang, consultation.client_name, consultation.scheduled_date, consultation.scheduled_time),
       type: 'incoming_call',
       link: `/provider/telehealth/${consultation.id}`,
     },

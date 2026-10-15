@@ -1,4 +1,5 @@
 import cron from 'node-cron'
+import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
@@ -24,11 +25,12 @@ export function startAiTrialExpiryCron() {
           data: { ai_subscription_status: 'expired' },
         })
 
+        const nLang = await langOfUser(user.email)
         const notification = await prisma.notification.create({
           data: {
             user_email: user.email,
-            title: 'Η δωρεάν δοκιμή AI έληξε',
-            message: 'Οι 30 δωρεάν ημέρες σου στο GlobiPet AI ολοκληρώθηκαν. Επίλεξε ένα πλάνο για να συνεχίσεις να έχεις πρόσβαση στις υπηρεσίες AI.',
+            title: notifyTitle('ai_trial_expired', nLang),
+            message: notifyMsg.aiTrialExpired(nLang),
             type: 'ai_trial_expired',
             link: '/pricing',
           },

@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
@@ -280,11 +281,12 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
           payoutAmount: Math.round(info.payout * 100) / 100,
         }).catch(() => {})
 
+        const nLang = await langOfUser(providerEmail)
         const notification = await prisma.notification.create({
           data: {
             user_email: providerEmail,
-            title: 'Νέα παραγγελία προϊόντος',
-            message: `${info.itemNames.join(', ')} — αμοιβή ${(Math.round(info.payout * 100) / 100).toFixed(2)}€`,
+            title: notifyTitle('new_order', nLang),
+            message: notifyMsg.orderLine(nLang, info.itemNames.join(', '), (Math.round(info.payout * 100) / 100).toFixed(2)),
             type: 'new_order',
             link: '/provider',
           },
@@ -398,11 +400,12 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
   if (!booking) return
 
+  const nLang = await langOfUser(booking.provider_email)
   const notification = await prisma.notification.create({
     data: {
       user_email: booking.provider_email,
-      title: 'Πληρωμή κράτησης',
-      message: `${booking.customer_name ?? booking.customer_email} πλήρωσε ${booking.total_price.toFixed(2)}€ · ${booking.booking_date} ${booking.booking_time}`,
+      title: notifyTitle('booking_paid', nLang),
+      message: notifyMsg.bookingPaid(nLang, booking.customer_name ?? booking.customer_email, booking.total_price.toFixed(2), booking.booking_date, booking.booking_time),
       type: 'booking_paid',
       link: '/provider',
     },

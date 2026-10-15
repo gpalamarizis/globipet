@@ -50,6 +50,7 @@ import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
 import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron } from './lib/cron.js'
+import { registerMessageTranslation } from './lib/apiMessages.js'
 import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
@@ -249,6 +250,13 @@ const routes = [
   { prefix: '/api/admin/governance', handler: governanceRoutes },
   { prefix: '/api', handler: insuranceRoutes },
 ]
+
+// Μετάφραση μηνυμάτων API στη γλώσσα του χρήστη.
+//
+// ΠΡΕΠΕΙ να μπει ΠΡΙΝ τα routes: το hook onSend εφαρμόζεται μόνο σε όσα
+// routes εγγράφηκαν μετά από αυτό. Αν μπει στο τέλος, δεν μεταφράζεται
+// τίποτα και η αποτυχία είναι σιωπηλή.
+registerMessageTranslation(app)
 
 for (const { prefix, handler } of routes) {
   await app.register(handler, { prefix })

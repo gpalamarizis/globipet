@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import Stripe from 'stripe'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
 import { broadcastToUser } from './notifications.js'
 import { calculateCommission } from '../lib/commission.js'
@@ -129,11 +130,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 },
               })
 
+              const nLang = await langOfUser(productSub.user.email)
               const notification = await prisma.notification.create({
                 data: {
                   user_email: productSub.user.email,
-                  title: 'Η μηνιαία παράδοση τροφής προγραμματίστηκε',
-                  message: `Η πληρωμή της συνδρομής σου για "${productSub.product.name}" έγινε επιτυχώς. Η παράδοση ετοιμάζεται.`,
+                  title: notifyTitle('subscription_delivery', nLang),
+                  message: notifyMsg.subscriptionDelivery(nLang, productSub.product.name),
                   type: 'subscription_delivery',
                   link: '/orders',
                 },
@@ -153,11 +155,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               }).catch(() => {})
 
               if (providerEmail) {
+                const nLang = await langOfUser(providerEmail)
                 prisma.notification.create({
                   data: {
                     user_email: providerEmail,
-                    title: 'Νέα παράδοση συνδρομής',
-                    message: `${productSub.product.name} ×1 — αμοιβή ${providerPayout.toFixed(2)}€`,
+                    title: notifyTitle('subscription_new_order', nLang),
+                    message: notifyMsg.subscriptionOrderLine(nLang, productSub.product.name, providerPayout.toFixed(2)),
                     type: 'new_order',
                     link: '/provider',
                   },
@@ -186,11 +189,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                 where: { id: productSub.id },
                 data: { status: 'payment_failed' },
               })
+              const nLang = await langOfUser(productSub.user.email)
               const notification = await prisma.notification.create({
                 data: {
                   user_email: productSub.user.email,
-                  title: 'Αποτυχία πληρωμής συνδρομής',
-                  message: `Η χρέωση για τη συνδρομή "${productSub.product.name}" απέτυχε. Ενημέρωσε τα στοιχεία πληρωμής σου.`,
+                  title: notifyTitle('subscription_payment_failed', nLang),
+                  message: notifyMsg.subscriptionFailed(nLang, productSub.product.name),
                   type: 'subscription_payment_failed',
                   link: '/profile',
                 },

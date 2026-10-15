@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import bcrypt from 'bcryptjs'
 import { audit } from '../lib/audit.js'
 import { refundVivaTransaction } from '../lib/viva.js'
@@ -640,11 +641,12 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         where: { provider_email: existing.user_email },
         data: { is_verified: true },
       })
+      const nLang = await langOfUser(existing.user_email)
       await prisma.notification.create({
         data: {
           user_email: existing.user_email,
-          title: 'Ο λογαριασμός σου επαληθεύτηκε',
-          message: 'Οι υπηρεσίες σου εμφανίζονται πλέον με σήμα επαλήθευσης.',
+          title: notifyTitle('verification_approved', nLang),
+          message: notifyMsg.verificationApproved(nLang),
           type: 'verification',
           link: '/provider',
         },
@@ -655,12 +657,13 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         url: '/provider',
       })
     } else {
+      const nLang = await langOfUser(existing.user_email)
       await prisma.notification.create({
         data: {
           user_email: existing.user_email,
-          title: 'Η αίτηση επαλήθευσης απορρίφθηκε',
+          title: notifyTitle('verification_rejected', nLang),
           // Ο λόγος φτάνει στον πάροχο, ώστε να ξέρει τι να διορθώσει.
-          message: review_notes || 'Επικοινώνησε μαζί μας για λεπτομέρειες.',
+          message: review_notes || notifyMsg.verificationRejected(nLang),
           type: 'verification',
           link: '/provider',
         },

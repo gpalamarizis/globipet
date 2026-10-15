@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
@@ -252,11 +253,12 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       payoutAmount: providerPayout,
     }).catch(() => {})
 
+    const nLang = await langOfUser(service.provider_email)
     prisma.notification.create({
       data: {
         user_email: service.provider_email,
-        title: 'Νέα κράτηση',
-        message: `${full_name || email.split('@')[0]} · ${booking.booking_date} ${booking.booking_time} · αμοιβή ${providerPayout.toFixed(2)}€`,
+        title: notifyTitle('new_booking', nLang),
+        message: notifyMsg.bookingLine(nLang, full_name || email.split('@')[0], booking.booking_date, booking.booking_time, providerPayout.toFixed(2)),
         type: 'new_booking',
         link: '/provider',
       },
