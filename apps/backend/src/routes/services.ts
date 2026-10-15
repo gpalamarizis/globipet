@@ -78,6 +78,22 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
     if (!(await assertOwner(req, reply))) return
+
+    // Υπηρεσία με κρατήσεις ΔΕΝ διαγράφεται: το foreign key είναι RESTRICT,
+    // και σωστά — μια ιστορική κράτηση πρέπει να ξέρει τι κλείστηκε.
+    //
+    // Χωρίς αυτόν τον έλεγχο, η Postgres πετά σφάλμα 23503 και ο πάροχος
+    // έβλεπε ωμό μήνυμα βάσης. Τώρα παίρνει εξήγηση και τη σωστή εναλλακτική:
+    // απενεργοποίηση, που κρύβει την υπηρεσία χωρίς να χαλά το ιστορικό.
+    const bookings = await prisma.booking.count({ where: { service_id: req.params.id } })
+    if (bookings > 0) {
+      return reply.code(409).send({
+        message: 'Η υπηρεσία έχει κρατήσεις και δεν διαγράφεται. Απενεργοποίησέ την αντί να τη σβήσεις.',
+        code: 'SERVICE_HAS_BOOKINGS',
+        bookings,
+      })
+    }
+
     await prisma.service.delete({ where: { id: req.params.id } }); return { success: true }
   })
 }

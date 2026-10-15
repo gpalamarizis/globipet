@@ -421,6 +421,9 @@ function ServicesTab() {
   const deleteService = useMutation({
     mutationFn: (id: string) => api.delete(`/services/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-services'] }); toast.success(t('providerDash.serviceDeleted')) },
+    // Ο server απαντά 409 όταν η υπηρεσία έχει κρατήσεις. Δείχνουμε το δικό
+    // του μήνυμα, που εξηγεί και την εναλλακτική — ποτέ ωμό σφάλμα βάσης.
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerDash.errDeleteService')),
   })
 
   return (
@@ -474,8 +477,17 @@ function ServicesTab() {
               <Scissors size={16} className="text-brand-900" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-900 dark:text-white">{s.name}</p>
-              <p className="text-xs text-gray-500">{s.type} · {s.duration_minutes} {t('providerDash.minutes')}</p>
+              {/* Τα πεδία της βάσης λέγονται title και service_type — όχι name
+                  και type. Με τα λάθος ονόματα η κάρτα έδειχνε κενό όνομα και
+                  σκέτο «· min». Το duration_minutes δεν υπάρχει καν στο Service:
+                  η διάρκεια ζει στα πακέτα, οπότε δεν τη δείχνουμε εδώ. */}
+              <p className="font-medium text-gray-900 dark:text-white">{s.title || s.provider_name}</p>
+              <p className="text-xs text-gray-500">
+                {SERVICE_TYPES.find(st => st.value === s.service_type)
+                  ? t(SERVICE_TYPES.find(st => st.value === s.service_type)!.labelKey)
+                  : s.service_type}
+                {s.city ? ` · ${s.city}` : ''}
+              </p>
             </div>
             <p className="font-bold text-gray-900 dark:text-white">€{s.price}</p>
             <div className="flex gap-1">

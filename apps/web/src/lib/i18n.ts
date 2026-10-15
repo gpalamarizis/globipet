@@ -1,4 +1,4 @@
-﻿import i18n from 'i18next'
+import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { detectAndApplyGeoLanguage } from './geoLocale'
@@ -774,6 +774,7 @@ const el = {
     contactNote: 'Για ερωτήσεις σχετικά με τα cookies επικοινώνησε στο',
   },
   providerDash: {
+    errDeleteService: 'Δεν ήταν δυνατή η διαγραφή',
     addFirstProduct: 'Προσθήκη πρώτου προϊόντος',
     addFirstService: 'Προσθήκη πρώτης υπηρεσίας',
     addProduct: 'Προσθήκη προϊόντος',
@@ -1912,6 +1913,7 @@ const en: typeof el = {
     contactNote: 'For questions about cookies contact',
   },
   providerDash: {
+    errDeleteService: 'Could not delete the service',
     addFirstProduct: 'Add your first product',
     addFirstService: 'Add your first service',
     addProduct: 'Add product',
@@ -3050,6 +3052,7 @@ const es: typeof el = {
     contactNote: 'Para preguntas sobre cookies contacta',
   },
   providerDash: {
+    errDeleteService: 'No se pudo eliminar el servicio',
     addFirstProduct: 'Añadir tu primer producto',
     addFirstService: 'Añadir tu primer servicio',
     addProduct: 'Añadir producto',
@@ -4188,6 +4191,7 @@ const fr: typeof el = {
     contactNote: 'Pour questions sur les cookies contactez',
   },
   providerDash: {
+    errDeleteService: 'Impossible de supprimer le service',
     addFirstProduct: 'Ajouter votre premier produit',
     addFirstService: 'Ajouter votre premier service',
     addProduct: 'Ajouter un produit',
@@ -5326,6 +5330,7 @@ const zh: typeof el = {
     contactNote: '关于cookies的问题请联系',
   },
   providerDash: {
+    errDeleteService: '无法删除该服务',
     addFirstProduct: '添加第一个产品',
     addFirstService: '添加第一项服务',
     addProduct: '添加产品',
