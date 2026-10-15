@@ -90,6 +90,11 @@ const TITLES: Record<string, Row> = {
     el: 'Νέα κοινότητα κοντά σου!', en: 'A new community near you',
     es: 'Una nueva comunidad cerca de ti', fr: 'Une nouvelle communauté près de vous', zh: '您附近有新社区',
   },
+  staff_changed: {
+    el: 'Αλλαγή γιατρού στο ραντεβού σου', en: 'Your appointment has a new practitioner',
+    es: 'Cambio de profesional en tu cita', fr: 'Changement de praticien pour votre rendez-vous',
+    zh: '您的预约已更换接诊人员',
+  },
   ai_trial_expired: {
     el: 'Η δωρεάν δοκιμή AI έληξε', en: 'Your free AI trial has ended',
     es: 'Tu prueba gratuita de IA ha terminado', fr: 'Votre essai IA gratuit est terminé',
@@ -175,6 +180,23 @@ export const notifyMsg = {
     fr: `La communauté « ${name} » a été créée près de chez vous. Rejoignez-la.`,
     zh: `社区“${name}”已在您附近创建，欢迎加入。`,
   }),
+
+  /** Αλλαγή γιατρού. Χωρίς νέο μέλος, το ραντεβού μένει χωρίς συγκεκριμένο άτομο. */
+  staffChanged: (lang: Lang, name: string | null, date: string, time: string) => name
+    ? p(lang, {
+        el: `Το ραντεβού σου στις ${date} ${time} θα το εξυπηρετήσει ο/η ${name}.`,
+        en: `Your appointment on ${date} at ${time} will be handled by ${name}.`,
+        es: `Tu cita del ${date} a las ${time} la atenderá ${name}.`,
+        fr: `Votre rendez-vous du ${date} à ${time} sera assuré par ${name}.`,
+        zh: `您 ${date} ${time} 的预约将由 ${name} 接诊。`,
+      })
+    : p(lang, {
+        el: `Το ραντεβού σου στις ${date} ${time} δεν έχει πλέον συγκεκριμένο γιατρό.`,
+        en: `Your appointment on ${date} at ${time} no longer has a specific practitioner.`,
+        es: `Tu cita del ${date} a las ${time} ya no tiene un profesional asignado.`,
+        fr: `Votre rendez-vous du ${date} à ${time} n'a plus de praticien attitré.`,
+        zh: `您 ${date} ${time} 的预约已无指定接诊人员。`,
+      }),
 
   aiTrialExpired: (lang: Lang) => p(lang, {
     el: 'Οι 30 δωρεάν ημέρες σου στο GlobiPet AI ολοκληρώθηκαν. Επίλεξε ένα πλάνο για να συνεχίσεις να έχεις πρόσβαση στις υπηρεσίες AI.',

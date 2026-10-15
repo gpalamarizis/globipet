@@ -1,4 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
+import { broadcastToUser } from './notifications.js'
+import { sendPushToUser } from '../lib/push.js'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
@@ -189,6 +192,23 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
 
     // Base service price applies when no packages were chosen; with packages
     // the package prices are the whole charge.
+    // Αν ο πάροχος έχει ορίσει πακέτα, η επιλογή είναι ΥΠΟΧΡΕΩΤΙΚΗ.
+    //
+    // Αλλιώς ο πελάτης θα χρεωνόταν τη βασική τιμή της υπηρεσίας για κάτι
+    // που ο πάροχος τιμολογεί ανά πακέτο — και ο πάροχος θα έβλεπε κράτηση
+    // χωρίς να ξέρει τι ακριβώς ζητήθηκε.
+    if (packageRows.length === 0) {
+      const available = await prisma.servicePackage.count({
+        where: { service_id: service.id, is_active: true },
+      })
+      if (available > 0) {
+        return reply.code(400).send({
+          message: 'Επίλεξε τουλάχιστον ένα πακέτο για αυτή την υπηρεσία',
+          code: 'PACKAGE_REQUIRED',
+        })
+      }
+    }
+
     const totalPrice = Math.round((packageRows.length ? packagesTotal : service.price) * 100) / 100
     const category = service.service_type || null
     const { rate, platformFee, providerPayout } = await calculateCommission(totalPrice, category)
@@ -243,6 +263,76 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     // επιβεβαιώσει τη χρέωση.
 
     return reply.code(201).send(booking)
+  })
+
+  /**
+   * Αλλαγή του μέλους προσωπικού σε υπάρχουσα κράτηση.
+   *
+   * ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ
+   *   Ο πελάτης διαλέγει γιατρό τη στιγμή της κράτησης. Μέχρι το ραντεβού
+   *   μπορεί να μεσολαβήσει ασθένεια, άδεια ή αλλαγή βάρδιας — και τότε η
+   *   γραμματεία πρέπει να μεταφέρει το ραντεβού σε άλλον, χωρίς να ακυρωθεί
+   *   και να ξαναπληρωθεί.
+   *
+   * ΠΟΙΟΣ ΜΠΟΡΕΙ
+   *   Μόνο ο πάροχος της κράτησης, ή διαχειριστής. Ο πελάτης όχι: δεν του
+   *   ανήκει η στελέχωση της κλινικής.
+   *
+   * ΕΛΕΓΧΟΙ
+   *   · Το νέο μέλος ανήκει στην ΙΔΙΑ υπηρεσία και είναι ενεργό.
+   *   · Ακυρωμένη ή ολοκληρωμένη κράτηση δεν αλλάζει.
+   *   · Η τιμή ΔΕΝ ξαναϋπολογίζεται: ο πελάτης πλήρωσε ήδη, και μια αλλαγή
+   *     που επιβάλλει ο πάροχος δεν τον επιβαρύνει.
+   */
+  app.patch('/:id/staff', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
+    const { staff_id } = (req.body ?? {}) as any
+
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!booking) return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+
+    if (booking.provider_email !== user.email && user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    }
+    if (booking.status === 'cancelled' || booking.status === 'completed') {
+      return reply.code(400).send({ message: 'Η κράτηση δεν μπορεί να αλλάξει' })
+    }
+
+    // Κενό staff_id σημαίνει «χωρίς συγκεκριμένο μέλος» — επιτρεπτό.
+    let staffId: string | null = null
+    let staffName: string | null = null
+    if (staff_id) {
+      const staff = await (prisma as any).providerStaff.findUnique({ where: { id: staff_id } })
+      if (!staff || staff.service_id !== booking.service_id || !staff.is_active) {
+        return reply.code(400).send({ message: 'Το επιλεγμένο μέλος προσωπικού δεν είναι διαθέσιμο' })
+      }
+      staffId = staff.id
+      staffName = staff.full_name
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { staff_id: staffId, staff_name: staffName },
+    })
+
+    // Ο πελάτης πρέπει να μάθει ποιος θα τον δει τελικά.
+    const nLang = await langOfUser(booking.customer_email)
+    prisma.notification.create({
+      data: {
+        user_email: booking.customer_email,
+        title: notifyTitle('staff_changed', nLang),
+        message: notifyMsg.staffChanged(nLang, staffName, booking.booking_date, booking.booking_time),
+        type: 'booking_staff_changed',
+        link: '/bookings',
+      },
+    }).then(notification => {
+      broadcastToUser(booking.customer_email, { type: 'notification', notification })
+      void sendPushToUser(booking.customer_email, {
+        title: notification.title, body: notification.message, url: notification.link ?? '/',
+      })
+    }).catch(() => {})
+
+    return updated
   })
 
   /**

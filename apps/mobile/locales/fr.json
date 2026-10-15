@@ -27,7 +27,9 @@
     "something_wrong": "Une erreur est survenue",
     "total": "Total",
     "try_again": "Réessayez",
-    "try_again_later": "Réessayez dans un instant."
+    "try_again_later": "Réessayez dans un instant.",
+    "remove": "Retirer",
+    "add": "Ajouter"
   },
   "tabs": {
     "home": "Accueil",
@@ -585,5 +587,24 @@
     "website": "Site web",
     "what_you_offer": "Ce que vous proposez et à qui",
     "years": "Années d'expérience"
+  },
+  "serviceDetail": {
+    "forPet": "Pour quel animal",
+    "choosePackages": "Choisissez des forfaits",
+    "packageRequired": "Choisissez au moins un forfait",
+    "choosePractitioner": "Choisissez un praticien",
+    "anyPractitioner": "Indifférent",
+    "date": "Date",
+    "time": "Heure",
+    "note": "Remarque",
+    "notePlaceholder": "Facultatif — ce que le prestataire doit savoir",
+    "total": "Total",
+    "bookAndPay": "Réserver et payer",
+    "booking": "Réservation…",
+    "vivaNote": "Vous serez redirigé vers la page de paiement Viva. La réservation est confirmée dès le paiement effectué."
+  },
+  "booking": {
+    "noPaymentPage": "Aucune page de paiement créée. Consultez vos réservations.",
+    "err_book": "La réservation a échoué"
   }
 }

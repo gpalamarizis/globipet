@@ -27,7 +27,9 @@
     "something_wrong": "出了点问题",
     "total": "合计",
     "try_again": "请重试",
-    "try_again_later": "请稍后再试。"
+    "try_again_later": "请稍后再试。",
+    "remove": "移除",
+    "add": "添加"
   },
   "tabs": {
     "home": "首页",
@@ -585,5 +587,24 @@
     "website": "网站",
     "what_you_offer": "您提供什么服务、面向谁",
     "years": "从业年限"
+  },
+  "serviceDetail": {
+    "forPet": "为哪只宠物",
+    "choosePackages": "选择套餐",
+    "packageRequired": "请至少选择一个套餐",
+    "choosePractitioner": "选择接诊人员",
+    "anyPractitioner": "不限",
+    "date": "日期",
+    "time": "时间",
+    "note": "备注",
+    "notePlaceholder": "可选 — 服务商需要知道的信息",
+    "total": "合计",
+    "bookAndPay": "预约并支付",
+    "booking": "预约中…",
+    "vivaNote": "您将跳转至 Viva 支付页面。付款完成后预约即确认。"
+  },
+  "booking": {
+    "noPaymentPage": "未生成支付页面，请查看您的预约。",
+    "err_book": "预约失败"
   }
 }

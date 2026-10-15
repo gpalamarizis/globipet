@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Star, MapPin, Clock, Phone, Shield, Check,
   Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap,
-  Stethoscope, Scissors, GraduationCap, Footprints, Building2, Car, Camera, Pill, PawPrint,
+  Stethoscope, Scissors, GraduationCap, Footprints, Building2, Car, Camera, Pill, PawPrint, Package
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -43,6 +43,11 @@ export default function ServiceDetail() {
   const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
   const [selectedDate, setSelectedDate] = useState('')
+  // Τα επιλεγμένα πακέτα κρατιούνται ως id -> ποσότητα: ο πελάτης μπορεί να
+  // θέλει δύο φορές το ίδιο (π.χ. δύο σκύλοι, ίδιο μπάνιο).
+  const [pkgQty, setPkgQty] = useState<Record<string, number>>({})
+  const [selectedPet, setSelectedPet] = useState('')
+  const [selectedStaff, setSelectedStaff] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [tab, setTab] = useState<'about' | 'reviews' | 'booking'>('about')
   const [bookingNote, setBookingNote] = useState('')
@@ -58,6 +63,28 @@ export default function ServiceDetail() {
   const { data: service, isLoading } = useQuery({
     queryKey: ['service', id],
     queryFn: () => api.get(`/services/${id}`).then(r => r.data),
+    enabled: !!id,
+  })
+
+  // Τα κατοικίδια του χρήστη, για να συνδεθεί η κράτηση με συγκεκριμένο ζώο.
+  const { data: pets = [] } = useQuery({
+    queryKey: ['my-pets'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+
+  // Τα πακέτα της υπηρεσίας με τις τιμές τους. Όταν ο πάροχος έχει ορίσει
+  // πακέτα, η επιλογή είναι υποχρεωτική και ο server το επιβάλλει.
+  const { data: packages = [] } = useQuery({
+    queryKey: ['service-packages', id],
+    queryFn: () => api.get(`/packages/service/${id}`).then(r => r.data?.data ?? []),
+    enabled: !!id,
+  })
+
+  // Το προσωπικό της υπηρεσίας. Κενή λίστα σημαίνει πάροχος χωρίς γιατρούς.
+  const { data: staff = [] } = useQuery({
+    queryKey: ['service-staff', id],
+    queryFn: () => api.get(`/staff/by-service/${id}`).then(r => r.data?.data ?? r.data ?? []),
     enabled: !!id,
   })
 
@@ -86,6 +113,12 @@ export default function ServiceDetail() {
         booking_date: selectedDate,
         booking_time: selectedTime,
         notes: bookingNote,
+        pet_id: selectedPet || undefined,
+        staff_id: selectedStaff || undefined,
+        packages: chosenPackages.map((pk: any) => ({
+          package_id: pk.id,
+          quantity: pkgQty[pk.id] ?? 1,
+        })),
       })
       const { data: viva } = await api.post('/bookings/viva/checkout', {
         booking_id: booking.id,
@@ -134,7 +167,16 @@ export default function ServiceDetail() {
     ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
     : service.rating || 0
 
-  const canBook = isAuthenticated && selectedDate && selectedTime
+  // Το σύνολο υπολογίζεται εδώ ΜΟΝΟ για εμφάνιση. Η χρέωση γίνεται πάντα
+  // με τις τιμές της βάσης — ο server δεν δέχεται ποσό από τον πελάτη.
+  const chosenPackages = packages.filter((pk: any) => (pkgQty[pk.id] ?? 0) > 0)
+  const packagesTotal = chosenPackages.reduce(
+    (sum: number, pk: any) => sum + pk.price * (pkgQty[pk.id] ?? 0), 0)
+  const displayTotal = chosenPackages.length ? packagesTotal : (service?.price ?? 0)
+
+  // Όπου ο πάροχος έχει πακέτα, η επιλογή είναι υποχρεωτική.
+  const packagesOk = packages.length === 0 || chosenPackages.length > 0
+  const canBook = isAuthenticated && selectedDate && selectedTime && packagesOk
   const illustration = typeIllustration[service.service_type] || defaultIllustration
   const { Icon: TypeIcon, bg: illuBg, fg: illuFg } = illustration
 
@@ -329,6 +371,101 @@ export default function ServiceDetail() {
                 </div>
               ) : (
                 <>
+                  {/* Κατοικίδιο — μόνο αν ο χρήστης έχει. Προαιρετικό:
+                      υπάρχουν υπηρεσίες που δεν αφορούν συγκεκριμένο ζώο. */}
+                  {pets.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                        <PawPrint size={14} className="inline mr-1.5" />{t('serviceDetailExtra.forPet')}
+                      </label>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {pets.map((pet: any) => (
+                          <button key={pet.id} onClick={() => setSelectedPet(selectedPet === pet.id ? '' : pet.id)}
+                            className={cn('flex items-center gap-2 px-3 py-2 rounded-xl border-2 whitespace-nowrap transition-all',
+                              selectedPet === pet.id
+                                ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20 text-brand-900'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-300')}>
+                            <span className="text-base">{pet.species === 'cat' ? '🐈' : '🐕'}</span>
+                            <span className="text-sm font-medium">{pet.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Πακέτα με τιμές. Όπου υπάρχουν, η επιλογή είναι
+                      υποχρεωτική — το ίδιο επιβάλλει και ο server. */}
+                  {packages.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                        <Package size={14} className="inline mr-1.5" />{t('serviceDetailExtra.choosePackages')}
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <div className="space-y-2">
+                        {packages.map((pk: any) => {
+                          const qty = pkgQty[pk.id] ?? 0
+                          return (
+                            <div key={pk.id}
+                              className={cn('flex items-center gap-3 p-3 rounded-xl border-2 transition-all',
+                                qty > 0 ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20'
+                                        : 'border-gray-200 dark:border-gray-700')}>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{pk.name}</p>
+                                {pk.description && (
+                                  <p className="text-xs text-gray-500 truncate">{pk.description}</p>
+                                )}
+                              </div>
+                              <p className="font-bold text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                                {formatCurrency(pk.price)}
+                              </p>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button type="button" aria-label={t('common.remove')}
+                                  onClick={() => setPkgQty(q => ({ ...q, [pk.id]: Math.max(0, (q[pk.id] ?? 0) - 1) }))}
+                                  disabled={qty === 0}
+                                  className="w-7 h-7 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30">−</button>
+                                <span className="w-5 text-center text-sm font-semibold text-gray-900 dark:text-white">{qty}</span>
+                                <button type="button" aria-label={t('common.add')}
+                                  onClick={() => setPkgQty(q => ({ ...q, [pk.id]: (q[pk.id] ?? 0) + 1 }))}
+                                  className="w-7 h-7 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">+</button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {!packagesOk && (
+                        <p className="text-xs text-red-500 mt-2">{t('serviceDetailExtra.packageRequired')}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Γιατρός — μόνο όπου ο πάροχος έχει προσωπικό. Προαιρετικό:
+                      ο πελάτης μπορεί να μην έχει προτίμηση. */}
+                  {staff.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                        <Stethoscope size={14} className="inline mr-1.5" />{t('serviceDetailExtra.choosePractitioner')}
+                      </label>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        <button onClick={() => setSelectedStaff('')}
+                          className={cn('px-3 py-2 rounded-xl border-2 text-sm font-medium whitespace-nowrap transition-all',
+                            selectedStaff === ''
+                              ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20 text-brand-900'
+                              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
+                          {t('serviceDetailExtra.anyPractitioner')}
+                        </button>
+                        {staff.map((m: any) => (
+                          <button key={m.id} onClick={() => setSelectedStaff(m.id)}
+                            className={cn('px-3 py-2 rounded-xl border-2 text-sm font-medium whitespace-nowrap transition-all',
+                              selectedStaff === m.id
+                                ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20 text-brand-900'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-300')}>
+                            {m.full_name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Date picker */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
@@ -395,6 +532,17 @@ export default function ServiceDetail() {
                       {t('serviceDetailExtra.addNote')}
                     </button>
                   )}
+
+                  {/* Το σύνολο ΠΡΙΝ το κουμπί: ο χρήστης βλέπει τι θα πληρώσει
+                      πριν φύγει για το Viva, όχι αφού φτάσει εκεί. */}
+                  <div className="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('serviceDetailExtra.total')}
+                    </span>
+                    <span className="text-xl font-bold text-brand-900 dark:text-brand-400">
+                      {formatCurrency(displayTotal)}
+                    </span>
+                  </div>
 
                   <button
                     onClick={() => bookService.mutate()}

@@ -27,7 +27,9 @@
     "something_wrong": "Something went wrong",
     "total": "Total",
     "try_again": "Try again",
-    "try_again_later": "Try again in a moment."
+    "try_again_later": "Try again in a moment.",
+    "remove": "Remove",
+    "add": "Add"
   },
   "tabs": {
     "home": "Home",
@@ -585,5 +587,24 @@
     "website": "Website",
     "what_you_offer": "What you offer and to whom",
     "years": "Years of experience"
+  },
+  "serviceDetail": {
+    "forPet": "For which pet",
+    "choosePackages": "Choose packages",
+    "packageRequired": "Choose at least one package",
+    "choosePractitioner": "Choose a practitioner",
+    "anyPractitioner": "Any",
+    "date": "Date",
+    "time": "Time",
+    "note": "Note",
+    "notePlaceholder": "Optional — anything the provider should know",
+    "total": "Total",
+    "bookAndPay": "Book and pay",
+    "booking": "Booking…",
+    "vivaNote": "You will be taken to the Viva payment page. The booking is confirmed once the payment goes through."
+  },
+  "booking": {
+    "noPaymentPage": "No payment page was created. Check your bookings.",
+    "err_book": "The booking could not be made"
   }
 }

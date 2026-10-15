@@ -257,6 +257,29 @@ function CalendarTab() {
   const syncGoogle = () => connected('google') ? disconnect('google') : connect('google')
   const syncOutlook = () => connected('outlook') ? disconnect('outlook') : connect('outlook')
 
+  // Το προσωπικό όλων των υπηρεσιών του παρόχου, για την αλλαγή γιατρού.
+  const { data: allStaff = [] } = useQuery({
+    queryKey: ['provider-staff-all'],
+    queryFn: () => api.get('/staff/mine').then(r => r.data?.data ?? r.data ?? []),
+  })
+
+  /**
+   * Αλλαγή γιατρού σε υπάρχουσα κράτηση.
+   *
+   * Ασθένεια, άδεια ή αλλαγή βάρδιας δεν πρέπει να σημαίνει ακύρωση και νέα
+   * πληρωμή. Ο server ελέγχει ότι ο νέος γιατρός ανήκει στην ίδια υπηρεσία,
+   * δεν ξαναϋπολογίζει τιμή, και ειδοποιεί τον πελάτη στη γλώσσα του.
+   */
+  const changeStaff = useMutation({
+    mutationFn: ({ id, staff_id }: { id: string; staff_id: string }) =>
+      api.patch(`/bookings/${id}/staff`, { staff_id: staff_id || null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provider-bookings'] })
+      toast.success(t('providerDash.staffChanged'))
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerDash.error')),
+  })
+
   const { data: bookings = [] } = useQuery({
     queryKey: ['provider-bookings'],
     // The provider's bookings live at /provider/bookings — bookings.ts has no
@@ -364,6 +387,25 @@ function CalendarTab() {
                 {b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}
               </p>
             </div>
+            {/* Αλλαγή γιατρού από τη γραμματεία. Εμφανίζεται μόνο όπου
+                υπάρχει προσωπικό για τη συγκεκριμένη υπηρεσία, και μόνο σε
+                κρατήσεις που δεν έχουν ολοκληρωθεί ή ακυρωθεί. */}
+            {b.status !== 'cancelled' && b.status !== 'completed' &&
+             allStaff.some((m: any) => m.service_id === b.service_id) && (
+              <select
+                className="input text-xs py-1 px-2 max-w-[150px]"
+                value={b.staff_id ?? ''}
+                disabled={changeStaff.isPending}
+                onChange={e => changeStaff.mutate({ id: b.id, staff_id: e.target.value })}>
+                <option value="">{t('providerDash.noPractitioner')}</option>
+                {allStaff
+                  .filter((m: any) => m.service_id === b.service_id && m.is_active)
+                  .map((m: any) => (
+                    <option key={m.id} value={m.id}>{m.full_name}</option>
+                  ))}
+              </select>
+            )}
+
             <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
               b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
               b.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600')}>

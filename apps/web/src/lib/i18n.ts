@@ -230,6 +230,12 @@ const el = {
     backHome: 'Πίσω στην αρχική',
   },
   serviceDetailExtra: {
+    total: 'Σύνολο',
+    anyPractitioner: 'Οποιοσδήποτε',
+    choosePractitioner: 'Επίλεξε γιατρό',
+    packageRequired: 'Επίλεξε τουλάχιστον ένα πακέτο',
+    choosePackages: 'Επίλεξε πακέτα',
+    forPet: 'Για ποιο κατοικίδιο',
     about: 'Σχετικά', date: 'Ημερομηνία', time: 'Ώρα', duration: 'Διάρκεια', location: 'Τοποθεσία',
     share: 'Κοινοποίηση', perHour: '/ ώρα', perSession: '/ συνεδρία',
     noDescription: 'Δεν υπάρχει διαθέσιμη περιγραφή.', noReviews: 'Δεν υπάρχουν κριτικές ακόμα.',
@@ -510,6 +516,7 @@ const el = {
     allRights: 'Με επιφύλαξη παντός δικαιώματος.', aboutUs: 'Ποιοί Είμαστε',
   },
   common: {
+    remove: 'Αφαίρεση',
     loading: 'Φόρτωση...', error: 'Σφάλμα', save: 'Αποθήκευση',
     cancel: 'Ακύρωση', delete: 'Διαγραφή', edit: 'Επεξεργασία',
     add: 'Προσθήκη', close: 'Κλείσιμο', search: 'Αναζήτηση',
@@ -774,6 +781,8 @@ const el = {
     contactNote: 'Για ερωτήσεις σχετικά με τα cookies επικοινώνησε στο',
   },
   providerDash: {
+    noPractitioner: '— χωρίς γιατρό —',
+    staffChanged: 'Ο γιατρός άλλαξε',
     errDeleteService: 'Δεν ήταν δυνατή η διαγραφή',
     addFirstProduct: 'Προσθήκη πρώτου προϊόντος',
     addFirstService: 'Προσθήκη πρώτης υπηρεσίας',
@@ -1399,6 +1408,12 @@ const en: typeof el = {
     backHome: 'Back home',
   },
   serviceDetailExtra: {
+    total: 'Total',
+    anyPractitioner: 'Any',
+    choosePractitioner: 'Choose a practitioner',
+    packageRequired: 'Choose at least one package',
+    choosePackages: 'Choose packages',
+    forPet: 'For which pet',
     about: 'About', date: 'Date', time: 'Time', duration: 'Duration', location: 'Location',
     share: 'Share', perHour: '/ hour', perSession: '/ session',
     noDescription: 'No description available.', noReviews: 'No reviews yet.',
@@ -1655,6 +1670,7 @@ const en: typeof el = {
     allRights: 'All rights reserved.', aboutUs: 'About Us',
   },
   common: {
+    remove: 'Remove',
     loading: 'Loading...', error: 'Error', save: 'Save',
     cancel: 'Cancel', delete: 'Delete', edit: 'Edit',
     add: 'Add', close: 'Close', search: 'Search',
@@ -1913,6 +1929,8 @@ const en: typeof el = {
     contactNote: 'For questions about cookies contact',
   },
   providerDash: {
+    noPractitioner: '— no practitioner —',
+    staffChanged: 'Practitioner changed',
     errDeleteService: 'Could not delete the service',
     addFirstProduct: 'Add your first product',
     addFirstService: 'Add your first service',
@@ -2538,6 +2556,12 @@ const es: typeof el = {
     backHome: 'Volver al inicio',
   },
   serviceDetailExtra: {
+    total: 'Total',
+    anyPractitioner: 'Cualquiera',
+    choosePractitioner: 'Elige profesional',
+    packageRequired: 'Elige al menos un paquete',
+    choosePackages: 'Elige paquetes',
+    forPet: 'Para qué mascota',
     about: 'Acerca de', date: 'Fecha', time: 'Hora', duration: 'Duración', location: 'Ubicación',
     share: 'Compartir', perHour: '/ hora', perSession: '/ sesión',
     noDescription: 'No hay descripción disponible.', noReviews: 'Aún no hay reseñas.',
@@ -2794,6 +2818,7 @@ const es: typeof el = {
     allRights: 'Todos los derechos reservados.', aboutUs: 'Quiénes Somos',
   },
   common: {
+    remove: 'Quitar',
     loading: 'Cargando...', error: 'Error', save: 'Guardar',
     cancel: 'Cancelar', delete: 'Eliminar', edit: 'Editar',
     add: 'Añadir', close: 'Cerrar', search: 'Buscar',
@@ -3052,6 +3077,8 @@ const es: typeof el = {
     contactNote: 'Para preguntas sobre cookies contacta',
   },
   providerDash: {
+    noPractitioner: '— sin profesional —',
+    staffChanged: 'Profesional cambiado',
     errDeleteService: 'No se pudo eliminar el servicio',
     addFirstProduct: 'Añadir tu primer producto',
     addFirstService: 'Añadir tu primer servicio',
@@ -3677,6 +3704,12 @@ const fr: typeof el = {
     backHome: 'Retour à l\'accueil',
   },
   serviceDetailExtra: {
+    total: 'Total',
+    anyPractitioner: 'Indifférent',
+    choosePractitioner: 'Choisissez un praticien',
+    packageRequired: 'Choisissez au moins un forfait',
+    choosePackages: 'Choisissez des forfaits',
+    forPet: 'Pour quel animal',
     about: 'À propos', date: 'Date', time: 'Heure', duration: 'Durée', location: 'Lieu',
     share: 'Partager', perHour: '/ heure', perSession: '/ séance',
     noDescription: 'Aucune description disponible.', noReviews: 'Aucun avis pour le moment.',
@@ -3933,6 +3966,7 @@ const fr: typeof el = {
     allRights: 'Tous droits réservés.', aboutUs: 'Qui Sommes-Nous',
   },
   common: {
+    remove: 'Retirer',
     loading: 'Chargement...', error: 'Erreur', save: 'Enregistrer',
     cancel: 'Annuler', delete: 'Supprimer', edit: 'Modifier',
     add: 'Ajouter', close: 'Fermer', search: 'Rechercher',
@@ -4191,6 +4225,8 @@ const fr: typeof el = {
     contactNote: 'Pour questions sur les cookies contactez',
   },
   providerDash: {
+    noPractitioner: '— sans praticien —',
+    staffChanged: 'Praticien modifié',
     errDeleteService: 'Impossible de supprimer le service',
     addFirstProduct: 'Ajouter votre premier produit',
     addFirstService: 'Ajouter votre premier service',
@@ -4816,6 +4852,12 @@ const zh: typeof el = {
     backHome: '返回首页',
   },
   serviceDetailExtra: {
+    total: '合计',
+    anyPractitioner: '不限',
+    choosePractitioner: '选择接诊人员',
+    packageRequired: '请至少选择一个套餐',
+    choosePackages: '选择套餐',
+    forPet: '为哪只宠物',
     about: '关于', date: '日期', time: '时间', duration: '时长', location: '地点',
     share: '分享', perHour: '/ 小时', perSession: '/ 次',
     noDescription: '暂无描述。', noReviews: '暂无评价。',
@@ -5072,6 +5114,7 @@ const zh: typeof el = {
     allRights: '版权所有。', aboutUs: '关于我们',
   },
   common: {
+    remove: '移除',
     loading: '加载中...', error: '错误', save: '保存',
     cancel: '取消', delete: '删除', edit: '编辑',
     add: '添加', close: '关闭', search: '搜索',
@@ -5330,6 +5373,8 @@ const zh: typeof el = {
     contactNote: '关于cookies的问题请联系',
   },
   providerDash: {
+    noPractitioner: '— 不指定 —',
+    staffChanged: '已更换接诊人员',
     errDeleteService: '无法删除该服务',
     addFirstProduct: '添加第一个产品',
     addFirstService: '添加第一项服务',
