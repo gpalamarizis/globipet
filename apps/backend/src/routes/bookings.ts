@@ -1,11 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
-import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
-import { broadcastToUser } from './notifications.js'
-import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
@@ -236,40 +232,15 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       include: { packages: true },
     })
 
-    // Side effects — never block the booking response on email/notification failures
-    sendBookingConfirmedEmail(email, {
-      customerName: full_name || email.split('@')[0],
-      providerName: service.provider_name || 'τον πάροχο',
-      date: booking.booking_date,
-      time: booking.booking_time,
-      price: totalPrice,
-    }).catch(() => {})
-
-    sendProviderNewBookingEmail(service.provider_email, {
-      providerName: service.provider_name || service.provider_email.split('@')[0],
-      customerName: full_name || email.split('@')[0],
-      date: booking.booking_date,
-      time: booking.booking_time,
-      payoutAmount: providerPayout,
-    }).catch(() => {})
-
-    const nLang = await langOfUser(service.provider_email)
-    prisma.notification.create({
-      data: {
-        user_email: service.provider_email,
-        title: notifyTitle('new_booking', nLang),
-        message: notifyMsg.bookingLine(nLang, full_name || email.split('@')[0], booking.booking_date, booking.booking_time, providerPayout.toFixed(2)),
-        type: 'new_booking',
-        link: '/provider',
-      },
-    }).then(notification => {
-      broadcastToUser(service.provider_email, { type: 'notification', notification })
-      // Και εκτός εφαρμογής. Το void σημαίνει ότι δεν περιμένουμε: μια
-      // αποτυχία ειδοποίησης δεν πρέπει ποτέ να ρίξει την κράτηση.
-      void sendPushToUser(service.provider_email, {
-        title: notification.title, body: notification.message, url: notification.link ?? '/',
-      })
-    }).catch(() => {})
+    // ΚΑΜΙΑ ειδοποίηση πριν την πληρωμή.
+    //
+    // Η κράτηση γεννιέται pending/unpaid και ο πελάτης οδηγείται αμέσως στο
+    // Viva. Μέχρι να μπουν τα χρήματα δεν έχει συμβεί τίποτα: το email «η
+    // κράτησή σου επιβεβαιώθηκε» ήταν ψέμα, και η ειδοποίηση στον πάροχο τον
+    // έβαζε να κρατά ώρα στο ημερολόγιο για κάτι που μπορεί να μην πληρωθεί.
+    //
+    // Και τα δύο στέλνονται πλέον από το markBookingPaid, μόλις το Viva
+    // επιβεβαιώσει τη χρέωση.
 
     return reply.code(201).send(booking)
   })

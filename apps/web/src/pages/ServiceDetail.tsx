@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import confetti from 'canvas-confetti'
 import {
   ArrowLeft, Star, MapPin, Clock, Phone, Shield, Check,
   Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap,
@@ -76,28 +75,31 @@ export default function ServiceDetail() {
     // columns on Booking — it stores booking_date and booking_time, and the
     // provider is resolved from the service on the server. Prisma rejected
     // the unknown arguments, so this request never created a booking.
-    mutationFn: () => api.post('/bookings', {
-      service_id: id,
-      booking_date: selectedDate,
-      booking_time: selectedTime,
-      notes: bookingNote,
-    }),
+    // Κράτηση ΚΑΙ πληρωμή, σε μία κίνηση.
+    //
+    // Η κράτηση γεννιέται pending/unpaid και ο πελάτης φεύγει αμέσως για το
+    // Viva. Αν γυρίσει πίσω χωρίς να πληρώσει, η κράτηση μένει απλήρωτη και
+    // φαίνεται στο «Οι κρατήσεις μου» με κουμπί πληρωμής — δεν χάνεται.
+    mutationFn: async () => {
+      const { data: booking } = await api.post('/bookings', {
+        service_id: id,
+        booking_date: selectedDate,
+        booking_time: selectedTime,
+        notes: bookingNote,
+      })
+      const { data: viva } = await api.post('/bookings/viva/checkout', {
+        booking_id: booking.id,
+      })
+      if (viva?.checkoutUrl) {
+        window.location.href = viva.checkoutUrl
+        return null                       // φεύγουμε από τη σελίδα
+      }
+      // Χωρίς σελίδα πληρωμής δεν πανηγυρίζουμε: η κράτηση υπάρχει αλλά
+      // είναι απλήρωτη, και ο χρήστης πρέπει να το ξέρει.
+      throw new Error(t('bookings.noPaymentPage', 'Δεν δημιουργήθηκε σελίδα πληρωμής. Δες τις κρατήσεις σου.'))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      // #5: confetti celebration on successful booking (respects reduced motion)
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      if (!prefersReducedMotion) {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#E65100', '#FFD60A', '#FF9800', '#1565C0'],
-        })
-      }
-      // A new booking starts as pending — the provider confirms it. Saying
-      // "confirmed" here promised something that had not happened.
-      toast.success('✅ ' + t('bookings.requestSent', 'Το αίτημα κράτησης στάλθηκε'))
-      setTimeout(() => navigate('/bookings'), 600)
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })

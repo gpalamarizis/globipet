@@ -4,7 +4,7 @@ import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
-import { sendOrderConfirmedEmail, sendProviderNewOrderEmail } from '../lib/email.js'
+import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
 import { sendPushToUser } from '../lib/push.js'
@@ -399,6 +399,28 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
   if (!booking) return
+
+  // Τώρα που πληρώθηκε, και ΜΟΝΟ τώρα, ενημερώνονται οι δύο πλευρές.
+  //
+  // Μέχρι πρότινος το email «η κράτησή σου επιβεβαιώθηκε» έφευγε τη στιγμή
+  // της δημιουργίας, όταν τίποτα δεν είχε πληρωθεί. Εδώ είναι αληθινό.
+  const service = await prisma.service.findUnique({ where: { id: booking.service_id } })
+
+  sendBookingConfirmedEmail(booking.customer_email, {
+    customerName: booking.customer_name ?? booking.customer_email.split('@')[0],
+    providerName: booking.provider_name ?? (service?.provider_name ?? ''),
+    date: booking.booking_date,
+    time: booking.booking_time,
+    price: booking.total_price,
+  }).catch(() => {})
+
+  sendProviderNewBookingEmail(booking.provider_email, {
+    providerName: booking.provider_name ?? booking.provider_email.split('@')[0],
+    customerName: booking.customer_name ?? booking.customer_email.split('@')[0],
+    date: booking.booking_date,
+    time: booking.booking_time,
+    payoutAmount: booking.provider_payout_amount ?? 0,
+  }).catch(() => {})
 
   const nLang = await langOfUser(booking.provider_email)
   const notification = await prisma.notification.create({
