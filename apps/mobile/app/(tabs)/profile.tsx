@@ -1,10 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import {
-  PawPrint, Calendar, Package, MapPin, Stethoscope, Globe,
-  ShieldCheck, ChevronRight, LogOut, User as UserIcon,
-} from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -80,6 +77,20 @@ export default function ProfileScreen() {
       </View>
 
       <View style={s.menu}>
+        {/* Ο «both» είναι και πάροχος: του δίνουμε την είσοδο στον χώρο
+            παρόχου πάνω από τα υπόλοιπα, γιατί είναι η δουλειά του. Ο καθαρός
+            πάροχος δεν φτάνει ποτέ εδώ — τον στέλνει κατευθείαν το _layout. */}
+        {(user?.role === 'both' || user?.role === 'service_provider') && (
+          <TouchableOpacity activeOpacity={0.7} style={[s.row, s.rowProvider]}
+            onPress={() => router.push('/(provider)' as any)}>
+            <View style={[s.rowIcon, { backgroundColor: colors.brandTint }]}>
+              <LayoutDashboard size={icon.md} color={colors.brand} />
+            </View>
+            <Text style={[s.rowLabel, { color: colors.brand, fontWeight: weight.bold }]}>{t('providerDash.title')}</Text>
+            <ChevronRight size={icon.sm} color={colors.brand} />
+          </TouchableOpacity>
+        )}
+
         {MENU.map(({ key, Icon, labelKey, route }) => (
           <TouchableOpacity key={key} style={s.row} activeOpacity={0.7}
             onPress={() => router.push(route as any)}>
@@ -137,6 +148,7 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
+  rowProvider: { borderWidth: 1.5, borderColor: colors.brand, marginBottom: space.sm },
   rowIcon: {
     width: 38, height: 38, borderRadius: radius.md,
     backgroundColor: colors.brandLight,

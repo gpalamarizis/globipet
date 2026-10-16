@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Stack } from 'expo-router'
+import { Stack, useSegments, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -115,6 +115,33 @@ export default function RootLayout() {
     if (fontsReady && authReady && i18nReady) SplashScreen.hideAsync().catch(() => {})
   }, [fontsReady, authReady, i18nReady])
 
+  /**
+   * Ο καθαρός πάροχος ανοίγει στον δικό του χώρο.
+   *
+   * Καλάθι, κοινότητες, tracker δεν τον αφορούν. Ο «both» —και ιδιοκτήτης—
+   * μένει στην καταναλωτική μπάρα και μπαίνει στον χώρο παρόχου από το
+   * προφίλ του. Ίδια λογική με το web.
+   */
+  const role = useAuthStore(st => st.user?.role)
+  const isAuthenticated = useAuthStore(st => st.isAuthenticated)
+  const segments = useSegments()
+  const router = useRouter()
+  useEffect(() => {
+    if (!authReady) return
+    // Ως string επίτηδες: οι παραγόμενοι τύποι διαδρομών του expo-router
+    // ανανεώνονται μόνο στο επόμενο «expo start», οπότε μια νέα ομάδα
+    // οθονών θα έσπαγε τη μεταγλώττιση μέχρι τότε.
+    const first = segments[0] as string | undefined
+    const inProvider = first === '(provider)'
+    const inAuth = first === 'auth'
+    if (isAuthenticated && role === 'service_provider' && !inProvider && !inAuth) {
+      router.replace('/(provider)' as any)
+    }
+    if ((!isAuthenticated || role !== 'service_provider') && inProvider && role !== 'both') {
+      router.replace('/(tabs)' as any)
+    }
+  }, [authReady, isAuthenticated, role, segments, router])
+
   // Το return έρχεται ΜΕΤΑ από όλα τα hooks.
   if (!fontsReady || !authReady || !i18nReady) return null
 
@@ -128,6 +155,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(provider)" />
 
           {MODAL_ROUTES.map(name => (
             <Stack.Screen key={name} name={name} options={{ presentation: 'modal' }} />

@@ -118,6 +118,20 @@ function ThemeToggle() {
 }
 
 export default function MainLayout() {
+  const { user: authUser } = useAuthStore()
+  const navigateGuard = useNavigate()
+  /**
+   * Ο καθαρός πάροχος δεν βλέπει το καταναλωτικό site.
+   *
+   * Καλάθι, κοινότητες, tracker, AI υγείας — τίποτα από αυτά δεν αφορά
+   * έναν κτηνίατρο ή ένα κομμωτήριο. Αν φτάσει εδώ (σελιδοδείκτης, πίσω
+   * από browser, σύνδεσμος), τον στέλνουμε στον πίνακά του. Ο «both»
+   * είναι και ιδιοκτήτης και βλέπει τα πάντα.
+   */
+  useEffect(() => {
+    if (authUser?.role === 'service_provider') navigateGuard('/provider', { replace: true })
+  }, [authUser?.role, navigateGuard])
+
   const { t } = useTranslation()
   const location = useLocation()
   const { user, isAuthenticated, logout, refreshUser } = useAuthStore()

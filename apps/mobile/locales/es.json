@@ -606,5 +606,33 @@
   "booking": {
     "noPaymentPage": "No se creó la página de pago. Revisa tus reservas.",
     "err_book": "No se pudo reservar"
+  },
+  "providerTabs": {
+    "overview": "Resumen",
+    "bookings": "Reservas",
+    "services": "Servicios",
+    "products": "Productos",
+    "staff": "Personal"
+  },
+  "providerDash": {
+    "title": "Panel del proveedor",
+    "totalBookings": "Reservas totales",
+    "totalRevenue": "Ingresos totales",
+    "rating": "Valoración",
+    "upcomingBookings": "Próximas reservas",
+    "noBookings": "No hay reservas",
+    "booking": "Reserva",
+    "noServices": "Aún no tienes servicios",
+    "noProducts": "Aún no tienes productos",
+    "stock": "Existencias",
+    "errAvailability": "No se pudo cambiar la disponibilidad",
+    "changePractitioner": "Cambiar profesional",
+    "noPractitioner": "— sin profesional —"
+  },
+  "providerStaff": {
+    "empty": "Aún no has añadido personal"
+  },
+  "providerMobile": {
+    "manageOnWeb": "Para añadir o editar, usa globipet.com desde un ordenador."
   }
 }

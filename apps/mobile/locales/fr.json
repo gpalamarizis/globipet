@@ -606,5 +606,33 @@
   "booking": {
     "noPaymentPage": "Aucune page de paiement créée. Consultez vos réservations.",
     "err_book": "La réservation a échoué"
+  },
+  "providerTabs": {
+    "overview": "Aperçu",
+    "bookings": "Réservations",
+    "services": "Services",
+    "products": "Produits",
+    "staff": "Personnel"
+  },
+  "providerDash": {
+    "title": "Tableau de bord",
+    "totalBookings": "Réservations totales",
+    "totalRevenue": "Revenus totaux",
+    "rating": "Note",
+    "upcomingBookings": "Réservations à venir",
+    "noBookings": "Aucune réservation",
+    "booking": "Réservation",
+    "noServices": "Vous n'avez pas encore de services",
+    "noProducts": "Vous n'avez pas encore de produits",
+    "stock": "Stock",
+    "errAvailability": "Impossible de modifier la disponibilité",
+    "changePractitioner": "Changer de praticien",
+    "noPractitioner": "— sans praticien —"
+  },
+  "providerStaff": {
+    "empty": "Vous n'avez pas encore ajouté de personnel"
+  },
+  "providerMobile": {
+    "manageOnWeb": "Pour ajouter ou modifier, utilisez globipet.com sur un ordinateur."
   }
 }

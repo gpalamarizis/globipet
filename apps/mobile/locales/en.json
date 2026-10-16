@@ -606,5 +606,33 @@
   "booking": {
     "noPaymentPage": "No payment page was created. Check your bookings.",
     "err_book": "The booking could not be made"
+  },
+  "providerTabs": {
+    "overview": "Overview",
+    "bookings": "Bookings",
+    "services": "Services",
+    "products": "Products",
+    "staff": "Staff"
+  },
+  "providerDash": {
+    "title": "Provider dashboard",
+    "totalBookings": "Total bookings",
+    "totalRevenue": "Total revenue",
+    "rating": "Rating",
+    "upcomingBookings": "Upcoming bookings",
+    "noBookings": "No bookings",
+    "booking": "Booking",
+    "noServices": "You have no services yet",
+    "noProducts": "You have no products yet",
+    "stock": "Stock",
+    "errAvailability": "Could not change availability",
+    "changePractitioner": "Change practitioner",
+    "noPractitioner": "— no practitioner —"
+  },
+  "providerStaff": {
+    "empty": "You have not added staff yet"
+  },
+  "providerMobile": {
+    "manageOnWeb": "To add or edit, use globipet.com on a computer."
   }
 }

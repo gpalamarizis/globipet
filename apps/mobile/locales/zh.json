@@ -606,5 +606,33 @@
   "booking": {
     "noPaymentPage": "未生成支付页面，请查看您的预约。",
     "err_book": "预约失败"
+  },
+  "providerTabs": {
+    "overview": "概览",
+    "bookings": "预约",
+    "services": "服务",
+    "products": "产品",
+    "staff": "员工"
+  },
+  "providerDash": {
+    "title": "服务商面板",
+    "totalBookings": "总预约数",
+    "totalRevenue": "总收入",
+    "rating": "评分",
+    "upcomingBookings": "即将到来的预约",
+    "noBookings": "暂无预约",
+    "booking": "预约",
+    "noServices": "您还没有服务",
+    "noProducts": "您还没有产品",
+    "stock": "库存",
+    "errAvailability": "无法更改可用状态",
+    "changePractitioner": "更换接诊人员",
+    "noPractitioner": "— 不指定 —"
+  },
+  "providerStaff": {
+    "empty": "您还没有添加员工"
+  },
+  "providerMobile": {
+    "manageOnWeb": "如需添加或编辑，请在电脑上使用 globipet.com。"
   }
 }

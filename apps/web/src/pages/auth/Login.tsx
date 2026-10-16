@@ -17,7 +17,13 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    try { await login(email, password); navigate('/') }
+    try {
+      await login(email, password)
+      // Ο καθαρός πάροχος δεν έχει λόγο να δει την καταναλωτική αρχική:
+      // πάει κατευθείαν στον πίνακά του. Ο «both» βλέπει τα πάντα.
+      const role = useAuthStore.getState().user?.role
+      navigate(role === 'service_provider' ? '/provider' : '/')
+    }
     catch (err: any) { toast.error(err?.response?.data?.message || err.message || t('authExtraLogin.invalidCredentials')) }
   }
 

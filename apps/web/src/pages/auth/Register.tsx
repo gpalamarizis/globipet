@@ -67,7 +67,9 @@ export default function Register() {
           // Fall through — the /trial page will let them retry manually
         }
       }
-      navigate(redirectTo)
+      // Νέος πάροχος: κατευθείαν στον πίνακά του, όχι στην καταναλωτική
+      // αρχική που δεν τον αφορά.
+      navigate(role === 'service_provider' ? '/provider' : redirectTo)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err.message || t('common.error'))
     }

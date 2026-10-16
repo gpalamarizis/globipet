@@ -606,5 +606,33 @@
   "booking": {
     "noPaymentPage": "Δεν δημιουργήθηκε σελίδα πληρωμής. Δες τις κρατήσεις σου.",
     "err_book": "Δεν ήταν δυνατή η κράτηση"
+  },
+  "providerTabs": {
+    "overview": "Επισκόπηση",
+    "bookings": "Κρατήσεις",
+    "services": "Υπηρεσίες",
+    "products": "Προϊόντα",
+    "staff": "Προσωπικό"
+  },
+  "providerDash": {
+    "title": "Πίνακας παρόχου",
+    "totalBookings": "Συνολικές κρατήσεις",
+    "totalRevenue": "Συνολικά έσοδα",
+    "rating": "Αξιολόγηση",
+    "upcomingBookings": "Επερχόμενες κρατήσεις",
+    "noBookings": "Δεν υπάρχουν κρατήσεις",
+    "booking": "Κράτηση",
+    "noServices": "Δεν έχετε υπηρεσίες ακόμα",
+    "noProducts": "Δεν έχετε προϊόντα ακόμα",
+    "stock": "Απόθεμα",
+    "errAvailability": "Σφάλμα αλλαγής διαθεσιμότητας",
+    "changePractitioner": "Αλλαγή γιατρού",
+    "noPractitioner": "— χωρίς γιατρό —"
+  },
+  "providerStaff": {
+    "empty": "Δεν έχεις προσθέσει προσωπικό ακόμη"
+  },
+  "providerMobile": {
+    "manageOnWeb": "Για προσθήκη και επεξεργασία, χρησιμοποίησε το globipet.com από υπολογιστή."
   }
 }
