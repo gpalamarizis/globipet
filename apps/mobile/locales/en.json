@@ -634,5 +634,33 @@
   },
   "providerMobile": {
     "manageOnWeb": "To add or edit, use globipet.com on a computer."
+  },
+  "providerNew": {
+    "title": "New service",
+    "chooseCategory": "What service do you offer?",
+    "details": "Service details",
+    "name": "Service name",
+    "namePlaceholder": "e.g. Athens Vet Clinic",
+    "description": "Description",
+    "descriptionPlaceholder": "What you offer and to whom",
+    "basePrice": "Base price (€)",
+    "basePriceHint": "Used only if you do not set up packages.",
+    "setPrices": "Packages and prices",
+    "setPricesHint": "Set a price for the ones you offer. Anything left blank will not appear.",
+    "selectedCount": "{{count}} packages priced",
+    "next": "Next",
+    "create": "Create service",
+    "creating": "Creating…",
+    "errCreate": "The service could not be created"
+  },
+  "providerPkg": {
+    "gBathing": "Bathing",
+    "gHaircut": "Haircut",
+    "gConsultation": "Consultations",
+    "gVaccination": "Vaccinations",
+    "gSurgery": "Surgical",
+    "gDental": "Dental",
+    "gDiagnostics": "Diagnostics",
+    "gOther": "Other"
   }
 }

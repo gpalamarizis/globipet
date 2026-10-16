@@ -634,5 +634,33 @@
   },
   "providerMobile": {
     "manageOnWeb": "如需添加或编辑，请在电脑上使用 globipet.com。"
+  },
+  "providerNew": {
+    "title": "新服务",
+    "chooseCategory": "您提供什么服务？",
+    "details": "服务信息",
+    "name": "服务名称",
+    "namePlaceholder": "例如：雅典宠物医院",
+    "description": "描述",
+    "descriptionPlaceholder": "您提供什么、面向谁",
+    "basePrice": "基础价格 (€)",
+    "basePriceHint": "仅在未设置套餐时使用。",
+    "setPrices": "套餐与价格",
+    "setPricesHint": "为您提供的项目填写价格。留空的不会显示。",
+    "selectedCount": "已定价 {{count}} 个套餐",
+    "next": "下一步",
+    "create": "创建服务",
+    "creating": "创建中…",
+    "errCreate": "创建服务失败"
+  },
+  "providerPkg": {
+    "gBathing": "洗浴",
+    "gHaircut": "剪毛",
+    "gConsultation": "问诊",
+    "gVaccination": "疫苗接种",
+    "gSurgery": "手术",
+    "gDental": "牙科",
+    "gDiagnostics": "诊断",
+    "gOther": "其他"
   }
 }

@@ -634,5 +634,33 @@
   },
   "providerMobile": {
     "manageOnWeb": "Για προσθήκη και επεξεργασία, χρησιμοποίησε το globipet.com από υπολογιστή."
+  },
+  "providerNew": {
+    "title": "Νέα υπηρεσία",
+    "chooseCategory": "Τι υπηρεσία προσφέρεις;",
+    "details": "Στοιχεία υπηρεσίας",
+    "name": "Όνομα υπηρεσίας",
+    "namePlaceholder": "π.χ. Κτηνιατρείο Αθηνών",
+    "description": "Περιγραφή",
+    "descriptionPlaceholder": "Τι προσφέρεις και σε ποιους",
+    "basePrice": "Βασική τιμή (€)",
+    "basePriceHint": "Χρησιμοποιείται μόνο αν δεν ορίσεις πακέτα.",
+    "setPrices": "Πακέτα και τιμές",
+    "setPricesHint": "Βάλε τιμή σε όσα προσφέρεις. Όσα αφήσεις κενά δεν θα εμφανίζονται.",
+    "selectedCount": "{{count}} πακέτα με τιμή",
+    "next": "Επόμενο",
+    "create": "Δημιουργία υπηρεσίας",
+    "creating": "Δημιουργία…",
+    "errCreate": "Δεν ήταν δυνατή η δημιουργία"
+  },
+  "providerPkg": {
+    "gBathing": "Μπάνιο",
+    "gHaircut": "Κούρεμα",
+    "gConsultation": "Επισκέψεις",
+    "gVaccination": "Εμβολιασμοί",
+    "gSurgery": "Χειρουργικές",
+    "gDental": "Οδοντιατρικά",
+    "gDiagnostics": "Διαγνωστικά",
+    "gOther": "Άλλα"
   }
 }

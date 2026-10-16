@@ -2,9 +2,10 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, Switch, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Scissors } from 'lucide-react-native'
+import { useRouter } from 'expo-router'
+import { Scissors, Plus } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
 
 /**
@@ -18,6 +19,7 @@ import { colors, space, type, weight } from '@/theme'
 export default function ProviderServices() {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: services = [], isLoading } = useQuery({
@@ -38,6 +40,13 @@ export default function ProviderServices() {
 
   return (
     <Screen title={t('providerTabs.services')} onRefresh={onRefresh} refreshing={refreshing}>
+      <Button
+        label={t('providerNew.title')}
+        icon={<Plus size={18} color={colors.textOnDark} />}
+        onPress={() => router.push('/(provider)/new-service' as any)}
+        full
+        style={{ marginBottom: space.md }}
+      />
       {isLoading ? <SkeletonRows count={3} /> :
        services.length === 0 ? <EmptyState icon={Scissors} title={t('providerDash.noServices')} message={t('providerMobile.manageOnWeb')} /> :
        services.map((sv: any) => (

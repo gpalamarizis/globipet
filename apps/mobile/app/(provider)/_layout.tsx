@@ -52,6 +52,10 @@ export default function ProviderTabLayout() {
         tabBarItemStyle: { paddingTop: space.sm, paddingHorizontal: 2 },
         tabBarLabelPosition: 'below-icon',
       }}>
+      {/* Οθόνες του χώρου παρόχου που ΔΕΝ είναι καρτέλες: ανοίγουν από
+          μέσα και δεν πρέπει να εμφανίζονται στη μπάρα. */}
+      <Tabs.Screen name="new-service" options={{ href: null }} />
+
       {TABS.map(({ name, titleKey, Icon }) => (
         <Tabs.Screen key={name} name={name}
           options={{

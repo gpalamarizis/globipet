@@ -634,5 +634,33 @@
   },
   "providerMobile": {
     "manageOnWeb": "Pour ajouter ou modifier, utilisez globipet.com sur un ordinateur."
+  },
+  "providerNew": {
+    "title": "Nouveau service",
+    "chooseCategory": "Quel service proposez-vous ?",
+    "details": "Détails du service",
+    "name": "Nom du service",
+    "namePlaceholder": "p.ex. Clinique Vétérinaire Athènes",
+    "description": "Description",
+    "descriptionPlaceholder": "Ce que vous proposez et à qui",
+    "basePrice": "Prix de base (€)",
+    "basePriceHint": "Utilisé uniquement si vous ne définissez pas de forfaits.",
+    "setPrices": "Forfaits et prix",
+    "setPricesHint": "Indiquez un prix pour ceux que vous proposez. Les champs vides n'apparaîtront pas.",
+    "selectedCount": "{{count}} forfaits tarifés",
+    "next": "Suivant",
+    "create": "Créer le service",
+    "creating": "Création…",
+    "errCreate": "Impossible de créer le service"
+  },
+  "providerPkg": {
+    "gBathing": "Bain",
+    "gHaircut": "Coupe",
+    "gConsultation": "Consultations",
+    "gVaccination": "Vaccinations",
+    "gSurgery": "Chirurgie",
+    "gDental": "Dentaire",
+    "gDiagnostics": "Diagnostics",
+    "gOther": "Autres"
   }
 }
