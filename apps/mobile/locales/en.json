@@ -29,7 +29,8 @@
     "try_again": "Try again",
     "try_again_later": "Try again in a moment.",
     "remove": "Remove",
-    "add": "Add"
+    "add": "Add",
+    "email": "Email"
   },
   "tabs": {
     "home": "Home",
@@ -612,7 +613,10 @@
     "bookings": "Bookings",
     "services": "Services",
     "products": "Products",
-    "staff": "Staff"
+    "staff": "Staff",
+    "customers": "Customers",
+    "campaigns": "Campaigns",
+    "more": "More"
   },
   "providerDash": {
     "title": "Provider dashboard",
@@ -627,13 +631,16 @@
     "stock": "Stock",
     "errAvailability": "Could not change availability",
     "changePractitioner": "Change practitioner",
-    "noPractitioner": "— no practitioner —"
+    "noPractitioner": "— no practitioner —",
+    "category": "Category",
+    "priceEur": "Price (€)"
   },
   "providerStaff": {
     "empty": "You have not added staff yet"
   },
   "providerMobile": {
-    "manageOnWeb": "To add or edit, use globipet.com on a computer."
+    "manageOnWeb": "To add or edit, use globipet.com on a computer.",
+    "consumerArea": "The customer side"
   },
   "providerNew": {
     "title": "New service",
@@ -662,5 +669,69 @@
     "gDental": "Dental",
     "gDiagnostics": "Diagnostics",
     "gOther": "Other"
+  },
+  "providerStaffNew": {
+    "title": "New staff member",
+    "forService": "For which service",
+    "noServices": "Create a service first.",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "e.g. Maria Papadopoulou",
+    "role": "Role",
+    "rolePlaceholder": "e.g. Veterinarian",
+    "acceptsTelehealth": "Accepts telehealth",
+    "save": "Add",
+    "errCreate": "Could not add the staff member"
+  },
+  "providerProductNew": {
+    "title": "New product",
+    "name": "Product name",
+    "namePlaceholder": "e.g. Royal Canin Adult 3kg",
+    "save": "Add product",
+    "errCreate": "Could not add the product"
+  },
+  "providerCus": {
+    "search": "Search by name or email",
+    "empty": "You have no customers yet",
+    "emptyHint": "They will appear here as soon as someone books.",
+    "bookingCount": "{{count}} bookings",
+    "msgTo": "Message {{count}}",
+    "subject": "Subject",
+    "phSubject": "e.g. A special offer for you",
+    "messageReq": "Message *",
+    "inAppNote": "They will see it in their notifications inside the platform.",
+    "send": "Send to {{count}}",
+    "sending": "Sending…",
+    "sentTitle": "Sent",
+    "sentTo": "Sent to {{count}} customers",
+    "errSend": "Could not send"
+  },
+  "providerMkt": {
+    "empty": "You have no campaigns",
+    "emptyHint": "Create a discount that applies to your services.",
+    "stActive": "Active",
+    "stScheduled": "Scheduled",
+    "stExpired": "Expired",
+    "stPaused": "Paused",
+    "noDiscount": "No discount",
+    "viewsRedemptions": "{{views}} views · {{redemptions}} redemptions",
+    "errSave": "Could not save",
+    "fTitleReq": "Title *",
+    "phTitle": "e.g. Autumn offer",
+    "fDescription": "Description",
+    "fStart": "Starts *",
+    "fEnd": "Ends *",
+    "fDiscount": "Discount",
+    "fPercent": "Percentage",
+    "fEuro": "Euro",
+    "none": "None",
+    "fPercentPct": "Percentage %",
+    "fAmountEur": "Amount €",
+    "errEndBeforeStart": "The end must be after the start",
+    "errPercentMax": "The percentage cannot exceed 100",
+    "noDiscountHint": "With no discount the campaign is display only.",
+    "create": "Create campaign"
+  },
+  "providerCampaignNew": {
+    "title": "New campaign"
   }
 }

@@ -29,7 +29,8 @@
     "try_again": "Inténtalo de nuevo",
     "try_again_later": "Inténtalo de nuevo en un momento.",
     "remove": "Quitar",
-    "add": "Añadir"
+    "add": "Añadir",
+    "email": "Email"
   },
   "tabs": {
     "home": "Inicio",
@@ -612,7 +613,10 @@
     "bookings": "Reservas",
     "services": "Servicios",
     "products": "Productos",
-    "staff": "Personal"
+    "staff": "Personal",
+    "customers": "Clientes",
+    "campaigns": "Campañas",
+    "more": "Más"
   },
   "providerDash": {
     "title": "Panel del proveedor",
@@ -627,13 +631,16 @@
     "stock": "Existencias",
     "errAvailability": "No se pudo cambiar la disponibilidad",
     "changePractitioner": "Cambiar profesional",
-    "noPractitioner": "— sin profesional —"
+    "noPractitioner": "— sin profesional —",
+    "category": "Categoría",
+    "priceEur": "Precio (€)"
   },
   "providerStaff": {
     "empty": "Aún no has añadido personal"
   },
   "providerMobile": {
-    "manageOnWeb": "Para añadir o editar, usa globipet.com desde un ordenador."
+    "manageOnWeb": "Para añadir o editar, usa globipet.com desde un ordenador.",
+    "consumerArea": "La parte de cliente"
   },
   "providerNew": {
     "title": "Nuevo servicio",
@@ -662,5 +669,69 @@
     "gDental": "Dental",
     "gDiagnostics": "Diagnóstico",
     "gOther": "Otros"
+  },
+  "providerStaffNew": {
+    "title": "Nuevo miembro del personal",
+    "forService": "Para qué servicio",
+    "noServices": "Crea primero un servicio.",
+    "fullName": "Nombre completo",
+    "fullNamePlaceholder": "p.ej. María Papadopoulou",
+    "role": "Cargo",
+    "rolePlaceholder": "p.ej. Veterinario",
+    "acceptsTelehealth": "Acepta telemedicina",
+    "save": "Añadir",
+    "errCreate": "No se pudo añadir"
+  },
+  "providerProductNew": {
+    "title": "Nuevo producto",
+    "name": "Nombre del producto",
+    "namePlaceholder": "p.ej. Royal Canin Adult 3kg",
+    "save": "Añadir producto",
+    "errCreate": "No se pudo añadir el producto"
+  },
+  "providerCus": {
+    "search": "Buscar por nombre o email",
+    "empty": "Aún no tienes clientes",
+    "emptyHint": "Aparecerán aquí en cuanto alguien reserve.",
+    "bookingCount": "{{count}} reservas",
+    "msgTo": "Mensaje a {{count}}",
+    "subject": "Asunto",
+    "phSubject": "p.ej. Oferta especial para ti",
+    "messageReq": "Mensaje *",
+    "inAppNote": "Lo verán en sus notificaciones dentro de la plataforma.",
+    "send": "Enviar a {{count}}",
+    "sending": "Enviando…",
+    "sentTitle": "Enviado",
+    "sentTo": "Enviado a {{count}} clientes",
+    "errSend": "No se pudo enviar"
+  },
+  "providerMkt": {
+    "empty": "No tienes campañas",
+    "emptyHint": "Crea un descuento para tus servicios.",
+    "stActive": "Activa",
+    "stScheduled": "Programada",
+    "stExpired": "Caducada",
+    "stPaused": "En pausa",
+    "noDiscount": "Sin descuento",
+    "viewsRedemptions": "{{views}} vistas · {{redemptions}} canjes",
+    "errSave": "No se pudo guardar",
+    "fTitleReq": "Título *",
+    "phTitle": "p.ej. Oferta de otoño",
+    "fDescription": "Descripción",
+    "fStart": "Inicio *",
+    "fEnd": "Fin *",
+    "fDiscount": "Descuento",
+    "fPercent": "Porcentaje",
+    "fEuro": "Euro",
+    "none": "Ninguno",
+    "fPercentPct": "Porcentaje %",
+    "fAmountEur": "Importe €",
+    "errEndBeforeStart": "El fin debe ser posterior al inicio",
+    "errPercentMax": "El porcentaje no puede superar 100",
+    "noDiscountHint": "Sin descuento la campaña es solo de visualización.",
+    "create": "Crear campaña"
+  },
+  "providerCampaignNew": {
+    "title": "Nueva campaña"
   }
 }

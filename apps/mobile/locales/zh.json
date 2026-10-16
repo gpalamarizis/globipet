@@ -29,7 +29,8 @@
     "try_again": "请重试",
     "try_again_later": "请稍后再试。",
     "remove": "移除",
-    "add": "添加"
+    "add": "添加",
+    "email": "邮箱"
   },
   "tabs": {
     "home": "首页",
@@ -612,7 +613,10 @@
     "bookings": "预约",
     "services": "服务",
     "products": "产品",
-    "staff": "员工"
+    "staff": "员工",
+    "customers": "客户",
+    "campaigns": "活动",
+    "more": "更多"
   },
   "providerDash": {
     "title": "服务商面板",
@@ -627,13 +631,16 @@
     "stock": "库存",
     "errAvailability": "无法更改可用状态",
     "changePractitioner": "更换接诊人员",
-    "noPractitioner": "— 不指定 —"
+    "noPractitioner": "— 不指定 —",
+    "category": "类别",
+    "priceEur": "价格 (€)"
   },
   "providerStaff": {
     "empty": "您还没有添加员工"
   },
   "providerMobile": {
-    "manageOnWeb": "如需添加或编辑，请在电脑上使用 globipet.com。"
+    "manageOnWeb": "如需添加或编辑，请在电脑上使用 globipet.com。",
+    "consumerArea": "客户端"
   },
   "providerNew": {
     "title": "新服务",
@@ -662,5 +669,69 @@
     "gDental": "牙科",
     "gDiagnostics": "诊断",
     "gOther": "其他"
+  },
+  "providerStaffNew": {
+    "title": "新增员工",
+    "forService": "属于哪项服务",
+    "noServices": "请先创建服务。",
+    "fullName": "姓名",
+    "fullNamePlaceholder": "例如：张医生",
+    "role": "职位",
+    "rolePlaceholder": "例如：兽医",
+    "acceptsTelehealth": "接受远程问诊",
+    "save": "添加",
+    "errCreate": "添加失败"
+  },
+  "providerProductNew": {
+    "title": "新产品",
+    "name": "产品名称",
+    "namePlaceholder": "例如：皇家成犬粮 3kg",
+    "save": "添加产品",
+    "errCreate": "添加产品失败"
+  },
+  "providerCus": {
+    "search": "按姓名或邮箱搜索",
+    "empty": "您还没有客户",
+    "emptyHint": "有人预约后将显示在此处。",
+    "bookingCount": "{{count}} 次预约",
+    "msgTo": "发消息给 {{count}} 位",
+    "subject": "主题",
+    "phSubject": "例如：专属优惠",
+    "messageReq": "消息 *",
+    "inAppNote": "他们将在平台内的通知中看到。",
+    "send": "发送给 {{count}} 位",
+    "sending": "发送中…",
+    "sentTitle": "已发送",
+    "sentTo": "已发送给 {{count}} 位客户",
+    "errSend": "发送失败"
+  },
+  "providerMkt": {
+    "empty": "您还没有营销活动",
+    "emptyHint": "为您的服务创建折扣。",
+    "stActive": "进行中",
+    "stScheduled": "已排期",
+    "stExpired": "已结束",
+    "stPaused": "已暂停",
+    "noDiscount": "无折扣",
+    "viewsRedemptions": "{{views}} 次浏览 · {{redemptions}} 次使用",
+    "errSave": "保存失败",
+    "fTitleReq": "标题 *",
+    "phTitle": "例如：秋季优惠",
+    "fDescription": "描述",
+    "fStart": "开始 *",
+    "fEnd": "结束 *",
+    "fDiscount": "折扣",
+    "fPercent": "百分比",
+    "fEuro": "欧元",
+    "none": "无",
+    "fPercentPct": "百分比 %",
+    "fAmountEur": "金额 €",
+    "errEndBeforeStart": "结束时间必须晚于开始时间",
+    "errPercentMax": "百分比不能超过 100",
+    "noDiscountHint": "无折扣时活动仅用于展示。",
+    "create": "创建活动"
+  },
+  "providerCampaignNew": {
+    "title": "新建活动"
   }
 }

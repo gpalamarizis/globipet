@@ -2,15 +2,17 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, Switch, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package } from 'lucide-react-native'
+import { useRouter } from 'expo-router'
+import { Package, Plus } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
 
 /** Τα προϊόντα του παρόχου: διαθεσιμότητα με διακόπτη, απόθεμα με μια ματιά. */
 export default function ProviderProducts() {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: products = [], isLoading } = useQuery({
@@ -31,6 +33,13 @@ export default function ProviderProducts() {
 
   return (
     <Screen title={t('providerTabs.products')} onRefresh={onRefresh} refreshing={refreshing}>
+      <Button
+        label={t('providerProductNew.title')}
+        icon={<Plus size={18} color={colors.textOnDark} />}
+        onPress={() => router.push('/(provider)/new-product' as any)}
+        full
+        style={{ marginBottom: space.md }}
+      />
       {isLoading ? <SkeletonRows count={3} /> :
        products.length === 0 ? <EmptyState icon={Package} title={t('providerDash.noProducts')} message={t('providerMobile.manageOnWeb')} /> :
        products.map((p: any) => (

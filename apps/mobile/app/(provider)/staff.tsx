@@ -2,9 +2,10 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, Switch, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users } from 'lucide-react-native'
+import { useRouter } from 'expo-router'
+import { Users, Plus } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
 
 /**
@@ -17,6 +18,7 @@ import { colors, space, type, weight } from '@/theme'
 export default function ProviderStaff() {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: staff = [], isLoading } = useQuery({
@@ -37,6 +39,13 @@ export default function ProviderStaff() {
 
   return (
     <Screen title={t('providerTabs.staff')} onRefresh={onRefresh} refreshing={refreshing}>
+      <Button
+        label={t('providerStaffNew.title')}
+        icon={<Plus size={18} color={colors.textOnDark} />}
+        onPress={() => router.push('/(provider)/new-staff' as any)}
+        full
+        style={{ marginBottom: space.md }}
+      />
       {isLoading ? <SkeletonRows count={3} /> :
        staff.length === 0 ? <EmptyState icon={Users} title={t('providerStaff.empty')} message={t('providerMobile.manageOnWeb')} /> :
        staff.map((m: any) => (

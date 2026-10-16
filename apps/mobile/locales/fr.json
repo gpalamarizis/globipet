@@ -29,7 +29,8 @@
     "try_again": "Réessayez",
     "try_again_later": "Réessayez dans un instant.",
     "remove": "Retirer",
-    "add": "Ajouter"
+    "add": "Ajouter",
+    "email": "E-mail"
   },
   "tabs": {
     "home": "Accueil",
@@ -612,7 +613,10 @@
     "bookings": "Réservations",
     "services": "Services",
     "products": "Produits",
-    "staff": "Personnel"
+    "staff": "Personnel",
+    "customers": "Clients",
+    "campaigns": "Campagnes",
+    "more": "Plus"
   },
   "providerDash": {
     "title": "Tableau de bord",
@@ -627,13 +631,16 @@
     "stock": "Stock",
     "errAvailability": "Impossible de modifier la disponibilité",
     "changePractitioner": "Changer de praticien",
-    "noPractitioner": "— sans praticien —"
+    "noPractitioner": "— sans praticien —",
+    "category": "Catégorie",
+    "priceEur": "Prix (€)"
   },
   "providerStaff": {
     "empty": "Vous n'avez pas encore ajouté de personnel"
   },
   "providerMobile": {
-    "manageOnWeb": "Pour ajouter ou modifier, utilisez globipet.com sur un ordinateur."
+    "manageOnWeb": "Pour ajouter ou modifier, utilisez globipet.com sur un ordinateur.",
+    "consumerArea": "L'espace client"
   },
   "providerNew": {
     "title": "Nouveau service",
@@ -662,5 +669,69 @@
     "gDental": "Dentaire",
     "gDiagnostics": "Diagnostics",
     "gOther": "Autres"
+  },
+  "providerStaffNew": {
+    "title": "Nouveau membre du personnel",
+    "forService": "Pour quel service",
+    "noServices": "Créez d'abord un service.",
+    "fullName": "Nom complet",
+    "fullNamePlaceholder": "p.ex. Maria Papadopoulou",
+    "role": "Fonction",
+    "rolePlaceholder": "p.ex. Vétérinaire",
+    "acceptsTelehealth": "Accepte la télémédecine",
+    "save": "Ajouter",
+    "errCreate": "Impossible d'ajouter"
+  },
+  "providerProductNew": {
+    "title": "Nouveau produit",
+    "name": "Nom du produit",
+    "namePlaceholder": "p.ex. Royal Canin Adult 3 kg",
+    "save": "Ajouter le produit",
+    "errCreate": "Impossible d'ajouter le produit"
+  },
+  "providerCus": {
+    "search": "Rechercher par nom ou e-mail",
+    "empty": "Vous n'avez pas encore de clients",
+    "emptyHint": "Ils apparaîtront ici dès qu'une réservation est faite.",
+    "bookingCount": "{{count}} réservations",
+    "msgTo": "Message à {{count}}",
+    "subject": "Objet",
+    "phSubject": "p.ex. Une offre spéciale pour vous",
+    "messageReq": "Message *",
+    "inAppNote": "Ils le verront dans leurs notifications sur la plateforme.",
+    "send": "Envoyer à {{count}}",
+    "sending": "Envoi…",
+    "sentTitle": "Envoyé",
+    "sentTo": "Envoyé à {{count}} clients",
+    "errSend": "Échec de l'envoi"
+  },
+  "providerMkt": {
+    "empty": "Vous n'avez aucune campagne",
+    "emptyHint": "Créez une remise valable sur vos services.",
+    "stActive": "Active",
+    "stScheduled": "Programmée",
+    "stExpired": "Expirée",
+    "stPaused": "En pause",
+    "noDiscount": "Sans remise",
+    "viewsRedemptions": "{{views}} vues · {{redemptions}} utilisations",
+    "errSave": "Échec de l'enregistrement",
+    "fTitleReq": "Titre *",
+    "phTitle": "p.ex. Offre d'automne",
+    "fDescription": "Description",
+    "fStart": "Début *",
+    "fEnd": "Fin *",
+    "fDiscount": "Remise",
+    "fPercent": "Pourcentage",
+    "fEuro": "Euro",
+    "none": "Aucune",
+    "fPercentPct": "Pourcentage %",
+    "fAmountEur": "Montant €",
+    "errEndBeforeStart": "La fin doit être après le début",
+    "errPercentMax": "Le pourcentage ne peut dépasser 100",
+    "noDiscountHint": "Sans remise, la campagne sert uniquement à l'affichage.",
+    "create": "Créer la campagne"
+  },
+  "providerCampaignNew": {
+    "title": "Nouvelle campagne"
   }
 }

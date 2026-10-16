@@ -2,7 +2,7 @@ import { View, StyleSheet, Platform, Dimensions, useWindowDimensions } from 'rea
 import { Tabs } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LayoutDashboard, CalendarDays, Scissors, Package, Users } from 'lucide-react-native'
+import { LayoutDashboard, CalendarDays, Scissors, UserCheck, MoreHorizontal } from 'lucide-react-native'
 import { colors, space, radius, weight } from '@/theme'
 import { bottomSystemSpace } from '../(tabs)/_layout'
 
@@ -17,12 +17,17 @@ import { bottomSystemSpace } from '../(tabs)/_layout'
  *   Ο «both» (και ιδιοκτήτης) μένει στην καταναλωτική μπάρα και μπαίνει
  *   εδώ από το προφίλ του.
  */
+// ΠΕΝΤΕ καρτέλες, όχι περισσότερες.
+//
+// Σε οθόνη 380 pixel η έκτη καρτέλα αφήνει 54 pixel στην καθεμία και οι
+// ετικέτες κόβονται. Στη μπάρα μένουν οι τέσσερις καθημερινές — επισκόπηση,
+// κρατήσεις, υπηρεσίες, πελάτες — και τα υπόλοιπα ζουν στο «Περισσότερα».
 const TABS = [
-  { name: 'index',    titleKey: 'providerTabs.overview', Icon: LayoutDashboard },
-  { name: 'bookings', titleKey: 'providerTabs.bookings', Icon: CalendarDays },
-  { name: 'services', titleKey: 'providerTabs.services', Icon: Scissors },
-  { name: 'products', titleKey: 'providerTabs.products', Icon: Package },
-  { name: 'staff',    titleKey: 'providerTabs.staff',    Icon: Users },
+  { name: 'index',     titleKey: 'providerTabs.overview',  Icon: LayoutDashboard },
+  { name: 'bookings',  titleKey: 'providerTabs.bookings',  Icon: CalendarDays },
+  { name: 'services',  titleKey: 'providerTabs.services',  Icon: Scissors },
+  { name: 'customers', titleKey: 'providerTabs.customers', Icon: UserCheck },
+  { name: 'more',      titleKey: 'providerTabs.more',      Icon: MoreHorizontal },
 ]
 
 const BAR_CONTENT = 68
@@ -55,6 +60,12 @@ export default function ProviderTabLayout() {
       {/* Οθόνες του χώρου παρόχου που ΔΕΝ είναι καρτέλες: ανοίγουν από
           μέσα και δεν πρέπει να εμφανίζονται στη μπάρα. */}
       <Tabs.Screen name="new-service" options={{ href: null }} />
+      <Tabs.Screen name="new-staff" options={{ href: null }} />
+      <Tabs.Screen name="new-product" options={{ href: null }} />
+      <Tabs.Screen name="new-campaign" options={{ href: null }} />
+      <Tabs.Screen name="products" options={{ href: null }} />
+      <Tabs.Screen name="staff" options={{ href: null }} />
+      <Tabs.Screen name="campaigns" options={{ href: null }} />
 
       {TABS.map(({ name, titleKey, Icon }) => (
         <Tabs.Screen key={name} name={name}

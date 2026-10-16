@@ -29,7 +29,8 @@
     "try_again": "Δοκίμασε ξανά",
     "try_again_later": "Δοκίμασε ξανά σε λίγο.",
     "remove": "Αφαίρεση",
-    "add": "Προσθήκη"
+    "add": "Προσθήκη",
+    "email": "Email"
   },
   "tabs": {
     "home": "Αρχική",
@@ -612,7 +613,10 @@
     "bookings": "Κρατήσεις",
     "services": "Υπηρεσίες",
     "products": "Προϊόντα",
-    "staff": "Προσωπικό"
+    "staff": "Προσωπικό",
+    "customers": "Πελάτες",
+    "campaigns": "Καμπάνιες",
+    "more": "Περισσότερα"
   },
   "providerDash": {
     "title": "Πίνακας παρόχου",
@@ -627,13 +631,16 @@
     "stock": "Απόθεμα",
     "errAvailability": "Σφάλμα αλλαγής διαθεσιμότητας",
     "changePractitioner": "Αλλαγή γιατρού",
-    "noPractitioner": "— χωρίς γιατρό —"
+    "noPractitioner": "— χωρίς γιατρό —",
+    "category": "Κατηγορία",
+    "priceEur": "Τιμή (€)"
   },
   "providerStaff": {
     "empty": "Δεν έχεις προσθέσει προσωπικό ακόμη"
   },
   "providerMobile": {
-    "manageOnWeb": "Για προσθήκη και επεξεργασία, χρησιμοποίησε το globipet.com από υπολογιστή."
+    "manageOnWeb": "Για προσθήκη και επεξεργασία, χρησιμοποίησε το globipet.com από υπολογιστή.",
+    "consumerArea": "Το καταναλωτικό μέρος"
   },
   "providerNew": {
     "title": "Νέα υπηρεσία",
@@ -662,5 +669,69 @@
     "gDental": "Οδοντιατρικά",
     "gDiagnostics": "Διαγνωστικά",
     "gOther": "Άλλα"
+  },
+  "providerStaffNew": {
+    "title": "Νέο μέλος προσωπικού",
+    "forService": "Σε ποια υπηρεσία",
+    "noServices": "Φτιάξε πρώτα μια υπηρεσία.",
+    "fullName": "Ονοματεπώνυμο",
+    "fullNamePlaceholder": "π.χ. Μαρία Παπαδοπούλου",
+    "role": "Ιδιότητα",
+    "rolePlaceholder": "π.χ. Κτηνίατρος",
+    "acceptsTelehealth": "Δέχεται τηλεϊατρική",
+    "save": "Προσθήκη",
+    "errCreate": "Δεν ήταν δυνατή η προσθήκη"
+  },
+  "providerProductNew": {
+    "title": "Νέο προϊόν",
+    "name": "Όνομα προϊόντος",
+    "namePlaceholder": "π.χ. Royal Canin Adult 3kg",
+    "save": "Προσθήκη προϊόντος",
+    "errCreate": "Δεν ήταν δυνατή η προσθήκη"
+  },
+  "providerCus": {
+    "search": "Αναζήτηση ονόματος ή email",
+    "empty": "Δεν έχεις ακόμα πελάτες",
+    "emptyHint": "Θα εμφανιστούν εδώ μόλις κάποιος κάνει κράτηση.",
+    "bookingCount": "{{count}} κρατήσεις",
+    "msgTo": "Μήνυμα σε {{count}}",
+    "subject": "Θέμα",
+    "phSubject": "π.χ. Ειδική προσφορά για εσάς",
+    "messageReq": "Μήνυμα *",
+    "inAppNote": "Θα το δουν στις ειδοποιήσεις τους μέσα στην πλατφόρμα.",
+    "send": "Αποστολή σε {{count}}",
+    "sending": "Αποστολή…",
+    "sentTitle": "Στάλθηκε",
+    "sentTo": "Στάλθηκε σε {{count}} πελάτες",
+    "errSend": "Σφάλμα αποστολής"
+  },
+  "providerMkt": {
+    "empty": "Δεν έχεις καμπάνιες",
+    "emptyHint": "Φτιάξε έκπτωση που θα ισχύει για τις υπηρεσίες σου.",
+    "stActive": "Ενεργή",
+    "stScheduled": "Προγραμματισμένη",
+    "stExpired": "Έληξε",
+    "stPaused": "Σε παύση",
+    "noDiscount": "Χωρίς έκπτωση",
+    "viewsRedemptions": "{{views}} προβολές · {{redemptions}} εξαργυρώσεις",
+    "errSave": "Σφάλμα αποθήκευσης",
+    "fTitleReq": "Τίτλος *",
+    "phTitle": "π.χ. Φθινοπωρινή προσφορά",
+    "fDescription": "Περιγραφή",
+    "fStart": "Έναρξη *",
+    "fEnd": "Λήξη *",
+    "fDiscount": "Έκπτωση",
+    "fPercent": "Ποσοστό",
+    "fEuro": "Ευρώ",
+    "none": "Χωρίς",
+    "fPercentPct": "Ποσοστό %",
+    "fAmountEur": "Ποσό €",
+    "errEndBeforeStart": "Η λήξη πρέπει να είναι μετά την έναρξη",
+    "errPercentMax": "Το ποσοστό δεν μπορεί να ξεπερνά το 100",
+    "noDiscountHint": "Χωρίς έκπτωση η καμπάνια λειτουργεί μόνο ως προβολή.",
+    "create": "Δημιουργία καμπάνιας"
+  },
+  "providerCampaignNew": {
+    "title": "Νέα καμπάνια"
   }
 }
