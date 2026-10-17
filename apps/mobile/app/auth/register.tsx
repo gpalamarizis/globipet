@@ -5,7 +5,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Image,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Eye, EyeOff, Mail, Lock, User, Sparkles } from 'lucide-react-native'
+import { Eye, EyeOff, Mail, Lock, User, Sparkles, Calendar } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -19,11 +19,24 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  *
  *   Επίσης έλεγχος μήκους κωδικού πριν το αίτημα — ο server τον απορρίπτει
  *   κάτω από 8 χαρακτήρες και ο χρήστης το μάθαινε μετά την υποβολή.
+ *
+ * ΗΜΕΡΟΜΗΝΙΑ ΓΕΝΝΗΣΗΣ — ΥΠΟΧΡΕΩΤΙΚΗ
+ *   Ο server την απαιτεί και απορρίπτει κάτω από 15 ετών: ο GDPR αφήνει το
+ *   όριο συγκατάθεσης ανηλίκου στα κράτη μέλη, και η Ελλάδα το έχει θέσει
+ *   εκεί. Χωρίς το πεδίο, ΚΑΘΕ εγγραφή από την εφαρμογή αποτύγχανε με 400.
+ *
+ *   Τρία αριθμητικά πεδία αντί για picker, ώστε να μην μπει νέα native
+ *   εξάρτηση που θα απαιτούσε νέο build. Ο έλεγχος ηλικίας αναπαράγει
+ *   ΑΚΡΙΒΩΣ τη λογική του server, γενέθλια-σήμερα συμπεριλαμβανομένων, για
+ *   να μην λέει η φόρμα «εντάξει» και ο server «όχι».
  */
 
+// Κρατάμε ΚΛΕΙΔΙ: η σταθερά αποτιμάται εκτός component, όπου το t() δεν
+// υπάρχει — και ακόμα κι αν υπήρχε, θα κλείδωνε στη γλώσσα της πρώτης
+// φόρτωσης και δεν θα άλλαζε ποτέ.
 const ROLES = [
-  { id: 'user',             labelKey: 'auth.role_owner', subKey: 'auth.role_owner_desc' },
-  { id: 'service_provider', labelKey: 'auth.role_provider',    subKey: 'auth.role_provider_desc' },
+  { id: 'user',             labelKey: 'auth.role_owner',    subKey: 'auth.role_owner_desc' },
+  { id: 'service_provider', labelKey: 'auth.role_provider', subKey: 'auth.role_provider_desc' },
 ]
 
 export default function RegisterScreen() {
@@ -31,6 +44,7 @@ export default function RegisterScreen() {
   const router = useRouter()
   const { register, loginWithGoogle, loginWithFacebook, isLoading } = useAuthStore()
   const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'user' })
+  const [dob, setDob] = useState({ d: '', m: '', y: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [facebookLoading, setFacebookLoading] = useState(false)
@@ -39,6 +53,33 @@ export default function RegisterScreen() {
     err?.message || err?.response?.data?.message || fallback
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const setD = (k: 'd' | 'm' | 'y', v: string) =>
+    setDob(o => ({ ...o, [k]: v.replace(/[^0-9]/g, '') }))
+
+  /**
+   * Επιστρέφει ISO ημερομηνία αν είναι έγκυρη και ο χρήστης 15+, αλλιώς
+   * μήνυμα σφάλματος. Ο έλεγχος «υπαρκτής ημερομηνίας» γίνεται συγκρίνοντας
+   * τα μέρη πίσω από το Date: το 31/02 αλλιώς θα γινόταν σιωπηλά 03/03.
+   */
+  const validateDob = (): { iso: string } | { error: string } => {
+    const d = parseInt(dob.d, 10), m = parseInt(dob.m, 10), y = parseInt(dob.y, 10)
+    if (!d || !m || !y || dob.y.length !== 4) return { error: t('auth.dobRequired') }
+    const date = new Date(y, m - 1, d)
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+      return { error: t('auth.dobInvalid') }
+    }
+    const now = new Date()
+    if (date > now) return { error: t('auth.dobFuture') }
+
+    // Ίδιος υπολογισμός με τον server.
+    let age = now.getFullYear() - date.getFullYear()
+    const monthDiff = now.getMonth() - date.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) age--
+    if (age < 15) return { error: t('auth.dobMinAge') }
+
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return { iso: `${y}-${pad(m)}-${pad(d)}` }
+  }
 
   const handleRegister = async () => {
     if (!form.full_name.trim() || !form.email.trim() || !form.password) {
@@ -48,8 +89,15 @@ export default function RegisterScreen() {
     if (form.password.length < 8) {
       Alert.alert(t('common.error'), t('auth.password_min_error')); return
     }
+    const age = validateDob()
+    if ('error' in age) { Alert.alert(t('common.error'), age.error); return }
     try {
-      await register({ ...form, full_name: form.full_name.trim(), email: form.email.trim() })
+      await register({
+        ...form,
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        birth_date: age.iso,
+      })
       router.replace('/(tabs)')
     } catch (err: any) {
       Alert.alert(t('auth.register_error'), msg(err, t('common.try_again')))
@@ -92,7 +140,9 @@ export default function RegisterScreen() {
         {/* Ο λόγος να πατήσει κανείς εγγραφή, γραμμένος. */}
         <View style={s.trialBanner}>
           <Sparkles size={icon.md} color={colors.accent} />
-          <Text style={s.trialText}>{t('auth.trial_30')}</Text>
+          <Text style={s.trialText}>
+            {t('auth.trial_30')}
+          </Text>
         </View>
 
         <View style={s.form}>
@@ -119,11 +169,33 @@ export default function RegisterScreen() {
 
           <View style={s.field}>
             <Mail size={icon.md} color={colors.textLight} />
-            <TextInput style={s.input} placeholder={t('auth.email')}
+            <TextInput style={s.input} placeholder="Email"
               value={form.email} onChangeText={v => set('email', v)}
               keyboardType="email-address" autoCapitalize="none" autoComplete="email"
               placeholderTextColor={colors.textLight} />
           </View>
+
+          {/* Ημερομηνία γέννησης: τρία πεδία αντί για picker, ώστε να μην
+              μπει νέα native εξάρτηση. maxLength και keyboardType κάνουν
+              την πληκτρολόγηση γρήγορη στο κινητό. */}
+          <View style={s.field}>
+            <Calendar size={icon.md} color={colors.textLight} />
+            <TextInput style={[s.input, s.dobPart]} placeholder={t('auth.dobDay')}
+              value={dob.d} onChangeText={v => setD('d', v)}
+              keyboardType="number-pad" maxLength={2}
+              placeholderTextColor={colors.textLight} />
+            <Text style={s.dobSep}>/</Text>
+            <TextInput style={[s.input, s.dobPart]} placeholder={t('auth.dobMonth')}
+              value={dob.m} onChangeText={v => setD('m', v)}
+              keyboardType="number-pad" maxLength={2}
+              placeholderTextColor={colors.textLight} />
+            <Text style={s.dobSep}>/</Text>
+            <TextInput style={[s.input, s.dobYear]} placeholder={t('auth.dobYear')}
+              value={dob.y} onChangeText={v => setD('y', v)}
+              keyboardType="number-pad" maxLength={4}
+              placeholderTextColor={colors.textLight} />
+          </View>
+          <Text style={s.dobHint}>{t('auth.dobHint')}</Text>
 
           <View style={s.field}>
             <Lock size={icon.md} color={colors.textLight} />
@@ -169,7 +241,7 @@ export default function RegisterScreen() {
 
         <TouchableOpacity activeOpacity={0.7} style={s.footer}
           onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.footerText}>{t('auth.have_account_q')}<Text style={s.footerLink}>{t('auth.sign_in')}</Text>
+          <Text style={s.footerText}>{t('auth.have_account_q')}<Text style={s.footerLink}>{t('auth.login')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -222,6 +294,13 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   input: { flex: 1, ...type.body, color: colors.text, padding: 0 },
+  // Τα τρία μέρη της ημερομηνίας μοιράζονται τη γραμμή: τα ΗΗ/ΜΜ στενά,
+  // το έτος λίγο πλατύτερο, με κεντραρισμένο κείμενο ώστε να διαβάζονται
+  // ως ημερομηνία και όχι ως τρία άσχετα κουτιά.
+  dobPart: { flex: 0, width: 46, textAlign: 'center' as const },
+  dobYear: { flex: 0, width: 68, textAlign: 'center' as const },
+  dobSep:  { ...type.body, color: colors.textLight, marginHorizontal: 2 },
+  dobHint: { ...type.caption, color: colors.textLight, marginTop: -space.xs, marginBottom: space.sm, marginLeft: space.xs },
 
   primaryBtn: {
     height: touch.comfortable + 4, borderRadius: radius.md,

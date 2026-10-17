@@ -103,7 +103,15 @@
     "role_provider": "Provider",
     "role_provider_desc": "I offer services",
     "send_link": "Send link",
-    "trial_30": "30 days of all AI features, free"
+    "trial_30": "30 days of all AI features, free",
+    "dobRequired": "Enter your date of birth (DD/MM/YYYY)",
+    "dobInvalid": "That date is not valid",
+    "dobFuture": "The date of birth cannot be in the future",
+    "dobMinAge": "You must be at least 15 to create an account",
+    "dobHint": "Date of birth — minimum age 15",
+    "dobDay": "DD",
+    "dobMonth": "MM",
+    "dobYear": "YYYY"
   },
   "home": {
     "greeting": "Hi, {{name}}! 👋",

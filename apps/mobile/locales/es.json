@@ -103,7 +103,15 @@
     "role_provider": "Proveedor",
     "role_provider_desc": "Ofrezco servicios",
     "send_link": "Enviar enlace",
-    "trial_30": "30 días de todas las funciones de IA, gratis"
+    "trial_30": "30 días de todas las funciones de IA, gratis",
+    "dobRequired": "Introduce tu fecha de nacimiento (DD/MM/AAAA)",
+    "dobInvalid": "La fecha no es válida",
+    "dobFuture": "La fecha de nacimiento no puede estar en el futuro",
+    "dobMinAge": "Debes tener al menos 15 años para crear una cuenta",
+    "dobHint": "Fecha de nacimiento — edad mínima 15",
+    "dobDay": "DD",
+    "dobMonth": "MM",
+    "dobYear": "AAAA"
   },
   "home": {
     "greeting": "¡Hola, {{name}}! 👋",

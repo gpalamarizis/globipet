@@ -103,7 +103,15 @@
     "role_provider": "服务商",
     "role_provider_desc": "我提供服务",
     "send_link": "发送链接",
-    "trial_30": "所有 AI 功能免费 30 天"
+    "trial_30": "所有 AI 功能免费 30 天",
+    "dobRequired": "请输入出生日期（日/月/年）",
+    "dobInvalid": "日期无效",
+    "dobFuture": "出生日期不能是未来日期",
+    "dobMinAge": "创建账号需年满 15 岁",
+    "dobHint": "出生日期 — 最低年龄 15 岁",
+    "dobDay": "日",
+    "dobMonth": "月",
+    "dobYear": "年"
   },
   "home": {
     "greeting": "你好，{{name}}！👋",
