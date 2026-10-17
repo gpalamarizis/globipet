@@ -855,5 +855,73 @@
     "pros": "优点",
     "cons": "缺点",
     "health": "健康问题"
+  },
+  "legal": {
+    "title": "法律顾问",
+    "subtitle": "询问宠物主人的权利与义务。",
+    "examples": "示例问题",
+    "q1": "如果我的狗咬人，我有什么义务？",
+    "q2": "房东能因为我养猫而赶我走吗？",
+    "q3": "带宠物旅行需要什么？",
+    "q4": "必须植入芯片吗？",
+    "answer": "回答",
+    "steps": "该怎么做",
+    "references": "参考依据",
+    "placeholder": "输入您的问题",
+    "ask": "提问",
+    "errAsk": "无法连接顾问",
+    "disclaimer": "回答仅供参考，不构成法律意见。",
+    "lawyers": "律师",
+    "urgency_low": "低",
+    "urgency_medium": "中",
+    "urgency_high": "高"
+  },
+  "subscribe": {
+    "title": "月度订阅",
+    "monthlyPrice": "每月扣费",
+    "youSave": "每月节省 €{{amount}}",
+    "benefitDelivery": "每月自动配送",
+    "benefitFlexible": "随时更改或暂停",
+    "benefitCancel": "随时取消",
+    "start": "开始订阅",
+    "vivaNote": "通过 Viva 付款，每月自动续费。"
+  },
+  "reset": {
+    "subtitle": "为您的账号设置新密码。",
+    "confirm": "确认密码",
+    "mismatch": "两次输入的密码不一致",
+    "submit": "更改密码",
+    "done": "密码已更改",
+    "doneHint": "您现在可以使用新密码登录。",
+    "noToken": "链接无效",
+    "noTokenHint": "请重新申请重置链接。"
+  },
+  "orderConfirm": {
+    "title": "订单",
+    "paid": "订单已确认",
+    "paidHint": "您将收到包含订单详情的邮件。",
+    "pending": "付款待确认",
+    "pendingHint": "付款完成后订单即确认。",
+    "failed": "付款失败",
+    "failedHint": "请从订单页重试。",
+    "orderNumber": "订单号"
+  },
+  "teleConfirm": {
+    "title": "远程问诊",
+    "paid": "问诊已确认",
+    "paidHint": "请在预约时间打开应用开始视频通话。",
+    "pending": "付款待确认",
+    "pendingHint": "付款完成后问诊即确认。",
+    "failed": "付款失败",
+    "failedHint": "请从远程问诊页重试。",
+    "sessionNumber": "问诊编号"
+  },
+  "medical": {
+    "title": "健康中心",
+    "subtitle": "您宠物的所有健康工具集中于此。",
+    "aiActive": "AI 功能已启用",
+    "aiInactive": "AI 功能需要订阅",
+    "trialDaysLeft": "试用还剩 {{count}} 天",
+    "needsPlan": "需要订阅"
   }
 }

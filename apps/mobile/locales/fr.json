@@ -855,5 +855,73 @@
     "pros": "Avantages",
     "cons": "Inconvénients",
     "health": "Problèmes de santé"
+  },
+  "legal": {
+    "title": "Conseiller juridique",
+    "subtitle": "Posez vos questions sur les droits et devoirs du propriétaire.",
+    "examples": "Exemples de questions",
+    "q1": "Quelles sont mes obligations si mon chien mord quelqu'un ?",
+    "q2": "Mon propriétaire peut-il m'expulser parce que j'ai un chat ?",
+    "q3": "De quoi ai-je besoin pour voyager avec mon animal ?",
+    "q4": "La puce est-elle obligatoire ?",
+    "answer": "Réponse",
+    "steps": "Que faire",
+    "references": "Références",
+    "placeholder": "Saisissez votre question",
+    "ask": "Demander",
+    "errAsk": "Impossible de joindre le conseiller",
+    "disclaimer": "Ces réponses sont informatives et ne constituent pas un conseil juridique.",
+    "lawyers": "Avocats",
+    "urgency_low": "Faible",
+    "urgency_medium": "Moyenne",
+    "urgency_high": "Élevée"
+  },
+  "subscribe": {
+    "title": "Abonnement mensuel",
+    "monthlyPrice": "Prélèvement mensuel",
+    "youSave": "Vous économisez {{amount}} € par mois",
+    "benefitDelivery": "Livraison automatique chaque mois",
+    "benefitFlexible": "Modifiez ou suspendez quand vous voulez",
+    "benefitCancel": "Résiliation à tout moment",
+    "start": "Démarrer l'abonnement",
+    "vivaNote": "Le paiement est géré par Viva et se répète chaque mois."
+  },
+  "reset": {
+    "subtitle": "Choisissez un nouveau mot de passe.",
+    "confirm": "Confirmer le mot de passe",
+    "mismatch": "Les mots de passe ne correspondent pas",
+    "submit": "Modifier le mot de passe",
+    "done": "Mot de passe modifié",
+    "doneHint": "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "noToken": "Le lien n'est pas valide",
+    "noTokenHint": "Demandez un nouveau lien de réinitialisation."
+  },
+  "orderConfirm": {
+    "title": "Commande",
+    "paid": "Commande confirmée",
+    "paidHint": "Vous recevrez un e-mail avec les détails.",
+    "pending": "Paiement en attente",
+    "pendingHint": "Dès que le paiement aboutit, la commande est confirmée.",
+    "failed": "Le paiement a échoué",
+    "failedHint": "Réessayez depuis vos commandes.",
+    "orderNumber": "Numéro de commande"
+  },
+  "teleConfirm": {
+    "title": "Télémédecine",
+    "paid": "Séance confirmée",
+    "paidHint": "Ouvrez l'application à l'heure du rendez-vous pour démarrer la visio.",
+    "pending": "Paiement en attente",
+    "pendingHint": "Dès que le paiement aboutit, la séance est confirmée.",
+    "failed": "Le paiement a échoué",
+    "failedHint": "Réessayez depuis la télémédecine.",
+    "sessionNumber": "Numéro de séance"
+  },
+  "medical": {
+    "title": "Centre de santé",
+    "subtitle": "Tous les outils de santé de votre animal au même endroit.",
+    "aiActive": "Les fonctions IA sont actives",
+    "aiInactive": "Les fonctions IA nécessitent une formule",
+    "trialDaysLeft": "{{count}} jours d'essai restants",
+    "needsPlan": "Formule requise"
   }
 }

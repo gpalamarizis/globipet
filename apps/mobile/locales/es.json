@@ -855,5 +855,73 @@
     "pros": "Pros",
     "cons": "Contras",
     "health": "Problemas de salud"
+  },
+  "legal": {
+    "title": "Asesor legal",
+    "subtitle": "Pregunta sobre derechos y obligaciones del dueño de una mascota.",
+    "examples": "Preguntas de ejemplo",
+    "q1": "¿Qué obligaciones tengo si mi perro muerde a alguien?",
+    "q2": "¿Puede mi casero echarme por tener un gato?",
+    "q3": "¿Qué necesito para viajar con mi mascota?",
+    "q4": "¿Es obligatorio el microchip?",
+    "answer": "Respuesta",
+    "steps": "Qué hacer",
+    "references": "Referencias",
+    "placeholder": "Escribe tu pregunta",
+    "ask": "Preguntar",
+    "errAsk": "No se pudo contactar con el asesor",
+    "disclaimer": "Las respuestas son informativas y no constituyen asesoramiento legal.",
+    "lawyers": "Abogados",
+    "urgency_low": "Baja",
+    "urgency_medium": "Media",
+    "urgency_high": "Alta"
+  },
+  "subscribe": {
+    "title": "Suscripción mensual",
+    "monthlyPrice": "Cargo mensual",
+    "youSave": "Ahorras {{amount}} € al mes",
+    "benefitDelivery": "Entrega automática cada mes",
+    "benefitFlexible": "Cambia o pausa cuando quieras",
+    "benefitCancel": "Cancela cuando quieras",
+    "start": "Iniciar suscripción",
+    "vivaNote": "El pago se realiza a través de Viva y se repite cada mes."
+  },
+  "reset": {
+    "subtitle": "Elige una nueva contraseña para tu cuenta.",
+    "confirm": "Confirmar contraseña",
+    "mismatch": "Las contraseñas no coinciden",
+    "submit": "Cambiar contraseña",
+    "done": "Contraseña cambiada",
+    "doneHint": "Ya puedes iniciar sesión con tu nueva contraseña.",
+    "noToken": "El enlace no es válido",
+    "noTokenHint": "Solicita un nuevo enlace de restablecimiento."
+  },
+  "orderConfirm": {
+    "title": "Pedido",
+    "paid": "Pedido confirmado",
+    "paidHint": "Recibirás un email con los datos del pedido.",
+    "pending": "Pago pendiente",
+    "pendingHint": "En cuanto se complete el cobro, el pedido se confirma.",
+    "failed": "El pago ha fallado",
+    "failedHint": "Inténtalo de nuevo desde tus pedidos.",
+    "orderNumber": "Número de pedido"
+  },
+  "teleConfirm": {
+    "title": "Telemedicina",
+    "paid": "Sesión confirmada",
+    "paidHint": "Abre la app a la hora de la cita para iniciar la videollamada.",
+    "pending": "Pago pendiente",
+    "pendingHint": "En cuanto se complete el cobro, la sesión se confirma.",
+    "failed": "El pago ha fallado",
+    "failedHint": "Inténtalo de nuevo desde telemedicina.",
+    "sessionNumber": "Número de sesión"
+  },
+  "medical": {
+    "title": "Centro de salud",
+    "subtitle": "Todas las herramientas de salud de tu mascota en un solo lugar.",
+    "aiActive": "Las funciones de IA están activas",
+    "aiInactive": "Las funciones de IA requieren un plan",
+    "trialDaysLeft": "Quedan {{count}} días de prueba",
+    "needsPlan": "Requiere plan"
   }
 }

@@ -151,6 +151,14 @@ export default function ProductDetailScreen() {
           </Card>
         )}
 
+        {/* Συνδρομή: μόνο όπου το προϊόν τη δέχεται. Ο server έχει το
+            subscription_enabled· χωρίς αυτό το κουμπί θα οδηγούσε σε
+            σφάλμα «δεν διαθέτει συνδρομή». */}
+        {product.subscription_enabled && (
+          <Button label={t('subscribe.title')} variant="secondary"
+            onPress={() => router.push(`/product-subscribe?id=${id}` as any)} full />
+        )}
+
         {!isAuthenticated ? (
           <Button label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} full />
         ) : (

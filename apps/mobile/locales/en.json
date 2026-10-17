@@ -855,5 +855,73 @@
     "pros": "Pros",
     "cons": "Cons",
     "health": "Health issues"
+  },
+  "legal": {
+    "title": "Legal advisor",
+    "subtitle": "Ask about the rights and duties of a pet owner.",
+    "examples": "Example questions",
+    "q1": "What are my obligations if my dog bites someone?",
+    "q2": "Can my landlord evict me because I have a cat?",
+    "q3": "What do I need to travel with my pet?",
+    "q4": "Is a microchip mandatory?",
+    "answer": "Answer",
+    "steps": "What to do",
+    "references": "References",
+    "placeholder": "Type your question",
+    "ask": "Ask",
+    "errAsk": "Could not reach the advisor",
+    "disclaimer": "These answers are informational and are not legal advice.",
+    "lawyers": "Lawyers",
+    "urgency_low": "Low",
+    "urgency_medium": "Medium",
+    "urgency_high": "High"
+  },
+  "subscribe": {
+    "title": "Monthly subscription",
+    "monthlyPrice": "Monthly charge",
+    "youSave": "You save €{{amount}} a month",
+    "benefitDelivery": "Automatic delivery every month",
+    "benefitFlexible": "Change or pause whenever you want",
+    "benefitCancel": "Cancel at any time",
+    "start": "Start the subscription",
+    "vivaNote": "Payment is handled by Viva and repeats every month."
+  },
+  "reset": {
+    "subtitle": "Choose a new password for your account.",
+    "confirm": "Confirm password",
+    "mismatch": "The passwords do not match",
+    "submit": "Change password",
+    "done": "Your password has been changed",
+    "doneHint": "You can now sign in with your new password.",
+    "noToken": "The link is not valid",
+    "noTokenHint": "Request a new reset link."
+  },
+  "orderConfirm": {
+    "title": "Order",
+    "paid": "Your order is confirmed",
+    "paidHint": "You will receive an email with the order details.",
+    "pending": "Payment pending",
+    "pendingHint": "Once the payment goes through, the order is confirmed.",
+    "failed": "The payment failed",
+    "failedHint": "Try again from your orders.",
+    "orderNumber": "Order number"
+  },
+  "teleConfirm": {
+    "title": "Telehealth",
+    "paid": "Your session is confirmed",
+    "paidHint": "Open the app at the appointment time to start the video call.",
+    "pending": "Payment pending",
+    "pendingHint": "Once the payment goes through, the session is confirmed.",
+    "failed": "The payment failed",
+    "failedHint": "Try again from telehealth.",
+    "sessionNumber": "Session number"
+  },
+  "medical": {
+    "title": "Health centre",
+    "subtitle": "All your pet's health tools in one place.",
+    "aiActive": "AI features are active",
+    "aiInactive": "AI features need a plan",
+    "trialDaysLeft": "{{count}} trial days left",
+    "needsPlan": "Needs a plan"
   }
 }

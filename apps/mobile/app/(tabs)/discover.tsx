@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog } from 'lucide-react-native'
+import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 
@@ -20,6 +20,7 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  */
 
 const SECTIONS = [
+  { key: 'medical', Icon: HeartPulse, titleKey: 'medical.title', subKey: 'medical.subtitle', route: '/medical-center', tint: 'veterinary' },
   { key: 'telehealth',  Icon: Stethoscope, titleKey: 'profile.menu.telehealth',      subKey: 'discover.book_online',   route: '/telehealth', tint: 'veterinary' },
   { key: 'passport',    Icon: FileText,    titleKey: 'discover.medical_record', subKey: 'discover.full_history',   route: '/passport',   tint: 'pharmacy' },
   { key: 'ai-health',   Icon: Brain,       titleKey: 'cat.ai_health',          subKey: 'discover.photo_analysis',      route: '/ai-health',  tint: 'training' },
@@ -27,6 +28,7 @@ const SECTIONS = [
   { key: 'forum',  Icon: MessagesSquare, titleKey: 'forum.title',  subKey: 'forum.emptyHint',  route: '/forum',  tint: 'training' },
   { key: 'events', Icon: CalendarDays,   titleKey: 'events.title', subKey: 'events.emptyHint', route: '/events', tint: 'hosting' },
   { key: 'breeds', Icon: Dog,            titleKey: 'breeds.title', subKey: 'breeds.search',    route: '/breeds', tint: 'grooming' },
+  { key: 'legal', Icon: Scale, titleKey: 'legal.title', subKey: 'legal.subtitle', route: '/pet-legal', tint: 'veterinary' },
   { key: 'ai-emotion',  Icon: Heart,       titleKey: 'discover.ai_emotion',        subKey: 'discover.how_pet_feels',     route: '/ai-emotion', tint: 'grooming' },
   { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
   { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },
