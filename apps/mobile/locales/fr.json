@@ -812,5 +812,48 @@
     "empty": "Votre liste est vide",
     "emptyHint": "Appuyez sur le cœur d'un produit pour le garder ici.",
     "loginPrompt": "Connectez-vous pour voir votre liste"
+  },
+  "forum": {
+    "title": "Forum",
+    "newTopic": "Nouveau sujet",
+    "topicTitle": "Titre",
+    "content": "Contenu",
+    "publish": "Publier",
+    "empty": "Aucun sujet",
+    "emptyHint": "Soyez le premier à poser une question.",
+    "replies": "{{count}} réponses",
+    "noReplies": "Aucune réponse",
+    "yourReply": "Votre réponse",
+    "sendReply": "Envoyer",
+    "notFound": "Sujet introuvable",
+    "catHealth": "Santé",
+    "catNutrition": "Alimentation",
+    "catBehaviour": "Comportement",
+    "catGeneral": "Général"
+  },
+  "events": {
+    "title": "Événements",
+    "empty": "Aucun événement",
+    "emptyHint": "Dès qu'un événement est annoncé, il apparaîtra ici.",
+    "register": "S'inscrire",
+    "registered": "Inscription enregistrée",
+    "alreadyRegistered": "Vous êtes déjà inscrit",
+    "notFound": "Événement introuvable"
+  },
+  "breeds": {
+    "title": "Races",
+    "search": "Rechercher une race",
+    "kidFriendly": "Bon avec les enfants",
+    "petFriendly": "Bon avec d'autres animaux",
+    "apartment": "Adapté à un appartement",
+    "size": "Taille",
+    "origin": "Origine",
+    "lifespan": "Espérance de vie",
+    "years": "{{min}}–{{max}} ans",
+    "exercise": "Besoin d'exercice",
+    "grooming": "Toilettage",
+    "pros": "Avantages",
+    "cons": "Inconvénients",
+    "health": "Problèmes de santé"
   }
 }

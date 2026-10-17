@@ -812,5 +812,48 @@
     "empty": "Your wishlist is empty",
     "emptyHint": "Tap the heart on a product to keep it here.",
     "loginPrompt": "Log in to see your wishlist"
+  },
+  "forum": {
+    "title": "Forum",
+    "newTopic": "New topic",
+    "topicTitle": "Title",
+    "content": "Content",
+    "publish": "Publish",
+    "empty": "No topics yet",
+    "emptyHint": "Be the first to ask something.",
+    "replies": "{{count}} replies",
+    "noReplies": "No replies yet",
+    "yourReply": "Your reply",
+    "sendReply": "Send",
+    "notFound": "Topic not found",
+    "catHealth": "Health",
+    "catNutrition": "Nutrition",
+    "catBehaviour": "Behaviour",
+    "catGeneral": "General"
+  },
+  "events": {
+    "title": "Events",
+    "empty": "No events",
+    "emptyHint": "As soon as one is announced, it will appear here.",
+    "register": "Register",
+    "registered": "You are registered",
+    "alreadyRegistered": "You are already registered",
+    "notFound": "Event not found"
+  },
+  "breeds": {
+    "title": "Breeds",
+    "search": "Search for a breed",
+    "kidFriendly": "Good with children",
+    "petFriendly": "Good with other pets",
+    "apartment": "Suits an apartment",
+    "size": "Size",
+    "origin": "Origin",
+    "lifespan": "Life expectancy",
+    "years": "{{min}}–{{max}} years",
+    "exercise": "Exercise needs",
+    "grooming": "Grooming",
+    "pros": "Pros",
+    "cons": "Cons",
+    "health": "Health issues"
   }
 }

@@ -812,5 +812,48 @@
     "empty": "心愿单是空的",
     "emptyHint": "点击商品上的爱心即可收藏。",
     "loginPrompt": "登录后查看心愿单"
+  },
+  "forum": {
+    "title": "论坛",
+    "newTopic": "新主题",
+    "topicTitle": "标题",
+    "content": "内容",
+    "publish": "发布",
+    "empty": "还没有主题",
+    "emptyHint": "成为第一个提问的人。",
+    "replies": "{{count}} 条回复",
+    "noReplies": "还没有回复",
+    "yourReply": "您的回复",
+    "sendReply": "发送",
+    "notFound": "未找到主题",
+    "catHealth": "健康",
+    "catNutrition": "营养",
+    "catBehaviour": "行为",
+    "catGeneral": "综合"
+  },
+  "events": {
+    "title": "活动",
+    "empty": "暂无活动",
+    "emptyHint": "活动公布后将显示在此处。",
+    "register": "报名",
+    "registered": "报名成功",
+    "alreadyRegistered": "您已报名",
+    "notFound": "未找到活动"
+  },
+  "breeds": {
+    "title": "品种",
+    "search": "搜索品种",
+    "kidFriendly": "适合有孩家庭",
+    "petFriendly": "与其他宠物相处好",
+    "apartment": "适合公寓",
+    "size": "体型",
+    "origin": "原产地",
+    "lifespan": "寿命",
+    "years": "{{min}}–{{max}} 年",
+    "exercise": "运动需求",
+    "grooming": "美容需求",
+    "pros": "优点",
+    "cons": "缺点",
+    "health": "健康问题"
   }
 }

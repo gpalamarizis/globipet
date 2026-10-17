@@ -812,5 +812,48 @@
     "empty": "Tu lista está vacía",
     "emptyHint": "Pulsa el corazón en un producto para guardarlo aquí.",
     "loginPrompt": "Inicia sesión para ver tu lista"
+  },
+  "forum": {
+    "title": "Foro",
+    "newTopic": "Nuevo tema",
+    "topicTitle": "Título",
+    "content": "Contenido",
+    "publish": "Publicar",
+    "empty": "Aún no hay temas",
+    "emptyHint": "Sé el primero en preguntar algo.",
+    "replies": "{{count}} respuestas",
+    "noReplies": "Aún no hay respuestas",
+    "yourReply": "Tu respuesta",
+    "sendReply": "Enviar",
+    "notFound": "Tema no encontrado",
+    "catHealth": "Salud",
+    "catNutrition": "Nutrición",
+    "catBehaviour": "Comportamiento",
+    "catGeneral": "General"
+  },
+  "events": {
+    "title": "Eventos",
+    "empty": "No hay eventos",
+    "emptyHint": "En cuanto se anuncie alguno, aparecerá aquí.",
+    "register": "Inscribirse",
+    "registered": "Inscripción registrada",
+    "alreadyRegistered": "Ya estás inscrito",
+    "notFound": "Evento no encontrado"
+  },
+  "breeds": {
+    "title": "Razas",
+    "search": "Buscar raza",
+    "kidFriendly": "Bueno con niños",
+    "petFriendly": "Bueno con otras mascotas",
+    "apartment": "Apto para piso",
+    "size": "Tamaño",
+    "origin": "Origen",
+    "lifespan": "Esperanza de vida",
+    "years": "{{min}}–{{max}} años",
+    "exercise": "Necesidad de ejercicio",
+    "grooming": "Cuidado del pelo",
+    "pros": "Pros",
+    "cons": "Contras",
+    "health": "Problemas de salud"
   }
 }
