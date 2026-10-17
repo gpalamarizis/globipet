@@ -158,7 +158,7 @@ export default function AiHealthScreen() {
           </Text>
           {expired ? (
             <Button label={t('ai.see_plans')} full
-              onPress={() => Linking.openURL(MEDICAL_CENTER_URL)}
+              onPress={() => router.push('/pricing' as any)}
               style={{ marginTop: space.xl }} />
           ) : (
             <Button label={t('ai.start_trial')} full

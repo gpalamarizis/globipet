@@ -777,5 +777,25 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "browserNote": "The connection opens in your browser. Once you grant access, come back to the app."
+  },
+  "productDetail": {
+    "quantity": "Quantity",
+    "addToCart": "Add to cart",
+    "reviews": "Reviews"
+  },
+  "petDetail": {
+    "lostNotice": "This pet is reported lost"
+  },
+  "pricing": {
+    "title": "AI subscriptions",
+    "subtitle": "Choose a plan to use all the AI health tools.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "perMonth": "/month",
+    "billedAnnually": "Billed €{{amount}} a year",
+    "recommended": "Recommended",
+    "choose": "Choose this plan",
+    "noPlans": "No plans available",
+    "vivaNote": "Payment is handled by Viva. You can cancel your subscription at any time."
   }
 }

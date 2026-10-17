@@ -777,5 +777,25 @@
     "connect": "连接",
     "disconnect": "断开",
     "browserNote": "连接将在浏览器中打开。授权后请返回应用。"
+  },
+  "productDetail": {
+    "quantity": "数量",
+    "addToCart": "加入购物车",
+    "reviews": "评价"
+  },
+  "petDetail": {
+    "lostNotice": "该宠物已被标记为走失"
+  },
+  "pricing": {
+    "title": "AI 订阅",
+    "subtitle": "选择方案以使用所有 AI 健康工具。",
+    "monthly": "按月",
+    "annual": "按年",
+    "perMonth": "/月",
+    "billedAnnually": "每年收费 €{{amount}}",
+    "recommended": "推荐",
+    "choose": "选择此方案",
+    "noPlans": "暂无可用方案",
+    "vivaNote": "通过 Viva 付款。您可随时取消订阅。"
   }
 }

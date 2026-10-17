@@ -140,7 +140,7 @@ export default function PetsScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} activeOpacity={0.85}
-            onPress={() => router.push(`/passport?pet=${item.id}` as any)}>
+            onPress={() => router.push(`/pets/${item.id}` as any)}>
             <View style={s.avatar}>
               {item.image_url
                 ? <Image source={{ uri: item.image_url }} style={s.avatarImg} />

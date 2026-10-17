@@ -777,5 +777,25 @@
     "connect": "Conectar",
     "disconnect": "Desconectar",
     "browserNote": "La conexión se abre en el navegador. Tras dar permiso, vuelve a la app."
+  },
+  "productDetail": {
+    "quantity": "Cantidad",
+    "addToCart": "Añadir al carrito",
+    "reviews": "Reseñas"
+  },
+  "petDetail": {
+    "lostNotice": "Esta mascota está declarada perdida"
+  },
+  "pricing": {
+    "title": "Suscripciones de IA",
+    "subtitle": "Elige un plan para usar todas las herramientas de salud con IA.",
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "perMonth": "/mes",
+    "billedAnnually": "Cobro de {{amount}} € al año",
+    "recommended": "Recomendado",
+    "choose": "Elegir este plan",
+    "noPlans": "No hay planes disponibles",
+    "vivaNote": "El pago se realiza a través de Viva. Puedes cancelar la suscripción cuando quieras."
   }
 }
