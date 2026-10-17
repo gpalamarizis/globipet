@@ -923,5 +923,29 @@
     "aiInactive": "Las funciones de IA requieren un plan",
     "trialDaysLeft": "Quedan {{count}} días de prueba",
     "needsPlan": "Requiere plan"
+  },
+  "privacy": {
+    "title": "Mis datos",
+    "subtitle": "Puedes obtener una copia de todos tus datos o solicitar la eliminación de tu cuenta.",
+    "exportTitle": "Copia de mis datos",
+    "exportDesc": "Incluye perfil, mascotas, reservas, pedidos, publicaciones, reseñas e historial médico.",
+    "exportAction": "Obtener copia",
+    "exportDone": "Listo",
+    "exportHint": "Tus datos están listos.",
+    "deleteTitle": "Eliminar mi cuenta",
+    "deleteDesc": "Tu cuenta se eliminará definitivamente tras 30 días. Hasta entonces puedes cancelar la solicitud.",
+    "deleteAction": "Solicitar eliminación",
+    "confirmDelete": "Confirmar",
+    "reason": "Motivo (opcional)",
+    "reasonHint": "Nos ayudaría saber por qué te vas.",
+    "deleteRequested": "Solicitud registrada",
+    "deleteRequestedHint": "Tu cuenta se eliminará en 30 días.",
+    "pendingTitle": "Eliminación de cuenta pendiente",
+    "pendingOn": "Tu cuenta se eliminará el {{date}}.",
+    "pendingHint": "Puedes cancelar la solicitud mientras esté pendiente.",
+    "cancelDelete": "Cancelar solicitud",
+    "cancelled": "Cancelada",
+    "cancelledHint": "Tu cuenta sigue activa.",
+    "legalNote": "Derechos conforme a los artículos 17 y 20 del RGPD."
   }
 }

@@ -923,5 +923,29 @@
     "aiInactive": "AI 功能需要订阅",
     "trialDaysLeft": "试用还剩 {{count}} 天",
     "needsPlan": "需要订阅"
+  },
+  "privacy": {
+    "title": "我的数据",
+    "subtitle": "您可以获取所有数据的副本，或申请删除账号。",
+    "exportTitle": "我的数据副本",
+    "exportDesc": "包括个人资料、宠物、预约、订单、动态、评价和病历。",
+    "exportAction": "获取副本",
+    "exportDone": "已就绪",
+    "exportHint": "您的数据已准备好。",
+    "deleteTitle": "删除我的账号",
+    "deleteDesc": "您的账号将在 30 天后永久删除。在此之前可以取消请求。",
+    "deleteAction": "申请删除",
+    "confirmDelete": "确认",
+    "reason": "原因（可选）",
+    "reasonHint": "告诉我们原因会对我们有帮助。",
+    "deleteRequested": "请求已登记",
+    "deleteRequestedHint": "您的账号将在 30 天后删除。",
+    "pendingTitle": "账号删除待处理",
+    "pendingOn": "您的账号将于 {{date}} 删除。",
+    "pendingHint": "在处理期间您可以取消请求。",
+    "cancelDelete": "取消请求",
+    "cancelled": "已取消",
+    "cancelledHint": "您的账号仍然有效。",
+    "legalNote": "依据《通用数据保护条例》第 17 条和第 20 条的权利。"
   }
 }

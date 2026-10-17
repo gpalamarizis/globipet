@@ -9,6 +9,7 @@ import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 import NotificationSettingsCard from '@/components/NotificationSettingsCard'
+import MyDataCard from '@/components/MyDataCard'
 
 const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
 const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
@@ -302,6 +303,9 @@ export default function Profile() {
       {!hasGoogleAuth && (
         <div className="mt-6">
           <ChangeMyPasswordCard />
+
+          {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων */}
+          <MyDataCard />
         </div>
       )}
 

@@ -923,5 +923,29 @@
     "aiInactive": "Les fonctions IA nécessitent une formule",
     "trialDaysLeft": "{{count}} jours d'essai restants",
     "needsPlan": "Formule requise"
+  },
+  "privacy": {
+    "title": "Mes données",
+    "subtitle": "Vous pouvez obtenir une copie de vos données ou demander la suppression de votre compte.",
+    "exportTitle": "Copie de mes données",
+    "exportDesc": "Comprend profil, animaux, réservations, commandes, publications, avis et historique médical.",
+    "exportAction": "Obtenir une copie",
+    "exportDone": "Prêt",
+    "exportHint": "Vos données sont prêtes.",
+    "deleteTitle": "Supprimer mon compte",
+    "deleteDesc": "Votre compte sera définitivement supprimé après 30 jours. Vous pouvez annuler jusque-là.",
+    "deleteAction": "Demander la suppression",
+    "confirmDelete": "Confirmer",
+    "reason": "Motif (facultatif)",
+    "reasonHint": "Cela nous aiderait de savoir pourquoi vous partez.",
+    "deleteRequested": "Demande enregistrée",
+    "deleteRequestedHint": "Votre compte sera supprimé dans 30 jours.",
+    "pendingTitle": "Suppression de compte en attente",
+    "pendingOn": "Votre compte sera supprimé le {{date}}.",
+    "pendingHint": "Vous pouvez annuler tant que la demande est en attente.",
+    "cancelDelete": "Annuler la demande",
+    "cancelled": "Annulée",
+    "cancelledHint": "Votre compte reste actif.",
+    "legalNote": "Droits au titre des articles 17 et 20 du RGPD."
   }
 }

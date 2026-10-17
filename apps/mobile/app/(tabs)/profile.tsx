@@ -26,6 +26,7 @@ const MENU = [
   { key: 'wishlist',   Icon: Heart,       labelKey: 'wishlist.title',            route: '/wishlist' },
   { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
   { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
+  { key: 'privacy',    Icon: ShieldCheck, labelKey: 'privacy.title',             route: '/privacy' },
 ]
 
 export default function ProfileScreen() {

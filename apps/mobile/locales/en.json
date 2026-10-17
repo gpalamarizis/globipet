@@ -923,5 +923,29 @@
     "aiInactive": "AI features need a plan",
     "trialDaysLeft": "{{count}} trial days left",
     "needsPlan": "Needs a plan"
+  },
+  "privacy": {
+    "title": "My data",
+    "subtitle": "You can get a copy of all your data or ask for your account to be deleted.",
+    "exportTitle": "A copy of my data",
+    "exportDesc": "Includes your profile, pets, bookings, orders, posts, reviews and medical history.",
+    "exportAction": "Get a copy",
+    "exportDone": "Ready",
+    "exportHint": "Your data has been prepared.",
+    "deleteTitle": "Delete my account",
+    "deleteDesc": "Your account will be permanently deleted after 30 days. Until then you can cancel the request.",
+    "deleteAction": "Request deletion",
+    "confirmDelete": "Confirm",
+    "reason": "Reason (optional)",
+    "reasonHint": "It would help us to know why you are leaving.",
+    "deleteRequested": "Your request has been recorded",
+    "deleteRequestedHint": "Your account will be deleted in 30 days.",
+    "pendingTitle": "Account deletion pending",
+    "pendingOn": "Your account will be deleted on {{date}}.",
+    "pendingHint": "You can cancel the request while it is pending.",
+    "cancelDelete": "Cancel the request",
+    "cancelled": "Cancelled",
+    "cancelledHint": "Your account stays active.",
+    "legalNote": "Rights under Articles 17 and 20 of the General Data Protection Regulation."
   }
 }
