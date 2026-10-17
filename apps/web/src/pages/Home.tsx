@@ -449,8 +449,8 @@ export default function Home() {
                     to={`/marketplace/${featuredProducts.data[0].id}`}
                     className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-6 flex items-center gap-6 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors"
                   >
-                    {featuredProducts.data[0].imageUrl
-                      ? <img src={featuredProducts.data[0].imageUrl} alt={featuredProducts.data[0].name} className="w-24 h-24 object-contain rounded-xl flex-shrink-0" />
+                    {featuredProducts.data[0].image_url
+                      ? <img src={featuredProducts.data[0].image_url} alt={featuredProducts.data[0].name} className="w-24 h-24 object-contain rounded-xl flex-shrink-0" />
                       : <div className="w-24 h-24 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
                           <ShoppingBag size={32} className="text-brand-900 dark:text-brand-400" />
                         </div>}
@@ -477,8 +477,8 @@ export default function Home() {
                       to={`/marketplace/${product.id}`}
                       className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center gap-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                      {product.imageUrl
-                        ? <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-contain rounded-lg flex-shrink-0" />
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-12 h-12 object-contain rounded-lg flex-shrink-0" />
                         : <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                             <ShoppingBag size={18} className="text-gray-400" />
                           </div>}

@@ -4,6 +4,10 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { detectAndApplyGeoLanguage } from './geoLocale'
 
 const el = {
+  productDetail: {
+    brand: 'Μάρκα',
+    category: 'Κατηγορία',
+  },
   nav: {
     home: 'Αρχική', shop: 'Κατάστημα', marketplace: 'Marketplace',
     services: 'Υπηρεσίες', telehealth: 'Τηλεϊατρική', social: 'Social',
@@ -1200,6 +1204,10 @@ const el = {
 
 // English
 const en: typeof el = {
+  productDetail: {
+    brand: 'Brand',
+    category: 'Category',
+  },
   nav: {
     home: 'Home', shop: 'Shop', marketplace: 'Marketplace',
     services: 'Services', telehealth: 'Telehealth', social: 'Social',
@@ -2348,6 +2356,10 @@ const en: typeof el = {
 
 // Spanish
 const es: typeof el = {
+  productDetail: {
+    brand: 'Marca',
+    category: 'Categoría',
+  },
   nav: {
     home: 'Inicio', shop: 'Tienda', marketplace: 'Marketplace',
     services: 'Servicios', telehealth: 'Telesalud', social: 'Social',
@@ -3496,6 +3508,10 @@ const es: typeof el = {
 
 // French
 const fr: typeof el = {
+  productDetail: {
+    brand: 'Marque',
+    category: 'Catégorie',
+  },
   nav: {
     home: 'Accueil', shop: 'Boutique', marketplace: 'Marketplace',
     services: 'Services', telehealth: 'Télésanté', social: 'Social',
@@ -4644,6 +4660,10 @@ const fr: typeof el = {
 
 // Chinese
 const zh: typeof el = {
+  productDetail: {
+    brand: '品牌',
+    category: '类别',
+  },
   nav: {
     home: '首页', shop: '商店', marketplace: '市场',
     services: '服务', telehealth: '远程医疗', social: '社交',

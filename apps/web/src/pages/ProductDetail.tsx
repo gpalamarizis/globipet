@@ -282,12 +282,14 @@ export default function ProductDetail() {
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
               {product.description || 'No description available for this product.'}
             </p>
-            {product.weight && (
+            {/* Το Product δεν έχει πεδίο weight: ο έλεγχος ήταν πάντα ψευδής
+                και ο πίνακας χαρακτηριστικών δεν εμφανιζόταν ποτέ. Τώρα
+                εξαρτάται από την κατηγορία, που υπάρχει πάντα. */}
+            {product.category && (
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Weight', value: `${product.weight}g` },
-                  { label: 'Category', value: product.category },
-                  product.brand && { label: 'Brand', value: product.brand },
+                  { label: t('productDetail.category'), value: product.category },
+                  product.brand && { label: t('productDetail.brand'), value: product.brand },
                 ].filter(Boolean).map((attr: any, i) => (
                   <div key={i} className="flex justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm">
                     <span className="text-gray-500">{attr.label}</span>

@@ -248,11 +248,6 @@ export default function ServiceDetail() {
                   <MapPin size={14} /> {service.city}
                 </span>
               )}
-              {service.duration && (
-                <span className="flex items-center gap-1.5">
-                  <Clock size={14} /> {service.duration} {t('bookings.minutes')}
-                </span>
-              )}
               {service.home_visits && (
                 <span className="flex items-center gap-1.5 text-green-600">
                   <Home size={14} /> {t('services.homeVisits')}
@@ -316,16 +311,6 @@ export default function ServiceDetail() {
               )}
 
               {/* Features */}
-              {service.features && service.features.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {service.features.map((f: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                      <Check size={14} className="text-green-500 shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{f}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -585,12 +570,6 @@ export default function ServiceDetail() {
 
             {/* Quick info */}
             <div className="mt-4 space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-              {service.duration && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">{t('serviceDetailExtra.duration')}</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{service.duration} min</span>
-                </div>
-              )}
               {service.city && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">{t('serviceDetailExtra.location')}</span>

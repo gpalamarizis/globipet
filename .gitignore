@@ -294,3 +294,5 @@ backend-logs.json
 credentials.json
 *.jks
 *.keystore
+credentials/ 
+*.jks

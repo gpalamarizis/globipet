@@ -107,7 +107,13 @@ export default function ProductDetailScreen() {
           )}
 
           {!!product.description && <Text style={s.desc}>{product.description}</Text>}
-          {!!product.weight && <Text style={s.meta}>{product.weight}</Text>}
+          {/* Το Product δεν έχει πεδίο βάρους. Στη θέση του δείχνουμε την
+              κατηγορία, που υπάρχει πάντα και βοηθά τον αγοραστή. */}
+          {!!product.category && (
+            <Text style={s.meta}>
+              {t(`marketplace.categories.${product.category}`, { defaultValue: product.category })}
+            </Text>
+          )}
         </Card>
 
         {!outOfStock && (
@@ -152,9 +158,9 @@ export default function ProductDetailScreen() {
         )}
 
         {/* Συνδρομή: μόνο όπου το προϊόν τη δέχεται. Ο server έχει το
-            subscription_enabled· χωρίς αυτό το κουμπί θα οδηγούσε σε
+            is_subscribable· χωρίς αυτό το κουμπί θα οδηγούσε σε
             σφάλμα «δεν διαθέτει συνδρομή». */}
-        {product.subscription_enabled && (
+        {product.is_subscribable && (
           <Button label={t('subscribe.title')} variant="secondary"
             onPress={() => router.push(`/product-subscribe?id=${id}` as any)} full />
         )}
