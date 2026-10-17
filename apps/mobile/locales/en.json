@@ -369,7 +369,8 @@
     "trial_failed": "The trial could not be started",
     "trial_over": "Your trial has ended",
     "trial_sub": "With a subscription you keep using all the AI health tools.",
-    "try_free": "Try it free"
+    "try_free": "Try it free",
+    "analysing": "Analysing…"
   },
   "bookings": {
     "cancel": "Cancel booking",
@@ -797,5 +798,19 @@
     "choose": "Choose this plan",
     "noPlans": "No plans available",
     "vivaNote": "Payment is handled by Viva. You can cancel your subscription at any time."
+  },
+  "stool": {
+    "title": "Sample analysis",
+    "subtitle": "Photograph a stool or urine sample for a first assessment.",
+    "stool": "Stool",
+    "urine": "Urine",
+    "photoHint": "Good light and a neutral background help the analysis.",
+    "disclaimer": "This analysis is indicative and does not replace a veterinary examination."
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "empty": "Your wishlist is empty",
+    "emptyHint": "Tap the heart on a product to keep it here.",
+    "loginPrompt": "Log in to see your wishlist"
   }
 }

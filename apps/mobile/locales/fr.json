@@ -369,7 +369,8 @@
     "trial_failed": "L'essai n'a pas pu démarrer",
     "trial_over": "Votre essai est terminé",
     "trial_sub": "Avec un abonnement, vous gardez tous les outils de santé IA.",
-    "try_free": "Essayez gratuitement"
+    "try_free": "Essayez gratuitement",
+    "analysing": "Analyse…"
   },
   "bookings": {
     "cancel": "Annuler la réservation",
@@ -797,5 +798,19 @@
     "choose": "Choisir cette formule",
     "noPlans": "Aucune formule disponible",
     "vivaNote": "Le paiement est géré par Viva. Vous pouvez résilier à tout moment."
+  },
+  "stool": {
+    "title": "Analyse d'échantillon",
+    "subtitle": "Photographiez un échantillon de selles ou d'urine pour une première évaluation.",
+    "stool": "Selles",
+    "urine": "Urine",
+    "photoHint": "Un bon éclairage et un fond neutre aident l'analyse.",
+    "disclaimer": "Cette analyse est indicative et ne remplace pas un examen vétérinaire."
+  },
+  "wishlist": {
+    "title": "Liste d'envies",
+    "empty": "Votre liste est vide",
+    "emptyHint": "Appuyez sur le cœur d'un produit pour le garder ici.",
+    "loginPrompt": "Connectez-vous pour voir votre liste"
   }
 }

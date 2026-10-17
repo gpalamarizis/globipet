@@ -369,7 +369,8 @@
     "trial_failed": "无法开始试用",
     "trial_over": "试用已结束",
     "trial_sub": "订阅后可继续使用所有 AI 健康工具。",
-    "try_free": "免费试用"
+    "try_free": "免费试用",
+    "analysing": "分析中…"
   },
   "bookings": {
     "cancel": "取消预约",
@@ -797,5 +798,19 @@
     "choose": "选择此方案",
     "noPlans": "暂无可用方案",
     "vivaNote": "通过 Viva 付款。您可随时取消订阅。"
+  },
+  "stool": {
+    "title": "样本分析",
+    "subtitle": "拍摄粪便或尿液样本以获得初步评估。",
+    "stool": "粪便",
+    "urine": "尿液",
+    "photoHint": "良好的光线和中性背景有助于分析。",
+    "disclaimer": "本分析仅供参考，不能替代兽医检查。"
+  },
+  "wishlist": {
+    "title": "心愿单",
+    "empty": "心愿单是空的",
+    "emptyHint": "点击商品上的爱心即可收藏。",
+    "loginPrompt": "登录后查看心愿单"
   }
 }

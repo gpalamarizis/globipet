@@ -369,7 +369,8 @@
     "trial_failed": "No se pudo iniciar la prueba",
     "trial_over": "Tu prueba ha terminado",
     "trial_sub": "Con una suscripción sigues usando todas las herramientas de salud con IA.",
-    "try_free": "Pruébalo gratis"
+    "try_free": "Pruébalo gratis",
+    "analysing": "Analizando…"
   },
   "bookings": {
     "cancel": "Cancelar reserva",
@@ -797,5 +798,19 @@
     "choose": "Elegir este plan",
     "noPlans": "No hay planes disponibles",
     "vivaNote": "El pago se realiza a través de Viva. Puedes cancelar la suscripción cuando quieras."
+  },
+  "stool": {
+    "title": "Análisis de muestra",
+    "subtitle": "Fotografía una muestra de heces u orina para una primera evaluación.",
+    "stool": "Heces",
+    "urine": "Orina",
+    "photoHint": "Buena luz y fondo neutro ayudan al análisis.",
+    "disclaimer": "El análisis es orientativo y no sustituye un examen veterinario."
+  },
+  "wishlist": {
+    "title": "Lista de deseos",
+    "empty": "Tu lista está vacía",
+    "emptyHint": "Pulsa el corazón en un producto para guardarlo aquí.",
+    "loginPrompt": "Inicia sesión para ver tu lista"
   }
 }
