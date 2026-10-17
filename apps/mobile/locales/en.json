@@ -624,7 +624,10 @@
     "staff": "Staff",
     "customers": "Customers",
     "campaigns": "Campaigns",
-    "more": "More"
+    "more": "More",
+    "insights": "Insights",
+    "translations": "Translations",
+    "calendar": "Calendar"
   },
   "providerDash": {
     "title": "Provider dashboard",
@@ -641,7 +644,12 @@
     "changePractitioner": "Change practitioner",
     "noPractitioner": "— no practitioner —",
     "category": "Category",
-    "priceEur": "Price (€)"
+    "priceEur": "Price (€)",
+    "connectGoogle": "Google Calendar",
+    "connectMicrosoft": "Microsoft Outlook",
+    "calendarSyncHint": "Connect your calendar to sync bookings automatically.",
+    "errConnect": "Could not connect",
+    "errNoAuthUrl": "No sign-in URL was returned"
   },
   "providerStaff": {
     "empty": "You have not added staff yet"
@@ -741,5 +749,33 @@
   },
   "providerCampaignNew": {
     "title": "New campaign"
+  },
+  "providerInsights": {
+    "popularSearches": "Popular searches",
+    "shopCategories": "Shop categories",
+    "noData": "No data yet",
+    "noDataHint": "They will appear once searches and orders start coming in."
+  },
+  "providerTrn": {
+    "tabServices": "Services",
+    "tabPackages": "Packages",
+    "tabProducts": "Products",
+    "subtitle": "Fill in the English so foreign-language customers can find you. Anything left blank falls back to Greek.",
+    "greek": "Greek",
+    "english": "English",
+    "missingEn": "EN missing",
+    "emptyCategory": "There is no content in this category",
+    "emptyHint": "Leave a field blank to remove its translation.",
+    "fTitle": "Title in English",
+    "fDescription": "Description in English",
+    "save": "Save",
+    "saving": "Saving…",
+    "errSave": "Could not save"
+  },
+  "providerCal": {
+    "connected": "Connected",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "browserNote": "The connection opens in your browser. Once you grant access, come back to the app."
   }
 }

@@ -624,7 +624,10 @@
     "staff": "员工",
     "customers": "客户",
     "campaigns": "活动",
-    "more": "更多"
+    "more": "更多",
+    "insights": "数据",
+    "translations": "翻译",
+    "calendar": "日历"
   },
   "providerDash": {
     "title": "服务商面板",
@@ -641,7 +644,12 @@
     "changePractitioner": "更换接诊人员",
     "noPractitioner": "— 不指定 —",
     "category": "类别",
-    "priceEur": "价格 (€)"
+    "priceEur": "价格 (€)",
+    "connectGoogle": "Google 日历",
+    "connectMicrosoft": "Microsoft Outlook",
+    "calendarSyncHint": "连接您的日历以自动同步预约。",
+    "errConnect": "无法连接",
+    "errNoAuthUrl": "未返回登录地址"
   },
   "providerStaff": {
     "empty": "您还没有添加员工"
@@ -741,5 +749,33 @@
   },
   "providerCampaignNew": {
     "title": "新建活动"
+  },
+  "providerInsights": {
+    "popularSearches": "热门搜索",
+    "shopCategories": "商城类别",
+    "noData": "暂无数据",
+    "noDataHint": "搜索和订单开始后将显示。"
+  },
+  "providerTrn": {
+    "tabServices": "服务",
+    "tabPackages": "套餐",
+    "tabProducts": "产品",
+    "subtitle": "填写英文以便外语客户找到您。留空处将显示希腊语。",
+    "greek": "希腊语",
+    "english": "英语",
+    "missingEn": "缺少英文",
+    "emptyCategory": "此类别暂无内容",
+    "emptyHint": "留空即可删除该字段的翻译。",
+    "fTitle": "英文标题",
+    "fDescription": "英文描述",
+    "save": "保存",
+    "saving": "保存中…",
+    "errSave": "保存失败"
+  },
+  "providerCal": {
+    "connected": "已连接",
+    "connect": "连接",
+    "disconnect": "断开",
+    "browserNote": "连接将在浏览器中打开。授权后请返回应用。"
   }
 }

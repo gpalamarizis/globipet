@@ -624,7 +624,10 @@
     "staff": "Personnel",
     "customers": "Clients",
     "campaigns": "Campagnes",
-    "more": "Plus"
+    "more": "Plus",
+    "insights": "Statistiques",
+    "translations": "Traductions",
+    "calendar": "Agenda"
   },
   "providerDash": {
     "title": "Tableau de bord",
@@ -641,7 +644,12 @@
     "changePractitioner": "Changer de praticien",
     "noPractitioner": "— sans praticien —",
     "category": "Catégorie",
-    "priceEur": "Prix (€)"
+    "priceEur": "Prix (€)",
+    "connectGoogle": "Google Agenda",
+    "connectMicrosoft": "Microsoft Outlook",
+    "calendarSyncHint": "Connectez votre agenda pour synchroniser les réservations automatiquement.",
+    "errConnect": "Connexion impossible",
+    "errNoAuthUrl": "Aucune URL de connexion renvoyée"
   },
   "providerStaff": {
     "empty": "Vous n'avez pas encore ajouté de personnel"
@@ -741,5 +749,33 @@
   },
   "providerCampaignNew": {
     "title": "Nouvelle campagne"
+  },
+  "providerInsights": {
+    "popularSearches": "Recherches populaires",
+    "shopCategories": "Catégories de la boutique",
+    "noData": "Pas encore de données",
+    "noDataHint": "Elles apparaîtront dès les premières recherches et commandes."
+  },
+  "providerTrn": {
+    "tabServices": "Services",
+    "tabPackages": "Forfaits",
+    "tabProducts": "Produits",
+    "subtitle": "Renseignez l'anglais pour être trouvé par des clients étrangers. Les champs vides affichent le grec.",
+    "greek": "Grec",
+    "english": "Anglais",
+    "missingEn": "EN manquant",
+    "emptyCategory": "Aucun contenu dans cette catégorie",
+    "emptyHint": "Laissez un champ vide pour supprimer sa traduction.",
+    "fTitle": "Titre en anglais",
+    "fDescription": "Description en anglais",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "errSave": "Échec de l'enregistrement"
+  },
+  "providerCal": {
+    "connected": "Connecté",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "browserNote": "La connexion s'ouvre dans le navigateur. Après autorisation, revenez à l'application."
   }
 }

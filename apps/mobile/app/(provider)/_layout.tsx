@@ -66,6 +66,9 @@ export default function ProviderTabLayout() {
       <Tabs.Screen name="products" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />
       <Tabs.Screen name="campaigns" options={{ href: null }} />
+      <Tabs.Screen name="insights" options={{ href: null }} />
+      <Tabs.Screen name="translations" options={{ href: null }} />
+      <Tabs.Screen name="calendar" options={{ href: null }} />
 
       {TABS.map(({ name, titleKey, Icon }) => (
         <Tabs.Screen key={name} name={name}

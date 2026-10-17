@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe } from 'lucide-react-native'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2 } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -19,6 +19,9 @@ const ITEMS = [
   { key: 'products',  Icon: Package,   labelKey: 'providerTabs.products',  route: '/(provider)/products' },
   { key: 'staff',     Icon: Users,     labelKey: 'providerTabs.staff',     route: '/(provider)/staff' },
   { key: 'campaigns', Icon: Megaphone, labelKey: 'providerTabs.campaigns', route: '/(provider)/campaigns' },
+  { key: 'calendar',  Icon: CalendarDays, labelKey: 'providerTabs.calendar', route: '/(provider)/calendar' },
+  { key: 'insights',  Icon: BarChart3,  labelKey: 'providerTabs.insights',  route: '/(provider)/insights' },
+  { key: 'translations', Icon: Languages2, labelKey: 'providerTabs.translations', route: '/(provider)/translations' },
   { key: 'language',  Icon: Languages, labelKey: 'language.title',         route: '/language' },
 ]
 

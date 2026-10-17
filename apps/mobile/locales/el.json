@@ -624,7 +624,10 @@
     "staff": "Προσωπικό",
     "customers": "Πελάτες",
     "campaigns": "Καμπάνιες",
-    "more": "Περισσότερα"
+    "more": "Περισσότερα",
+    "insights": "Στατιστικά",
+    "translations": "Μεταφράσεις",
+    "calendar": "Ημερολόγιο"
   },
   "providerDash": {
     "title": "Πίνακας παρόχου",
@@ -641,7 +644,12 @@
     "changePractitioner": "Αλλαγή γιατρού",
     "noPractitioner": "— χωρίς γιατρό —",
     "category": "Κατηγορία",
-    "priceEur": "Τιμή (€)"
+    "priceEur": "Τιμή (€)",
+    "connectGoogle": "Google Calendar",
+    "connectMicrosoft": "Microsoft Outlook",
+    "calendarSyncHint": "Συνδέστε το ημερολόγιό σας για αυτόματο συγχρονισμό κρατήσεων.",
+    "errConnect": "Δεν ήταν δυνατή η σύνδεση",
+    "errNoAuthUrl": "Δεν επιστράφηκε διεύθυνση σύνδεσης"
   },
   "providerStaff": {
     "empty": "Δεν έχεις προσθέσει προσωπικό ακόμη"
@@ -741,5 +749,33 @@
   },
   "providerCampaignNew": {
     "title": "Νέα καμπάνια"
+  },
+  "providerInsights": {
+    "popularSearches": "Δημοφιλείς αναζητήσεις",
+    "shopCategories": "Κατηγορίες καταστήματος",
+    "noData": "Δεν υπάρχουν ακόμα δεδομένα",
+    "noDataHint": "Θα εμφανιστούν μόλις αρχίσουν οι αναζητήσεις και οι παραγγελίες."
+  },
+  "providerTrn": {
+    "tabServices": "Υπηρεσίες",
+    "tabPackages": "Πακέτα",
+    "tabProducts": "Προϊόντα",
+    "subtitle": "Συμπλήρωσε τα αγγλικά για να σε βρίσκουν και ξενόγλωσσοι πελάτες. Όπου δεν συμπληρώσεις, εμφανίζεται το ελληνικό.",
+    "greek": "Ελληνικά",
+    "english": "Αγγλικά",
+    "missingEn": "λείπει EN",
+    "emptyCategory": "Δεν υπάρχει περιεχόμενο σε αυτή την κατηγορία",
+    "emptyHint": "Άφησε ένα πεδίο κενό για να αφαιρεθεί η μετάφρασή του.",
+    "fTitle": "Τίτλος στα αγγλικά",
+    "fDescription": "Περιγραφή στα αγγλικά",
+    "save": "Αποθήκευση",
+    "saving": "Αποθήκευση…",
+    "errSave": "Σφάλμα αποθήκευσης"
+  },
+  "providerCal": {
+    "connected": "Συνδεδεμένο",
+    "connect": "Σύνδεση",
+    "disconnect": "Αποσύνδεση",
+    "browserNote": "Η σύνδεση ανοίγει στον browser. Μόλις δώσεις άδεια, επίστρεψε στην εφαρμογή."
   }
 }

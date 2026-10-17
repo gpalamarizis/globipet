@@ -624,7 +624,10 @@
     "staff": "Personal",
     "customers": "Clientes",
     "campaigns": "Campañas",
-    "more": "Más"
+    "more": "Más",
+    "insights": "Estadísticas",
+    "translations": "Traducciones",
+    "calendar": "Calendario"
   },
   "providerDash": {
     "title": "Panel del proveedor",
@@ -641,7 +644,12 @@
     "changePractitioner": "Cambiar profesional",
     "noPractitioner": "— sin profesional —",
     "category": "Categoría",
-    "priceEur": "Precio (€)"
+    "priceEur": "Precio (€)",
+    "connectGoogle": "Google Calendar",
+    "connectMicrosoft": "Microsoft Outlook",
+    "calendarSyncHint": "Conecta tu calendario para sincronizar las reservas automáticamente.",
+    "errConnect": "No se pudo conectar",
+    "errNoAuthUrl": "No se devolvió ninguna URL de acceso"
   },
   "providerStaff": {
     "empty": "Aún no has añadido personal"
@@ -741,5 +749,33 @@
   },
   "providerCampaignNew": {
     "title": "Nueva campaña"
+  },
+  "providerInsights": {
+    "popularSearches": "Búsquedas populares",
+    "shopCategories": "Categorías de la tienda",
+    "noData": "Aún no hay datos",
+    "noDataHint": "Aparecerán cuando empiecen las búsquedas y los pedidos."
+  },
+  "providerTrn": {
+    "tabServices": "Servicios",
+    "tabPackages": "Paquetes",
+    "tabProducts": "Productos",
+    "subtitle": "Completa el inglés para que te encuentren clientes extranjeros. Lo que dejes vacío se mostrará en griego.",
+    "greek": "Griego",
+    "english": "Inglés",
+    "missingEn": "falta EN",
+    "emptyCategory": "No hay contenido en esta categoría",
+    "emptyHint": "Deja un campo vacío para eliminar su traducción.",
+    "fTitle": "Título en inglés",
+    "fDescription": "Descripción en inglés",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "errSave": "No se pudo guardar"
+  },
+  "providerCal": {
+    "connected": "Conectado",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "browserNote": "La conexión se abre en el navegador. Tras dar permiso, vuelve a la app."
   }
 }
