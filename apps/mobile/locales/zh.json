@@ -30,7 +30,9 @@
     "try_again_later": "请稍后再试。",
     "remove": "移除",
     "add": "添加",
-    "email": "邮箱"
+    "email": "邮箱",
+    "edit": "编辑",
+    "delete": "删除"
   },
   "tabs": {
     "home": "首页",
@@ -230,14 +232,24 @@
     "optional": "可选",
     "saving_short": "保存中…",
     "subtitle": "您的宠物及其档案集中管理。",
-    "unknown": "不清楚"
+    "unknown": "不清楚",
+    "editTitle": "编辑宠物",
+    "deleteTitle": "删除宠物",
+    "deleteQ": "确定永久删除 {{name}} 及其记录吗？",
+    "deleteFailed": "删除失败"
   },
   "social": {
     "title": "社区动态",
     "no_posts": "暂无动态",
     "be_first": "成为第一个分享的人。",
     "what_others_share": "其他主人在分享什么",
-    "with_pet": "与 {{name}}"
+    "with_pet": "与 {{name}}",
+    "write": "发布动态",
+    "writeHint": "想分享什么？",
+    "publish": "发布",
+    "comments": "评论",
+    "noComments": "还没有评论",
+    "commentHint": "写评论"
   },
   "profile": {
     "guest_title": "登录后使用",
@@ -256,7 +268,9 @@
     "login_prompt": "登录后查看您的宠物、预约和订单。",
     "logout_question": "要退出登录吗？",
     "no_account": "没有账号？注册",
-    "not_logged_in": "您尚未登录"
+    "not_logged_in": "您尚未登录",
+    "editProfile": "编辑资料",
+    "points": "积分"
   },
   "language": {
     "title": "语言",
@@ -426,7 +440,13 @@
     "none": "还没有社区",
     "none_hint": "第一个社区创建后将显示在此处。",
     "rabbits": "兔类",
-    "subtitle": "找到养同类宠物的人"
+    "subtitle": "找到养同类宠物的人",
+    "create": "新建社区",
+    "nameLabel": "社区名称",
+    "title": "社区",
+    "discussion": "讨论",
+    "noMessages": "还没有消息",
+    "messageHint": "写消息"
   },
   "emo": {
     "angry": "生气",
@@ -566,7 +586,11 @@
     "st_revoked": "已撤销",
     "st_severe": "严重",
     "st_moderate": "中度",
-    "st_mild": "轻度"
+    "st_mild": "轻度",
+    "age_years": "{{count}} 岁",
+    "addRecord": "添加记录",
+    "deleteTitle": "删除记录",
+    "deleteQ": "确定永久删除此记录吗？"
   },
   "play": {
     "create_first": "创建第一个并邀请其他主人。",
@@ -579,7 +603,16 @@
     "mine": "您的",
     "near_city": "{{city}} 附近",
     "near_you": "附近的主人",
-    "none": "附近没有活动"
+    "none": "附近没有活动",
+    "create": "新建活动",
+    "location": "集合地点",
+    "maxParticipants": "最多参与人数",
+    "invitations": "邀请",
+    "invitation": "邀请",
+    "invite": "邀请参加活动",
+    "send": "发送",
+    "inviteSent": "邀请已发送",
+    "inviteSentHint": "对方将在通知中看到。"
   },
   "soon": {
     "title": "手机应用即将推出",
@@ -625,7 +658,18 @@
     "signal_none": "无信号",
     "signal_ok": "良好",
     "signal_weak": "弱",
-    "subtitle": "查看您的宠物在哪里。"
+    "subtitle": "查看您的宠物在哪里。",
+    "addDevice": "添加设备",
+    "addHint": "请输入项圈或包装上的标识码。",
+    "deviceId": "设备标识",
+    "deviceIdHint": "至少 4 个字符",
+    "deviceName": "设备名称",
+    "devices": "设备",
+    "removeTitle": "移除设备",
+    "removeQ": "确定断开该设备？位置历史将保留。",
+    "tokenRotated": "密钥已更新",
+    "newToken": "新密钥",
+    "tokenHint": "请在设备上设置新密钥以继续上报位置。"
   },
   "ver": {
     "about": "简介",
@@ -1005,5 +1049,12 @@
     "cancelled": "已取消",
     "cancelledHint": "您的账号仍然有效。",
     "legalNote": "依据《通用数据保护条例》第 17 条和第 20 条的权利。"
+  },
+  "reviews": {
+    "write": "写评价",
+    "submit": "提交评价",
+    "commentHint": "说说体验如何 — 可选",
+    "thanks": "谢谢",
+    "thanksHint": "您的评价能帮助其他主人做出选择。"
   }
 }

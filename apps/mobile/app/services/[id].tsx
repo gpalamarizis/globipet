@@ -59,6 +59,14 @@ export default function ServiceDetailScreen() {
     enabled: !!id,
   })
 
+  // Κριτικές άλλων πελατών: το web τις δείχνει, το κινητό όχι — και είναι
+  // ό,τι κοιτά πρώτο κανείς πριν κλείσει ραντεβού.
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['service-reviews', id],
+    queryFn: () => api.get(`/reviews?service_id=${id}`).then(r => r.data?.data ?? []),
+    enabled: !!id,
+  })
+
   const { data: staff = [] } = useQuery({
     queryKey: ['service-staff', id],
     queryFn: () => api.get(`/staff/by-service/${id}`).then(r => r.data?.data ?? r.data ?? []),
@@ -307,6 +315,27 @@ export default function ServiceDetailScreen() {
               />
             </View>
 
+            {/* Κριτικές */}
+            {reviews.length > 0 && (
+              <Card>
+                <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
+                {reviews.slice(0, 5).map((r: any) => (
+                  <View key={r.id} style={s.review}>
+                    <View style={s.reviewTop}>
+                      <Text style={s.reviewName} numberOfLines={1}>
+                        {r.user_name ?? r.user_email}
+                      </Text>
+                      <View style={s.ratingRow}>
+                        <Star size={12} color={colors.warning} fill={colors.warning} />
+                        <Text style={s.ratingTxt}>{r.rating}</Text>
+                      </View>
+                    </View>
+                    {!!r.comment && <Text style={s.reviewTxt}>{r.comment}</Text>}
+                  </View>
+                ))}
+              </Card>
+            )}
+
             {/* Σύνολο και κράτηση */}
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>{t('serviceDetail.total')}</Text>
@@ -329,6 +358,13 @@ export default function ServiceDetailScreen() {
 }
 
 const s = StyleSheet.create({
+  sectionTitle: { ...type.emphasis, color: colors.text, marginBottom: space.sm },
+  review: { paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  reviewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  reviewName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, flex: 1 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ratingTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  reviewTxt: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   body: { padding: space.lg, gap: space.lg, paddingBottom: space.xxxl },
 
   title: { ...type.section, color: colors.text },

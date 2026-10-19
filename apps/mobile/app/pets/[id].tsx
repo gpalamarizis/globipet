@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native'
+import { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PawPrint, ShieldCheck, MapPin, AlertTriangle, ChevronRight } from 'lucide-react-native'
+import { PawPrint, ShieldCheck, MapPin, AlertTriangle, ChevronRight, Pencil, Trash2, X } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -31,6 +32,52 @@ export default function PetDetailScreen() {
     queryFn: () => api.get('/tracker/devices').then(r => r.data?.data ?? []),
   })
   const device = devices.find((d: any) => d.pet_id === id)
+
+  // Επεξεργασία: τα πεδία που δέχεται ο server. Το είδος δεν αλλάζει —
+  // ένα ζώο δεν γίνεται άλλο είδος, και η αλλαγή θα χαλούσε τα ιστορικά.
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState<Record<string, string>>({})
+
+  const save = useMutation({
+    mutationFn: () => api.patch(`/pets/${id}`, {
+      name: form.name?.trim(),
+      breed: form.breed?.trim() || undefined,
+      color: form.color?.trim() || undefined,
+      weight: form.weight ? parseFloat(form.weight.replace(',', '.')) : undefined,
+      microchip_number: form.microchip_number?.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-pets'] })
+      setEditing(false)
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const remove = useMutation({
+    mutationFn: () => api.delete(`/pets/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-pets'] })
+      router.replace('/(tabs)/pets' as any)
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('pets.deleteFailed')),
+  })
+
+  const confirmDelete = () =>
+    Alert.alert(t('pets.deleteTitle'), t('pets.deleteQ', { name: pet?.name ?? '' }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => remove.mutate() },
+    ])
+
+  const openEdit = () => {
+    setForm({
+      name: pet?.name ?? '',
+      breed: pet?.breed ?? '',
+      color: pet?.color ?? '',
+      weight: pet?.weight != null ? String(pet.weight) : '',
+      microchip_number: pet?.microchip_number ?? '',
+    })
+    setEditing(true)
+  }
 
   const toggleLost = useMutation({
     mutationFn: () => api.patch(`/pets/${id}`, { is_lost: !pet?.is_lost }),
@@ -114,6 +161,16 @@ export default function PetDetailScreen() {
 
         {/* Η δήλωση απώλειας είναι η πιο επείγουσα ενέργεια: μένει τελευταία
             και ευδιάκριτη, ώστε να βρίσκεται αμέσως σε στιγμή πανικού. */}
+        <View style={s.actions}>
+          <Button label={t('common.edit')} variant="secondary"
+            icon={<Pencil size={18} color={colors.text} />}
+            onPress={openEdit} style={{ flex: 1 }} />
+          <Button label={t('common.delete')} variant="danger"
+            icon={<Trash2 size={18} color={colors.textOnDark} />}
+            loading={remove.isPending}
+            onPress={confirmDelete} style={{ flex: 1 }} />
+        </View>
+
         <Button
           label={pet.is_lost ? t('pets.mark_found') : t('pets.mark_lost')}
           variant={pet.is_lost ? 'secondary' : 'danger'}
@@ -121,11 +178,50 @@ export default function PetDetailScreen() {
           onPress={() => toggleLost.mutate()}
           full style={{ marginTop: space.lg }} />
       </ScrollView>
+
+      {/* Φύλλο επεξεργασίας */}
+      <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <View style={s.sheetHead}>
+              <Text style={s.sheetTitle}>{t('pets.editTitle')}</Text>
+              <TouchableOpacity onPress={() => setEditing(false)}>
+                <X size={icon.md} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ gap: space.sm }} keyboardShouldPersistTaps="handled">
+              {([
+                ['name', 'pets.name'],
+                ['breed', 'pets.breed'],
+                ['color', 'pets.color'],
+                ['weight', 'pets.weight'],
+                ['microchip_number', 'pets.microchip'],
+              ] as const).map(([key, labelKey]) => (
+                <Input key={key} label={t(labelKey)} value={form[key] ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
+                  keyboardType={key === 'weight' ? 'decimal-pad' : 'default'} />
+              ))}
+            </ScrollView>
+            <Button label={t('common.save')}
+              disabled={!form.name?.trim() || save.isPending}
+              loading={save.isPending}
+              onPress={() => save.mutate()} full />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   )
 }
 
 const s = StyleSheet.create({
+  actions: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface, padding: space.lg, gap: space.md,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '85%',
+  },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sheetTitle: { ...type.section, color: colors.text },
   body: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   lostCard: { backgroundColor: colors.dangerBg, borderColor: colors.danger, borderWidth: 1 },
   lostRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },

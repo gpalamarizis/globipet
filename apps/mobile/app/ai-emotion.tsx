@@ -35,6 +35,7 @@ export default function AiEmotionScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [isVideo, setIsVideo] = useState(false)
 
   const pick = async (fromCamera: boolean) => {
     const permission = fromCamera
@@ -51,30 +52,46 @@ export default function AiEmotionScreen() {
     }
 
     const picked = fromCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 })
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 })
 
     if (!picked.canceled && picked.assets?.[0]) {
       setImageUri(picked.assets[0].uri)
+      setIsVideo(picked.assets[0].type === 'video')
       setResult(null)
     }
   }
 
+  /**
+   * Ανάλυση από φωτογραφία ή βίντεο.
+   *
+   * Μια στιγμιαία φωτογραφία πιάνει μία έκφραση· το βίντεο δείχνει κίνηση
+   * και στάση σώματος, που λένε περισσότερα για τη διάθεση. Το web είχε
+   * και τα δύο, το κινητό μόνο φωτογραφία — παρότι το κινητό τραβά βίντεο
+   * ευκολότερα από οτιδήποτε άλλο.
+   */
   const analyze = async () => {
     if (!imageUri) return
     setAnalyzing(true)
     setResult(null)
     try {
       const formData = new FormData()
-      const filename = imageUri.split('/').pop() || 'photo.jpg'
-      formData.append('file', { uri: imageUri, type: 'image/jpeg', name: filename } as any)
+      const ext = isVideo ? 'mp4' : 'jpg'
+      const filename = imageUri.split('/').pop() || `clip.${ext}`
+      formData.append('file', {
+        uri: imageUri,
+        type: isVideo ? 'video/mp4' : 'image/jpeg',
+        name: filename,
+      } as any)
 
       const uploadRes = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      const imageUrl = uploadRes.data?.url || uploadRes.data?.file_url
+      const mediaUrl = uploadRes.data?.url || uploadRes.data?.file_url
 
-      const res = await api.post('/ai/emotion', { image_url: imageUrl })
+      const res = isVideo
+        ? await api.post('/ai/emotion/video', { video_url: mediaUrl })
+        : await api.post('/ai/emotion', { image_url: mediaUrl })
       setResult(res.data)
     } catch (err: any) {
       Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later'))

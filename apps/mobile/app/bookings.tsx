@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, Platform, StatusBar } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, Platform, StatusBar, Modal, TextInput } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Calendar, Clock, MapPin, ArrowLeft, PawPrint } from 'lucide-react-native'
+import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -38,9 +38,30 @@ const TABS = [
 ]
 
 export default function BookingsScreen() {
-  const { t } = useTranslation()
+
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
+
+  // Κριτική: μόνο σε ολοκληρωμένη κράτηση, όπως και στο web.
+  const [reviewing, setReviewing] = useState<any>(null)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post('/reviews', {
+      service_id: reviewing.service_id,
+      booking_id: reviewing.id,
+      rating,
+      comment: comment.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookings'] })
+      setReviewing(null); setComment(''); setRating(5)
+      Alert.alert(t('reviews.thanks'), t('reviews.thanksHint'))
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
   const { isAuthenticated } = useAuthStore()
   const [tab, setTab] = useState('upcoming')
   const [refreshing, setRefreshing] = useState(false)
@@ -75,7 +96,7 @@ export default function BookingsScreen() {
     if (!d) return '—'
     const x = new Date(d)
     return isNaN(x.getTime()) ? d
-      : x.toLocaleDateString('el-GR', { weekday: 'short', day: '2-digit', month: 'short' })
+      : x.toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })
   }
 
   if (!isAuthenticated) return (
@@ -199,16 +220,93 @@ export default function BookingsScreen() {
                     <Text style={s.cancelText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 )}
+                {/* Κριτική μόνο σε ολοκληρωμένη και μόνο μία φορά: ο server
+                    απορρίπτει τη δεύτερη, αλλά δεν έχει νόημα να τη ζητήσουμε. */}
+                {item.status === 'completed' && !item.has_review && (
+                  <TouchableOpacity style={s.reviewBtn} activeOpacity={0.7}
+                    onPress={() => setReviewing(item)}>
+                    <Star size={14} color={colors.warning} />
+                    <Text style={s.reviewText}>{t('reviews.write')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )
         }}
       />
+
+      {/* Φύλλο κριτικής */}
+      <Modal visible={!!reviewing} transparent animationType="slide"
+        onRequestClose={() => setReviewing(null)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <View style={s.sheetHead}>
+              <Text style={s.sheetTitle} numberOfLines={1}>
+                {reviewing?.service?.title ?? t('reviews.write')}
+              </Text>
+              <TouchableOpacity onPress={() => setReviewing(null)}>
+                <X size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.stars}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <TouchableOpacity key={n} onPress={() => setRating(n)} hitSlop={6}>
+                  <Star size={32}
+                    color={n <= rating ? colors.warning : colors.border}
+                    fill={n <= rating ? colors.warning : 'transparent'} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={s.input}
+              value={comment}
+              onChangeText={setComment}
+              placeholder={t('reviews.commentHint')}
+              placeholderTextColor={colors.textLight}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[s.submitBtn, submitReview.isPending && { opacity: 0.6 }]}
+              disabled={submitReview.isPending}
+              onPress={() => submitReview.mutate()}>
+              <Text style={s.submitText}>
+                {submitReview.isPending ? t('providerCus.sending') : t('reviews.submit')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
 
 const s = StyleSheet.create({
+  reviewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: space.md, paddingVertical: space.sm,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.warning,
+  },
+  reviewText: { ...type.caption, color: colors.warning, fontWeight: weight.semibold },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface, padding: space.lg, gap: space.md,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+  },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  sheetTitle: { ...type.section, color: colors.text, flex: 1 },
+  stars: { flexDirection: 'row', justifyContent: 'center', gap: space.sm, paddingVertical: space.md },
+  input: {
+    ...type.body, color: colors.text, minHeight: 90, textAlignVertical: 'top',
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: space.md,
+  },
+  submitBtn: {
+    backgroundColor: colors.brand, borderRadius: radius.lg,
+    paddingVertical: space.md, alignItems: 'center',
+  },
+  submitText: { ...type.body, color: colors.textOnDark, fontWeight: weight.bold },
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: space.lg,

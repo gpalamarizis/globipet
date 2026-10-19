@@ -1,8 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, StatusBar } from 'react-native'
+import { useState } from 'react'
+import { api } from '@/lib/api'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, StatusBar, Modal, TextInput } from 'react-native'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -41,10 +44,80 @@ const MENU = [
 ]
 
 export default function ProfileScreen() {
+
   const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
+
+  const qc = useQueryClient()
+
+  /**
+   * Σύνοψη δραστηριότητας και πόντοι.
+   *
+   * Το web τα δείχνει, το κινητό όχι — ο χρήστης δεν έβλεπε πουθενά πόσες
+   * κρατήσεις έχει κάνει ούτε πόσους πόντους έχει μαζέψει.
+   */
+  const { data: pets = [] } = useQuery({
+    queryKey: ['my-pets'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const { data: myBookings = [] } = useQuery({
+    queryKey: ['my-bookings-count'],
+    queryFn: () => api.get('/bookings/my').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const { data: myOrders = [] } = useQuery({
+    queryKey: ['my-orders-count'],
+    queryFn: () => api.get('/orders/my').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const { data: myReviews = [] } = useQuery({
+    queryKey: ['my-reviews'],
+    queryFn: () => api.get('/reviews/my').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const { data: loyalty } = useQuery({
+    queryKey: ['loyalty'],
+    queryFn: () => api.get('/loyalty').then(r => r.data?.data ?? r.data),
+    enabled: isAuthenticated,
+  })
+
+  // Επεξεργασία προφίλ
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState<Record<string, string>>({})
+
+  const saveProfile = useMutation({
+    mutationFn: () => api.patch('/users/me', {
+      full_name: form.full_name?.trim(),
+      phone: form.phone?.trim() || undefined,
+      city: form.city?.trim() || undefined,
+    }),
+    onSuccess: (r: any) => {
+      useAuthStore.setState(st => ({ user: { ...(st.user as any), ...(r?.data?.data ?? r?.data ?? {}) } } as any))
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setEditing(false)
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const openEdit = () => {
+    setForm({
+      full_name: (user as any)?.full_name ?? '',
+      phone: (user as any)?.phone ?? '',
+      city: (user as any)?.city ?? '',
+    })
+    setEditing(true)
+  }
+
+  const STATS = [
+    { key: 'pets', value: pets.length, labelKey: 'home.my_pets' },
+    { key: 'bookings', value: myBookings.length, labelKey: 'profile.menu.bookings' },
+    { key: 'orders', value: myOrders.length, labelKey: 'profile.menu.orders' },
+    { key: 'points', value: loyalty?.points ?? loyalty?.balance ?? 0, labelKey: 'profile.points' },
+    { key: 'reviews', value: myReviews.length, labelKey: 'productDetail.reviews' },
+  ]
 
   const confirmLogout = () => {
     Alert.alert(t('profile.logout_title'), t('profile.logout_question'), [
@@ -106,6 +179,23 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Σύνοψη δραστηριότητας: τέσσερις αριθμοί που ο χρήστης δεν
+            έβλεπε πουθενά στο κινητό. */}
+        <View style={s.statsGrid}>
+          {STATS.map(st => (
+            <View key={st.key} style={s.stat}>
+              <Text style={s.statValue}>{st.value}</Text>
+              <Text style={s.statLabel} numberOfLines={1}>{t(st.labelKey)}</Text>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity activeOpacity={0.7} style={s.row} onPress={openEdit}>
+          <View style={s.rowIcon}><Pencil size={icon.md} color={colors.brand} /></View>
+          <Text style={s.rowLabel}>{t('profile.editProfile')}</Text>
+          <ChevronRight size={icon.sm} color={colors.textLight} />
+        </TouchableOpacity>
+
         {MENU.map(({ key, Icon, labelKey, route }) => (
           <TouchableOpacity key={key} style={s.row} activeOpacity={0.7}
             onPress={() => router.push(route as any)}>
@@ -122,11 +212,70 @@ export default function ProfileScreen() {
         <LogOut size={icon.md} color={colors.danger} />
         <Text style={s.logoutText}>{t('profile.logout_title')}</Text>
       </TouchableOpacity>
+      <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>{t('profile.editProfile')}</Text>
+            {([
+              ['full_name', 'auth.full_name'],
+              ['phone', 'common.phone'],
+              ['city', 'common.city'],
+            ] as const).map(([key, labelKey]) => (
+              <View key={key}>
+                <Text style={s.inputLabel}>{t(labelKey)}</Text>
+                <TextInput style={s.input} value={form[key] ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
+                  placeholderTextColor={colors.textLight}
+                  keyboardType={key === 'phone' ? 'phone-pad' : 'default'} />
+              </View>
+            ))}
+            <View style={s.sheetActions}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setEditing(false)}>
+                <Text style={s.cancelTxt}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.saveBtn}
+                disabled={!form.full_name?.trim() || saveProfile.isPending}
+                onPress={() => saveProfile.mutate()}>
+                <Text style={s.saveTxt}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.md },
+  stat: {
+    width: '48%', alignItems: 'center', paddingVertical: space.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderLight,
+  },
+  statValue: { ...type.title, color: colors.brand, fontWeight: weight.black },
+  statLabel: { ...type.caption, color: colors.textMuted },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface, padding: space.lg, gap: space.md,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+  },
+  sheetTitle: { ...type.section, color: colors.text },
+  inputLabel: { ...type.caption, color: colors.textMuted, marginBottom: 4 },
+  input: {
+    ...type.body, color: colors.text,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    paddingHorizontal: space.md, paddingVertical: space.sm,
+  },
+  sheetActions: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
+  cancelBtn: {
+    flex: 1, paddingVertical: space.md, alignItems: 'center',
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  cancelTxt: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
+  saveBtn: { flex: 1, paddingVertical: space.md, alignItems: 'center', borderRadius: radius.lg, backgroundColor: colors.brand },
+  saveTxt: { ...type.body, color: colors.textOnDark, fontWeight: weight.bold },
   container: { flex: 1, backgroundColor: colors.bg },
 
   header: {

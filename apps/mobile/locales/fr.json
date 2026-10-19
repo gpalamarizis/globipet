@@ -30,7 +30,9 @@
     "try_again_later": "Réessayez dans un instant.",
     "remove": "Retirer",
     "add": "Ajouter",
-    "email": "E-mail"
+    "email": "E-mail",
+    "edit": "Modifier",
+    "delete": "Supprimer"
   },
   "tabs": {
     "home": "Accueil",
@@ -230,14 +232,24 @@
     "optional": "Facultatif",
     "saving_short": "Enregistrement…",
     "subtitle": "Vos animaux et leur dossier au même endroit.",
-    "unknown": "Je ne sais pas"
+    "unknown": "Je ne sais pas",
+    "editTitle": "Modifier l'animal",
+    "deleteTitle": "Supprimer l'animal",
+    "deleteQ": "Supprimer définitivement {{name}} et son historique ?",
+    "deleteFailed": "Suppression impossible"
   },
   "social": {
     "title": "Fil social",
     "no_posts": "Aucune publication",
     "be_first": "Soyez le premier à partager.",
     "what_others_share": "Ce que partagent les autres propriétaires",
-    "with_pet": "avec {{name}}"
+    "with_pet": "avec {{name}}",
+    "write": "Nouvelle publication",
+    "writeHint": "Que voulez-vous partager ?",
+    "publish": "Publier",
+    "comments": "Commentaires",
+    "noComments": "Aucun commentaire",
+    "commentHint": "Écrire un commentaire"
   },
   "profile": {
     "guest_title": "Connectez-vous pour accéder",
@@ -256,7 +268,9 @@
     "login_prompt": "Connectez-vous pour voir vos animaux, réservations et commandes.",
     "logout_question": "Voulez-vous vous déconnecter ?",
     "no_account": "Pas de compte ? Inscrivez-vous",
-    "not_logged_in": "Vous n'êtes pas connecté"
+    "not_logged_in": "Vous n'êtes pas connecté",
+    "editProfile": "Modifier le profil",
+    "points": "Points"
   },
   "language": {
     "title": "Langue",
@@ -426,7 +440,13 @@
     "none": "Aucune communauté",
     "none_hint": "Dès qu'une première communauté sera créée, elle apparaîtra ici.",
     "rabbits": "Lapins",
-    "subtitle": "Trouvez des personnes avec les mêmes animaux"
+    "subtitle": "Trouvez des personnes avec les mêmes animaux",
+    "create": "Nouvelle communauté",
+    "nameLabel": "Nom de la communauté",
+    "title": "Communautés",
+    "discussion": "Discussion",
+    "noMessages": "Aucun message",
+    "messageHint": "Écrire un message"
   },
   "emo": {
     "angry": "En colère",
@@ -566,7 +586,11 @@
     "st_revoked": "Révoqué",
     "st_severe": "Sévère",
     "st_moderate": "Modérée",
-    "st_mild": "Légère"
+    "st_mild": "Légère",
+    "age_years": "{{count}} ans",
+    "addRecord": "Ajouter une entrée",
+    "deleteTitle": "Supprimer l'entrée",
+    "deleteQ": "Supprimer définitivement cette entrée ?"
   },
   "play": {
     "create_first": "Créez la première et invitez d'autres propriétaires.",
@@ -579,7 +603,16 @@
     "mine": "La vôtre",
     "near_city": "Près de {{city}}",
     "near_you": "Propriétaires près de vous",
-    "none": "Aucune promenade près de vous"
+    "none": "Aucune promenade près de vous",
+    "create": "Nouvelle promenade",
+    "location": "Point de rendez-vous",
+    "maxParticipants": "Nombre maximum de participants",
+    "invitations": "Invitations",
+    "invitation": "Invitation",
+    "invite": "Inviter à une promenade",
+    "send": "Envoyer",
+    "inviteSent": "Invitation envoyée",
+    "inviteSentHint": "Il la verra dans ses notifications."
   },
   "soon": {
     "title": "L'application mobile arrive très bientôt",
@@ -625,7 +658,18 @@
     "signal_none": "Aucun signal",
     "signal_ok": "Bon",
     "signal_weak": "Faible",
-    "subtitle": "Voyez où sont vos animaux."
+    "subtitle": "Voyez où sont vos animaux.",
+    "addDevice": "Ajouter un appareil",
+    "addHint": "Saisissez l'identifiant inscrit sur le collier ou sa boîte.",
+    "deviceId": "Identifiant de l'appareil",
+    "deviceIdHint": "Au moins 4 caractères",
+    "deviceName": "Nom de l'appareil",
+    "devices": "Appareils",
+    "removeTitle": "Retirer l'appareil",
+    "removeQ": "Déconnecter cet appareil ? L'historique des positions est conservé.",
+    "tokenRotated": "La clé a été renouvelée",
+    "newToken": "Nouvelle clé",
+    "tokenHint": "Configurez la nouvelle clé sur l'appareil pour qu'il continue d'envoyer sa position."
   },
   "ver": {
     "about": "À propos",
@@ -1005,5 +1049,12 @@
     "cancelled": "Annulée",
     "cancelledHint": "Votre compte reste actif.",
     "legalNote": "Droits au titre des articles 17 et 20 du RGPD."
+  },
+  "reviews": {
+    "write": "Laisser un avis",
+    "submit": "Envoyer l'avis",
+    "commentHint": "Dites-nous comment ça s'est passé — facultatif",
+    "thanks": "Merci",
+    "thanksHint": "Votre avis aide d'autres propriétaires à choisir."
   }
 }

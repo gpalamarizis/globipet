@@ -34,6 +34,15 @@ export default function TelehealthScreen() {
   const [time, setTime] = useState('10:00')
   const [refreshing, setRefreshing] = useState(false)
 
+  // Το κατοικίδιο που αφορά η συνεδρία: ο γιατρός πρέπει να ξέρει ποιο
+  // ζώο θα δει πριν τη βιντεοκλήση, όχι την ώρα της.
+  const { data: pets = [] } = useQuery({
+    queryKey: ['my-pets'],
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const [petId, setPetId] = useState('')
+
   const { data: availableVets = [], isLoading: loadingNow } = useQuery({
     queryKey: ['vets-now'],
     queryFn: () => api.get('/telehealth/available-now').then(r => r.data?.data ?? []),
@@ -49,6 +58,7 @@ export default function TelehealthScreen() {
 
   const book = useMutation({
     mutationFn: () => api.post('/telehealth', {
+      pet_id: petId || undefined,
       provider_email: selected.provider_email,
       service_id: selected.id,
       scheduled_date: tab === 'now' ? new Date().toISOString().split('T')[0] : date,
@@ -182,6 +192,25 @@ export default function TelehealthScreen() {
               )}
 
               <View style={s.totalRow}>
+            {pets.length > 0 && (
+              <>
+                <Text style={s.label}>{t('serviceDetail.forPet')}</Text>
+                <View style={s.petChips}>
+                  {pets.map((p: any) => {
+                    const on = petId === p.id
+                    return (
+                      <TouchableOpacity key={p.id} activeOpacity={0.7}
+                        style={[s.petChip, on && s.petChipOn]}
+                        onPress={() => setPetId(on ? '' : p.id)}>
+                        <Text style={s.petEmoji}>{p.species === 'cat' ? '🐈' : '🐕'}</Text>
+                        <Text style={[s.petTxt, on && s.petTxtOn]}>{p.name}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </>
+            )}
+
                 <Text style={s.totalLabel}>{t('tele.session_cost')}</Text>
                 <Text style={s.total}>€{selected?.price}</Text>
               </View>
@@ -209,6 +238,17 @@ export default function TelehealthScreen() {
 }
 
 const s = StyleSheet.create({
+  label: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold, marginTop: space.md },
+  petChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.xs },
+  petChip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    paddingHorizontal: space.md, paddingVertical: space.sm,
+    borderRadius: radius.lg, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  petChipOn: { borderColor: colors.brand, backgroundColor: colors.brandTint },
+  petEmoji: { fontSize: 15 },
+  petTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.medium },
+  petTxtOn: { color: colors.brand, fontWeight: weight.bold },
   tabs: { flexDirection: 'row', gap: space.sm, marginBottom: space.lg },
   tab: {
     flex: 1, height: touch.min,

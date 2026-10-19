@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View, Text, StyleSheet, Image, Alert } from 'react-native'
+import { View, Text, StyleSheet, Image, Alert, Modal, TouchableOpacity } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PawPrint, MapPin, Calendar, Clock, Users } from 'lucide-react-native'
+import { PawPrint, MapPin, Calendar, Clock, Users, Plus, Trash2, Check, X, UserPlus } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
-import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader } from '@/components/ui'
+import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -42,7 +42,82 @@ export default function PlaydatesScreen() {
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
+  /**
+   * Δημιουργία και διαγραφή βόλτας.
+   *
+   * Το κινητό μόνο συμμετείχε σε υπάρχουσες. Ο χρήστης που ήθελε να
+   * οργανώσει βόλτα έπρεπε να ανοίξει υπολογιστή — για κάτι που γίνεται
+   * με το τηλέφωνο στο χέρι, στο πάρκο.
+   */
+  const [creating, setCreating] = useState(false)
+  const [pTitle, setPTitle] = useState('')
+  const [pDate, setPDate] = useState(new Date(Date.now() + 864e5).toISOString().slice(0, 10))
+  const [pTime, setPTime] = useState('18:00')
+  const [pLocation, setPLocation] = useState('')
+  const [pCity, setPCity] = useState('')
+  const [pMax, setPMax] = useState('')
+
+  const createPlaydate = useMutation({
+    mutationFn: () => api.post('/playdates', {
+      title: pTitle.trim(),
+      date: pDate,
+      time: pTime,
+      location: pLocation.trim() || undefined,
+      city: pCity.trim() || undefined,
+      max_participants: pMax ? parseInt(pMax, 10) : undefined,
+      is_public: true,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['playdates'] })
+      setCreating(false); setPTitle(''); setPLocation(''); setPMax('')
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const removePlaydate = useMutation({
+    mutationFn: (pid: string) => api.delete(`/playdates/${pid}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
   const { user, isAuthenticated } = useAuthStore()
+
+  /**
+   * Δικές μου βόλτες και προσκλήσεις.
+   *
+   * Το /playdates δείχνει τις δημόσιες κοντά· το /playdates/my δείχνει
+   * όσες διοργανώνει ο χρήστης και τις προσκλήσεις που έλαβε. Χωρίς αυτό,
+   * μια πρόσκληση δεν έφτανε ποτέ στον παραλήπτη.
+   */
+  const { data: mine } = useQuery({
+    queryKey: ['playdates-mine'],
+    queryFn: () => api.get('/playdates/my').then(r => r.data?.data ?? r.data),
+    enabled: isAuthenticated,
+  })
+  const invitations: any[] = mine?.invitations ?? mine?.received ?? []
+
+  const respondInvite = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch(`/playdates/invitation/${id}`, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['playdates-mine'] })
+      qc.invalidateQueries({ queryKey: ['playdates'] })
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const [invitingFor, setInvitingFor] = useState<any>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+
+  const sendInvite = useMutation({
+    mutationFn: () => api.post(`/playdates/${invitingFor.id}/invite`, { email: inviteEmail.trim() }),
+    onSuccess: () => {
+      setInvitingFor(null); setInviteEmail('')
+      Alert.alert(t('play.inviteSent'), t('play.inviteSentHint'))
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
   const [refreshing, setRefreshing] = useState(false)
 
   const { data, isLoading } = useQuery({
@@ -80,6 +155,35 @@ export default function PlaydatesScreen() {
     <Screen title={t('community.walks_meetups')}
       subtitle={data?.userCity ? t('play.near_city', { city: data.userCity }) : undefined}
       onRefresh={onRefresh} refreshing={refreshing}>
+      {invitations.length > 0 && (
+        <Card style={{ marginBottom: space.md }}>
+          <Text style={s.sectionTitle}>{t('play.invitations')}</Text>
+          {invitations.map((inv: any) => (
+            <View key={inv.id} style={s.inviteRow}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.inviteTitle} numberOfLines={1}>
+                  {inv.event?.title ?? inv.title ?? t('play.invitation')}
+                </Text>
+                <Text style={s.inviteMeta} numberOfLines={1}>
+                  {inv.event?.date ?? inv.date} {inv.event?.time ?? inv.time}
+                </Text>
+              </View>
+              <TouchableOpacity style={s.accept}
+                onPress={() => respondInvite.mutate({ id: inv.id, status: 'accepted' })}>
+                <Check size={16} color={colors.success} />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.decline}
+                onPress={() => respondInvite.mutate({ id: inv.id, status: 'declined' })}>
+                <X size={16} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </Card>
+      )}
+
+      <Button label={t('play.create')} icon={<Plus size={18} color={colors.textOnDark} />}
+        onPress={() => setCreating(true)} full style={{ marginBottom: space.md }} />
+
 
       {isLoading ? (
         <SkeletonRows count={3} height={130} />
@@ -188,11 +292,69 @@ export default function PlaydatesScreen() {
           </View>
         </>
       )}
+      <Modal visible={creating} transparent animationType="slide" onRequestClose={() => setCreating(false)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>{t('play.create')}</Text>
+            <Input label={t('providerMkt.fTitleReq')} value={pTitle} onChangeText={setPTitle} />
+            <View style={s.rowTwo}>
+              <View style={{ flex: 1 }}>
+                <Input label={t('serviceDetail.date')} value={pDate} onChangeText={setPDate} placeholder="YYYY-MM-DD" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Input label={t('serviceDetail.time')} value={pTime} onChangeText={setPTime} placeholder="18:00" />
+              </View>
+            </View>
+            <Input label={t('play.location')} value={pLocation} onChangeText={setPLocation} />
+            <Input label={t('common.city')} value={pCity} onChangeText={setPCity} />
+            <Input label={t('play.maxParticipants')} value={pMax} onChangeText={setPMax} keyboardType="number-pad" />
+            <View style={s.sheetActions}>
+              <Button label={t('common.cancel')} variant="secondary"
+                onPress={() => setCreating(false)} style={{ flex: 1 }} />
+              <Button label={t('common.save')}
+                disabled={pTitle.trim().length < 2 || !pDate || createPlaydate.isPending}
+                loading={createPlaydate.isPending}
+                onPress={() => createPlaydate.mutate()} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!invitingFor} transparent animationType="slide" onRequestClose={() => setInvitingFor(null)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>{t('play.invite')}</Text>
+            <Text style={s.inviteMeta}>{invitingFor?.title}</Text>
+            <Input label={t('common.email')} value={inviteEmail} onChangeText={setInviteEmail}
+              keyboardType="email-address" autoCapitalize="none" />
+            <View style={s.sheetActions}>
+              <Button label={t('common.cancel')} variant="secondary"
+                onPress={() => setInvitingFor(null)} style={{ flex: 1 }} />
+              <Button label={t('play.send')}
+                disabled={!inviteEmail.includes('@') || sendInvite.isPending}
+                loading={sendInvite.isPending}
+                onPress={() => sendInvite.mutate()} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </Screen>
   )
 }
 
 const s = StyleSheet.create({
+  sectionTitle: { ...type.emphasis, color: colors.text, marginBottom: space.sm },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  inviteTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  inviteMeta: { ...type.caption, color: colors.textLight },
+  accept: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.success, alignItems: 'center', justifyContent: 'center' },
+  decline: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.surface, padding: space.lg, gap: space.sm, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '88%' },
+  sheetTitle: { ...type.section, color: colors.text },
+  sheetActions: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
+  rowTwo: { flexDirection: 'row', gap: space.md },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.sm },
   iconBox: {
     width: 48, height: 48, borderRadius: radius.md,

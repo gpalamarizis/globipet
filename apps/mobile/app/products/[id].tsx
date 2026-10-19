@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ShoppingBag, Star, Heart, Minus, Plus } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
-import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -48,6 +48,31 @@ export default function ProductDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cart'] })
       Alert.alert(t('marketplace.added'), product?.name ?? '')
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  // Κριτική: ο server λέει αν ο χρήστης δικαιούται — αγόρασε και δεν έχει
+  // ήδη αξιολογήσει. Χωρίς αυτό θα δείχναμε κουμπί που απορρίπτεται.
+  const { data: canReview } = useQuery({
+    queryKey: ['can-review', id],
+    queryFn: () => api.get(`/reviews/can-review?product_id=${id}`).then(r => r.data?.data ?? r.data),
+    enabled: isAuthenticated && !!id,
+  })
+
+  const [reviewing, setReviewing] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post('/reviews', {
+      product_id: id, rating, comment: comment.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['product-reviews', id] })
+      qc.invalidateQueries({ queryKey: ['can-review', id] })
+      setReviewing(false); setComment(''); setRating(5)
+      Alert.alert(t('reviews.thanks'), t('reviews.thanksHint'))
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -141,7 +166,14 @@ export default function ProductDetailScreen() {
 
         {reviews.length > 0 && (
           <Card>
-            <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
+            <View style={s.reviewHead}>
+              <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
+              {(canReview?.can_review ?? canReview?.allowed) && (
+                <TouchableOpacity onPress={() => setReviewing(true)}>
+                  <Text style={s.writeReview}>{t('reviews.write')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {reviews.slice(0, 5).map((r: any) => (
               <View key={r.id} style={s.review}>
                 <View style={s.reviewTop}>
@@ -165,6 +197,13 @@ export default function ProductDetailScreen() {
             onPress={() => router.push(`/product-subscribe?id=${id}` as any)} full />
         )}
 
+        {/* Κουμπί κριτικής και χωρίς υπάρχουσες κριτικές */}
+        {reviews.length === 0 && (canReview?.can_review ?? canReview?.allowed) && (
+          <Button label={t('reviews.write')} variant="secondary"
+            icon={<Star size={18} color={colors.text} />}
+            onPress={() => setReviewing(true)} full />
+        )}
+
         {!isAuthenticated ? (
           <Button label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} full />
         ) : (
@@ -175,12 +214,43 @@ export default function ProductDetailScreen() {
             loading={addToCart.isPending}
             onPress={() => addToCart.mutate()} full />
         )}
+      <Modal visible={reviewing} transparent animationType="slide" onRequestClose={() => setReviewing(false)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle} numberOfLines={1}>{product.name}</Text>
+            <View style={s.stars}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <TouchableOpacity key={n} onPress={() => setRating(n)} hitSlop={6}>
+                  <Star size={32} color={n <= rating ? colors.warning : colors.border}
+                    fill={n <= rating ? colors.warning : 'transparent'} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Input label={t('productDetail.reviews')} value={comment} onChangeText={setComment}
+              placeholder={t('reviews.commentHint')} multiline />
+            <View style={s.sheetActions}>
+              <Button label={t('common.cancel')} variant="secondary"
+                onPress={() => setReviewing(false)} style={{ flex: 1 }} />
+              <Button label={t('reviews.submit')} loading={submitReview.isPending}
+                onPress={() => submitReview.mutate()} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       </ScrollView>
     </Screen>
   )
 }
 
 const s = StyleSheet.create({
+  reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  writeReview: { ...type.caption, color: colors.brand, fontWeight: weight.bold },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.surface, padding: space.lg, gap: space.md, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl },
+  sheetTitle: { ...type.section, color: colors.text },
+  stars: { flexDirection: 'row', justifyContent: 'center', gap: space.sm },
+  sheetActions: { flexDirection: 'row', gap: space.sm },
   body: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   image: { width: '100%', height: 220, borderRadius: radius.xl, backgroundColor: colors.surfaceAlt },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },

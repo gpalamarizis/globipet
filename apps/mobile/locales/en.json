@@ -30,7 +30,9 @@
     "try_again_later": "Try again in a moment.",
     "remove": "Remove",
     "add": "Add",
-    "email": "Email"
+    "email": "Email",
+    "edit": "Edit",
+    "delete": "Delete"
   },
   "tabs": {
     "home": "Home",
@@ -230,14 +232,24 @@
     "optional": "Optional",
     "saving_short": "Saving…",
     "subtitle": "Your pets and their records in one place.",
-    "unknown": "I don't know"
+    "unknown": "I don't know",
+    "editTitle": "Edit pet",
+    "deleteTitle": "Delete pet",
+    "deleteQ": "Permanently delete {{name}} and its history?",
+    "deleteFailed": "Could not delete"
   },
   "social": {
     "title": "Social Feed",
     "no_posts": "No posts yet",
     "be_first": "Be the first to share something.",
     "what_others_share": "What other owners are sharing",
-    "with_pet": "with {{name}}"
+    "with_pet": "with {{name}}",
+    "write": "New post",
+    "writeHint": "What would you like to share?",
+    "publish": "Publish",
+    "comments": "Comments",
+    "noComments": "No comments yet",
+    "commentHint": "Write a comment"
   },
   "profile": {
     "guest_title": "Log in to access",
@@ -256,7 +268,9 @@
     "login_prompt": "Log in to see your pets, bookings and orders.",
     "logout_question": "Do you want to log out?",
     "no_account": "No account? Sign up",
-    "not_logged_in": "You are not logged in"
+    "not_logged_in": "You are not logged in",
+    "editProfile": "Edit profile",
+    "points": "Points"
   },
   "language": {
     "title": "Language",
@@ -426,7 +440,13 @@
     "none": "No communities yet",
     "none_hint": "As soon as the first community is created, it will appear here.",
     "rabbits": "Rabbits",
-    "subtitle": "Find people with the same pets"
+    "subtitle": "Find people with the same pets",
+    "create": "New community",
+    "nameLabel": "Community name",
+    "title": "Communities",
+    "discussion": "Discussion",
+    "noMessages": "No messages yet",
+    "messageHint": "Write a message"
   },
   "emo": {
     "angry": "Angry",
@@ -566,7 +586,11 @@
     "st_revoked": "Revoked",
     "st_severe": "Severe",
     "st_moderate": "Moderate",
-    "st_mild": "Mild"
+    "st_mild": "Mild",
+    "age_years": "{{count}} years old",
+    "addRecord": "Add a record",
+    "deleteTitle": "Delete record",
+    "deleteQ": "Permanently delete this record?"
   },
   "play": {
     "create_first": "Create the first one and invite other owners.",
@@ -579,7 +603,16 @@
     "mine": "Yours",
     "near_city": "Near {{city}}",
     "near_you": "Owners near you",
-    "none": "No walks near you"
+    "none": "No walks near you",
+    "create": "New walk",
+    "location": "Meeting point",
+    "maxParticipants": "Maximum participants",
+    "invitations": "Invitations",
+    "invitation": "Invitation",
+    "invite": "Invite to a walk",
+    "send": "Send",
+    "inviteSent": "Invitation sent",
+    "inviteSentHint": "They will see it in their notifications."
   },
   "soon": {
     "title": "The mobile app is coming very soon",
@@ -625,7 +658,18 @@
     "signal_none": "No signal",
     "signal_ok": "Good",
     "signal_weak": "Weak",
-    "subtitle": "See where your pets are."
+    "subtitle": "See where your pets are.",
+    "addDevice": "Add a device",
+    "addHint": "Enter the identifier printed on the collar or its box.",
+    "deviceId": "Device identifier",
+    "deviceIdHint": "At least 4 characters",
+    "deviceName": "Device name",
+    "devices": "Devices",
+    "removeTitle": "Remove device",
+    "removeQ": "Disconnect this device? The location history is kept.",
+    "tokenRotated": "The key has been rotated",
+    "newToken": "New key",
+    "tokenHint": "Set the new key on the device so it keeps sending its location."
   },
   "ver": {
     "about": "About",
@@ -1005,5 +1049,12 @@
     "cancelled": "Cancelled",
     "cancelledHint": "Your account stays active.",
     "legalNote": "Rights under Articles 17 and 20 of the General Data Protection Regulation."
+  },
+  "reviews": {
+    "write": "Write a review",
+    "submit": "Submit review",
+    "commentHint": "Tell us how it went — optional",
+    "thanks": "Thank you",
+    "thanksHint": "Your review helps other owners choose."
   }
 }

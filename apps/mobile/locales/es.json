@@ -30,7 +30,9 @@
     "try_again_later": "Inténtalo de nuevo en un momento.",
     "remove": "Quitar",
     "add": "Añadir",
-    "email": "Email"
+    "email": "Email",
+    "edit": "Editar",
+    "delete": "Eliminar"
   },
   "tabs": {
     "home": "Inicio",
@@ -230,14 +232,24 @@
     "optional": "Opcional",
     "saving_short": "Guardando…",
     "subtitle": "Tus mascotas y su historial en un solo lugar.",
-    "unknown": "No lo sé"
+    "unknown": "No lo sé",
+    "editTitle": "Editar mascota",
+    "deleteTitle": "Eliminar mascota",
+    "deleteQ": "¿Eliminar definitivamente a {{name}} y su historial?",
+    "deleteFailed": "No se pudo eliminar"
   },
   "social": {
     "title": "Social Feed",
     "no_posts": "No hay publicaciones",
     "be_first": "Sé el primero en compartir algo.",
     "what_others_share": "Lo que comparten otros propietarios",
-    "with_pet": "con {{name}}"
+    "with_pet": "con {{name}}",
+    "write": "Nueva publicación",
+    "writeHint": "¿Qué quieres compartir?",
+    "publish": "Publicar",
+    "comments": "Comentarios",
+    "noComments": "Aún no hay comentarios",
+    "commentHint": "Escribe un comentario"
   },
   "profile": {
     "guest_title": "Inicia sesión para acceder",
@@ -256,7 +268,9 @@
     "login_prompt": "Inicia sesión para ver tus mascotas, reservas y pedidos.",
     "logout_question": "¿Quieres cerrar sesión?",
     "no_account": "¿Sin cuenta? Regístrate",
-    "not_logged_in": "No has iniciado sesión"
+    "not_logged_in": "No has iniciado sesión",
+    "editProfile": "Editar perfil",
+    "points": "Puntos"
   },
   "language": {
     "title": "Idioma",
@@ -426,7 +440,13 @@
     "none": "Aún no hay comunidades",
     "none_hint": "En cuanto se cree la primera comunidad, aparecerá aquí.",
     "rabbits": "Conejos",
-    "subtitle": "Encuentra personas con las mismas mascotas"
+    "subtitle": "Encuentra personas con las mismas mascotas",
+    "create": "Nueva comunidad",
+    "nameLabel": "Nombre de la comunidad",
+    "title": "Comunidades",
+    "discussion": "Discusión",
+    "noMessages": "Aún no hay mensajes",
+    "messageHint": "Escribe un mensaje"
   },
   "emo": {
     "angry": "Enfadado",
@@ -566,7 +586,11 @@
     "st_revoked": "Revocado",
     "st_severe": "Grave",
     "st_moderate": "Moderada",
-    "st_mild": "Leve"
+    "st_mild": "Leve",
+    "age_years": "{{count}} años",
+    "addRecord": "Añadir registro",
+    "deleteTitle": "Eliminar registro",
+    "deleteQ": "¿Eliminar definitivamente este registro?"
   },
   "play": {
     "create_first": "Crea la primera e invita a otros propietarios.",
@@ -579,7 +603,16 @@
     "mine": "Tuya",
     "near_city": "Cerca de {{city}}",
     "near_you": "Propietarios cerca de ti",
-    "none": "No hay paseos cerca"
+    "none": "No hay paseos cerca",
+    "create": "Nuevo paseo",
+    "location": "Punto de encuentro",
+    "maxParticipants": "Máximo de participantes",
+    "invitations": "Invitaciones",
+    "invitation": "Invitación",
+    "invite": "Invitar a un paseo",
+    "send": "Enviar",
+    "inviteSent": "Invitación enviada",
+    "inviteSentHint": "La verá en sus notificaciones."
   },
   "soon": {
     "title": "La app móvil llega muy pronto",
@@ -625,7 +658,18 @@
     "signal_none": "Sin señal",
     "signal_ok": "Buena",
     "signal_weak": "Débil",
-    "subtitle": "Mira dónde están tus mascotas."
+    "subtitle": "Mira dónde están tus mascotas.",
+    "addDevice": "Añadir dispositivo",
+    "addHint": "Introduce el identificador impreso en el collar o su caja.",
+    "deviceId": "Identificador del dispositivo",
+    "deviceIdHint": "Al menos 4 caracteres",
+    "deviceName": "Nombre del dispositivo",
+    "devices": "Dispositivos",
+    "removeTitle": "Quitar dispositivo",
+    "removeQ": "¿Desconectar el dispositivo? El historial de ubicaciones se conserva.",
+    "tokenRotated": "La clave se ha renovado",
+    "newToken": "Nueva clave",
+    "tokenHint": "Configura la nueva clave en el dispositivo para que siga enviando ubicación."
   },
   "ver": {
     "about": "Sobre ti",
@@ -1005,5 +1049,12 @@
     "cancelled": "Cancelada",
     "cancelledHint": "Tu cuenta sigue activa.",
     "legalNote": "Derechos conforme a los artículos 17 y 20 del RGPD."
+  },
+  "reviews": {
+    "write": "Escribir reseña",
+    "submit": "Enviar reseña",
+    "commentHint": "Cuéntanos qué tal fue — opcional",
+    "thanks": "Gracias",
+    "thanksHint": "Tu reseña ayuda a otros propietarios a elegir."
   }
 }

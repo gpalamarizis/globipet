@@ -1,16 +1,12 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Modal } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
-import {
-  BookOpen, Syringe, Stethoscope, Pill, FlaskConical, ScanLine, Scissors,
-  TriangleAlert, Heart, Smile, Scale, Dna, Activity, Award, Plane, Users,
-  PawPrint, Download, ChevronRight,
-} from 'lucide-react-native'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { BookOpen, Syringe, Stethoscope, Pill, FlaskConical, ScanLine, Scissors, TriangleAlert, Heart, Smile, Scale, Dna, Activity, Award, Plane, Users, PawPrint, Download, ChevronRight, Plus, Trash2, X, Pencil } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
-import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -30,6 +26,9 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
 type FieldSpec = { key: string; labelKey: string }
 type TabSpec = {
   id: string
+  /** Τμήμα διαδρομής για προσθήκη και διαγραφή· χωρίς αυτό η καρτέλα
+   *  είναι ανάγνωση μόνο (ταυτότητα, γενεαλογία, πρόσβαση). */
+  api?: string
   Icon: any
   labelKey: string
   /** Κλειδί στην απάντηση του server. */
@@ -47,7 +46,7 @@ type TabSpec = {
 const TABS: TabSpec[] = [
   { id: 'identity', Icon: BookOpen, labelKey: 'passport.identity' },
 
-  { id: 'vaccines', Icon: Syringe, labelKey: 'passport.vaccines',
+  { id: 'vaccines', api: 'vaccination', Icon: Syringe, labelKey: 'passport.vaccines',
     data: 'vaccinations', title: 'vaccine_name', date: 'date_administered',
     fields: [
       { key: 'next_due_date', labelKey: 'passport.nextDue' },
@@ -55,7 +54,7 @@ const TABS: TabSpec[] = [
       { key: 'batch_number', labelKey: 'passport.batch' },
     ] },
 
-  { id: 'health', Icon: Stethoscope, labelKey: 'passport.visits',
+  { id: 'health', api: 'health', Icon: Stethoscope, labelKey: 'passport.visits',
     data: 'healthRecords', title: 'title', date: 'date',
     fields: [
       { key: 'vet_name', labelKey: 'passport.vet' },
@@ -64,7 +63,7 @@ const TABS: TabSpec[] = [
       { key: 'treatment', labelKey: 'passport.treatment' },
     ] },
 
-  { id: 'meds', Icon: Pill, labelKey: 'passport.medications',
+  { id: 'meds', api: 'medication', Icon: Pill, labelKey: 'passport.medications',
     data: 'medications', title: 'name', date: 'start_date',
     badge: { key: 'is_active' },
     fields: [
@@ -75,7 +74,7 @@ const TABS: TabSpec[] = [
       { key: 'end_date', labelKey: 'passport.until' },
     ] },
 
-  { id: 'lab', Icon: FlaskConical, labelKey: 'passport.lab',
+  { id: 'lab', api: 'lab', Icon: FlaskConical, labelKey: 'passport.lab',
     data: 'labResults', title: 'title', date: 'date',
     badge: { key: 'is_abnormal' },
     fields: [
@@ -85,7 +84,7 @@ const TABS: TabSpec[] = [
       { key: 'findings', labelKey: 'ai.findings' },
     ] },
 
-  { id: 'imaging', Icon: ScanLine, labelKey: 'passport.imaging',
+  { id: 'imaging', api: 'imaging', Icon: ScanLine, labelKey: 'passport.imaging',
     data: 'imaging', title: 'imaging_type', date: 'date',
     fields: [
       { key: 'body_region', labelKey: 'passport.bodyRegion' },
@@ -94,7 +93,7 @@ const TABS: TabSpec[] = [
       { key: 'findings', labelKey: 'ai.findings' },
     ] },
 
-  { id: 'surgery', Icon: Scissors, labelKey: 'passport.surgeries',
+  { id: 'surgery', api: 'surgery', Icon: Scissors, labelKey: 'passport.surgeries',
     data: 'surgeries', title: 'procedure', date: 'date',
     fields: [
       { key: 'category', labelKey: 'providerDash.category' },
@@ -104,7 +103,7 @@ const TABS: TabSpec[] = [
       { key: 'complications', labelKey: 'passport.complications' },
     ] },
 
-  { id: 'allergies', Icon: TriangleAlert, labelKey: 'passport.allergies',
+  { id: 'allergies', api: 'allergy', Icon: TriangleAlert, labelKey: 'passport.allergies',
     data: 'allergies', title: 'allergen', date: 'diagnosed_date',
     badge: { key: 'severity', danger: ['severe', 'high'] },
     fields: [
@@ -113,7 +112,7 @@ const TABS: TabSpec[] = [
       { key: 'treatment', labelKey: 'passport.treatment' },
     ] },
 
-  { id: 'chronic', Icon: Heart, labelKey: 'passport.chronic',
+  { id: 'chronic', api: 'chronic', Icon: Heart, labelKey: 'passport.chronic',
     data: 'chronicConditions', title: 'condition', date: 'diagnosed_date',
     badge: { key: 'status' },
     fields: [
@@ -123,7 +122,7 @@ const TABS: TabSpec[] = [
       { key: 'monitoring', labelKey: 'passport.monitoring' },
     ] },
 
-  { id: 'dental', Icon: Smile, labelKey: 'passport.dental',
+  { id: 'dental', api: 'dental', Icon: Smile, labelKey: 'passport.dental',
     data: 'dentalRecords', title: 'procedure', date: 'date',
     fields: [
       { key: 'vet_name', labelKey: 'passport.vet' },
@@ -132,7 +131,7 @@ const TABS: TabSpec[] = [
       { key: 'next_due', labelKey: 'passport.nextDue' },
     ] },
 
-  { id: 'weight', Icon: Scale, labelKey: 'passport.weight',
+  { id: 'weight', api: 'weight', Icon: Scale, labelKey: 'passport.weight',
     data: 'weightRecords', title: 'weight_kg', date: 'date',
     fields: [
       { key: 'bcs', labelKey: 'passport.bcs' },
@@ -140,7 +139,7 @@ const TABS: TabSpec[] = [
       { key: 'notes', labelKey: 'serviceDetail.note' },
     ] },
 
-  { id: 'genetic', Icon: Dna, labelKey: 'passport.genetic',
+  { id: 'genetic', api: 'genetic', Icon: Dna, labelKey: 'passport.genetic',
     data: 'geneticTests', title: 'test_name', date: 'date',
     fields: [
       { key: 'provider', labelKey: 'passport.provider' },
@@ -149,7 +148,7 @@ const TABS: TabSpec[] = [
       { key: 'conditions_found', labelKey: 'passport.conditionsFound' },
     ] },
 
-  { id: 'vitals', Icon: Activity, labelKey: 'passport.vitals',
+  { id: 'vitals', api: 'vitals', Icon: Activity, labelKey: 'passport.vitals',
     data: 'vitalSigns', title: 'date', date: 'date',
     fields: [
       { key: 'temperature', labelKey: 'passport.temperature' },
@@ -160,7 +159,7 @@ const TABS: TabSpec[] = [
 
   { id: 'pedigree', Icon: Award, labelKey: 'passport.pedigree' },
 
-  { id: 'travel', Icon: Plane, labelKey: 'passport.travel',
+  { id: 'travel', api: 'travel', Icon: Plane, labelKey: 'passport.travel',
     data: 'travelDocs', title: 'destination_country', date: 'departure_date',
     fields: [
       { key: 'travel_type', labelKey: 'passport.travelType' },
@@ -176,6 +175,7 @@ const TABS: TabSpec[] = [
 ]
 
 export default function PassportScreen() {
+  const qc = useQueryClient()
   const { t } = useTranslation()
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
@@ -193,6 +193,57 @@ export default function PassportScreen() {
     queryFn: () => api.get(`/passport/${petId}`).then(r => r.data?.data ?? r.data),
     enabled: !!petId,
   })
+
+  /**
+   * Προσθήκη και διαγραφή εγγραφών.
+   *
+   * Ο φάκελος ήταν ανάγνωση μόνο στο κινητό: ο κτηνίατρος που μόλις
+   * εμβολίασε έπρεπε να ανοίξει υπολογιστή για να το καταχωρήσει. Η φόρμα
+   * χτίζεται από την ίδια περιγραφή που αποδίδει τη λίστα, οπότε κάθε νέα
+   * κατηγορία αποκτά φόρμα χωρίς επιπλέον κώδικα.
+   */
+  const [adding, setAdding] = useState(false)
+  const [form, setForm] = useState<Record<string, string>>({})
+
+  const addRecord = useMutation({
+    mutationFn: () => api.post(`/passport/${spec.api}/${petId}`, {
+      ...Object.fromEntries(
+        Object.entries(form)
+          .filter(([, v]) => v !== '' && v != null)
+          .map(([k, v]) => [k, /^\d+([.,]\d+)?$/.test(v) && (k.includes('weight') || k.includes('rate') || k.includes('temp'))
+            ? parseFloat(v.replace(',', '.')) : v]),
+      ),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['passport', petId] })
+      setAdding(false); setForm({})
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  // Η γενεαλογία είναι ΕΝΑ αντικείμενο ανά ζώο, όχι λίστα: ο server το
+  // δημιουργεί ή το ενημερώνει με την ίδια κλήση.
+  const savePedigree = useMutation({
+    mutationFn: () => api.put(`/passport/pedigree/${petId}`, { ...form }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['passport', petId] })
+      setAdding(false); setForm({})
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const deleteRecord = useMutation({
+    mutationFn: ({ api: ep, id }: { api: string; id: string }) => api.delete(`/passport/${ep}/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['passport', petId] }),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const confirmDelete = (r: any) =>
+    Alert.alert(t('passport.deleteTitle'), t('passport.deleteQ'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive',
+        onPress: () => deleteRecord.mutate({ api: spec.api!, id: r.id }) },
+    ])
 
   const exportPdf = async () => {
     try {
@@ -289,6 +340,31 @@ export default function PassportScreen() {
           })}
         </View>
 
+        {/* Προσθήκη: μόνο όπου η κατηγορία γράφεται. Ταυτότητα, γενεαλογία
+            και πρόσβαση δεν είναι λίστες εγγραφών. */}
+        {tab === 'pedigree' && (
+          <Button label={t('common.edit')}
+            icon={<Pencil size={18} color={colors.textOnDark} />}
+            onPress={() => {
+              const pd = data?.pedigree ?? {}
+              setForm({
+                registration_number: pd.registration_number ?? '',
+                kennel_club: pd.kennel_club ?? '',
+                father_name: pd.father_name ?? '',
+                mother_name: pd.mother_name ?? '',
+                breeder_name: pd.breeder_name ?? '',
+                breeder_contact: pd.breeder_contact ?? '',
+              })
+              setAdding(true)
+            }} full />
+        )}
+
+        {!!spec.api && (
+          <Button label={t('passport.addRecord')}
+            icon={<Plus size={18} color={colors.textOnDark} />}
+            onPress={() => { setForm({}); setAdding(true) }} full />
+        )}
+
         {isLoading ? <SkeletonRows count={4} /> : (
           <>
             {/* Ταυτότητα */}
@@ -353,6 +429,11 @@ export default function PassportScreen() {
                           {fmt(r[spec.title ?? 'title']) ?? t(spec.labelKey)}
                         </Text>
                         {badgeFor(r)}
+                        {!!spec.api && !!r.id && (
+                          <TouchableOpacity onPress={() => confirmDelete(r)} hitSlop={8}>
+                            <Trash2 size={15} color={colors.danger} />
+                          </TouchableOpacity>
+                        )}
                       </View>
                       {spec.date && fmt(r[spec.date]) && (
                         <Text style={s.recDate}>{fmt(r[spec.date])}</Text>
@@ -380,11 +461,70 @@ export default function PassportScreen() {
           icon={<Download size={18} color={colors.textOnDark} />}
           onPress={exportPdf} full style={{ marginTop: space.lg }} />
       </ScrollView>
+
+      {/* Φόρμα προσθήκης, χτισμένη από την περιγραφή της κατηγορίας */}
+      <Modal visible={adding} transparent animationType="slide" onRequestClose={() => setAdding(false)}>
+        <View style={s.backdrop}>
+          <View style={s.sheet}>
+            <View style={s.sheetHead}>
+              <Text style={s.sheetTitle}>{t(spec.labelKey)}</Text>
+              <TouchableOpacity onPress={() => setAdding(false)}>
+                <X size={icon.md} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ gap: space.sm }} keyboardShouldPersistTaps="handled">
+              {tab === 'pedigree' ? (
+                ([
+                  ['registration_number', 'passport.regNumber'],
+                  ['kennel_club', 'passport.kennelClub'],
+                  ['father_name', 'passport.father'],
+                  ['mother_name', 'passport.mother'],
+                  ['breeder_name', 'passport.breeder'],
+                  ['breeder_contact', 'common.phone'],
+                ] as const).map(([key, labelKey]) => (
+                  <Input key={key} label={t(labelKey)} value={form[key] ?? ''}
+                    onChangeText={v => setForm(f => ({ ...f, [key]: v }))} />
+                ))
+              ) : null}
+
+              {tab !== 'pedigree' && (<>
+              {/* Ο τίτλος και η ημερομηνία πρώτα: είναι τα πεδία που
+                  ταυτοποιούν την εγγραφή σε κάθε κατηγορία. */}
+              {!!spec.title && (
+                <Input label={t(spec.labelKey)} value={form[spec.title] ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, [spec.title!]: v }))} />
+              )}
+              {!!spec.date && (
+                <Input label={t('serviceDetail.date')} value={form[spec.date] ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, [spec.date!]: v }))}
+                  placeholder="YYYY-MM-DD" />
+              )}
+              {spec.fields?.map(f => (
+                <Input key={f.key} label={t(f.labelKey)} value={form[f.key] ?? ''}
+                  onChangeText={v => setForm(x => ({ ...x, [f.key]: v }))} />
+              ))}
+              <Input label={t('serviceDetail.note')} value={form.notes ?? ''}
+                onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline />
+              </>)}
+            </ScrollView>
+            <Button label={t('common.save')}
+              disabled={tab === 'pedigree'
+                ? savePedigree.isPending
+                : (addRecord.isPending || !(spec.title && form[spec.title]?.trim()))}
+              loading={addRecord.isPending || savePedigree.isPending}
+              onPress={() => (tab === 'pedigree' ? savePedigree : addRecord).mutate()} full />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   )
 }
 
 const s = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.surface, padding: space.lg, gap: space.md, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '88%' },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sheetTitle: { ...type.section, color: colors.text },
   body: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   intro: { ...type.body, color: colors.textMuted, marginBottom: space.md },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginBottom: space.sm },
