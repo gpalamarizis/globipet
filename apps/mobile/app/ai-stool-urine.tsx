@@ -117,7 +117,7 @@ export default function AiStoolUrineScreen() {
         {pets.length === 0 ? (
           <Text style={s.hint}>{t('pets.none_yet')}</Text>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+          <View style={[s.chips, { flexWrap: 'wrap' }]}>
             {pets.map((p: any) => {
               const on = petId === p.id
               return (
@@ -128,7 +128,7 @@ export default function AiStoolUrineScreen() {
                 </TouchableOpacity>
               )
             })}
-          </ScrollView>
+          </View>
         )}
 
         {imageUri ? (

@@ -45,7 +45,7 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}><Text style={s.title}>{t('tabs.profile')}</Text></View>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}><Text style={s.title}>{t('tabs.profile')}</Text></View>
       <View style={s.empty}>
         <UserIcon size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('profile.not_logged_in')}</Text>

@@ -137,7 +137,7 @@ export default function HomeScreen() {
       {/* ── Κεφαλίδα ─────────────────────────────────────────────────
           Σκούρο μπλε: είναι δομή, όχι ενέργεια. Το πορτοκαλί μένει για
           τα πράγματα που πατιούνται. */}
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.greeting} numberOfLines={1}>
@@ -173,8 +173,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: space.md, paddingRight: space.lg }}>
+          <View style={{ gap: space.md, paddingRight: space.lg, flexDirection: 'row', flexWrap: 'wrap' }}>
             {pets.slice(0, 6).map((p: any) => (
               <TouchableOpacity key={p.id} style={s.petCard} activeOpacity={0.8}
                 onPress={() => router.push('/(tabs)/pets' as any)}>
@@ -198,7 +197,7 @@ export default function HomeScreen() {
                   γραμμές κάτω από το κυκλικό εικονίδιο. */}
               <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>{t('home.new')}</Text>
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         </View>
       )}
 
@@ -214,7 +213,7 @@ export default function HomeScreen() {
               <TouchableOpacity key={a.key} style={s.serviceTile} activeOpacity={0.7}
                 onPress={() => router.push(`/(tabs)/services?type=${a.type}` as any)}>
                 <View style={[s.serviceIcon, { backgroundColor: c.bg }]}>
-                  <a.Icon size={26} color={c.fg ?? colors.navy} strokeWidth={2} />
+                  <a.Icon size={22} color={c.fg ?? colors.navy} strokeWidth={2} />
                 </View>
                 <Text style={s.serviceLabel} numberOfLines={2}>{t(a.labelKey)}</Text>
               </TouchableOpacity>
@@ -224,19 +223,24 @@ export default function HomeScreen() {
       </View>
 
       {/* ── Λειτουργίες ──────────────────────────────────────────────
-          Οριζόντια, ώστε να μην ανταγωνίζονται οπτικά τις υπηρεσίες. */}
+          Πλέγμα τριών, ίδιο μοτίβο με τις υπηρεσίες από πάνω. */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>{t('home.for_your_pet')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.sm, paddingRight: space.lg }}>
+        {/* Πλέγμα τριών, όχι οριζόντια κύλιση.
+            Η οριζόντια λίστα έκρυβε τα μισά: ο χρήστης δεν καταλαβαίνει
+            ότι υπάρχει κι άλλο δεξιά, και στο Android η σκιά κοβόταν στα
+            όρια του ScrollView. Εδώ φαίνονται όλα με μια ματιά. */}
+        <View style={s.featureGrid}>
           {FEATURES.map(f => (
-            <TouchableOpacity key={f.key} style={s.featureChip} activeOpacity={0.7}
+            <TouchableOpacity key={f.key} style={s.featureTile} activeOpacity={0.7}
               onPress={() => router.push(f.route as any)}>
-              <f.Icon size={icon.sm} color={colors.brand} strokeWidth={2} />
-              <Text style={s.featureLabel}>{t(f.labelKey)}</Text>
+              <View style={s.featureIcon}>
+                <f.Icon size={20} color={colors.brand} strokeWidth={2} />
+              </View>
+              <Text style={s.featureLabel} numberOfLines={2}>{t(f.labelKey)}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── Πάροχοι ──────────────────────────────────────────────────
@@ -377,17 +381,30 @@ const s = StyleSheet.create({
   // Υπηρεσίες — τρεις στήλες
   serviceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
   serviceTile: { width: '30.5%', alignItems: 'center', paddingVertical: space.sm },
+  // Μικρότερα: στα 64 το πλέγμα κυριαρχούσε και έσπρωχνε τα πάντα κάτω
+  // από το πρώτο γέμισμα οθόνης.
   serviceIcon: {
-    width: 64, height: 64, borderRadius: radius.lg,
+    width: 52, height: 52, borderRadius: radius.lg,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: space.sm,
+    marginBottom: space.xs,
   },
   serviceLabel: {
-    ...type.caption, color: colors.text, fontWeight: weight.semibold,
+    ...type.caption, fontSize: 12, lineHeight: 15,
+    color: colors.text, fontWeight: weight.semibold,
     textAlign: 'center',
   },
 
   // Λειτουργίες
+  // Ίδιο πλέγμα με τις υπηρεσίες: ο χρήστης μαθαίνει ένα μοτίβο, όχι δύο.
+  featureGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
+  featureTile: { width: '33.33%', alignItems: 'center', paddingHorizontal: space.xs },
+  featureIcon: {
+    width: 46, height: 46, borderRadius: radius.lg,
+    backgroundColor: colors.brandTint,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space.xs,
+  },
+
   featureChip: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     backgroundColor: colors.surface,
@@ -396,7 +413,11 @@ const s = StyleSheet.create({
     minHeight: touch.min,
     ...shadow.sm,
   },
-  featureLabel: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  featureLabel: {
+    ...type.caption, fontSize: 12, lineHeight: 15,
+    color: colors.text, fontWeight: weight.semibold,
+    textAlign: 'center',
+  },
 
   // Πάροχοι
   providerCard: {

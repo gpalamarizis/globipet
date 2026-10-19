@@ -69,7 +69,7 @@ export default function ForumScreen() {
           onPress={() => setComposing(true)} full style={{ marginBottom: space.md }} />
       )}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+      <View style={[s.chips, { flexWrap: 'wrap' }]}>
         {CATEGORIES.map(c => {
           const on = category === c.value
           return (
@@ -79,7 +79,7 @@ export default function ForumScreen() {
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
 
       {isLoading ? <SkeletonRows count={4} /> :
        filtered.length === 0 ? <EmptyState icon={MessagesSquare} title={t('forum.empty')} message={t('forum.emptyHint')} /> :

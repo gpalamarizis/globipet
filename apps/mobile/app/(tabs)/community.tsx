@@ -68,7 +68,7 @@ export default function CommunityScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
 
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <Text style={s.title}>{t('tabs.community')}</Text>
         <Text style={s.subtitle}>{t('community.subtitle')}</Text>
       </View>

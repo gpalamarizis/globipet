@@ -69,7 +69,7 @@ export default function ServicesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <Text style={s.title}>{t('services.title')}</Text>
         <View style={s.searchRow}>
           <Search size={icon.md} color={colors.textLight} />
@@ -89,12 +89,10 @@ export default function ServicesScreen() {
         </View>
       </View>
 
-      {/* Μία σειρά που κυλάει, αντί για τρεις σειρές που τρώνε την οθόνη. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.filterRow}
-        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+      {/* Πλέγμα που αναδιπλώνεται: όλα τα φίλτρα ορατά με μια ματιά.
+          Η οριζόντια κύλιση έκρυβε τα μισά — ο χρήστης δεν καταλαβαίνει
+          ότι υπάρχει κι άλλο δεξιά. */}
+      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
         {SERVICE_TYPES.map(sv => {
           const active = serviceType === sv.id
           const c = tint(sv.tint)
@@ -111,7 +109,7 @@ export default function ServicesScreen() {
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
 
       <FlatList
         data={services}

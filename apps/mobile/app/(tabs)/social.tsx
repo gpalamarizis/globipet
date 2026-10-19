@@ -59,7 +59,7 @@ export default function SocialScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <Text style={s.title}>{t('tabs.community')}</Text>
         <Text style={s.subtitle}>{t('social.what_others_share')}</Text>
       </View>

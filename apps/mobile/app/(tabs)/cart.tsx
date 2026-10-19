@@ -61,7 +61,7 @@ export default function CartScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}><Text style={s.title}>{t('cart.title')}</Text></View>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}><Text style={s.title}>{t('cart.title')}</Text></View>
       <View style={s.empty}>
         <ShoppingCart size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('cart.login_required')}</Text>

@@ -53,14 +53,12 @@ export default function InsuranceScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <Text style={s.title}>{t('cat.insurance')}</Text>
         <Text style={s.subtitle}>{t('insurance.subtitle')}</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        style={s.filterRow}
-        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
         {PET_TYPES.map(pt => {
           const active = petType === pt.id
           return (
@@ -72,7 +70,7 @@ export default function InsuranceScreen() {
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}

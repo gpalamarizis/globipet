@@ -78,7 +78,13 @@ export function Screen({
   const segments = useSegments() as string[]
   const inTabs = segments[0] === '(tabs)' || segments[0] === '(provider)'
 
-  const bottomSpace = (inTabs ? TAB_BAR_CONTENT + systemBottom : systemBottom) + space.xl
+  // Ποτέ μικρότερο από όσο ίσχυε πριν: στο Android τα insets επιστρέφουν
+  // 0 σε συσκευές όπου το σύστημα σχεδιάζει ούτως ή άλλως κάτω από τις
+  // μπάρες, και η «διόρθωση» θα έκρυβε περιεχόμενο αντί να το φανερώσει.
+  const bottomSpace = Math.max(
+    (inTabs ? TAB_BAR_CONTENT + systemBottom : systemBottom) + space.xl,
+    inTabs ? 100 : space.xxxl,
+  )
 
   const body = scroll ? (
     <ScrollView

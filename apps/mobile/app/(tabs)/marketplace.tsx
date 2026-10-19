@@ -81,7 +81,7 @@ export default function MarketplaceScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <View style={s.headerRow}>
           <Text style={s.title}>{t('marketplace.title')}</Text>
           <TouchableOpacity
@@ -110,11 +110,7 @@ export default function MarketplaceScreen() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.filterRow}
-        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
         {CATEGORIES.map(c => {
           const active = category === c.id
           return (
@@ -128,7 +124,7 @@ export default function MarketplaceScreen() {
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
 
       <FlatList
         data={products}

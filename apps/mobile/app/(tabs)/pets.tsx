@@ -87,7 +87,7 @@ export default function PetsScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}><Text style={s.title}>{t('tabs.pets')}</Text></View>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}><Text style={s.title}>{t('tabs.pets')}</Text></View>
       <View style={s.empty}>
         <PawPrint size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('pets.login_required')}</Text>

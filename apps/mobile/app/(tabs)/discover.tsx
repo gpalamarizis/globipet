@@ -65,7 +65,7 @@ export default function DiscoverScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
 
-      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
+      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
         <Text style={s.title}>{t('discover.title')}</Text>
         <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
       </View>

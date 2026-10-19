@@ -163,7 +163,7 @@ export default function ServiceDetailScreen() {
                   <PawPrint size={icon.xs} color={colors.textMuted} />
                   <Text style={s.labelText}>{t('serviceDetail.forPet')}</Text>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+                <View style={[s.chipRow, { flexWrap: 'wrap' }]}>
                   {pets.map((p: any) => {
                     const on = petId === p.id
                     return (
@@ -175,7 +175,7 @@ export default function ServiceDetailScreen() {
                       </TouchableOpacity>
                     )
                   })}
-                </ScrollView>
+                </View>
               </View>
             )}
 
@@ -228,7 +228,7 @@ export default function ServiceDetailScreen() {
                   <Stethoscope size={icon.xs} color={colors.textMuted} />
                   <Text style={s.labelText}>{t('serviceDetail.choosePractitioner')}</Text>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+                <View style={[s.chipRow, { flexWrap: 'wrap' }]}>
                   <TouchableOpacity activeOpacity={0.7}
                     style={[s.chip, staffId === '' && s.chipOn]}
                     onPress={() => setStaffId('')}>
@@ -246,7 +246,7 @@ export default function ServiceDetailScreen() {
                       </TouchableOpacity>
                     )
                   })}
-                </ScrollView>
+                </View>
               </View>
             )}
 
@@ -256,7 +256,7 @@ export default function ServiceDetailScreen() {
                 <Calendar size={icon.xs} color={colors.textMuted} />
                 <Text style={s.labelText}>{t('serviceDetail.date')}</Text>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+              <View style={[s.chipRow, { flexWrap: 'wrap' }]}>
                 {dates.map(d => {
                   const dt = new Date(d)
                   const on = date === d
@@ -271,7 +271,7 @@ export default function ServiceDetailScreen() {
                     </TouchableOpacity>
                   )
                 })}
-              </ScrollView>
+              </View>
             </View>
 
             {/* Ώρα */}
@@ -343,7 +343,9 @@ const s = StyleSheet.create({
   required: { ...type.caption, color: colors.danger },
   error: { ...type.caption, color: colors.danger, marginTop: space.xs },
 
-  chipRow: { gap: space.sm, paddingRight: space.lg },
+  // flexDirection απαραίτητο: ήταν contentContainerStyle οριζόντιου
+  // ScrollView, που το υπονοούσε. Ως πλέγμα πρέπει να δηλωθεί.
+  chipRow: { flexDirection: 'row', gap: space.sm },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: space.xs,
     paddingHorizontal: space.md, paddingVertical: space.sm,
