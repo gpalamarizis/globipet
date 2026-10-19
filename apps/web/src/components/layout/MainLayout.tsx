@@ -2,7 +2,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame } from 'lucide-react'
 import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -22,10 +22,12 @@ const simpleNavItems = [
 
 const servicesDropdown = [
   { path: '/services',   labelKey: 'nav.services',   icon: Scissors,    color: 'text-orange-500' },
+  { path: '/medical-center', labelKey: 'nav.medicalCenter', icon: HeartPulse, color: 'text-rose-500' },
   { path: '/telehealth', labelKey: 'nav.telehealth', icon: Stethoscope, color: 'text-blue-500' },
   { path: '/insurance',  labelKey: 'nav.insurance',  icon: Shield,      color: 'text-green-500' },
   { path: '/tracker',    labelKey: 'nav.petTracker', icon: MapPin,      color: 'text-red-500' },
   { path: '/ai-health',  labelKey: 'nav.aiHealth',   icon: Brain,       color: 'text-purple-500' },
+  { path: '/ai-stool-urine', labelKey: 'nav.aiStoolUrine', icon: FlaskConical, color: 'text-amber-600' },
   { path: '/ai-emotion', labelKey: 'nav.aiEmotion',  icon: Heart,       color: 'text-pink-500' },
   { path: '/legal',      labelKey: 'nav.legal',      icon: Scale,       color: 'text-indigo-500' },
 ]
@@ -34,6 +36,9 @@ const communityDropdown = [
   { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,   color: 'text-green-500' },
   { path: '/communities', labelKey: 'nav.communities', icon: Building2,  color: 'text-purple-500' },
   { path: '/forum',       labelKey: 'nav.forum',       icon: MessageSquare, color: 'text-blue-500' },
+  { path: '/events',      labelKey: 'nav.events',      icon: CalendarDays,  color: 'text-orange-500' },
+  { path: '/breeds',      labelKey: 'nav.breeds',      icon: Dog,           color: 'text-yellow-600' },
+  { path: '/market-insights', labelKey: 'nav.popular', icon: Flame,         color: 'text-orange-600' },
   // Τα δύο επίσημα μητρώα: δημόσια δεδομένα, όχι πάροχοι της πλατφόρμας.
   { path: '/shelters',    labelKey: 'nav.shelters',    icon: HomeIcon,      color: 'text-amber-600' },
   { path: '/welfare-organisations', labelKey: 'nav.welfareOrgs', icon: HeartHandshake, color: 'text-rose-500' },
@@ -201,7 +206,7 @@ export default function MainLayout() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-0.5" aria-label="Κύρια πλοήγηση">
+            <nav className="hidden lg:flex items-center gap-0.5" aria-label={t('nav.mainNav')}>
               {simpleNavItems.map(item => (
                 <Link key={item.path} to={item.path}
                   aria-current={location.pathname === item.path ? 'page' : undefined}
@@ -223,20 +228,20 @@ export default function MainLayout() {
 
               <ThemeToggle />
 
-              <button className="btn-ghost p-2.5 hidden sm:flex" aria-label="Αναζήτηση">
+              <button className="btn-ghost p-2.5 hidden sm:flex" aria-label={t('nav.search')}>
                 <Search size={18} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
               </button>
 
               {isAuthenticated && (
                 <>
                   <button onClick={() => setNotifOpen(!notifOpen)} className="btn-ghost p-2.5 relative"
-                    aria-label={`Ειδοποιήσεις${notifications.length > 0 ? ` (${notifications.length} μη αναγνωσμένες)` : ''}`}
+                    aria-label={`${t('nav.notifications')}${notifications.length > 0 ? ` (${t('nav.unread', { count: notifications.length })})` : ''}`}
                     aria-expanded={notifOpen}>
                     <Bell size={18} className="text-gray-500" aria-hidden="true" />
                     {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
                   </button>
                   <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative"
-                    aria-label={`Καλάθι${cartItems.length > 0 ? ` (${cartItems.length} αντικείμενα)` : ''}`}>
+                    aria-label={`${t('nav.cart')}${cartItems.length > 0 ? ` (${t('nav.cartItems', { count: cartItems.length })})` : ''}`}>
                     <ShoppingCart size={18} className="text-gray-500" aria-hidden="true" />
                     {cartItems.length > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center" aria-hidden="true">
@@ -250,7 +255,7 @@ export default function MainLayout() {
                     <button onClick={() => setUserMenuOpen(!userMenuOpen)}
                       aria-haspopup="true"
                       aria-expanded={userMenuOpen}
-                      aria-label="Μενού χρήστη"
+                      aria-label={t('nav.userMenu')}
                       className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center text-brand-900 font-semibold text-sm shrink-0">
                         {(user?.profile_photo || (user as any)?.picture)
@@ -272,7 +277,8 @@ export default function MainLayout() {
                           { to: '/profile',    icon: User,          label: t('nav.profile') },
                           { to: '/my-pets',    icon: PawPrint,      label: t('nav.myPets') },
                           { to: '/bookings',   icon: Calendar,      label: t('nav.myBookings') },
-                          { to: '/orders',     icon: ShoppingBag,   label: 'Παραγγελίες' },
+                          { to: '/orders',     icon: ShoppingBag,   label: t('nav.orders') },
+                          { to: '/wishlist',   icon: Heart,         label: t('nav.wishlist') },
                           { to: '/telehealth', icon: Video,         label: t('nav.telehealth') },
                         ].map(item => (
                           <Link key={item.to} to={item.to} onClick={() => setUserMenuOpen(false)}
@@ -281,7 +287,7 @@ export default function MainLayout() {
                             {item.label}
                           </Link>
                         ))}
-                        {(user?.role === 'service_provider' || user?.role === 'admin') && (
+                        {(user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin') && (
                           <Link to="/provider" onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
                             <Settings size={15} className="text-gray-400" />
@@ -320,7 +326,7 @@ export default function MainLayout() {
       </header>
 
       {/* ── A11Y: Skip to main content ─────────────────────── */}
-      <a href="#main-content" className="skip-link">Μετάβαση στο περιεχόμενο</a>
+      <a href="#main-content" className="skip-link">{t('nav.skipToContent')}</a>
 
       {/* ── MAIN CONTENT (extra bottom padding on mobile for tab bar) ── */}
       <main id="main-content" className="flex-1 pb-20 lg:pb-0">
@@ -353,7 +359,7 @@ export default function MainLayout() {
                 {['/services', '/marketplace', '/events', '/breeds', '/market-insights'].map((path, i) => (
                   <li key={path}>
                     <Link to={path} className="hover:text-white transition-colors">
-                      {[t('nav.services'), t('nav.shop'), t('nav.events'), t('nav.breeds'), t('nav.popular', 'Δημοφιλή')][i]}
+                      {[t('nav.services'), t('nav.shop'), t('nav.events'), t('nav.breeds'), t('nav.popular')][i]}
                     </Link>
                   </li>
                 ))}
@@ -384,7 +390,7 @@ export default function MainLayout() {
       </footer>
 
       {/* ── MOBILE BOTTOM TAB BAR ─────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom" aria-label="Πλοήγηση κινητού">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom" aria-label={t('nav.mobileNav')}>
         <div className="flex items-center justify-around px-2 py-2">
           {bottomTabs.map(tab => {
             const isActive = tab.path === '/' ? location.pathname === '/' : location.pathname.startsWith(tab.path)
@@ -400,12 +406,12 @@ export default function MainLayout() {
           })}
           {/* Περισσότερα */}
           <button onClick={() => setMoreOpen(true)}
-            aria-label="Περισσότερες επιλογές"
+            aria-label={t('nav.moreOptions')}
             aria-expanded={moreOpen}
             className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all',
               moreOpen ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
             <MoreHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />
-            <span className="text-[10px] font-medium">Περισσότερα</span>
+            <span className="text-[10px] font-medium">{t('nav.more')}</span>
           </button>
         </div>
       </nav>
@@ -420,7 +426,7 @@ export default function MainLayout() {
             <motion.div
               role="dialog"
               aria-modal="true"
-              aria-label="Περισσότερες επιλογές"
+              aria-label={t('nav.moreOptions')}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[90vh] overflow-y-auto">
@@ -447,7 +453,7 @@ export default function MainLayout() {
                 )}
 
                 {/* Υπηρεσίες */}
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-3">Υπηρεσίες</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-3">{t('nav.services')}</p>
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {servicesDropdown.map(item => (
                     <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
@@ -460,7 +466,7 @@ export default function MainLayout() {
                 </div>
 
                 {/* Κοινότητα */}
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Κοινότητα</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t('nav.community')}</p>
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {communityDropdown.map(item => (
                     <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
@@ -475,14 +481,14 @@ export default function MainLayout() {
                 {/* Λογαριασμός */}
                 {isAuthenticated ? (
                   <>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Λογαριασμός</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t('nav.account')}</p>
                     <div className="space-y-1">
                       {[
                         { to: '/profile',  icon: User,        label: t('nav.profile') },
                         { to: '/my-pets',  icon: PawPrint,    label: t('nav.myPets') },
                         { to: '/bookings', icon: Calendar,    label: t('nav.myBookings') },
-                        { to: '/orders',   icon: ShoppingBag, label: 'Παραγγελίες' },
-                        { to: '/wishlist', icon: Heart,       label: 'Wishlist' },
+                        { to: '/orders',   icon: ShoppingBag, label: t('nav.orders') },
+                        { to: '/wishlist', icon: Heart,       label: t('nav.wishlist') },
                       ].map(item => (
                         <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)}
                           className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -490,7 +496,7 @@ export default function MainLayout() {
                           {item.label}
                         </Link>
                       ))}
-                      {(user?.role === 'service_provider' || user?.role === 'admin') && (
+                      {(user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin') && (
                         <Link to="/provider" onClick={() => setMoreOpen(false)}
                           className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                           <Settings size={18} className="text-gray-400 shrink-0" />

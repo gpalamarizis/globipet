@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake } from 'lucide-react-native'
+import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake, Flame } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 
@@ -47,6 +47,7 @@ const SECTIONS = [
   { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },
   { key: 'playdates',   Icon: PawPrint,    titleKey: 'discover.playdates',         subKey: 'discover.meet_other_pets',  route: '/playdates',  tint: 'walking' },
   { key: 'communities', Icon: Users,       titleKey: 'discover.communities',        subKey: 'discover.owner_groups',        route: '/communities',tint: 'photography' },
+  { key: 'popular', Icon: Flame, titleKey: 'insights.popularTitle', subKey: 'insights.discoverSubtitle', route: '/market-insights', tint: 'pharmacy' },
 ]
 
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
