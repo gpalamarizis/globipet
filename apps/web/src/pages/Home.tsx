@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { effectivePrice, isOnSale } from '@/lib/price'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -418,9 +419,10 @@ export default function Home() {
                       <p className="text-[10px] font-bold text-brand-900 dark:text-brand-400 uppercase tracking-wider mb-1">{t('home.marketplaceSection.featured')}</p>
                       <p className="font-semibold text-gray-900 dark:text-white mb-2 leading-snug">{featuredProducts.data[0].name}</p>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-xl font-bold text-brand-900 dark:text-brand-400">€{featuredProducts.data[0].price}</span>
-                        {featuredProducts.data[0].originalPrice && (
-                          <span className="text-sm text-gray-400 line-through">€{featuredProducts.data[0].originalPrice}</span>
+                        {/* Τιμή που χρεώνεται (lib/price.ts)· το originalPrice δεν υπάρχει στο API. */}
+                        <span className="text-xl font-bold text-brand-900 dark:text-brand-400">€{effectivePrice(featuredProducts.data[0]).toFixed(2)}</span>
+                        {isOnSale(featuredProducts.data[0]) && (
+                          <span className="text-sm text-gray-400 line-through">€{Number(featuredProducts.data[0].price).toFixed(2)}</span>
                         )}
                       </div>
                       <span className="inline-block mt-3 bg-brand-900 text-white text-xs font-semibold px-4 py-1.5 rounded-lg">
@@ -444,7 +446,7 @@ export default function Home() {
                           </div>}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{product.name}</p>
-                        <p className="text-sm text-brand-900 dark:text-brand-400 font-bold mt-0.5">€{product.price}</p>
+                        <p className="text-sm text-brand-900 dark:text-brand-400 font-bold mt-0.5">€{effectivePrice(product).toFixed(2)}</p>
                       </div>
                       <ArrowRight size={14} className="text-gray-400 shrink-0" />
                     </Link>

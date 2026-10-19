@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban } from 'lucide-react'
+import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban, UserCheck, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 /**
@@ -31,18 +32,26 @@ export default function Events() {
   const [city, setCity] = useState('')
   const [eventType, setEventType] = useState('')
   const [upcomingOnly, setUpcomingOnly] = useState(true)
+  // «Οι εκδηλώσεις μου» (GET /events?mine=true): όσες οργανώνω, ΜΑΖΙ με τις
+  // ακυρωμένες — από εδώ ο διοργανωτής ξαναβρίσκει ακυρωμένη εκδήλωση με
+  // επιστροφές σε εκκρεμότητα. Μόνο για συνδεδεμένους.
+  const { isAuthenticated } = useAuthStore()
+  const [mineOnly, setMineOnly] = useState(false)
+  const mine = isAuthenticated && mineOnly
 
   const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
   const locale = localeMap[i18n.language] || 'el-GR'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['events', { search, city, eventType, upcomingOnly }],
+    queryKey: ['events', { search, city, eventType, upcomingOnly, mine }],
     queryFn: () => api.get('/events', {
       params: {
         q: search || undefined,
         city: city || undefined,
         event_type: eventType || undefined,
-        upcoming: upcomingOnly ? 'true' : undefined,
+        // Στις δικές μου: όλες (και περασμένες ακυρωμένες με εκκρεμότητες).
+        upcoming: upcomingOnly && !mine ? 'true' : undefined,
+        mine: mine ? 'true' : undefined,
         limit: 30,
       },
     }).then(r => r.data),
@@ -104,13 +113,24 @@ export default function Events() {
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => setUpcomingOnly(!upcomingOnly)}
-          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
-            upcomingOnly
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
-          <Calendar size={13} /> {t('events.upcomingOnly')}
-        </button>
+        {!mine && (
+          <button onClick={() => setUpcomingOnly(!upcomingOnly)}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
+              upcomingOnly
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
+            <Calendar size={13} /> {t('events.upcomingOnly')}
+          </button>
+        )}
+        {isAuthenticated && (
+          <button onClick={() => setMineOnly(!mineOnly)}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
+              mine
+                ? 'bg-brand-900 text-white border-brand-900'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
+            <UserCheck size={13} /> {t('events.mine')}
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -119,11 +139,13 @@ export default function Events() {
         <div className="text-center py-24">
           <Calendar size={48} className="mx-auto text-gray-200 mb-4" />
           <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('events.noResults')}
+            {mine ? t('events.mineEmpty') : t('events.noResults')}
           </p>
-          <p className="text-gray-500 text-sm">
-            {t('events.noResultsDesc')}
-          </p>
+          {!mine && (
+            <p className="text-gray-500 text-sm">
+              {t('events.noResultsDesc')}
+            </p>
+          )}
         </div>
       ) : (
         <>
@@ -179,6 +201,13 @@ export default function Events() {
                         <MapPin size={11} />
                         <span className="truncate">{ev.location || ev.city}</span>
                       </div>
+
+                      {/* «Οι εκδηλώσεις μου»: επιστροφές που περιμένουν «Ολοκλήρωση επιστροφών». */}
+                      {Number(ev.refunds_pending) > 0 && (
+                        <div className="flex items-center gap-1 text-xs mt-2 text-amber-600">
+                          <AlertTriangle size={11} /> {t('events.refundsPending', { count: Number(ev.refunds_pending) })}
+                        </div>
+                      )}
 
                       {left != null && !ev.cancelled && (
                         <div className={cn('flex items-center gap-1 text-xs mt-2',

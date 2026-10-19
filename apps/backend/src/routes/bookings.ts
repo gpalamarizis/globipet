@@ -8,6 +8,10 @@ import { bestDiscount } from '../lib/campaignDiscount.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
 import { cancelBooking, cancellationTerms, CancelError } from '../lib/cancellation.js'
 import { serverError } from '../lib/errors.js'
+import { isBookingPayable, confirmBookingPayment } from '../lib/bookingPayment.js'
+
+/** Μορφή του transaction id της Viva (GUID). */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
   /**
@@ -124,7 +128,29 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         packages: { select: { name_snapshot: true, quantity: true, price_snapshot: true } },
       },
     })
-    return { data, total: data.length }
+    // Προσθετικό πεδίο `payable`: ο server αποφασίζει αν η κράτηση είναι
+    // απλήρωτη ΚΑΙ πληρώσιμη (κουμπί «Πληρωμή» σε web και κινητό).
+    return { data: data.map(b => ({ ...b, payable: isBookingPayable(b) })), total: data.length }
+  })
+
+  /**
+   * Μία κράτηση — για τη σελίδα/οθόνη επιβεβαίωσης πληρωμής (polling όσο
+   * εκκρεμεί). Μόνο ο πελάτης, ο πάροχος ή διαχειριστής.
+   */
+  app.get('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
+    const b = await prisma.booking.findUnique({
+      where: { id: req.params.id },
+      include: {
+        service: { select: { id: true, title: true, service_type: true, city: true, location: true } },
+        packages: { select: { name_snapshot: true, quantity: true, price_snapshot: true } },
+      },
+    })
+    if (!b) return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+    if (b.customer_email !== user.email && b.provider_email !== user.email && user.role !== 'admin') {
+      return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+    }
+    return { data: { ...b, payable: isBookingPayable(b) } }
   })
 
   /**
@@ -370,6 +396,12 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
    *   · Το ποσό διαβάζεται από τη ΒΑΣΗ, ποτέ από το αίτημα — αλλιώς
    *     επιστρέφουμε στην ευπάθεια των 0,01 € που είχε ήδη διορθωθεί.
    *   · Ήδη πληρωμένη κράτηση δεν χρεώνεται δεύτερη φορά.
+   *
+   * ΕΠΑΝΑΠΛΗΡΩΜΗ (κουμπί «Πληρωμή» στις «Κρατήσεις μου»)
+   *   Κάθε κλήση φτιάχνει ΝΕΑ παραγγελία Viva για την ίδια κράτηση. Αν
+   *   πληρωθούν δύο, η πρώτη πληρώνει την κράτηση και η δεύτερη επιστρέφεται
+   *   αυτόματα (lib/bookingPayment). Η επιστροφή γίνεται στη σελίδα
+   *   επιβεβαίωσης ΚΡΑΤΗΣΗΣ — όχι στη σελίδα των παραγγελιών.
    */
   app.post('/viva/checkout', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { booking_id } = (req.body ?? {}) as any
@@ -393,6 +425,12 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       if (!Number.isFinite(booking.total_price) || booking.total_price <= 0) {
         return reply.code(400).send({ message: 'Το ποσό της κράτησης δεν είναι έγκυρο' })
       }
+      // Επιστραμμένη, ολοκληρωμένη ή παρελθούσα κράτηση δεν πληρώνεται — μια
+      // πληρωμή εκεί θα επέστρεφε αμέσως (διπλή κίνηση στην κάρτα για το τίποτα).
+      if (!isBookingPayable(booking)) {
+        return reply.code(400).send({ message: 'Η κράτηση δεν μπορεί πλέον να πληρωθεί' })
+      }
+      const frontendUrl = process.env.FRONTEND_URL || 'https://globipet.com'
 
       const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
         // Το ποσό της βάσης, ποτέ του πελάτη.
@@ -401,10 +439,14 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         customerName: user.full_name,
         orderId: booking_id,
         description: `GlobiPet κράτηση #${booking_id.slice(0, 8)}`,
+        successUrl: `${frontendUrl}/bookings/${booking_id}/confirmation`,
+        failureUrl: `${frontendUrl}/bookings/${booking_id}/confirmation`,
       })
 
-      await prisma.booking.update({
-        where: { id: booking_id },
+      // Μόνο όσο είναι ακόμη απλήρωτη: αν πληρώθηκε στο μεταξύ, το
+      // payment_ref είναι πια η συναλλαγή και δεν πρέπει να χαθεί.
+      await prisma.booking.updateMany({
+        where: { id: booking_id, payment_status: 'unpaid' },
         data: { payment_ref: String(orderCode) },
       })
 
@@ -412,6 +454,46 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     } catch (err: any) {
       console.error('Viva booking checkout error:', err)
       return serverError(reply, err, 'booking-checkout', 'Η πληρωμή δεν ξεκίνησε.')
+    }
+  })
+
+  /**
+   * Επιβεβαίωση πληρωμής μετά την επιστροφή από τη Viva (σελίδα επιβεβαίωσης
+   * web/κινητού, με το ?t= της Viva). Το webhook του orders.ts κάνει το ίδιο
+   * ως εφεδρεία. Ο server ξαναρωτά τη Viva — το transaction id δεν αρκεί.
+   */
+  app.post('/:id/viva/verify', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const { id } = req.params
+    const { transaction_id } = (req.body ?? {}) as any
+    try {
+      const b = await prisma.booking.findUnique({ where: { id } })
+      if (!b || b.customer_email !== email) return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+
+      // Το transaction id της Viva είναι UUID· οτιδήποτε άλλο δεν φτάνει στη Viva.
+      if (transaction_id != null && transaction_id !== ''
+        && (typeof transaction_id !== 'string' || !UUID_RE.test(transaction_id))) {
+        return reply.code(400).send({ message: 'Μη έγκυρο αναγνωριστικό συναλλαγής' })
+      }
+
+      let result: string | null = null
+      if (transaction_id && typeof transaction_id === 'string' && b.payment_ref !== transaction_id) {
+        result = await confirmBookingPayment(id, transaction_id)
+        // Η Viva δεν απάντησε (5xx/δίκτυο): 503, ο πελάτης ξαναδοκιμάζει.
+        if (result === 'error') {
+          return reply.code(503).send({ message: 'Η επαλήθευση της πληρωμής δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.', retry: true })
+        }
+      }
+      const fresh = await prisma.booking.findUnique({ where: { id } })
+      return {
+        paid: fresh?.payment_status === 'paid',
+        // 'paid' | 'already' | 'refunded' | 'refund_failed' | 'invalid' | null
+        result,
+        data: fresh ? { ...fresh, payable: isBookingPayable(fresh) } : null,
+      }
+    } catch (err: any) {
+      console.error('Booking verify error:', err)
+      return serverError(reply, err, 'booking-verify')
     }
   })
 
@@ -478,6 +560,11 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     // Status transitions. Cancelling is available to both parties; marking a
     // booking completed is the provider's call and only once it is paid.
     if (body.status !== undefined) {
+      // Ακυρωμένη κράτηση δεν «ξανανοίγει» (π.χ. σε confirmed): η επιστροφή
+      // χρημάτων έχει ήδη γίνει και η θέση έχει ελευθερωθεί.
+      if (existing.status === 'cancelled') {
+        return reply.code(409).send({ message: 'Η κράτηση έχει ακυρωθεί' })
+      }
       if (body.status === 'cancelled') {
         data.status = 'cancelled'
       } else if (body.status === 'confirmed' && (isProvider || isAdmin)) {

@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { randomBytes } from 'node:crypto'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
-import { createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction } from '../lib/viva.js'
+import { createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
 import { bookingStart } from '../lib/cancellation.js'
 import { audit, auditSystem } from '../lib/audit.js'
 import { serverError } from '../lib/errors.js'
@@ -200,8 +200,12 @@ async function refundOrphanPayment(
  *
  * Μοναδική παρενέργεια: πληρωμή παλιάς παραγγελίας της ίδιας εγγραφής (δεν
  * αντιστοιχεί σε θέση) επιστρέφεται — μέσω refundOrphanPayment, άρα μία φορά.
+ *
+ * 'error': η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx/429, timeout, δίκτυο,
+ * βάση) — όχι «άκυρη»· το webhook απαντά μη-2xx και το verify 503, ώστε να
+ * ξαναγίνει. Πριν επέστρεφε null και η πληρωμή έμενε χωρίς θέση.
  */
-async function verifyEventPayment(registrationId: string, transactionId: string): Promise<{ orderCode: string } | null> {
+async function verifyEventPayment(registrationId: string, transactionId: string): Promise<{ orderCode: string } | null | 'error'> {
   const txn = String(transactionId)
   try {
     const reg = await prisma.eventRegistration.findUnique({ where: { id: registrationId } })
@@ -244,14 +248,19 @@ async function verifyEventPayment(registrationId: string, transactionId: string)
     }
     return { orderCode: txOrder }
   } catch (err: any) {
-    console.error('[viva] event registration verification error:', err?.message)
-    return null
+    if (isVivaDefinitiveRejection(err)) {
+      console.error('[viva] event registration transaction rejected by Viva:', err?.message)
+      return null
+    }
+    console.error('[viva] event registration verification error (will retry):', err?.message)
+    return 'error'
   }
 }
 
 /** Συμβατότητα: «πληρώνει αυτή η συναλλαγή την εγγραφή;» */
 export async function vivaPaidEventRegistration(registrationId: string, transactionId: string): Promise<boolean> {
-  return !!(await verifyEventPayment(registrationId, transactionId))
+  const r = await verifyEventPayment(registrationId, transactionId)
+  return !!r && r !== 'error'
 }
 
 type MarkResult = 'registered' | 'refunded' | 'refund_failed' | 'ignored'
@@ -344,9 +353,13 @@ export async function markEventRegistrationPaid(
   return final
 }
 
-/** Επαλήθευση + καταχώριση (verify της σελίδας επιβεβαίωσης και webhook). */
-export async function confirmEventRegistrationPayment(registrationId: string, transactionId: string): Promise<MarkResult | null> {
+/**
+ * Επαλήθευση + καταχώριση (verify της σελίδας επιβεβαίωσης και webhook).
+ * null = άκυρη/δεν αφορά εγγραφή· 'error' = η επαλήθευση δεν ολοκληρώθηκε.
+ */
+export async function confirmEventRegistrationPayment(registrationId: string, transactionId: string): Promise<MarkResult | null | 'error'> {
   const ok = await verifyEventPayment(registrationId, transactionId)
+  if (ok === 'error') return 'error'
   if (!ok) return null
   return markEventRegistrationPaid(registrationId, String(transactionId), ok.orderCode)
 }
@@ -355,13 +368,16 @@ export async function confirmEventRegistrationPayment(registrationId: string, tr
  * Κλάδος εκδηλώσεων του κοινού webhook (orders.ts), για merchantTrns
  * `ev:<regId>:<nonce>`. Αν η εγγραφή δεν υπάρχει πια (π.χ. σβήστηκε η
  * εκδήλωση), η πληρωμή επαληθεύεται στη Viva και επιστρέφεται αυτόματα.
+ *
+ * 'retry': η επαλήθευση στη Viva δεν ολοκληρώθηκε — το webhook απαντά μη-2xx
+ * ώστε η Viva να το ξαναστείλει.
  */
-export async function handleEventPaymentWebhook(merchantTrns: string, transactionId: string): Promise<void> {
+export async function handleEventPaymentWebhook(merchantTrns: string, transactionId: string): Promise<'ok' | 'retry'> {
   const regId = eventRegistrationIdFromTrns(merchantTrns)
   const txn = String(transactionId)
   if (!regId) {
     console.error(`[viva] webhook merchantTrns ${merchantTrns} is not a valid event reference — ignored`)
-    return
+    return 'ok'
   }
   const exists = await prisma.eventRegistration.findUnique({ where: { id: regId }, select: { id: true } })
   if (!exists) {
@@ -375,11 +391,14 @@ export async function handleEventPaymentWebhook(merchantTrns: string, transactio
       }
     } catch (err: any) {
       console.error(`[viva] webhook for missing event registration ${regId}: verification error`, err?.message)
+      if (!isVivaDefinitiveRejection(err)) return 'retry'
     }
-    return
+    return 'ok'
   }
   const r = await confirmEventRegistrationPayment(regId, txn)
+  if (r === 'error') return 'retry'
   if (!r) console.error(`[viva] webhook for event registration ${regId} could not be verified — ignored`)
+  return 'ok'
 }
 
 /** Μορφή ημερομηνίας/ώρας και νόμισμα για εκδηλώσεις με τιμή. */
@@ -420,11 +439,16 @@ class RegistrationConflict extends Error {
 
 // ─── Ακύρωση εκδήλωσης από τον διοργανωτή ──────────────────────────────
 //
-// Το Event δεν έχει πεδίο κατάστασης (και δεν προστίθεται στήλη). Η ακύρωση
-// σημειώνεται στο audit log (action event_cancel, resource event): από τη
-// στιγμή αυτή δεν γίνονται νέες δηλώσεις. Όταν όλες οι συμμετοχές
-// τακτοποιηθούν (επιστροφή ή ακύρωση), η εκδήλωση διαγράφεται. Αν κάποια
-// επιστροφή αποτύχει, η εκδήλωση μένει (ακυρωμένη) για νέα προσπάθεια.
+// Η ακύρωση σημειώνεται στη στήλη events.cancelled_at (ατομικά, μόνο αν
+// είναι null) ΠΡΙΝ ξεκινήσουν οι επιστροφές: από τη στιγμή αυτή δεν γίνονται
+// νέες δηλώσεις ούτε αλλαγές. Η εκδήλωση ΔΕΝ διαγράφεται — η σελίδα της μένει
+// με ένδειξη «Ακυρώθηκε». Το audit log (action event_cancel) μένει μόνο ως
+// καταγραφή· η κατάσταση δεν εξαρτάται πια από αυτό (καθαρίζεται στις 180
+// ημέρες, βλ. lib/cron.ts).
+//
+// Συμβατότητα: εκδηλώσεις που ακυρώθηκαν πριν υπάρξει η στήλη (μόνο audit)
+// θεωρούνται κι αυτές ακυρωμένες· η επόμενη «Ολοκλήρωση επιστροφών» γράφει
+// και τη στήλη.
 
 const EVENT_CANCEL_ACTION = 'event_cancel'
 
@@ -435,12 +459,23 @@ const EVENT_CANCEL_ACTION = 'event_cancel'
  * στιγμιαία αποτυχία άφηνε νέες δηλώσεις/πληρωμές σε ακυρωμένη εκδήλωση.
  * Όποιος καλεί αποφασίζει (π.χ. το register απαντά 503).
  */
-async function isEventCancelled(eventId: string): Promise<boolean> {
-  return !!(await eventCancelledAt(eventId))
+async function isEventCancelled(eventId: string, known?: { cancelled_at: Date | null }): Promise<boolean> {
+  return !!(await eventCancelledAt(eventId, known))
 }
 
-/** Πότε σημειώθηκε (πρώτη φορά) η ακύρωση· null αν δεν ακυρώθηκε. Πετά σε σφάλμα βάσης. */
-async function eventCancelledAt(eventId: string): Promise<Date | null> {
+/**
+ * Πότε σημειώθηκε η ακύρωση· null αν δεν ακυρώθηκε. Από τη στήλη
+ * cancelled_at (με `known` χωρίς νέα ερώτηση)· αν είναι null, από το audit
+ * (ακυρώσεις πριν τη στήλη). Πετά σε σφάλμα βάσης.
+ */
+async function eventCancelledAt(eventId: string, known?: { cancelled_at: Date | null }): Promise<Date | null> {
+  const row = known ?? await prisma.event.findUnique({ where: { id: eventId }, select: { cancelled_at: true } })
+  if (row?.cancelled_at) return row.cancelled_at
+  return legacyCancelledAt(eventId)
+}
+
+/** Ακύρωση από την εποχή πριν τη στήλη: πρώτη καταγραφή event_cancel στο audit. */
+async function legacyCancelledAt(eventId: string): Promise<Date | null> {
   const row = await prisma.auditLog.findFirst({
     where: { action: EVENT_CANCEL_ACTION, resource: 'event', resource_id: eventId, outcome: 'success' },
     orderBy: { created_at: 'asc' },
@@ -449,7 +484,7 @@ async function eventCancelledAt(eventId: string): Promise<Date | null> {
   return row?.created_at ?? null
 }
 
-/** Ποιες από αυτές τις εκδηλώσεις έχουν ακυρωθεί (μία ερώτηση). Πετά σε σφάλμα βάσης. */
+/** Ποιες από αυτές τις εκδηλώσεις έχουν ακυρωθεί κατά το audit (μία ερώτηση). Πετά σε σφάλμα βάσης. */
 async function cancelledEventIds(eventIds: string[]): Promise<Set<string>> {
   if (eventIds.length === 0) return new Set()
   const rows = await prisma.auditLog.findMany({
@@ -478,9 +513,10 @@ async function notifyEventCancelled(
         title: notifyTitle('event_cancelled', nLang),
         message: notifyMsg.eventCancelled(nLang, event.title, kind, Number(amount ?? 0).toFixed(2)),
         type: 'event_cancelled',
-        // Η εκδήλωση διαγράφεται όταν τακτοποιηθούν όλα· μένει μόνο όσο
-        // εκκρεμεί επιστροφή — τότε ο σύνδεσμος δείχνει την κατάστασή της.
-        link: kind === 'delayed' ? `/events/${event.id}` : '/events',
+        // Η εκδήλωση δεν διαγράφεται πια: ο σύνδεσμος ανοίγει πάντα τη
+        // σελίδα της, με την ένδειξη «Ακυρώθηκε» και την κατάσταση της
+        // επιστροφής (web /events/:id, κινητό app/events/[id]).
+        link: `/events/${event.id}`,
       },
     })
     broadcastToUser(email, { type: 'notification', notification })
@@ -493,9 +529,54 @@ async function notifyEventCancelled(
   }
 }
 
+/**
+ * Ειδοποίηση (in-app + live + push) ΠΡΟΣ ΤΟΝ ΔΙΟΡΓΑΝΩΤΗ όταν η ακύρωση
+ * τελειώνει με εκκρεμείς επιστροφές (207). Η ακυρωμένη εκδήλωση δεν
+ * εμφανίζεται στη δημόσια λίστα, οπότε ο σύνδεσμος /events/:id είναι ο
+ * δρόμος πίσω στην «Ολοκλήρωση επιστροφών» (μαζί με το «Οι εκδηλώσεις μου»).
+ * Μία αδιάβαστη τη φορά: κάθε νέα απόπειρα δεν προσθέτει νέα ειδοποίηση.
+ */
+async function notifyOrganizerCancelIncomplete(
+  event: { id: string; title: string; organizer_email: string }, pending: number,
+) {
+  try {
+    const email = event.organizer_email
+    const link = `/events/${event.id}`
+    const open = await prisma.notification.findFirst({
+      where: { user_email: email, type: 'event_cancel_incomplete', link, is_read: false },
+      select: { id: true },
+    })
+    if (open) return
+    const nLang = await langOfUser(email)
+    const notification = await prisma.notification.create({
+      data: {
+        user_email: email,
+        title: notifyTitle('event_cancel_incomplete', nLang),
+        message: notifyMsg.eventCancelIncomplete(nLang, event.title, pending),
+        type: 'event_cancel_incomplete',
+        link,
+      },
+    })
+    broadcastToUser(email, { type: 'notification', notification })
+    void sendPushToUser(email, {
+      title: notification.title, body: notification.message, url: notification.link ?? '/',
+      data: { type: 'event_cancel_incomplete' },
+    })
+  } catch (err: any) {
+    console.error(`[events] organizer cancel notification for ${event.id} failed:`, err?.message)
+  }
+}
+
 type CancelProblem = { registration_id: string; user_name: string; amount: number | null; status: string }
 
 export type EventCancelReport = {
+  /** Όλες οι συμμετοχές τακτοποιήθηκαν (καμία επιστροφή/πληρωμή σε εκκρεμότητα). */
+  settled: boolean
+  /**
+   * Συμβατότητα με παλιούς πελάτες (ήδη εγκατεστημένη εφαρμογή κινητού), που
+   * διαβάζουν το `deleted` ως «ολοκληρώθηκε». Ίσο με `settled` — η εκδήλωση
+   * ΔΕΝ διαγράφεται πια.
+   */
   deleted: boolean
   refunded: number
   refunded_amount: number
@@ -584,29 +665,29 @@ async function deleteEventIfSettled(eventId: string, blockOnFree: boolean): Prom
 }
 
 /**
- * Ακύρωση όλων των συμμετοχών μιας εκδήλωσης και, αν τακτοποιηθούν όλες,
- * διαγραφή της. Επαναλήψιμη: σε νέα κλήση ξαναδοκιμάζονται οι αποτυχημένες
- * επιστροφές· όσες έγιναν δεν ξαναγίνονται (audit ανά συναλλαγή).
+ * Ακύρωση όλων των συμμετοχών μιας εκδήλωσης (ΗΔΗ σημειωμένης ακυρωμένης).
+ * Η εκδήλωση δεν διαγράφεται. Επαναλήψιμη: σε νέα κλήση ξαναδοκιμάζονται οι
+ * αποτυχημένες επιστροφές· όσες έγιναν δεν ξαναγίνονται (audit ανά συναλλαγή).
  *
  *   registered + πληρωμή → refunding (ατομικά) → επιστροφή → refunded | refund_failed
  *   refund_failed        → refunding (ατομικά) → νέα απόπειρα επιστροφής
  *   registered δωρεάν    → cancelled
  *   pending_payment      → cancelled (αν πληρωθεί αργότερα: αυτόματη επιστροφή)
- *   refunding            → σε εξέλιξη από άλλο αίτημα· η εκδήλωση δεν διαγράφεται ακόμη
+ *   refunding            → σε εξέλιξη από άλλο αίτημα· η ακύρωση δεν έχει τακτοποιηθεί ακόμη
  *                          (ήδη επιστραμμένη κατά το audit → refunded· κολλημένη
  *                          ≥ 10 λεπτά → νέα απόπειρα όπως η refund_failed)
  */
 export async function cancelEventWithRefunds(eventId: string): Promise<EventCancelReport | null> {
-  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, title: true } })
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, title: true, cancelled_at: true } })
   if (!event) return null
 
   const report: EventCancelReport = {
-    deleted: false, refunded: 0, refunded_amount: 0, cancelled: 0, failed: [], in_progress: [],
+    settled: false, deleted: false, refunded: 0, refunded_amount: 0, cancelled: 0, failed: [], in_progress: [],
   }
   const problem = (r: any, status: string): CancelProblem =>
     ({ registration_id: r.id, user_name: r.user_name, amount: r.amount_paid ?? null, status })
   // Στιγμή σήμανσης της ακύρωσης — όριο για τις «κολλημένες» `refunding`.
-  const cancelledAt = await eventCancelledAt(eventId)
+  const cancelledAt = await eventCancelledAt(eventId, event)
 
   // Δύο περάσματα: το δεύτερο πιάνει όσες γραμμές άλλαξαν όσο έτρεχε το
   // πρώτο (π.χ. δήλωση που πρόλαβε λίγο πριν σημειωθεί η ακύρωση).
@@ -668,15 +749,14 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
 
       if (reg.status === 'refunding') {
         // `refunding` = κάποιο αίτημα διεκδίκησε την επιστροφή. Αν η διεργασία
-        // του έπεσε στη μέση, η γραμμή κολλάει εδώ και η εκδήλωση δεν
-        // διαγράφεται ποτέ. Δεν υπάρχει updated_at (και δεν προστίθεται
-        // στήλη), οπότε:
+        // του έπεσε στη μέση, η γραμμή κολλάει εδώ και η ακύρωση δεν
+        // τακτοποιείται ποτέ. Δεν υπάρχει updated_at στην εγγραφή, οπότε:
         //   1. Η επιστροφή έγινε ήδη (audit ανά συναλλαγή) → απλώς `refunded`.
         //      Ασφαλές πάντα: καμία κλήση στη Viva.
         //   2. Αλλιώς, νέα απόπειρα ΜΟΝΟ αν η γραμμή είναι `refunding` για
         //      τουλάχιστον 10 λεπτά. Κατώτερο όριο της στιγμής διεκδίκησης:
         //      το μεταγενέστερο από created_at και τη σήμανση ακύρωσης
-        //      (audit event_cancel)· μια διεκδίκηση πριν τη σήμανση είναι
+        //      (cancelled_at)· μια διεκδίκηση πριν τη σήμανση είναι
         //      ακόμη παλαιότερη. Μια επιστροφή στη Viva κρατά δευτερόλεπτα.
         //   3. Διεκδίκηση ατομικά (refunding → refund_failed, ένα μόνο αίτημα
         //      περνά) και συνέχεια ως οφειλόμενη επιστροφή παρακάτω· η
@@ -730,8 +810,12 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
 
     if (report.failed.length > 0 || report.in_progress.length > 0) return report
 
-    const { deleted, blocking } = await deleteEventIfSettled(eventId, true)
-    if (deleted) { report.deleted = true; return report }
+    // Τακτοποιήθηκαν όλα; (καμία ενεργή συμμετοχή, πληρωμή ή επιστροφή σε
+    // εκκρεμότητα). Η εκδήλωση ΔΕΝ διαγράφεται — μένει ακυρωμένη.
+    const blocking = await prisma.eventRegistration.findMany({
+      where: { event_id: eventId, status: { in: ['registered', 'pending_payment', 'refunding', 'refund_failed'] } },
+    })
+    if (blocking.length === 0) { report.settled = true; report.deleted = true; return report }
     // Κάτι άλλαξε στο μεταξύ: ένα ακόμη πέρασμα· μετά αναφέρεται ως σε εξέλιξη.
     if (pass === 1) report.in_progress = blocking.map(r => problem(r, r.status))
   }
@@ -795,15 +879,30 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     return data
   }
 
-  app.get('/', async (req: any) => {
+  app.get('/', async (req: any, reply) => {
     const lang = getRequestLang(req)
-    const { q, city, country, event_type, upcoming, featured, page = 1, limit = 20 } = req.query
+    const { q, city, country, event_type, upcoming, featured, mine, page = 1, limit = 20 } = req.query
+    // Προσθετικό: ?mine=true → «Οι εκδηλώσεις μου» του διοργανωτή (μόνο
+    // συνδεδεμένος), ΜΑΖΙ με τις ακυρωμένες — ώστε να ξαναβρίσκει μια
+    // ακυρωμένη εκδήλωση με επιστροφές σε εκκρεμότητα.
+    let mineEmail: string | null = null
+    if (mine === 'true') {
+      try {
+        await req.jwtVerify()
+        mineEmail = (req.user as any)?.email ?? null
+      } catch { mineEmail = null }
+      if (!mineEmail) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' })
+    }
     const where: any = {}
     if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
     if (city) where.city = { contains: city, mode: 'insensitive' }
     if (country) where.country = country
     if (event_type) where.event_type = event_type
     if (featured === 'true') where.is_featured = true
+    // Ακυρωμένες από τον διοργανωτή: εκτός δημόσιου καταλόγου (ανοίγουν με
+    // τον σύνδεσμο, GET /:id, ή από το «Οι εκδηλώσεις μου», ?mine=true).
+    if (mineEmail) where.organizer_email = mineEmail
+    else where.cancelled_at = null
     if (upcoming === 'true') {
       const today = new Date().toISOString().split('T')[0]
       where.date = { gte: today }
@@ -815,17 +914,28 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       prisma.event.count({ where })
     ])
     const translated = await translateRecords('event', data, lang)
-    // Προσθετικό πεδίο `cancelled`: ακυρωμένη από τον διοργανωτή (μένει
-    // ορατή μόνο όσο εκκρεμεί κάποια επιστροφή). ΔΕΝ αφαιρείται από τη λίστα:
-    // ο διοργανωτής χρειάζεται να τη βρει για να ολοκληρώσει την ακύρωση, και
-    // φιλτράρισμα μετά τη σελιδοποίηση θα χαλούσε τα total/totalPages. Μία
-    // ερώτηση στο audit για τα ids της σελίδας· σε σφάλμα το πεδίο λείπει
-    // (η δήλωση κόβεται ούτως ή άλλως στο register).
-    let cancelled: Set<string> | null = null
-    try { cancelled = await cancelledEventIds(data.map(e => e.id)) } catch { cancelled = null }
-    const out = cancelled
-      ? translated.map((e: any) => ({ ...e, cancelled: cancelled!.has(e.id) }))
+    // Προσθετικό πεδίο `cancelled`. Η λίστα φιλτράρει ήδη cancelled_at, άρα
+    // εδώ μένουν μόνο ακυρώσεις πριν τη στήλη (μόνο στο audit): μία ερώτηση
+    // στο audit για τα ids της σελίδας· σε σφάλμα το πεδίο λείπει (η δήλωση
+    // κόβεται ούτως ή άλλως στο register).
+    let legacy: Set<string> | null = null
+    try { legacy = await cancelledEventIds(data.map(e => e.id)) } catch { legacy = null }
+    let out = legacy
+      ? translated.map((e: any) => ({ ...e, cancelled: e.cancelled_at != null || legacy!.has(e.id) }))
       : translated
+    // «Οι εκδηλώσεις μου»: προσθετικό `refunds_pending` — πόσες επιστροφές
+    // (αποτυχημένες ή σε εξέλιξη) περιμένουν «Ολοκλήρωση επιστροφών».
+    if (mineEmail && data.length > 0) {
+      try {
+        const rows = await prisma.eventRegistration.groupBy({
+          by: ['event_id'],
+          where: { event_id: { in: data.map(e => e.id) }, status: { in: ['refund_failed', 'refunding'] } },
+          _count: { _all: true },
+        })
+        const pending = new Map(rows.map(r => [r.event_id, r._count._all]))
+        out = out.map((e: any) => ({ ...e, refunds_pending: pending.get(e.id) ?? 0 }))
+      } catch { /* το πεδίο λείπει· η λίστα επιστρέφεται κανονικά */ }
+    }
     return { data: out, total, page: Number(page), totalPages: Math.ceil(total / take) }
   })
 
@@ -834,11 +944,12 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     const event = await prisma.event.findUniqueOrThrow({ where: { id: req.params.id } })
     const translated: any = await translateRecord('event', event, lang)
     // Προσθετικό: ορατό και σε μη συνδεδεμένους (το event_cancelled του
-    // /:id/registration θέλει σύνδεση). Σε σφάλμα βάσης το πεδίο λείπει.
+    // /:id/registration θέλει σύνδεση). Από τη στήλη cancelled_at· audit
+    // μόνο για ακυρώσεις πριν τη στήλη. Σε σφάλμα βάσης: από τη στήλη.
     try {
-      return { ...translated, cancelled: await isEventCancelled(event.id) }
+      return { ...translated, cancelled: await isEventCancelled(event.id, event) }
     } catch {
-      return translated
+      return { ...translated, cancelled: event.cancelled_at != null }
     }
   })
 
@@ -869,6 +980,10 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const event = await assertCanModify(req, reply, req.params.id)
     if (!event) return
+    // Ακυρωμένη εκδήλωση: καμία αλλαγή (μένει ως είχε, με την ένδειξη).
+    if (await isEventCancelled(event.id, event)) {
+      return reply.code(409).send({ message: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή' })
+    }
     const isAdmin = (req.user as any).role === 'admin'
     const data = pickEventFields(req.body ?? {}, isAdmin)
     if (Object.keys(data).length === 0) {
@@ -920,7 +1035,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const event = await prisma.event.findUnique({
       where: { id: req.params.id },
-      select: { id: true, capacity: true, registered_count: true, price: true, date: true, time: true },
+      select: { id: true, capacity: true, registered_count: true, price: true, date: true, time: true, cancelled_at: true },
     })
     if (!event) return reply.code(404).send({ message: 'Η εκδήλωση δεν βρέθηκε' })
 
@@ -945,9 +1060,8 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         // Γιατί επιστράφηκαν τα χρήματα:
         // 'full' | 'cancelled' | 'event_cancelled' | null (άγνωστο).
         refund_reason: mine ? await refundReason(mine) : null,
-        // Ο διοργανωτής ακύρωσε την εκδήλωση (μένει ορατή μόνο όσο εκκρεμεί
-        // κάποια επιστροφή· μετά διαγράφεται).
-        event_cancelled: await isEventCancelled(event.id),
+        // Ο διοργανωτής ακύρωσε την εκδήλωση (μένει ορατή, με την ένδειξη).
+        event_cancelled: await isEventCancelled(event.id, event),
         amount_paid: mine?.amount_paid ?? null,
         refund_hours: EVENT_REFUND_HOURS,
         refund_deadline: deadline ? deadline.toISOString() : null,
@@ -988,7 +1102,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     // Fail-closed: αν δεν μπορούμε να ελέγξουμε την ακύρωση, καμία δήλωση/πληρωμή.
     let cancelledNow: boolean
     try {
-      cancelledNow = await isEventCancelled(event.id)
+      cancelledNow = await isEventCancelled(event.id, event)
     } catch (err: any) {
       console.error('[events] cancel check failed:', err?.message)
       return reply.code(503).send({ message: 'Η δήλωση δεν είναι δυνατή αυτή τη στιγμή. Δοκίμασε ξανά σε λίγο.' })
@@ -1145,7 +1259,11 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       if (!reg || reg.user_email !== email) return reply.code(404).send({ message: 'Δεν βρέθηκε συμμετοχή' })
 
       if (reg.status === 'pending_payment' && transaction_id) {
-        await confirmEventRegistrationPayment(String(id), String(transaction_id))
+        const r = await confirmEventRegistrationPayment(String(id), String(transaction_id))
+        // Η Viva δεν απάντησε (5xx/δίκτυο): 503, ο πελάτης ξαναδοκιμάζει.
+        if (r === 'error') {
+          return reply.code(503).send({ message: 'Η επαλήθευση της πληρωμής δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.', retry: true })
+        }
       }
       const fresh = await prisma.eventRegistration.findUnique({ where: { id } })
       return { paid: fresh?.status === 'registered', status: fresh?.status ?? null, data: fresh }
@@ -1279,6 +1397,12 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const event = await assertCanModify(req, reply, req.params.id)
     if (!event) return
+    // Ακυρωμένη εκδήλωση: δεν διαγράφεται — μένει (με «Ακυρώθηκε») ώστε οι
+    // συμμετέχοντες να βλέπουν την κατάσταση της επιστροφής τους από τον
+    // σύνδεσμο της ειδοποίησης, και να μη χαθεί το ίχνος των πληρωμών.
+    if (await isEventCancelled(event.id, event)) {
+      return reply.code(409).send({ message: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή' })
+    }
     // Η διαγραφή σβήνει (cascade) και τις εγγραφές — μαζί και το ίχνος
     // πληρωμών που δεν έχουν επιστραφεί. Δεν γίνεται όσο υπάρχουν πληρωμένες
     // ή επιστροφές σε εκκρεμότητα· οι εκκρεμείς πληρωμές (εγκαταλειμμένα
@@ -1302,7 +1426,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     })
     const refunds = regs.filter(r => isPaidRegistration(r)
       || ((r.status === 'refund_failed' || r.status === 'refunding') && !!r.viva_transaction_id && (r.amount_paid ?? 0) > 0))
-    const alreadyCancelled = await isEventCancelled(event.id)
+    const alreadyCancelled = await isEventCancelled(event.id, event)
     return {
       data: {
         participants: regs.filter(r => r.status === 'registered').length,
@@ -1311,6 +1435,9 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         refund_total: round2(refunds.reduce((s, r) => s + (r.amount_paid ?? 0), 0)),
         currency: event.currency || 'EUR',
         already_cancelled: alreadyCancelled,
+        // Προσθετικό: ακυρωμένη και όλα τακτοποιημένα (καμία ενεργή συμμετοχή,
+        // πληρωμή ή επιστροφή σε εκκρεμότητα) — δεν μένει «Ολοκλήρωση επιστροφών».
+        settled: alreadyCancelled && regs.length === 0,
         // Προσθετικό: μπορεί ο καλών να πατήσει «Ακύρωση» τώρα; (όχι αν η
         // εκδήλωση ξεκίνησε και δεν είναι admin — ίδιος κανόνας με το POST /:id/cancel)
         can_cancel: alreadyCancelled || !eventHasStarted(event) || (req.user as any).role === 'admin',
@@ -1319,14 +1446,15 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   /**
-   * Ακύρωση εκδήλωσης από τον διοργανωτή ή διαχειριστή: πλήρης επιστροφή σε
-   * κάθε πληρωμένη συμμετοχή, ακύρωση των υπολοίπων, ειδοποίηση σε όλους και
-   * διαγραφή της εκδήλωσης όταν τακτοποιηθούν όλα.
+   * Ακύρωση εκδήλωσης από τον διοργανωτή ή διαχειριστή: σήμανση cancelled_at,
+   * πλήρης επιστροφή σε κάθε πληρωμένη συμμετοχή, ακύρωση των υπολοίπων και
+   * ειδοποίηση σε όλους. Η εκδήλωση ΔΕΝ διαγράφεται (μένει με «Ακυρώθηκε»).
    *
-   *   200 { data: report, deleted: true }  — ολοκληρώθηκε, η εκδήλωση διαγράφηκε
-   *   207 { data: report, deleted: false } — κάποιες επιστροφές απέτυχαν ή τρέχουν·
-   *                                          η εκδήλωση μένει ακυρωμένη, η κλήση επαναλαμβάνεται
+   *   200 { data: report, settled: true, deleted: true }   — ολοκληρώθηκε
+   *   207 { data: report, settled: false, deleted: false } — κάποιες επιστροφές απέτυχαν ή τρέχουν·
+   *                                          η κλήση επαναλαμβάνεται («Ολοκλήρωση επιστροφών»)
    *   409                                  — η εκδήλωση ξεκίνησε ήδη και ο καλών δεν είναι admin
+   * Το `deleted` μένει για τους παλιούς πελάτες ως «ολοκληρώθηκε» (= settled).
    */
   app.post('/:id/cancel', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const event = await assertCanModify(req, reply, req.params.id)
@@ -1347,14 +1475,27 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    // Σημείωση ακύρωσης ΠΡΩΤΑ: από εδώ και πέρα καμία νέα δήλωση.
-    if (!alreadyCancelled) {
-      await audit(req, {
-        action: EVENT_CANCEL_ACTION, resource: 'event', resource_id: event.id,
-        metadata: { title: event.title, date: event.date, price: event.price },
-      })
-      if (!(await isEventCancelled(event.id).catch(() => false))) {
-        return reply.code(500).send({ message: 'Η ακύρωση δεν ξεκίνησε. Δοκίμασε ξανά σε λίγο.' })
+    // Σημείωση ακύρωσης ΠΡΩΤΑ (στήλη, ατομικά, μόνο αν είναι null): από εδώ
+    // και πέρα καμία νέα δήλωση. Ακύρωση πριν τη στήλη (μόνο audit): η
+    // στήλη παίρνει τη στιγμή εκείνης της σήμανσης.
+    if (!event.cancelled_at) {
+      let marked: number
+      try {
+        const legacyAt = alreadyCancelled ? await legacyCancelledAt(event.id) : null
+        const r = await prisma.event.updateMany({
+          where: { id: event.id, cancelled_at: null },
+          data: { cancelled_at: legacyAt ?? new Date() },
+        })
+        marked = r.count
+      } catch (err: any) {
+        return serverError(reply, err, 'event-cancel', 'Η ακύρωση δεν ξεκίνησε. Δοκίμασε ξανά σε λίγο.')
+      }
+      // Καταγραφή μόνο για τη νέα σήμανση (όχι σε ταυτόχρονο αίτημα ή παλιά ακύρωση).
+      if (marked > 0 && !alreadyCancelled) {
+        await audit(req, {
+          action: EVENT_CANCEL_ACTION, resource: 'event', resource_id: event.id,
+          metadata: { title: event.title, date: event.date, price: event.price },
+        })
       }
     }
 
@@ -1363,17 +1504,18 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       if (!report) return reply.code(404).send({ message: 'Η εκδήλωση δεν βρέθηκε' })
       await audit(req, {
         action: 'event_cancel_run', resource: 'event', resource_id: event.id,
-        outcome: report.deleted ? 'success' : 'failure',
+        outcome: report.settled ? 'success' : 'failure',
         metadata: {
-          deleted: report.deleted, refunded: report.refunded, refunded_amount: report.refunded_amount,
+          settled: report.settled, refunded: report.refunded, refunded_amount: report.refunded_amount,
           cancelled: report.cancelled,
           failed: report.failed.map(f => f.registration_id),
           in_progress: report.in_progress.map(f => f.registration_id),
         },
       })
-      if (report.deleted) return { data: report, deleted: true }
+      if (report.settled) return { data: report, settled: true, deleted: true }
+      await notifyOrganizerCancelIncomplete(event, report.failed.length + report.in_progress.length)
       return reply.code(207).send({
-        data: report, deleted: false,
+        data: report, settled: false, deleted: false,
         message: 'Η εκδήλωση ακυρώθηκε, αλλά κάποιες επιστροφές χρημάτων δεν ολοκληρώθηκαν. Δοκίμασε ξανά σε λίγο.',
       })
     } catch (err: any) {

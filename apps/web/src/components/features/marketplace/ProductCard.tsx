@@ -4,6 +4,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
+import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 import toast from 'react-hot-toast'
 import type { Product } from '@/types'
 import { useTranslation } from 'react-i18next'
@@ -80,8 +81,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
           <div className="flex items-center gap-1 mt-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/><span className="text-xs text-gray-500">{Number(product.rating ?? 0).toFixed(1)}</span></div>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-2">
-          <p className="font-bold text-brand-900">{formatCurrency(product.sale_price || product.price)}</p>
-          {product.sale_price && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
+          <p className="font-bold text-brand-900">{formatCurrency(effectivePrice(product))}</p>
+          {isOnSale(product) && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
           <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending || product.stock === 0} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>{t('marketplace.addToCart')}</button>
         </div>
       </div>
@@ -94,7 +95,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
           {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/> : <div className={cn('w-full h-full flex items-center justify-center', illuBg)}><CategoryIcon size={40} className={illuFg} strokeWidth={1.5} /></div>}
         </div>
-        {product.discount_percentage && <div className="absolute top-2 left-2 badge bg-red-500 text-white">-{product.discount_percentage}%</div>}
+        {/* Ποσοστό από την τιμή που χρεώνεται, όπως στο κινητό — όχι το ξεχωριστό discount_percentage. */}
+        {isOnSale(product) && <div className="absolute top-2 left-2 badge bg-red-500 text-white">-{salePercent(product)}%</div>}
         {product.is_featured && <div className="absolute top-2 right-2 badge bg-brand-900 text-white">⭐</div>}
       </Link>
 
@@ -109,8 +111,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         </div>
         <div className="flex items-center justify-between mt-2">
           <div>
-            <p className="font-bold text-xs text-gray-900 dark:text-white">{formatCurrency(product.sale_price || product.price)}</p>
-            {product.sale_price && <p className="text-[10px] text-gray-400 line-through">{formatCurrency(product.price)}</p>}
+            <p className="font-bold text-xs text-gray-900 dark:text-white">{formatCurrency(effectivePrice(product))}</p>
+            {isOnSale(product) && <p className="text-[10px] text-gray-400 line-through">{formatCurrency(product.price)}</p>}
           </div>
           <div className="flex gap-1">
             {isAuthenticated && (

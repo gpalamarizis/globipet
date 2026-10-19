@@ -470,7 +470,10 @@
     "none_history": "暂无历史记录",
     "none_upcoming": "暂无即将到来的预约",
     "see_services": "查看服务",
-    "upcoming": "即将到来"
+    "upcoming": "即将到来",
+    "pay_now": "支付 — €{{amount}}",
+    "payment_pending": "待付款",
+    "payment_pending_hint": "付款完成后，预约即会确认。"
   },
   "checkout": {
     "address": "地址",
@@ -1520,7 +1523,15 @@
     "cancelEventDone_one": "活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。",
     "cancelEventDone": "活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。",
     "cancelEventPartial_one": "活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。",
-    "cancelEventPartial": "活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。"
+    "cancelEventPartial": "活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。",
+    "cancelEventHintKeep": "所有报名都将被取消，已付款者将获得全额退款，所有参与者都会收到通知。活动将保留并标记为“已取消”。",
+    "completeRefunds": "完成退款",
+    "cancelEventSettled": "活动已取消。所有报名均已处理，退款已全部完成。",
+    "cancelEventStarted": "活动已开始或已举行，无法再在此处取消并退款。如有需要，请联系客服。",
+    "mine": "我的活动",
+    "mineEmpty": "您还没有创建任何活动",
+    "refundsPending_one": "{{count}} 笔退款待完成",
+    "refundsPending": "{{count}} 笔退款待完成"
   },
   "breeds": {
     "title": "品种",
@@ -2127,5 +2138,16 @@
     "title": "通知中心",
     "empty": "暂无通知",
     "markAll": "全部标为已读"
+  },
+  "bookingConfirm": {
+    "paid": "预约已付款",
+    "paidHint": "您的预约已确认，服务商已收到通知。",
+    "pendingHint": "在 Viva 完成付款后，您的预约将在此处确认。",
+    "pendingLateHint": "付款仍在处理中。如果您已在 Viva 完成付款，预约将自动确认；否则您可以在“我的预约”中重新付款。",
+    "cancelled": "该预约已取消",
+    "cancelledHint": "如果此预约已完成付款，款项将自动退还到您的银行卡。",
+    "failedHint": "您的预约仍未付款。您可以在“我的预约”中重新付款。",
+    "duplicateRefunded": "该预约此前已付款，因此多收的款项已自动退还到您的银行卡。",
+    "duplicateRefundDelayed": "该预约此前已付款。多收款项的自动退款有所延迟——我们会处理完成；如有需要，请联系我们。"
   }
 }

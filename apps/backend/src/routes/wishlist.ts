@@ -1,11 +1,26 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { effectivePrice } from '../lib/price.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
-    const data = await prisma.wishlist.findMany({ where: { user_email: email }, orderBy: { created_at: 'desc' } })
+    const rows = await prisma.wishlist.findMany({ where: { user_email: email }, orderBy: { created_at: 'desc' } })
+    // Η product_price της γραμμής είναι στιγμιότυπο της αποθήκευσης· εδώ
+    // επιστρέφεται η τρέχουσα τιμή που χρεώνεται (effectivePrice), ώστε η
+    // λίστα να δείχνει μειώσεις τιμής και εκπτώσεις όπως το καλάθι.
+    const products = rows.length
+      ? await prisma.product.findMany({
+          where: { id: { in: rows.map(r => r.product_id) } },
+          select: { id: true, price: true, sale_price: true },
+        })
+      : []
+    const byId = new Map(products.map(p => [p.id, p]))
+    const data = rows.map(r => {
+      const p = byId.get(r.product_id)
+      return p ? { ...r, product_price: effectivePrice(p) } : r
+    })
     return { data }
   })
 
@@ -45,7 +60,7 @@ const routes: FastifyPluginAsync = async (app) => {
           user_email: email,
           product_id,
           product_name: product.name,
-          product_price: product.price,
+          product_price: effectivePrice(product),
           product_image: product.image_url ?? null,
         },
       })

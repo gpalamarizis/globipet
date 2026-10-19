@@ -93,18 +93,17 @@ export default function EventDetailScreen() {
     onSuccess: (r: any) => {
       const report = r?.data?.data
       const amount = Number(report?.refunded_amount ?? 0).toFixed(2)
-      if (r?.data?.deleted) {
-        qc.invalidateQueries({ queryKey: ['events'] })
+      // Η εκδήλωση δεν διαγράφεται πια: μένει σε αυτή την οθόνη με «Ακυρώθηκε» (όπως στο web).
+      qc.invalidateQueries({ queryKey: ['events'] })
+      qc.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
+      qc.invalidateQueries({ queryKey: ['event-registration', id] })
+      qc.invalidateQueries({ queryKey: ['event', id] })
+      if (r?.data?.settled ?? r?.data?.deleted) {
         Alert.alert(t('events.cancelEvent'), t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
-        if (router.canGoBack()) router.back()
-        else router.replace('/events' as any)
         return
       }
       // 207: η εκδήλωση έμεινε ακυρωμένη, κάποιες επιστροφές απέτυχαν.
       const failed = (report?.failed?.length ?? 0) + (report?.in_progress?.length ?? 0)
-      qc.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
-      qc.invalidateQueries({ queryKey: ['event-registration', id] })
-      qc.invalidateQueries({ queryKey: ['event', id] })
       Alert.alert(t('common.error'), t('events.cancelEventPartial', { count: failed }))
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
@@ -168,7 +167,17 @@ export default function EventDetailScreen() {
   // και όποιος δεν είχε δηλώσει ή δεν είναι συνδεδεμένος. Αν ο server δεν
   // στέλνει το πεδίο, μένει η συμπεριφορά του /registration.
   const eventCancelled = !!registration?.event_cancelled || event?.cancelled === true
-  const cancelRefundDelayed = registration?.refund_reason === 'event_cancelled' && registration?.payment_status !== 'refunded'
+  // Τα χρήματα του χρήστη σε ακυρωμένη εκδήλωση: από την κατάσταση της
+  // εγγραφής (όχι από το audit, που καθαρίζεται στις 180 ημέρες) — όπως στο web.
+  const myRefundDone = registration?.payment_status === 'refunded'
+  // «Επιστράφηκαν λόγω ακύρωσης από τον διοργανωτή» μόνο όταν αυτός ήταν ο
+  // λόγος (refund_reason του /registration)· αλλιώς ουδέτερο, όπως στο web.
+  const myRefundByEventCancel = myRefundDone && registration?.refund_reason === 'event_cancelled'
+  const myRefundInProgress = registration?.payment_status === 'refunding'
+  const myRefundDelayed = registration?.payment_status === 'refund_failed'
+  // Διοργανωτής: ξεκίνησε η εκδήλωση (μόνο admin ακυρώνει) / όλα τακτοποιημένα.
+  const cancelBlocked = cancelPreview?.can_cancel === false
+  const cancelSettled = !!cancelPreview?.already_cancelled && cancelPreview?.settled === true
   const refundHours = registration?.refund_hours ?? 48
   const refundUntil = registration?.refund_deadline
     ? new Date(registration.refund_deadline).toLocaleString(i18n.language, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -215,11 +224,18 @@ export default function EventDetailScreen() {
         {eventCancelled ? (
           <>
             <Text style={s.cancelledTxt}>
-              {registration?.refund_reason === 'event_cancelled' && registration?.payment_status === 'refunded'
+              {myRefundByEventCancel
                 ? t('events.cancelledByOrganizerRefunded')
                 : t('events.cancelledByOrganizer')}
             </Text>
-            {cancelRefundDelayed && <Text style={s.note}>{t('events.cancelledByOrganizerRefundDelayed')}</Text>}
+            {myRefundDone && !myRefundByEventCancel && (
+              <Text style={s.note}>{t('eventConfirm.refunded')}</Text>
+            )}
+            {(myRefundInProgress || myRefundDelayed) && (
+              <Text style={s.note}>
+                {myRefundInProgress ? t('eventConfirm.refundInProgressHint') : t('events.cancelledByOrganizerRefundDelayed')}
+              </Text>
+            )}
           </>
         ) : already ? (
           <>
@@ -271,12 +287,20 @@ export default function EventDetailScreen() {
         {isOrganizer && (
           <Card>
             <Text style={s.cardTitle}>{t('events.manageEvent')}</Text>
-            <Text style={[s.note, s.manageHint]}>
-              {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHint')}
-            </Text>
-            <Button variant="danger" full loading={cancelEvent.isPending || cancelEventBusy}
-              disabled={cancelEvent.isPending || cancelEventBusy} onPress={onCancelEvent}
-              label={cancelPreview?.already_cancelled ? t('events.cancelEventRetry') : t('events.cancelEvent')} />
+            {cancelSettled ? (
+              <Text style={[s.note, s.manageHint]}>{t('events.cancelEventSettled')}</Text>
+            ) : cancelBlocked ? (
+              <Text style={[s.note, s.manageHint]}>{t('events.cancelEventStarted')}</Text>
+            ) : (
+              <>
+                <Text style={[s.note, s.manageHint]}>
+                  {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHintKeep')}
+                </Text>
+                <Button variant="danger" full loading={cancelEvent.isPending || cancelEventBusy}
+                  disabled={cancelEvent.isPending || cancelEventBusy} onPress={onCancelEvent}
+                  label={cancelPreview?.already_cancelled ? t('events.completeRefunds') : t('events.cancelEvent')} />
+              </>
+            )}
           </Card>
         )}
       </ScrollView>

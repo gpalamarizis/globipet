@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { effectivePrice } from '@/lib/price'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -410,7 +411,7 @@ export default function HomeScreen() {
                     : <Text style={{ fontSize: 32 }}>🛍️</Text>}
                 </View>
                 <Text style={s.productName} numberOfLines={2}>{p.name}</Text>
-                <Text style={s.productPrice}>€{Number(p.sale_price ?? p.price ?? 0).toFixed(2)}</Text>
+                <Text style={s.productPrice}>€{effectivePrice(p).toFixed(2)}</Text>
               </TouchableOpacity>
             ))}
           </View>

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { effectivePrice } from '@/lib/price'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useTranslation } from 'react-i18next'
@@ -39,8 +40,10 @@ export default function ProductSubscribe() {
   if (!product) return <div className="page-container py-16 text-center text-gray-500">{t('pgSubscribe.notFound')}</div>
 
   const discountPercent = discountData?.discount_percent ?? 0
+  // Ο server χρεώνει την τιμή έκπτωσης (αν ισχύει) μείον την έκπτωση συνδρομής.
+  const base = effectivePrice(product)
   // Ίδια στρογγυλοποίηση με τον server (routes/subscriptions.ts), εμφάνιση με 2 δεκαδικά.
-  const monthlyPrice = Math.round(product.price * (1 - discountPercent / 100) * 100) / 100
+  const monthlyPrice = Math.round(base * (1 - discountPercent / 100) * 100) / 100
 
   if (!product.is_subscribable) {
     return (
@@ -67,7 +70,7 @@ export default function ProductSubscribe() {
             <span className="text-2xl font-bold text-brand-900 dark:text-brand-400">{formatCurrency(monthlyPrice)}</span>
             <span className="text-sm text-gray-500">{t('pgSubscribe.perMonth')}</span>
             {discountPercent > 0 && (
-              <span className="text-xs text-gray-400 line-through ml-1">{formatCurrency(product.price)}</span>
+              <span className="text-xs text-gray-400 line-through ml-1">{formatCurrency(base)}</span>
             )}
           </div>
           {discountPercent > 0 && (

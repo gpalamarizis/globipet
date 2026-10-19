@@ -7,6 +7,7 @@ import { Package, Plus, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { effectivePrice } from '@/lib/price'
 
 /**
  * Τα προϊόντα του παρόχου. Πάτημα → επεξεργασία (τιμή, απόθεμα, φωτογραφία,
@@ -52,7 +53,7 @@ export default function ProviderProducts() {
                   {String(t(`marketplace.categories.${p.category}`, { defaultValue: p.category }))}
                 </Text>
                 <View style={s.badges}>
-                  <Badge label={`€${Number(p.sale_price ?? p.price ?? 0).toFixed(2)}`} tone="neutral" />
+                  <Badge label={`€${effectivePrice(p).toFixed(2)}`} tone="neutral" />
                   <Badge label={`${t('providerDash.stock')}: ${p.stock ?? 0}`}
                     tone={(p.stock ?? 0) === 0 ? 'danger' : (p.stock ?? 0) <= 5 ? 'warning' : 'success'} />
                 </View>

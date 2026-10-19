@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
 import { serverError } from '../lib/errors.js'
+import { effectivePrice } from '../lib/price.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const SETTING_KEY = 'food_subscription_discount_percent'
@@ -35,7 +36,10 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
 
     const setting = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY } })
     const discountPercent = setting ? parseFloat(setting.value) : 0
-    const monthlyPrice = Math.round(product.price * (1 - discountPercent / 100) * 100) / 100
+    // Βάση = τιμή έκπτωσης αν ισχύει (lib/price.ts), μείον την έκπτωση
+    // συνδρομής. Το ποσό κλειδώνει εδώ (price_data του Stripe + metadata
+    // monthly_price): υπάρχουσες συνδρομές ΔΕΝ αλλάζουν όταν αλλάξει η τιμή.
+    const monthlyPrice = Math.round(effectivePrice(product) * (1 - discountPercent / 100) * 100) / 100
 
     try {
       const session = await stripe.checkout.sessions.create({

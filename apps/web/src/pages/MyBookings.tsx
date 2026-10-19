@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Calendar, Clock, Star, X, MapPin, Phone, ChevronRight, Plus } from 'lucide-react'
+import { Calendar, Clock, Star, X, MapPin, Phone, ChevronRight, Plus, CreditCard } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
@@ -59,6 +59,24 @@ export default function MyBookings() {
       if (r?.data?.refund > 0) toast.success(t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }))
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('common.error')),
+  })
+
+  /**
+   * Πληρωμή απλήρωτης κράτησης. Το ποσό το ορίζει ο server από τη βάση
+   * (total_price, ήδη μετά την έκπτωση καμπάνιας)· εδώ μόνο εμφανίζεται.
+   * Η Viva επιστρέφει στο /bookings/:id/confirmation, που ανανεώνει τη λίστα.
+   */
+  const payBooking = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post('/bookings/viva/checkout', { booking_id: id })
+      if (!data?.checkoutUrl) throw new Error(t('common.error'))
+      window.location.href = data.checkoutUrl
+    },
+    onError: (err: any) => {
+      // Π.χ. πληρώθηκε ή ακυρώθηκε στο μεταξύ: η λίστα να δείξει την αλήθεια.
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+      toast.error(err?.response?.data?.message || err?.message || t('common.error'))
+    },
   })
 
   const submitReview = useMutation({
@@ -146,9 +164,17 @@ export default function MyBookings() {
                     </p>
                   </div>
                 </div>
-                <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusColors[booking.status] || 'bg-gray-100 text-gray-600')}>
-                  {t(`bookings.status.${booking.status}`) || booking.status}
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusColors[booking.status] || 'bg-gray-100 text-gray-600')}>
+                    {t(`bookings.status.${booking.status}`) || booking.status}
+                  </span>
+                  {/* Απλήρωτη και πληρώσιμη — το κρίνει ο server (`payable`). */}
+                  {booking.payable === true && (
+                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                      {t('bookings.paymentPending')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-500">
@@ -178,7 +204,18 @@ export default function MyBookings() {
                 )}
               </div>
 
+              {booking.payable === true && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">{t('bookings.paymentPendingHint')}</p>
+              )}
+
               <div className="flex gap-2">
+                {booking.payable === true && (
+                  <button onClick={() => payBooking.mutate(booking.id)}
+                    disabled={payBooking.isPending}
+                    className="flex-1 btn-primary text-xs py-2 flex items-center justify-center gap-1.5 disabled:opacity-60">
+                    <CreditCard size={13}/> {t('bookings.payNow', { amount: Number(booking.total_price ?? 0).toFixed(2) })}
+                  </button>
+                )}
                 {/* A booking can be called off while it is still pending or
                     confirmed. Limiting this to pending left customers unable
                     to cancel anything the provider had accepted. */}

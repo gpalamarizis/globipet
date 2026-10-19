@@ -470,7 +470,10 @@
     "none_history": "Aucun historique",
     "none_upcoming": "Aucune réservation à venir",
     "see_services": "Voir les services",
-    "upcoming": "À venir"
+    "upcoming": "À venir",
+    "pay_now": "Payer — {{amount}} €",
+    "payment_pending": "Paiement en attente",
+    "payment_pending_hint": "La réservation est confirmée dès que le paiement est finalisé."
   },
   "checkout": {
     "address": "Adresse",
@@ -1520,7 +1523,15 @@
     "cancelEventDone_one": "L’événement a été annulé. {{count}} paiement a été remboursé (€{{amount}}) et les participants ont été prévenus.",
     "cancelEventDone": "L’événement a été annulé. {{count}} paiements ont été remboursés (€{{amount}}) et les participants ont été prévenus.",
     "cancelEventPartial_one": "L’événement a été annulé, mais {{count}} remboursement n’a pas abouti. Réessayez dans un instant.",
-    "cancelEventPartial": "L’événement a été annulé, mais {{count}} remboursements n’ont pas abouti. Réessayez dans un instant."
+    "cancelEventPartial": "L’événement a été annulé, mais {{count}} remboursements n’ont pas abouti. Réessayez dans un instant.",
+    "cancelEventHintKeep": "Toutes les inscriptions sont annulées, les personnes ayant payé sont intégralement remboursées et tous les participants sont prévenus. L’événement reste visible avec la mention « Annulé ».",
+    "completeRefunds": "Finaliser les remboursements",
+    "cancelEventSettled": "L’événement a été annulé. Toutes les inscriptions ont été traitées et tous les remboursements effectués.",
+    "cancelEventStarted": "L’événement a déjà commencé ou eu lieu : il ne peut plus être annulé avec remboursements depuis l’application. En cas de besoin, contactez le support.",
+    "mine": "Mes événements",
+    "mineEmpty": "Vous n’avez créé aucun événement",
+    "refundsPending_one": "{{count}} remboursement en attente",
+    "refundsPending": "{{count}} remboursements en attente"
   },
   "breeds": {
     "title": "Races",
@@ -2127,5 +2138,16 @@
     "title": "Centre de notifications",
     "empty": "Aucune notification",
     "markAll": "Tout marquer comme lu"
+  },
+  "bookingConfirm": {
+    "paid": "Réservation payée",
+    "paidHint": "Votre rendez-vous est confirmé et le prestataire a été prévenu.",
+    "pendingHint": "Dès que le paiement sur Viva est finalisé, votre réservation est confirmée ici.",
+    "pendingLateHint": "Le paiement est toujours en attente. Si vous l'avez finalisé sur Viva, la réservation sera confirmée automatiquement ; sinon, vous pouvez payer de nouveau depuis « Mes réservations ».",
+    "cancelled": "La réservation a été annulée",
+    "cancelledHint": "Si un paiement a été finalisé pour cette réservation, le montant est remboursé automatiquement sur votre carte.",
+    "failedHint": "Votre réservation n'est toujours pas payée. Vous pouvez payer de nouveau depuis « Mes réservations ».",
+    "duplicateRefunded": "La réservation était déjà payée : le débit supplémentaire a été remboursé automatiquement sur votre carte.",
+    "duplicateRefundDelayed": "La réservation était déjà payée. Le remboursement automatique du débit supplémentaire est retardé — nous nous en chargerons ; si besoin, contactez-nous."
   }
 }

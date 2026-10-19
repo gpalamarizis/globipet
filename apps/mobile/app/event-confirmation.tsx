@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, AppState } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -25,7 +25,10 @@ export default function EventConfirmationScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
+  // Το verify απάντησε. Σε 503/δίκτυο (η Viva δεν απάντησε) μένει false και
+  // ξαναδοκιμάζεται στο polling, όπως στο web.
   const verified = useRef(false)
+  const verifying = useRef(false)
   const [timedOut, setTimedOut] = useState(false)
 
   const { data: event } = useQuery({
@@ -43,30 +46,54 @@ export default function EventConfirmationScreen() {
   const status: string | undefined = reg?.registration?.status
   const regId: string | undefined = reg?.registration?.id
 
-  useEffect(() => {
-    if (verified.current || !regId || !transactionId || status !== 'pending_payment') return
-    verified.current = true
+  const runVerify = useCallback(() => {
+    if (verified.current || verifying.current || !regId || !transactionId) return
+    verifying.current = true
     api.post(`/events/registrations/${regId}/viva/verify`, { transaction_id: transactionId })
-      .catch(() => { /* το webhook επιβεβαιώνει ανεξάρτητα */ })
+      .then(() => { verified.current = true })
+      .catch((err: any) => {
+        const st = err?.response?.status
+        // 4xx = οριστική απάντηση· σε 503/δίκτυο νέα απόπειρα στο polling.
+        if (st && st >= 400 && st < 500) verified.current = true
+      })
       .finally(() => {
+        verifying.current = false
         refetch()
         qc.invalidateQueries({ queryKey: ['event', id] })
       })
-  }, [regId, transactionId, status])
+  }, [regId, transactionId, refetch, qc, id])
+
+  useEffect(() => {
+    if (verified.current || !regId || !transactionId || status !== 'pending_payment') return
+    runVerify()
+  }, [regId, transactionId, status, runVerify])
 
   // Όσο εκκρεμεί: παρακολούθηση για 90". Μετά λέμε «σε εκκρεμότητα» — ΟΧΙ
   // «απέτυχε»: ο χρήστης μπορεί να είναι ακόμη στη Viva και το webhook
   // επιβεβαιώνει ανεξάρτητα (η κατάσταση φαίνεται στην εκδήλωση).
   useEffect(() => {
-    if (status !== 'pending_payment') return
+    if (status !== 'pending_payment' || timedOut) return
     let elapsed = 0
     const interval = setInterval(() => {
       elapsed += 3
       if (elapsed > 90) { clearInterval(interval); setTimedOut(true); return }
-      refetch()
+      if (!verified.current && transactionId) runVerify()
+      else refetch()
     }, 3000)
     return () => clearInterval(interval)
-  }, [status, refetch])
+  }, [status, timedOut, transactionId, refetch, runVerify])
+
+  // Επιστροφή στο προσκήνιο (π.χ. από τη Viva ή μετά από ώρα): νέα ανάγνωση
+  // αμέσως, και νέος κύκλος παρακολούθησης αν είχε λήξει ο προηγούμενος.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', st => {
+      if (st !== 'active') return
+      if (!verified.current && transactionId && status === 'pending_payment') runVerify()
+      else refetch()
+      setTimedOut(false)
+    })
+    return () => sub.remove()
+  }, [transactionId, status, refetch, runVerify])
 
   // Μόλις κριθεί, ενημερώνεται και η οθόνη της εκδήλωσης.
   useEffect(() => {
@@ -90,9 +117,11 @@ export default function EventConfirmationScreen() {
   // αφήνει η ακύρωση χωρίς refund_reason: `cancelled` (δωρεάν/εκκρεμής
   // πληρωμή) και `refunding` (επιστροφή σε εξέλιξη). Χωρίς αυτό έπεφταν στο
   // «Η πληρωμή απέτυχε».
+  // Και από το `cancelled` του GET /events/:id (στήλη cancelled_at), όπως στο web.
   const refunding = status === 'refunding'
+  const cancelledFlag = !!reg?.event_cancelled || event?.cancelled === true
   const eventCancelled = (refundReason === 'event_cancelled' && (refunded || refundFailed))
-    || (!!reg?.event_cancelled && (status === 'cancelled' || refunding
+    || (cancelledFlag && (status === 'cancelled' || refunding
       || ((refunded || refundFailed) && refundReason !== 'cancelled' && refundReason !== 'full')))
   const neutralRefund = refunded && !fullRefund
   const bad = !confirmed && !waiting && !stillPending && !neutralRefund
@@ -119,7 +148,8 @@ export default function EventConfirmationScreen() {
           <Text style={s.heroTitle}>
             {confirmed ? t('eventConfirm.confirmed')
               : waiting || stillPending ? t('teleConfirm.pending')
-              : eventCancelled ? (refunded ? t('events.cancelledByOrganizerRefunded') : t('events.cancelledByOrganizer'))
+              // «…τα χρήματα επιστράφηκαν» μόνο αν ο λόγος ήταν η ακύρωση της εκδήλωσης (όπως στο web).
+              : eventCancelled ? (refunded && refundReason === 'event_cancelled' ? t('events.cancelledByOrganizerRefunded') : t('events.cancelledByOrganizer'))
               : cancelRefund ? t('events.cancelled')
               : neutralRefund ? t('eventConfirm.refunded')
               : refunded || refundFailed ? t('eventConfirm.full')

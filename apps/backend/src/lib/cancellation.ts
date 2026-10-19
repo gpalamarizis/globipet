@@ -78,11 +78,31 @@ export class CancelError extends Error {
 export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
   const b = await prisma.booking.findUnique({ where: { id: bookingId } })
   if (!b) throw new CancelError(404, 'Η κράτηση δεν βρέθηκε')
+  // Άλλο αίτημα έχει ήδη διεκδικήσει την επιστροφή (βλ. παρακάτω). Χωρίς
+  // αυτόν τον έλεγχο η κράτηση θα έμοιαζε απλήρωτη και θα ακυρωνόταν χωρίς
+  // επιστροφή.
+  if (b.payment_status === 'refunding') {
+    throw new CancelError(409, 'Η ακύρωση είναι ήδη σε εξέλιξη')
+  }
   const terms = cancellationTerms(b, by)
   if (!terms.allowed) {
     throw new CancelError(400, terms.reason === 'already_started'
       ? 'Η ώρα του ραντεβού έχει περάσει — η κράτηση δεν ακυρώνεται πλέον.'
       : 'Η κράτηση δεν μπορεί να ακυρωθεί σε αυτή την κατάσταση.')
+  }
+
+  // Πληρωμένη: ατομική διεκδίκηση paid → refunding ΠΡΙΝ την επιστροφή, ώστε
+  // διπλό κλικ / δύο συσκευές / πελάτης και πάροχος μαζί να μην κάνουν δύο
+  // επιστροφές. Μόνο ένα αίτημα περνά· τα άλλα παίρνουν 409. Ίδιο μοτίβο με
+  // την ακύρωση συμμετοχής σε εκδήλωση (registered → refunding).
+  if (terms.paid) {
+    const claimed = await prisma.booking.updateMany({
+      where: { id: b.id, status: b.status, payment_status: 'paid', payment_ref: b.payment_ref },
+      data: { payment_status: 'refunding' },
+    })
+    if (claimed.count === 0) {
+      throw new CancelError(409, 'Η ακύρωση είναι ήδη σε εξέλιξη')
+    }
   }
 
   let refundTx: string | null = null
@@ -92,6 +112,11 @@ export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
       refundTx = r.transactionId
     } catch (err: any) {
       console.error('[viva] refund failed for booking', b.id, err?.message)
+      // Η επιστροφή απέτυχε: η κράτηση επανέρχεται πληρωμένη, όπως ήταν.
+      await prisma.booking.updateMany({
+        where: { id: b.id, payment_status: 'refunding' },
+        data: { payment_status: 'paid' },
+      }).catch((e: any) => console.error('[viva] could not restore booking', b.id, 'to paid:', e?.message))
       throw new CancelError(502, 'Η επιστροφή χρημάτων δεν ολοκληρώθηκε, οπότε η κράτηση δεν ακυρώθηκε. Δοκίμασε ξανά σε λίγο.')
     }
   }
@@ -104,7 +129,20 @@ export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
     if (b.provider_payout_amount != null) data.provider_payout_amount = round2(b.provider_payout_amount * keep)
     if (b.platform_fee_amount != null) data.platform_fee_amount = round2(b.platform_fee_amount * keep)
   }
-  const updated = await prisma.booking.update({ where: { id: b.id }, data })
+  // Απλήρωτη: ατομικά, μόνο αν δεν πληρώθηκε στο μεταξύ. Αλλιώς μια πληρωμή
+  // που καταχωρήθηκε ανάμεσα στην ανάγνωση και την ακύρωση θα έμενε σε
+  // ακυρωμένη κράτηση χωρίς επιστροφή.
+  if (!terms.paid) {
+    const r = await prisma.booking.updateMany({
+      where: { id: b.id, payment_status: b.payment_status, status: b.status }, data,
+    })
+    if (r.count === 0) {
+      throw new CancelError(409, 'Η κράτηση άλλαξε στο μεταξύ — ανανέωσε τη σελίδα και δοκίμασε ξανά.')
+    }
+  }
+  const updated = terms.paid
+    ? await prisma.booking.update({ where: { id: b.id }, data })
+    : (await prisma.booking.findUnique({ where: { id: b.id } }))!
 
   await audit(req, {
     action: 'booking_cancel', resource: 'booking', resource_id: b.id,

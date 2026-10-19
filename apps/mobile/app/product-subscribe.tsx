@@ -7,14 +7,16 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { effectivePrice } from '@/lib/price'
 
 /**
  * Μηνιαία συνδρομή τροφής.
  *
  * ΤΙ ΚΑΝΕΙ Ο SERVER (subscriptions.ts, webhooks.ts)
  *   Χρέωση κάρτας κάθε μήνα, μία παράδοση τον μήνα, 12 παραδόσεις και μετά
- *   η συνδρομή λήγει μόνη της. Τιμή = product.price μείον την έκπτωση των
- *   ρυθμίσεων (όχι η sale_price). Παύση ή αλλαγή δεν υπάρχει — μόνο ακύρωση.
+ *   η συνδρομή λήγει μόνη της. Τιμή = τιμή έκπτωσης αν ισχύει, αλλιώς
+ *   product.price (lib/price.ts), μείον την έκπτωση των ρυθμίσεων. Η τιμή
+ *   κλειδώνει στην έναρξη. Παύση ή αλλαγή δεν υπάρχει — μόνο ακύρωση.
  *   Η οθόνη έλεγε «παγώνεις όποτε θες» και «πληρωμή μέσω Viva»· τίποτα από
  *   τα δύο δεν ισχύει, και δεν ανέφερε ότι η διάρκεια είναι 12 μήνες.
  *
@@ -73,8 +75,8 @@ export default function ProductSubscribeScreen() {
   )
 
   const pct = Number(discountData?.discount_percent ?? discountData?.percent ?? 0)
-  // Ο server χρεώνει με βάση το product.price, όχι τη sale_price.
-  const base = Number(product.price ?? 0)
+  // Ο server χρεώνει με βάση την τιμή έκπτωσης (αν ισχύει), όπως το web.
+  const base = effectivePrice(product)
   // Στρογγυλοποίηση σε λεπτά όπως ο server (routes/subscriptions.ts), ώστε
   // το ποσό που βλέπει να είναι αυτό που χρεώνεται.
   const monthly = Math.round(base * (1 - pct / 100) * 100) / 100

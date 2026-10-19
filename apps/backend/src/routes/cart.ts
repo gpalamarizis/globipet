@@ -1,16 +1,32 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { effectivePrice } from '../lib/price.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
   // GET cart items
   app.get('/', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
-    const items = await prisma.cartItem.findMany({
+    const rows = await prisma.cartItem.findMany({
       where: { user_email: email },
       orderBy: { created_at: 'desc' },
     })
-    const total = items.reduce((sum: number, item: any) => sum + (item.product_price * item.quantity), 0)
+    // Η τιμή της γραμμής είναι στιγμιότυπο της στιγμής που μπήκε στο καλάθι.
+    // Η παραγγελία όμως χρεώνει την τρέχουσα τιμή (effectivePrice, από τη
+    // βάση)· γι' αυτό εδώ επιστρέφεται η τρέχουσα, ώστε καλάθι και ταμείο να
+    // δείχνουν αυτό που θα χρεωθεί (π.χ. καλάθια από πριν μπει η έκπτωση).
+    const products = rows.length
+      ? await prisma.product.findMany({
+          where: { id: { in: rows.map(r => r.product_id) } },
+          select: { id: true, price: true, sale_price: true },
+        })
+      : []
+    const byId = new Map(products.map(p => [p.id, p]))
+    const items = rows.map(r => {
+      const p = byId.get(r.product_id)
+      return p ? { ...r, product_price: effectivePrice(p) } : r
+    })
+    const total = Math.round(items.reduce((sum: number, item: any) => sum + (item.product_price * item.quantity), 0) * 100) / 100
     return { data: items, total }
   })
 
@@ -47,7 +63,7 @@ const routes: FastifyPluginAsync = async (app) => {
         data: {
           quantity: Math.min(existing.quantity + quantity, 99),
           // Refresh the snapshot in case the provider changed the price
-          product_price: product.price,
+          product_price: effectivePrice(product),
           product_name: product.name,
           product_image: product.image_url ?? null,
         },
@@ -60,7 +76,7 @@ const routes: FastifyPluginAsync = async (app) => {
         user_email: email,
         product_id,
         product_name: product.name,
-        product_price: product.price,
+        product_price: effectivePrice(product),
         product_image: product.image_url ?? null,
         quantity,
       },

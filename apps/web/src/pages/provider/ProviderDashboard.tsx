@@ -6,6 +6,7 @@ import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, S
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
+import { effectivePrice } from '@/lib/price'
 import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -787,7 +788,7 @@ function ProductsTab() {
               <p className="font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
               <p className="text-xs text-gray-500">{t(`marketplace.categories.${p.category}`, p.category)} · {t('providerDash.stock')}: {p.stock ?? '—'}</p>
             </div>
-            <p className="font-bold text-gray-900 dark:text-white">€{Number(p.sale_price ?? p.price ?? 0).toFixed(2)}</p>
+            <p className="font-bold text-gray-900 dark:text-white">€{effectivePrice(p).toFixed(2)}</p>
             <div className="flex gap-1">
               <button onClick={() => openEdit(p)} className="btn-ghost p-2" aria-label={t('providerEdit.editProduct')}><Edit size={14} className="text-gray-400"/></button>
               <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteProduct.mutate(p.id) }} className="btn-ghost p-2" aria-label={t('providerPkg.delete')}><Trash2 size={14} className="text-red-400"/></button>

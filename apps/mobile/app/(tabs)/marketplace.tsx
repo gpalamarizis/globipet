@@ -8,6 +8,7 @@ import { Search, X, ShoppingCart, Package, Star, Heart } from 'lucide-react-nati
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 import CampaignBanner from '@/components/CampaignBanner'
 
 /**
@@ -258,8 +259,9 @@ export default function MarketplaceScreen() {
               </View>
         }
         renderItem={({ item }) => {
-          const price = item.sale_price ?? item.price
-          const onSale = item.sale_price != null && item.sale_price < item.price
+          // Ίδιος κανόνας με τη χρέωση του server (lib/price.ts).
+          const price = effectivePrice(item)
+          const onSale = isOnSale(item)
           const busy = addToCart.isPending && addToCart.variables === item.id
           const justAdded = added === item.id
           return (
@@ -283,7 +285,7 @@ export default function MarketplaceScreen() {
                 {onSale && (
                   <View style={s.saleTag}>
                     <Text style={s.saleText}>
-                      -{Math.round((1 - item.sale_price / item.price) * 100)}%
+                      -{salePercent(item)}%
                     </Text>
                   </View>
                 )}

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { createHash } from 'node:crypto'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
+import { effectivePrice } from '../lib/price.js'
 
 /**
  * Πεδία προϊόντος που ορίζει ο πάροχος.
@@ -58,20 +59,58 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
     if (q) where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
     if (category) where.category = category
     if (featured === 'true') where.is_featured = true
-    if (min_price) where.price = { ...where.price, gte: Number(min_price) }
-    if (max_price) where.price = { ...where.price, lte: Number(max_price) }
+    // Φίλτρο τιμής πάνω στην τιμή που ΧΡΕΩΝΕΤΑΙ (effectivePrice, lib/price):
+    // sale_price όταν ισχύει (> 0 και < price), αλλιώς price. Πριν, το φίλτρο
+    // κοίταζε μόνο την price — προϊόν 30€ σε έκπτωση 15€ έλειπε από το «έως 20€».
+    // Σε AND, γιατί το where.OR το χρησιμοποιεί ήδη η αναζήτηση.
+    const lo = min_price ? Number(min_price) : NaN
+    const hi = max_price ? Number(max_price) : NaN
+    if (Number.isFinite(lo) || Number.isFinite(hi)) {
+      const range: any = {}
+      if (Number.isFinite(lo)) range.gte = lo
+      if (Number.isFinite(hi)) range.lte = hi
+      const listPrice = prisma.product.fields.price
+      where.AND = [{
+        OR: [
+          // Σε έκπτωση: μετρά η sale_price.
+          { AND: [{ sale_price: { gt: 0 } }, { sale_price: { lt: listPrice } }, { sale_price: range }] },
+          // Χωρίς (έγκυρη) έκπτωση: μετρά η price.
+          {
+            AND: [
+              { OR: [{ sale_price: null }, { sale_price: { lte: 0 } }, { sale_price: { gte: listPrice } }] },
+              { price: range },
+            ],
+          },
+        ],
+      }]
+    }
 
-    const orderBy: any = sort === 'price_asc' ? { price: 'asc' }
-      : sort === 'price_desc' ? { price: 'desc' }
-      : sort === 'rating' ? { rating: 'desc' }
+    const orderBy: any = sort === 'rating' ? { rating: 'desc' }
       : sort === 'newest' ? { created_at: 'desc' }
       : { is_featured: 'desc' }  // 'featured' (default)
 
     const skip = (Number(page) - 1) * Number(limit)
-    const [data, total] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: Number(limit), orderBy }),
-      prisma.product.count({ where })
-    ])
+    let data: any[]
+    let total: number
+    if (sort === 'price_asc' || sort === 'price_desc') {
+      // Ταξινόμηση κατά τιμή που χρεώνεται. Η Prisma δεν ταξινομεί κατά
+      // υπολογισμένη τιμή, οπότε: ids + τιμές όλων όσων περνούν το ΙΔΙΟ where
+      // (τρία πεδία), ταξινόμηση εδώ με τον ίδιο κανόνα, και μετά ανάγνωση
+      // μόνο της σελίδας — η σελιδοποίηση και το total μένουν σωστά.
+      const dir = sort === 'price_asc' ? 1 : -1
+      const all = await prisma.product.findMany({ where, select: { id: true, price: true, sale_price: true } })
+      all.sort((a, b) => (effectivePrice(a) - effectivePrice(b)) * dir || a.id.localeCompare(b.id))
+      const pageIds = all.slice(skip, skip + Number(limit)).map(r => r.id)
+      const rows = pageIds.length ? await prisma.product.findMany({ where: { id: { in: pageIds } } }) : []
+      const byId = new Map(rows.map(r => [r.id, r]))
+      data = pageIds.map(id => byId.get(id)).filter(Boolean) as any[]
+      total = all.length
+    } else {
+      ;[data, total] = await Promise.all([
+        prisma.product.findMany({ where, skip, take: Number(limit), orderBy }),
+        prisma.product.count({ where })
+      ])
+    }
     const translated = await translateRecords('product', data, lang)
     return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
   })

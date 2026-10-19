@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { effectivePrice, isOnSale } from '../lib/price.js'
 
 /**
  * Shop analytics.
@@ -110,8 +111,9 @@ const insightsRoutes: FastifyPluginAsync = async (app) => {
         image_url: r.p.image_url,
         category: r.p.category,
         brand: r.p.brand,
-        price: r.p.sale_price ?? r.p.price,
-        original_price: r.p.sale_price ? r.p.price : null,
+        // Ίδιος κανόνας με τη χρέωση (lib/price.ts).
+        price: effectivePrice(r.p),
+        original_price: isOnSale(r.p) ? r.p.price : null,
         rating: r.p.rating,
         reviews_count: r.p.reviews_count,
         in_stock: (r.p.stock ?? 0) > 0,
@@ -196,7 +198,7 @@ const insightsRoutes: FastifyPluginAsync = async (app) => {
         name: p.name,
         image_url: p.image_url,
         category: p.category,
-        price: p.sale_price ?? p.price,
+        price: effectivePrice(p),
         units: a?.units ?? 0,
         revenue: Math.round((a?.revenue ?? 0) * 100) / 100,
         views: p.views_count ?? 0,

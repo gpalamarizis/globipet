@@ -10,6 +10,7 @@ import {
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
+import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { Product } from '@/types'
@@ -155,7 +156,8 @@ export default function ProductDetail() {
   )
 
   const images = product.image_url ? [product.image_url] : []
-  const price = product.sale_price || product.price
+  // Η τιμή που χρεώνει ο server (lib/price.ts).
+  const price = effectivePrice(product)
   const avgRating = reviews.length > 0
     ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
     : product.rating || 0
@@ -203,8 +205,8 @@ export default function ProductDetail() {
             {product.is_featured && (
               <span className="badge bg-brand-900 text-white text-xs">⭐ {t('pgProductDetail.featured')}</span>
             )}
-            {product.discount_percentage && (
-              <span className="badge bg-red-500 text-white text-xs">-{product.discount_percentage}%</span>
+            {isOnSale(product) && (
+              <span className="badge bg-red-500 text-white text-xs">-{salePercent(product)}%</span>
             )}
           </div>
 
@@ -231,7 +233,7 @@ export default function ProductDetail() {
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(price)}
             </span>
-            {product.sale_price && (
+            {isOnSale(product) && (
               <span className="text-lg text-gray-400 line-through">{formatCurrency(product.price)}</span>
             )}
           </div>

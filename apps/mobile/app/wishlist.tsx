@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { effectivePrice } from '@/lib/price'
 
 /**
  * Λίστα επιθυμιών.
@@ -76,7 +77,7 @@ export default function WishlistScreen() {
         // (schema.prisma)· name / price / image_url δεν υπάρχουν σε αυτήν.
         const name = w.product_name ?? p.name
         const image = w.product_image ?? p.image_url
-        const price = w.product_price ?? p.sale_price ?? p.price
+        const price = w.product_price ?? effectivePrice(p)
         return (
           <Card key={id} onPress={() => router.push(`/products/${id}` as any)}>
             <View style={s.row}>

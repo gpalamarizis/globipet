@@ -9,6 +9,7 @@ import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '../../src/lib/shipping'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 
 /**
  * Λεπτομέρεια προϊόντος.
@@ -110,9 +111,10 @@ export default function ProductDetailScreen() {
     </Screen>
   )
 
-  // Η τιμή έκπτωσης υπερισχύει, όπως και στο web.
-  const price = product.sale_price ?? product.price
-  const hasSale = product.sale_price != null && product.sale_price < product.price
+  // Η τιμή έκπτωσης υπερισχύει, όπως και στο web — ίδιος κανόνας με τη
+  // χρέωση του server (lib/price.ts).
+  const price = effectivePrice(product)
+  const hasSale = isOnSale(product)
   const outOfStock = (product.stock ?? 0) <= 0
 
   return (
@@ -144,6 +146,8 @@ export default function ProductDetailScreen() {
           <View style={s.priceRow}>
             <Text style={s.price}>€{Number(price).toFixed(2)}</Text>
             {hasSale && <Text style={s.was}>€{Number(product.price).toFixed(2)}</Text>}
+            {/* Ποσοστό έκπτωσης, όπως στο web και στη λίστα. */}
+            {hasSale && <Badge label={`-${salePercent(product)}%`} tone="danger" />}
             {outOfStock
               ? <Badge label={t('marketplace.out_of_stock')} tone="danger" />
               : <Badge label={`${t('providerDash.stock')}: ${product.stock}`} tone="success" />}

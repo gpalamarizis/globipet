@@ -97,18 +97,18 @@ export default function EventDetail() {
     onSuccess: (res: any) => {
       const report = res?.data?.data
       const amount = Number(report?.refunded_amount ?? 0).toFixed(2)
-      if (res?.data?.deleted) {
+      // Η εκδήλωση δεν διαγράφεται πια: μένει σε αυτή τη σελίδα με «Ακυρώθηκε».
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
+      queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+      queryClient.invalidateQueries({ queryKey: ['event', id] })
+      if (res?.data?.settled ?? res?.data?.deleted) {
         toast.success(t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
-        queryClient.invalidateQueries({ queryKey: ['events'] })
-        navigate('/events')
         return
       }
       // 207: η εκδήλωση έμεινε ακυρωμένη, κάποιες επιστροφές απέτυχαν.
       const failed = (report?.failed?.length ?? 0) + (report?.in_progress?.length ?? 0)
       toast.error(t('events.cancelEventPartial', { count: failed }))
-      queryClient.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
-      queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
-      queryClient.invalidateQueries({ queryKey: ['event', id] })
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -162,6 +162,17 @@ export default function EventDetail() {
   const eventCancelled = !!event.cancelled || !!reg?.event_cancelled
   // Ο διοργανωτής δεν ακυρώνει με επιστροφές εκδήλωση που ξεκίνησε (μόνο admin).
   const cancelBlocked = cancelPreview?.can_cancel === false
+  // Ακυρωμένη και όλα τακτοποιημένα: δεν μένει «Ολοκλήρωση επιστροφών».
+  const cancelSettled = !!cancelPreview?.already_cancelled && cancelPreview?.settled === true
+  // Τα χρήματα του χρήστη σε ακυρωμένη εκδήλωση: από την κατάσταση της
+  // εγγραφής (όχι από το audit, που καθαρίζεται στις 180 ημέρες).
+  const myRefundDone = reg?.payment_status === 'refunded'
+  // «Επιστράφηκαν λόγω ακύρωσης από τον διοργανωτή» μόνο όταν αυτός ήταν ο
+  // λόγος (refund_reason του /registration)· π.χ. είχε ακυρώσει ο ίδιος πριν,
+  // ή γέμισε όσο πλήρωνε → ουδέτερο «Τα χρήματα επιστράφηκαν».
+  const myRefundByEventCancel = myRefundDone && reg?.refund_reason === 'event_cancelled'
+  const myRefundInProgress = reg?.payment_status === 'refunding'
+  const myRefundDelayed = reg?.payment_status === 'refund_failed'
   const pending = reg?.payment_status === 'pending'
   const paidSeat = reg?.registered && reg?.payment_status === 'paid'
   const refundHours = reg?.refund_hours ?? 48
@@ -273,13 +284,16 @@ export default function EventDetail() {
             <>
               <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-medium">
                 <Ban size={16} className="shrink-0" />
-                {reg?.refund_reason === 'event_cancelled' && reg?.payment_status === 'refunded'
+                {myRefundByEventCancel
                   ? t('events.cancelledByOrganizerRefunded')
                   : t('events.cancelledByOrganizer')}
               </p>
-              {reg?.refund_reason === 'event_cancelled' && reg?.payment_status !== 'refunded' && (
+              {myRefundDone && !myRefundByEventCancel && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('pgEventConfirm.refundedTitle')}</p>
+              )}
+              {(myRefundInProgress || myRefundDelayed) && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  {t('events.cancelledByOrganizerRefundDelayed')}
+                  {myRefundInProgress ? t('events.cancelledRefundInProgress') : t('events.cancelledByOrganizerRefundDelayed')}
                 </p>
               )}
             </>
@@ -366,21 +380,25 @@ export default function EventDetail() {
             <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
               {t('events.manageEvent')}
             </h2>
-            {cancelBlocked ? (
+            {cancelSettled ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('events.cancelEventSettled')}
+              </p>
+            ) : cancelBlocked ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('events.cancelEventStarted')}
               </p>
             ) : (
               <>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHint')}
+                  {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHintKeep')}
                 </p>
                 <button onClick={onCancelEvent} disabled={cancelEvent.isPending}
                   className="btn-secondary w-full justify-center text-sm flex items-center gap-2 text-red-600 dark:text-red-400">
                   <Ban size={15} />
                   {cancelEvent.isPending
                     ? t('common.loading')
-                    : cancelPreview?.already_cancelled ? t('events.cancelEventRetry') : t('events.cancelEvent')}
+                    : cancelPreview?.already_cancelled ? t('events.completeRefunds') : t('events.cancelEvent')}
                 </button>
               </>
             )}

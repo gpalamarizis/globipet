@@ -42,6 +42,7 @@ const MyBookings        = lazy(() => import('@/pages/MyBookings'))
 const Events            = lazy(() => import('@/pages/Events'))
 const EventDetail       = lazy(() => import('@/pages/EventDetail'))
 const EventConfirmation = lazy(() => import('@/pages/EventConfirmation'))
+const BookingConfirmation = lazy(() => import('@/pages/BookingConfirmation'))
 const Community         = lazy(() => import('@/pages/Community'))
 const Forum             = lazy(() => import('@/pages/Forum'))
 const ForumTopic        = lazy(() => import('@/pages/ForumTopic'))
@@ -246,6 +247,9 @@ export default function App() {
                 <Route path="/medical-center"  element={<PrivateRoute><PetMedicalCenter /></PrivateRoute>} />
                 <Route path="/tracker"         element={<PrivateRoute><PetTracker /></PrivateRoute>} />
                 <Route path="/bookings"        element={<PrivateRoute><MyBookings /></PrivateRoute>} />
+                {/* Επιστροφή από τη Viva μετά την πληρωμή κράτησης (successUrl στο
+                    routes/bookings.ts). Χωρίς PrivateRoute — βλ. BookingConfirmation. */}
+                <Route path="/bookings/:id/confirmation" element={<BookingConfirmation />} />
                 <Route path="/community"       element={<PrivateRoute><Community /></PrivateRoute>} />
                 <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/inbox" element={<InboxPage />} />

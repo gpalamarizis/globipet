@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, Platform, StatusBar, Modal, TextInput } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, Platform, StatusBar, Modal, TextInput, Linking } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X, Stethoscope, ChevronRight } from 'lucide-react-native'
+import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X, Stethoscope, ChevronRight, CreditCard } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -106,6 +106,31 @@ export default function BookingsScreen() {
         ? t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }) : undefined)
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('bookings.cancel_failed')),
+  })
+
+  /**
+   * Πληρωμή απλήρωτης κράτησης — όπως στο web. Το ποσό το ορίζει ο server
+   * από τη βάση (total_price, ήδη μετά την έκπτωση καμπάνιας). Μετά το
+   * άνοιγμα της Viva, η οθόνη επιβεβαίωσης παρακολουθεί την κράτηση και
+   * ανανεώνει τη λίστα μόλις πληρωθεί.
+   */
+  const pay = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post('/bookings/viva/checkout', { booking_id: id })
+      return { id, url: data?.checkoutUrl as string | undefined }
+    },
+    onSuccess: async ({ id, url }) => {
+      if (!url) return Alert.alert(t('common.error'), t('checkout.err_open_page'))
+      const ok = await Linking.canOpenURL(url)
+      if (!ok) return Alert.alert(t('common.error'), t('checkout.err_open_page'))
+      await Linking.openURL(url)
+      router.push({ pathname: '/booking-confirmation', params: { id } } as any)
+    },
+    onError: (e: any) => {
+      // Π.χ. πληρώθηκε ή ακυρώθηκε στο μεταξύ: η λίστα να δείξει την αλήθεια.
+      qc.invalidateQueries({ queryKey: ['my-bookings'] })
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong'))
+    },
   })
 
   const onRefresh = useCallback(async () => {
@@ -222,8 +247,16 @@ export default function BookingsScreen() {
                   </Text>
                   <Text style={s.provider} numberOfLines={1}>{item.provider_name}</Text>
                 </View>
-                <View style={[s.statusTag, { backgroundColor: st.bg }]}>
-                  <Text style={[s.statusText, { color: st.fg }]}>{t(st.labelKey)}</Text>
+                <View style={s.tags}>
+                  <View style={[s.statusTag, { backgroundColor: st.bg }]}>
+                    <Text style={[s.statusText, { color: st.fg }]}>{t(st.labelKey)}</Text>
+                  </View>
+                  {/* Απλήρωτη και πληρώσιμη — το κρίνει ο server (`payable`), όπως στο web. */}
+                  {item.payable === true && (
+                    <View style={[s.statusTag, { backgroundColor: colors.warningBg }]}>
+                      <Text style={[s.statusText, { color: colors.warning }]}>{t('bookings.payment_pending')}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -260,24 +293,40 @@ export default function BookingsScreen() {
                 </View>
               )}
 
+              {item.payable === true && (
+                <Text style={s.payHint}>{t('bookings.payment_pending_hint')}</Text>
+              )}
+
               <View style={s.cardFooter}>
                 <Text style={s.price}>€{Number(item.total_price ?? 0).toFixed(2)}</Text>
-                {canCancel && (
-                  <TouchableOpacity style={s.cancelBtn} activeOpacity={0.7}
-                    disabled={cancel.isPending}
-                    onPress={() => confirmCancel(item.id)}>
-                    <Text style={s.cancelText}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                )}
-                {/* Κριτική μόνο σε ολοκληρωμένη και μόνο μία φορά: ο server
-                    απορρίπτει τη δεύτερη, αλλά δεν έχει νόημα να τη ζητήσουμε. */}
-                {item.status === 'completed' && !item.has_review && (
-                  <TouchableOpacity style={s.reviewBtn} activeOpacity={0.7}
-                    onPress={() => setReviewing(item)}>
-                    <Star size={14} color={colors.warning} />
-                    <Text style={s.reviewText}>{t('reviews.write')}</Text>
-                  </TouchableOpacity>
-                )}
+                {/* Ενέργειες δεξιά, μαζί — με τρία παιδιά το space-between θα
+                    έβαζε το μεσαίο κουμπί στο κέντρο. */}
+                <View style={s.actions}>
+                  {item.payable === true && (
+                    <TouchableOpacity style={[s.payBtn, pay.isPending && { opacity: 0.6 }]} activeOpacity={0.85}
+                      disabled={pay.isPending}
+                      onPress={() => pay.mutate(item.id)}>
+                      <CreditCard size={14} color={colors.textOnDark} />
+                      <Text style={s.payText}>{t('bookings.pay_now', { amount: Number(item.total_price ?? 0).toFixed(2) })}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {canCancel && (
+                    <TouchableOpacity style={s.cancelBtn} activeOpacity={0.7}
+                      disabled={cancel.isPending}
+                      onPress={() => confirmCancel(item.id)}>
+                      <Text style={s.cancelText}>{t('common.cancel')}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/* Κριτική μόνο σε ολοκληρωμένη και μόνο μία φορά: ο server
+                      απορρίπτει τη δεύτερη, αλλά δεν έχει νόημα να τη ζητήσουμε. */}
+                  {item.status === 'completed' && !item.has_review && (
+                    <TouchableOpacity style={s.reviewBtn} activeOpacity={0.7}
+                      onPress={() => setReviewing(item)}>
+                      <Star size={14} color={colors.warning} />
+                      <Text style={s.reviewText}>{t('reviews.write')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
               {/* «Λεπτομέρειες» → η σελίδα της υπηρεσίας, όπως στο web. */}
               <TouchableOpacity style={s.details} activeOpacity={0.7}
@@ -399,6 +448,15 @@ const s = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   service: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
   provider: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1 },
+  tags: { alignItems: 'flex-end', gap: space.xs },
+  payHint: { ...type.caption, color: colors.warning, marginTop: space.sm },
+  payBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    paddingHorizontal: space.md, height: touch.min - 6,
+    borderRadius: radius.sm, backgroundColor: colors.brand,
+  },
+  payText: { ...type.caption, color: colors.textOnDark, fontWeight: weight.bold },
   statusTag: { paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.sm },
   statusText: { ...type.caption, fontWeight: weight.bold },
 

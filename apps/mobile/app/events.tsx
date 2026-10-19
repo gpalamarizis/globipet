@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, MapPin, Users } from 'lucide-react-native'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
+import { Chips } from '@/components/Chips'
 import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -14,10 +16,16 @@ export default function EventsScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
+  // «Οι εκδηλώσεις μου» (GET /events?mine=true): όσες οργανώνω, ΜΑΖΙ με τις
+  // ακυρωμένες — όπως στο web. Μόνο για συνδεδεμένους.
+  const { isAuthenticated } = useAuthStore()
+  const [filter, setFilter] = useState<'all' | 'mine'>('all')
+  const mine = isAuthenticated && filter === 'mine'
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ['events'],
-    queryFn: () => api.get('/events').then(r => r.data?.data ?? r.data ?? []),
+    queryKey: ['events', { mine }],
+    queryFn: () => api.get('/events', { params: mine ? { mine: 'true' } : undefined })
+      .then(r => r.data?.data ?? r.data ?? []),
   })
 
   const onRefresh = useCallback(async () => {
@@ -26,8 +34,16 @@ export default function EventsScreen() {
 
   return (
     <Screen title={t('events.title')} back onRefresh={onRefresh} refreshing={refreshing}>
+      {isAuthenticated && (
+        <Chips<'all' | 'mine'> value={filter} onChange={setFilter} options={[
+          { value: 'all', label: t('common.all') },
+          { value: 'mine', label: t('events.mine') },
+        ]} />
+      )}
       {isLoading ? <SkeletonRows count={3} /> :
-       events.length === 0 ? <EmptyState icon={CalendarDays} title={t('events.empty')} message={t('events.emptyHint')} /> :
+       events.length === 0 ? (mine
+         ? <EmptyState icon={CalendarDays} title={t('events.mineEmpty')} />
+         : <EmptyState icon={CalendarDays} title={t('events.empty')} message={t('events.emptyHint')} />) :
        events.map((e: any) => {
         const full = e.capacity != null && (e.registered_count ?? 0) >= e.capacity
         return (
@@ -53,7 +69,13 @@ export default function EventsScreen() {
                   <Text style={s.meta}>{e.registered_count ?? 0}/{e.capacity}</Text>
                 </View>
               )}
-              {full && <Badge label={t('play.full')} tone="danger" />}
+              {/* Ακυρωμένη από τον διοργανωτή (πεδίο `cancelled` του GET /events), όπως στο web. */}
+              {e.cancelled === true && <Badge label={t('status.cancelled')} tone="danger" />}
+              {full && e.cancelled !== true && <Badge label={t('play.full')} tone="danger" />}
+              {/* «Οι εκδηλώσεις μου»: επιστροφές που περιμένουν «Ολοκλήρωση επιστροφών». */}
+              {Number(e.refunds_pending) > 0 && (
+                <Badge label={t('events.refundsPending', { count: Number(e.refunds_pending) })} tone="warning" />
+              )}
             </View>
           </Card>
         )

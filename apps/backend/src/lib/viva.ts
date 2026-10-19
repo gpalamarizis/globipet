@@ -240,6 +240,21 @@ export async function refundVivaTransaction(
   return { transactionId: body?.TransactionId ?? null, raw: body }
 }
 
+/** Σφάλμα HTTP από τη Viva, με τον κωδικό της απάντησης. */
+export class VivaHttpError extends Error {
+  constructor(message: string, public status: number) { super(message) }
+}
+
+/**
+ * Οριστική απάντηση της Viva ότι η συναλλαγή δεν υπάρχει / δεν είναι έγκυρη
+ * (400/404) — σε αντίθεση με σφάλμα επαλήθευσης (5xx, 429, timeout, δίκτυο,
+ * διαπιστευτήρια, βάση), όπου η απάντηση είναι «δεν ξέρουμε ακόμη» και η
+ * επαλήθευση πρέπει να ξαναγίνει.
+ */
+export function isVivaDefinitiveRejection(err: unknown): boolean {
+  return err instanceof VivaHttpError && (err.status === 400 || err.status === 404)
+}
+
 /**
  * Retrieve a transaction by its ID to verify payment.
  */
@@ -247,13 +262,13 @@ export async function getVivaTransaction(transactionId: string): Promise<any> {
   const token = await getVivaAccessToken()
   const { api } = getBaseUrls()
 
-  const res = await fetch(`${api}/checkout/v2/transactions/${transactionId}`, {
+  const res = await fetch(`${api}/checkout/v2/transactions/${encodeURIComponent(String(transactionId))}`, {
     headers: { 'Authorization': `Bearer ${token}` },
   })
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Viva transaction error: ${res.status} ${text}`)
+    throw new VivaHttpError(`Viva transaction error: ${res.status} ${text}`, res.status)
   }
 
   return res.json()

@@ -298,6 +298,7 @@ model Event {
   is_international Boolean  @default(false)
   is_featured      Boolean  @default(false)
   created_at       DateTime @default(now())
+  cancelled_at     DateTime?
 
   registrations EventRegistration[]
 

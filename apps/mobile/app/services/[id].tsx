@@ -114,9 +114,9 @@ export default function ServiceDetailScreen() {
         packages: chosen.map((p: any) => ({ package_id: p.id, quantity: qty[p.id] ?? 1 })),
       })
       const { data: pay } = await api.post('/bookings/viva/checkout', { booking_id: booking.id })
-      return pay?.checkoutUrl as string | undefined
+      return { url: pay?.checkoutUrl as string | undefined, bookingId: String(booking.id) }
     },
-    onSuccess: async (url) => {
+    onSuccess: async ({ url, bookingId }) => {
       // Τα πραγματικά keys: η λίστα του app/bookings.tsx και η κάρτα της Αρχικής.
       qc.invalidateQueries({ queryKey: ['my-bookings'] })
       qc.invalidateQueries({ queryKey: ['my-next-booking'] })
@@ -128,8 +128,11 @@ export default function ServiceDetailScreen() {
         return
       }
       const ok = await Linking.canOpenURL(url)
-      if (ok) Linking.openURL(url)
-      else Alert.alert(t('common.error'), t('checkout.err_open_page'))
+      if (!ok) return Alert.alert(t('common.error'), t('checkout.err_open_page'))
+      await Linking.openURL(url)
+      // Όπως στις εκδηλώσεις: επιστρέφοντας από τη Viva βλέπει αμέσως το
+      // αποτέλεσμα — η οθόνη επιβεβαίωσης παρακολουθεί την κράτηση.
+      router.push({ pathname: '/booking-confirmation', params: { id: bookingId } } as any)
     },
     onError: (e: any) =>
       Alert.alert(t('common.error'), e?.response?.data?.message || t('booking.err_book')),

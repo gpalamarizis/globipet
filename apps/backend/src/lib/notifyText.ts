@@ -104,6 +104,10 @@ const TITLES: Record<string, Row> = {
     el: 'Η εκδήλωση ακυρώθηκε', en: 'Event cancelled', es: 'Evento cancelado',
     fr: 'Événement annulé', zh: '活动已取消',
   },
+  event_cancel_incomplete: {
+    el: 'Εκκρεμούν επιστροφές χρημάτων', en: 'Refunds still pending', es: 'Reembolsos pendientes',
+    fr: 'Remboursements en attente', zh: '退款尚未完成',
+  },
 }
 
 // ─── Μηνύματα ────────────────────────────────────────────────────────
@@ -208,6 +212,19 @@ export const notifyMsg = {
     es: 'Tus 30 días gratuitos de GlobiPet AI han terminado. Elige un plan para seguir usando las funciones de IA.',
     fr: 'Vos 30 jours gratuits de GlobiPet AI sont terminés. Choisissez une formule pour continuer à utiliser les fonctions IA.',
     zh: '您的 GlobiPet AI 30 天免费期已结束。请选择方案以继续使用 AI 功能。',
+  }),
+
+  /**
+   * Προς τον διοργανωτή: η ακύρωση ολοκληρώθηκε με εκκρεμείς επιστροφές
+   * (αποτυχημένες ή σε εξέλιξη). Ο σύνδεσμος ανοίγει την εκδήλωση, όπου
+   * υπάρχει η «Ολοκλήρωση επιστροφών».
+   */
+  eventCancelIncomplete: (lang: Lang, title: string, count: number) => p(lang, {
+    el: `Η εκδήλωση "${title}" ακυρώθηκε, αλλά ${count === 1 ? '1 επιστροφή χρημάτων δεν ολοκληρώθηκε' : `${count} επιστροφές χρημάτων δεν ολοκληρώθηκαν`}. Άνοιξε την εκδήλωση για να τις ολοκληρώσεις.`,
+    en: `The event "${title}" was cancelled, but ${count === 1 ? '1 refund was' : `${count} refunds were`} not completed. Open the event to complete ${count === 1 ? 'it' : 'them'}.`,
+    es: `El evento "${title}" se ha cancelado, pero ${count === 1 ? '1 reembolso no se ha completado' : `${count} reembolsos no se han completado`}. Abre el evento para completar${count === 1 ? 'lo' : 'los'}.`,
+    fr: `L’événement « ${title} » a été annulé, mais ${count === 1 ? '1 remboursement n’a pas abouti' : `${count} remboursements n’ont pas abouti`}. Ouvrez l’événement pour ${count === 1 ? 'le' : 'les'} finaliser.`,
+    zh: `活动“${title}”已取消，但有 ${count} 笔退款尚未完成。请打开该活动完成退款。`,
   }),
 
   /**

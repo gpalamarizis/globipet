@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
 import { bestDiscount, bookingBasePrice } from '../lib/campaignDiscount.js'
+import { effectivePrice } from '../lib/price.js'
 import { createHash } from 'node:crypto'
 
 /**
@@ -224,7 +225,8 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
 
         if (type === 'product') {
           const p = await prisma.product.findUnique({ where: { id: String(it.id || '') } })
-          if (p) { line = p.price * qty; dType = 'product'; dId = p.id }
+          // Τιμή έκπτωσης όπως στην παραγγελία (lib/price.ts)· η καμπάνια πάνω της.
+          if (p) { line = effectivePrice(p) * qty; dType = 'product'; dId = p.id }
         } else if (type === 'service') {
           const s = await prisma.service.findUnique({ where: { id: String(it.id || '') } })
           if (s) { line = s.price * qty; dType = 'service'; dId = s.id }

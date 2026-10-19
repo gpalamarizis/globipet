@@ -470,7 +470,10 @@
     "none_history": "No history",
     "none_upcoming": "No upcoming bookings",
     "see_services": "See services",
-    "upcoming": "Upcoming"
+    "upcoming": "Upcoming",
+    "pay_now": "Pay — €{{amount}}",
+    "payment_pending": "Payment pending",
+    "payment_pending_hint": "The booking is confirmed as soon as the payment is completed."
   },
   "checkout": {
     "address": "Address",
@@ -1520,7 +1523,15 @@
     "cancelEventDone_one": "The event was cancelled. {{count}} payment was refunded (€{{amount}}) and participants were notified.",
     "cancelEventDone": "The event was cancelled. {{count}} payments were refunded (€{{amount}}) and participants were notified.",
     "cancelEventPartial_one": "The event was cancelled, but {{count}} refund was not completed. Please try again shortly.",
-    "cancelEventPartial": "The event was cancelled, but {{count}} refunds were not completed. Please try again shortly."
+    "cancelEventPartial": "The event was cancelled, but {{count}} refunds were not completed. Please try again shortly.",
+    "cancelEventHintKeep": "All registrations are cancelled, everyone who paid gets a full refund and all participants are notified. The event stays visible, marked as cancelled.",
+    "completeRefunds": "Complete refunds",
+    "cancelEventSettled": "The event was cancelled. All registrations have been settled and all refunds completed.",
+    "cancelEventStarted": "The event has already started or taken place, so it can no longer be cancelled with refunds from here. If anything is needed, contact support.",
+    "mine": "My events",
+    "mineEmpty": "You haven’t created any events",
+    "refundsPending_one": "{{count}} refund pending",
+    "refundsPending": "{{count}} refunds pending"
   },
   "breeds": {
     "title": "Breeds",
@@ -2127,5 +2138,16 @@
     "title": "Notification centre",
     "empty": "No notifications",
     "markAll": "Mark all as read"
+  },
+  "bookingConfirm": {
+    "paid": "Booking paid",
+    "paidHint": "Your appointment is confirmed and the provider has been notified.",
+    "pendingHint": "As soon as the payment on Viva is completed, your booking is confirmed here.",
+    "pendingLateHint": "The payment is still pending. If you completed it on Viva, the booking will be confirmed automatically; otherwise you can pay again from “My bookings”.",
+    "cancelled": "This booking has been cancelled",
+    "cancelledHint": "If a payment was completed for this booking, the money is refunded to your card automatically.",
+    "failedHint": "Your booking is still unpaid. You can pay again from “My bookings”.",
+    "duplicateRefunded": "The booking had already been paid, so the extra charge was refunded to your card automatically.",
+    "duplicateRefundDelayed": "The booking had already been paid. The automatic refund of the extra charge is delayed — we will complete it; if you need anything, contact us."
   }
 }

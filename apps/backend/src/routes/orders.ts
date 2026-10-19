@@ -5,10 +5,12 @@ import { encryptField, decryptField } from '../lib/crypto.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { bestDiscount, countRedemptions } from '../lib/campaignDiscount.js'
+import { effectivePrice } from '../lib/price.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
 import { confirmEventRegistrationPayment, handleEventPaymentWebhook } from './events.js'
+import { handleBookingPaymentWebhook } from '../lib/bookingPayment.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 
@@ -147,7 +149,9 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       const productId = item.product_id || item.id
       const product = productMap.get(productId)!
       // Authoritative price from the database — the client value is ignored.
-      const price = product.price
+      // Τιμή έκπτωσης αν ισχύει (lib/price.ts) — αυτή δείχνουν λίστα και
+      // σελίδα προϊόντος· η έκπτωση καμπάνιας εφαρμόζεται πάνω της.
+      const price = effectivePrice(product)
       const quantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 99)
       const lineTotal = price * quantity
       // Έκπτωση καμπάνιας — υπολογίζεται εδώ, από τιμές της βάσης. Η
@@ -371,93 +375,6 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
   }
 }
 
-/**
- * Επαληθεύει στο Viva ότι η συναλλαγή αφορά ΑΥΤΗ την κράτηση και καλύπτει
- * το ποσό της. Ίδια λογική με το vivaPaymentIsValid των παραγγελιών: το
- * webhook είναι ένδειξη, όχι απόδειξη.
- */
-async function vivaPaidBooking(bookingId: string, transactionId: string): Promise<boolean> {
-  try {
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
-    if (!booking) return false
-
-    const tx = await getVivaTransaction(transactionId)
-    if (!tx || tx.statusId !== 'F') return false
-
-    const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
-    if (trns !== bookingId) {
-      console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not booking ${bookingId}`)
-      return false
-    }
-
-    const paid = Number(tx.amount ?? tx.Amount ?? 0)
-    if (Number.isFinite(paid) && paid + 0.01 < booking.total_price) {
-      console.error(`[viva] transaction ${transactionId} paid ${paid}, booking needs ${booking.total_price}`)
-      return false
-    }
-    return true
-  } catch (err: any) {
-    console.error('[viva] booking verification error:', err?.message)
-    return false
-  }
-}
-
-/** Σημειώνει την κράτηση πληρωμένη και ειδοποιεί τον πάροχο. */
-async function markBookingPaid(bookingId: string, transactionId: string) {
-  // Το updateMany με φίλτρο «όχι ήδη paid» κάνει την πράξη idempotent: το
-  // Viva στέλνει το ίδιο webhook περισσότερες από μία φορές.
-  const updated = await prisma.booking.updateMany({
-    where: { id: bookingId, payment_status: { not: 'paid' } },
-    data: { status: 'confirmed', payment_status: 'paid', payment_ref: transactionId },
-  })
-  if (updated.count === 0) return
-
-  const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
-  if (!booking) return
-
-  await countRedemptions([booking.campaign_id])
-
-  // Τώρα που πληρώθηκε, και ΜΟΝΟ τώρα, ενημερώνονται οι δύο πλευρές.
-  //
-  // Μέχρι πρότινος το email «η κράτησή σου επιβεβαιώθηκε» έφευγε τη στιγμή
-  // της δημιουργίας, όταν τίποτα δεν είχε πληρωθεί. Εδώ είναι αληθινό.
-  const service = await prisma.service.findUnique({ where: { id: booking.service_id } })
-
-  sendBookingConfirmedEmail(booking.customer_email, {
-    customerName: booking.customer_name ?? booking.customer_email.split('@')[0],
-    providerName: booking.provider_name ?? (service?.provider_name ?? ''),
-    date: booking.booking_date,
-    time: booking.booking_time,
-    price: booking.total_price,
-  }).catch(() => {})
-
-  sendProviderNewBookingEmail(booking.provider_email, {
-    providerName: booking.provider_name ?? booking.provider_email.split('@')[0],
-    customerName: booking.customer_name ?? booking.customer_email.split('@')[0],
-    date: booking.booking_date,
-    time: booking.booking_time,
-    payoutAmount: booking.provider_payout_amount ?? 0,
-  }).catch(() => {})
-
-  const nLang = await langOfUser(booking.provider_email)
-  const notification = await prisma.notification.create({
-    data: {
-      user_email: booking.provider_email,
-      title: notifyTitle('booking_paid', nLang),
-      message: notifyMsg.bookingPaid(nLang, booking.customer_name ?? booking.customer_email, booking.total_price.toFixed(2), booking.booking_date, booking.booking_time),
-      type: 'booking_paid',
-      link: '/provider',
-    },
-  }).catch(() => null)
-
-  if (notification) {
-    broadcastToUser(booking.provider_email, { type: 'notification', notification })
-    void sendPushToUser(booking.provider_email, {
-      title: notification.title, body: notification.message, url: notification.link ?? '/',
-    })
-  }
-}
-
   // Viva webhook - payment confirmation (PUBLIC - no auth)
   app.post('/viva/webhook', async (req: any, reply) => {
     try {
@@ -481,14 +398,20 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
         if (merchantTrns && statusId === 'F' && transactionId) {
           const ref = String(merchantTrns)
           const txn = String(transactionId)
+          let bookingOutcome: 'handled' | 'retry' | 'not_mine' = 'not_mine'
+          let legacyEventOutcome: Awaited<ReturnType<typeof confirmEventRegistrationPayment>> = null
 
           if (ref.startsWith('ev:')) {
             // Εκδηλώσεις (merchantTrns `ev:<εγγραφή>:<nonce>`): εξετάζονται
             // ΜΟΝΟ εδώ, και κανένας άλλος κλάδος δεν πιάνει `ev:`. Αν η
             // εγγραφή δεν υπάρχει πια, η πληρωμή επιστρέφεται αυτόματα.
-            await handleEventPaymentWebhook(ref, txn).catch((err) => {
+            const ev = await handleEventPaymentWebhook(ref, txn).catch((err) => {
               console.error('handleEventPaymentWebhook error:', err)
+              return 'ok' as const
             })
+            // Η επαλήθευση στη Viva δεν ολοκληρώθηκε: μη-2xx ώστε η Viva να
+            // ξαναστείλει το webhook (μόνο για αυτόν τον κλάδο).
+            if (ev === 'retry') return reply.code(503).send({ received: false, retry: true })
           } else if (await vivaPaymentIsValid(ref, txn)) {
             const updated = await prisma.order.updateMany({
               where: { id: ref, payment_status: { not: 'paid' } },
@@ -503,20 +426,25 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
             await markTelehealthPaid(ref, txn).catch((err) => {
               console.error('markTelehealthPaid error:', err)
             })
-          } else if (await vivaPaidBooking(ref, txn)) {
-            // Τρίτος τύπος στο ίδιο URL: κρατήσεις υπηρεσιών. Δοκιμάζεται
-            // τελευταίος γιατί είναι ο νεότερος — η σειρά δεν έχει σημασία
-            // για την ορθότητα, κάθε έλεγχος επαληθεύει το δικό του id.
-            await markBookingPaid(ref, txn).catch((err) => {
-              console.error('markBookingPaid error:', err)
-            })
-          } else if (await confirmEventRegistrationPayment(ref, txn).catch((err) => {
+          } else if ((bookingOutcome = await handleBookingPaymentWebhook(ref, txn).catch((err) => {
+            console.error('handleBookingPaymentWebhook error:', err)
+            return 'not_mine' as const
+          })) !== 'not_mine') {
+            // Τρίτος τύπος στο ίδιο URL: κρατήσεις υπηρεσιών (lib/bookingPayment).
+            // Επαλήθευση στη Viva και ατομική καταχώριση· δεύτερη πληρωμή της
+            // ίδιας κράτησης (ή πληρωμή ακυρωμένης) επιστρέφεται αυτόματα.
+            // Κράτηση της οποίας η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx,
+            // δίκτυο): μη-2xx ώστε η Viva να ξαναστείλει το webhook. Μόνο
+            // αυτός ο κλάδος — οι παραγγελίες/τηλεϊατρική απαντούν όπως πριν.
+            if (bookingOutcome === 'retry') return reply.code(503).send({ received: false, retry: true })
+          } else if ((legacyEventOutcome = await confirmEventRegistrationPayment(ref, txn).catch((err) => {
             console.error('confirmEventRegistrationPayment error:', err)
             return null
-          })) {
+          }))) {
             // Εγγραφές εκδηλώσεων με την παλιά μορφή merchantTrns (σκέτο id
             // εγγραφής, πληρωμές που ξεκίνησαν πριν το `ev:`). Επαλήθευση στη
             // Viva (ίδια παραγγελία, ποσό) και καταχώριση σε ένα βήμα.
+            if (legacyEventOutcome === 'error') return reply.code(503).send({ received: false, retry: true })
           } else {
             console.error(`[viva] webhook for ${ref} could not be verified — ignored`)
           }
