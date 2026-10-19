@@ -23,8 +23,8 @@
  *   Απαιτείται έλεγχος από νομικό σύμβουλο πριν τεθεί σε ισχύ.
  */
 
-export const LEGAL_VERSION = '1.0'
-export const LEGAL_UPDATED = '2026-08-26'
+export const LEGAL_VERSION = '1.1'
+export const LEGAL_UPDATED = '2026-10-19'
 
 export type LegalSection = { title: string; body: string }
 export type LegalDoc = { title: string; intro: string; sections: LegalSection[] }
@@ -35,15 +35,15 @@ export type LegalDoc = { title: string; intro: string; sections: LegalSection[] 
 const privacyEl: LegalDoc = {
   title: 'Πολιτική Απορρήτου',
   intro:
-    'Η παρούσα πολιτική περιγράφει πώς η OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. συλλέγει, χρησιμοποιεί ' +
+    'Η παρούσα πολιτική περιγράφει πώς η GLOBIPET Ι.Κ.Ε. συλλέγει, χρησιμοποιεί ' +
     'και προστατεύει τα προσωπικά σου δεδομένα όταν χρησιμοποιείς την πλατφόρμα GlobiPet. ' +
     'Είναι γραμμένη ώστε να διαβάζεται, όχι για να καλύπτει νομικά κενά.',
   sections: [
     {
       title: '1. Ποιος είναι υπεύθυνος',
       body:
-        'Υπεύθυνος επεξεργασίας είναι η OB.AN ΜΟΝΟΠΡΟΣΩΠΗ ΙΔΙΩΤΙΚΗ ΚΕΦΑΛΑΙΟΥΧΙΚΗ ΕΤΑΙΡΕΙΑ, ' +
-        'με ΑΦΜ 802501406, που λειτουργεί την πλατφόρμα με την εμπορική ονομασία GlobiPet.\n\n' +
+        'Υπεύθυνος επεξεργασίας είναι η GLOBIPET ΙΔΙΩΤΙΚΗ ΚΕΦΑΛΑΙΟΥΧΙΚΗ ΕΤΑΙΡΕΙΑ (GLOBIPET Ι.Κ.Ε.), ' +
+        'με ΑΦΜ 803419330 και αριθμό ΓΕΜΗ 196535701000, που λειτουργεί την πλατφόρμα GlobiPet.\n\n' +
         'Για κάθε θέμα προστασίας δεδομένων: legal@globipet.com\n\n' +
         'Δεν έχει οριστεί Υπεύθυνος Προστασίας Δεδομένων. Η ανάγκη ορισμού επανεξετάζεται ' +
         'καθώς μεγαλώνει η πλατφόρμα.',
@@ -198,7 +198,7 @@ const privacyEl: LegalDoc = {
       title: '15. Επικοινωνία',
       body:
         'Για κάθε ερώτημα ή άσκηση δικαιώματος: legal@globipet.com\n\n' +
-        'OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. · ΑΦΜ 802501406',
+        'GLOBIPET Ι.Κ.Ε. · ΑΦΜ 803419330 · ΓΕΜΗ 196535701000',
     },
   ],
 }
@@ -218,7 +218,7 @@ const termsEl: LegalDoc = {
         'Το GlobiPet είναι πλατφόρμα διαμεσολάβησης που συνδέει ιδιοκτήτες κατοικιδίων με ' +
         'παρόχους υπηρεσιών — κτηνιατρεία, grooming, εκπαιδευτές, sitters, walkers, ' +
         'μεταφορείς, φωτογράφους — και διαθέτει κατάστημα προϊόντων.\n\n' +
-        'Λειτουργεί από την OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε., ΑΦΜ 802501406.',
+        'Λειτουργεί από την GLOBIPET Ι.Κ.Ε., ΑΦΜ 803419330, ΓΕΜΗ 196535701000.',
     },
     {
       title: '2. Ο ρόλος μας',
@@ -335,7 +335,7 @@ const termsEl: LegalDoc = {
     {
       title: '15. Επικοινωνία',
       body:
-        'OB.AN ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. · ΑΦΜ 802501406\n\n' +
+        'GLOBIPET Ι.Κ.Ε. · ΑΦΜ 803419330 · ΓΕΜΗ 196535701000\n\n' +
         'legal@globipet.com',
     },
   ],
@@ -347,15 +347,15 @@ const termsEl: LegalDoc = {
 const privacyEn: LegalDoc = {
   title: 'Privacy Policy',
   intro:
-    'This policy explains how OB.AN Single Member P.C. collects, uses and protects your ' +
+    'This policy explains how GLOBIPET P.C. collects, uses and protects your ' +
     'personal data when you use the GlobiPet platform. It is written to be read, not to ' +
     'cover legal gaps.',
   sections: [
     {
       title: '1. Who is responsible',
       body:
-        'The data controller is OB.AN SINGLE MEMBER PRIVATE COMPANY, VAT 802501406, ' +
-        'operating the platform under the trade name GlobiPet.\n\n' +
+        'The data controller is GLOBIPET PRIVATE COMPANY (GLOBIPET P.C.), VAT 803419330, ' +
+        'General Commercial Registry (GEMI) no. 196535701000, operating the GlobiPet platform.\n\n' +
         'For any data protection matter: legal@globipet.com\n\n' +
         'No Data Protection Officer has been appointed. The need for one is reassessed as ' +
         'the platform grows.',
@@ -498,7 +498,7 @@ const privacyEn: LegalDoc = {
       title: '15. Contact',
       body:
         'For any question or to exercise a right: legal@globipet.com\n\n' +
-        'OB.AN Single Member P.C. · VAT 802501406',
+        'GLOBIPET P.C. · VAT 803419330 · GEMI 196535701000',
     },
   ],
 }
@@ -518,7 +518,7 @@ const termsEn: LegalDoc = {
         'GlobiPet is a marketplace connecting pet owners with service providers — veterinary ' +
         'clinics, groomers, trainers, sitters, walkers, transport and photographers — and ' +
         'offers a product store.\n\n' +
-        'It is operated by OB.AN Single Member P.C., VAT 802501406.',
+        'It is operated by GLOBIPET P.C., VAT 803419330, GEMI 196535701000.',
     },
     {
       title: '2. Our role',
@@ -628,7 +628,7 @@ const termsEn: LegalDoc = {
     {
       title: '15. Contact',
       body:
-        'OB.AN Single Member P.C. · VAT 802501406\n\n' +
+        'GLOBIPET P.C. · VAT 803419330 · GEMI 196535701000\n\n' +
         'legal@globipet.com',
     },
   ],

@@ -314,7 +314,7 @@ export default function Home() {
               { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80' },
               { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80' },
               { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
-              { path: '/telehealth', emoji: '💻', title: 'Τηλεϊατρική 24/7',  sub: 'Άμεση σύνδεση με κτηνίατρο', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600&q=80' },
+              { path: '/marketplace', emoji: '🛍️', title: 'Κατάστημα',        sub: 'Τροφές, παιχνίδια, αξεσουάρ', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=600&q=80' },
               { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
             ].map(item => (
               <Link key={item.path + item.title} to={item.path}

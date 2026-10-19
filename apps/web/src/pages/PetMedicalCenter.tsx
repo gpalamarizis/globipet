@@ -37,7 +37,7 @@ export default function PetMedicalCenter() {
     { icon: Brain,    title: 'AI Health Check',    desc: 'Ανάλυση φωτογραφιών δέρματος & ματιού με σύγκριση σε δημόσιες κτηνιατρικές πηγές.' },
     { icon: Heart,    title: 'Emotion Detector',    desc: 'Κατανόηση της συναισθηματικής κατάστασης του κατοικίδιού σου από εικόνα ή βίντεο.' },
     { icon: Activity, title: 'Wellness Tracker',    desc: 'Συνεχής παρακολούθηση υγείας και ιστορικό αναλύσεων στο χρόνο.' },
-    { icon: Video,    title: 'Τηλειατρική 24/7',    desc: 'Άμεση πρόσβαση σε κτηνίατρο online, χωρίς αναμονή.' },
+    { icon: Video,    title: 'Τηλεϊατρική',         desc: 'Βιντεοκλήση με διαθέσιμο κτηνίατρο, χωρίς μετακίνηση.' },
   ]
 
   const renderTrialCta = () => {

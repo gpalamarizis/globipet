@@ -13,14 +13,14 @@ const FOUNDERS = [
   },
   {
     name: 'Meropi Topalidou',
-    roleKey: 'about.founders.roles.cto',
+    roleKey: 'about.founders.roles.pm',
     bioKey: 'about.founders.bios.topalidou',
     linkedin: 'https://www.linkedin.com/in/meropi-topalidou/',
     photo: '/founders/topalidou.jpg',
   },
   {
     name: 'Vasilis Rallis',
-    roleKey: 'about.founders.roles.coo',
+    roleKey: 'about.founders.roles.cfo',
     bioKey: 'about.founders.bios.rallis',
     linkedin: 'https://www.linkedin.com/in/vasilis-rallis/',
     photo: '/founders/rallis.jpg',

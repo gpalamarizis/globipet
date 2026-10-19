@@ -22,14 +22,9 @@ const typo = theme.type
  *      άνοιγμα, γιατί το `canUseAi` είναι false όσο φορτώνει το status.
  *      Ένας συνδρομητής έβλεπε «Ξεκίνα το δωρεάν trial» και μετά την
  *      οθόνη. Τώρα δείχνει σκελετό μέχρι να απαντήσει το backend.
- *   3. `router.push('/medical-center')` — δεν υπάρχει τέτοιο route στο
- *      mobile. Το κουμπί έριχνε σφάλμα πλοήγησης σε όποιον έληγε το
- *      trial. Προσωρινά ανοίγει το web.
- *
- * ΕΠΙΒΕΒΑΙΩΣΕ: το URL παρακάτω. Αν το web route λέγεται αλλιώς, άλλαξέ το
- * εδώ — ή, καλύτερα, φτιάξε `app/medical-center.tsx` και γύρνα σε push.
+ *   3. Το «Ιατρικό κέντρο» άνοιγε route που δεν υπήρχε. Υπάρχει πλέον ως
+ *      οθόνη (app/medical-center.tsx) — το προσωρινό URL του web αφαιρέθηκε.
  */
-const MEDICAL_CENTER_URL = 'https://globipet.com/medical-center'
 
 type AnalysisType = 'skin' | 'eye'
 

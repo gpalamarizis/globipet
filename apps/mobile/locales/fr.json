@@ -1218,12 +1218,6 @@
   "providerCampaignNew": {
     "title": "Nouvelle campagne"
   },
-  "providerInsights": {
-    "popularSearches": "Recherches populaires",
-    "shopCategories": "Catégories de la boutique",
-    "noData": "Pas encore de données",
-    "noDataHint": "Elles apparaîtront dès les premières recherches et commandes."
-  },
   "providerTrn": {
     "tabServices": "Services",
     "tabPackages": "Forfaits",
@@ -1557,7 +1551,7 @@
   },
   "about": {
     "title": "Qui Sommes-Nous",
-    "hero": "GlobiPet est la première Super-App complète pour animaux de compagnie en Europe — une plateforme unique pour tous les besoins de votre animal et de son propriétaire.",
+    "hero": "GlobiPet est une Super-App complète pour animaux de compagnie — une plateforme unique pour tous les besoins de votre animal et de son propriétaire.",
     "mission": {
       "title": "Notre Mission",
       "pets": {
@@ -1577,9 +1571,9 @@
       "title": "Les Fondateurs",
       "subtitle": "L'équipe derrière GlobiPet",
       "roles": {
-        "ceo": "CEO et Co-Fondateur",
-        "cto": "CTO et Co-Fondatrice",
-        "coo": "COO et Co-Fondateur"
+        "ceo": "CEO et CTO · Co-Fondateur",
+        "pm": "Product Manager · Co-Fondatrice",
+        "cfo": "CFO et COO · Co-Fondateur"
       },
       "bios": {
         "palamarizis": "Ingénieur en génie mécanique (NTUA), 20+ ans d'expérience en gouvernance numérique et technologie. Ancien CIO du gouvernement grec.",
@@ -1593,7 +1587,7 @@
       "items": {
         "telehealth": {
           "title": "Télésanté",
-          "desc": "Appel vidéo avec un vétérinaire qualifié à tout moment. Accès immédiat à des soins professionnels sans attente."
+          "desc": "Appel vidéo avec un vétérinaire disponible à ce moment-là. Des soins professionnels sans vous déplacer."
         },
         "aiHealth": {
           "title": "Santé IA",
@@ -1661,7 +1655,7 @@
     "title": "Questions Fréquentes",
     "subtitle": "Les questions les plus courantes de nos utilisateurs",
     "q1": "Qu'est-ce que GlobiPet?",
-    "a1": "GlobiPet est la première super-app intégrée pour animaux en Europe combinant services vétérinaires, télémédecine, marketplace de produits, outils IA santé et communauté de propriétaires en une plateforme.",
+    "a1": "GlobiPet est une super-app intégrée pour animaux combinant services vétérinaires, télémédecine, marketplace de produits, outils IA santé et communauté de propriétaires en une plateforme.",
     "q2": "Comment créer un compte?",
     "a2": "Cliquez \"S'inscrire\" en haut à droite, remplissez email, nom et mot de passe. Vous pouvez aussi vous connecter avec Google. L'inscription est gratuite.",
     "q3": "GlobiPet est-il gratuit?",
@@ -1811,5 +1805,19 @@
     "details": "Fiche client",
     "sort": "Trier",
     "addTag": "Ajouter"
+  },
+  "productInfo": {
+    "tabDescription": "Description",
+    "tabShipping": "Livraison et retours",
+    "title": "Livraison et retours",
+    "freeShipping": "Livraison gratuite au-delà de {{amount}} €",
+    "securePayment": "Paiement sécurisé via Viva",
+    "withdrawal14": "Rétractation sous 14 jours",
+    "methodsTitle": "Modes de livraison",
+    "boxnow": "BOX NOW — retrait en casier",
+    "acs": "ACS — livraison à domicile",
+    "elta": "ELTA — livraison à domicile",
+    "freeOverNote": "Les commandes de plus de {{amount}} € sont livrées gratuitement.",
+    "withdrawalText": "En tant que consommateur, vous pouvez vous rétracter dans les 14 jours suivant la livraison, sans avoir à vous justifier."
   }
 }

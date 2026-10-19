@@ -1218,12 +1218,6 @@
   "providerCampaignNew": {
     "title": "新建活动"
   },
-  "providerInsights": {
-    "popularSearches": "热门搜索",
-    "shopCategories": "商城类别",
-    "noData": "暂无数据",
-    "noDataHint": "搜索和订单开始后将显示。"
-  },
   "providerTrn": {
     "tabServices": "服务",
     "tabPackages": "套餐",
@@ -1557,7 +1551,7 @@
   },
   "about": {
     "title": "关于我们",
-    "hero": "GlobiPet 是欧洲首个综合宠物超级应用 — 满足您宠物及其主人所有需求的统一平台。",
+    "hero": "GlobiPet 是一款综合宠物超级应用 — 满足您宠物及其主人所有需求的统一平台。",
     "mission": {
       "title": "我们的使命",
       "pets": {
@@ -1577,9 +1571,9 @@
       "title": "创始人",
       "subtitle": "GlobiPet 背后的团队",
       "roles": {
-        "ceo": "首席执行官兼联合创始人",
-        "cto": "首席技术官兼联合创始人",
-        "coo": "首席运营官兼联合创始人"
+        "ceo": "首席执行官兼首席技术官 · 联合创始人",
+        "pm": "产品经理 · 联合创始人",
+        "cfo": "首席财务官兼首席运营官 · 联合创始人"
       },
       "bios": {
         "palamarizis": "雅典国立技术大学机械工程师，拥有 20 多年数字治理与技术经验。曾任希腊政府首席信息官。",
@@ -1593,7 +1587,7 @@
       "items": {
         "telehealth": {
           "title": "远程医疗",
-          "desc": "随时与合格兽医进行视频通话。无需等待即可获得专业护理。"
+          "desc": "与当时在线的兽医进行视频通话。无需出门即可获得专业护理。"
         },
         "aiHealth": {
           "title": "AI 健康",
@@ -1661,7 +1655,7 @@
     "title": "常见问题",
     "subtitle": "用户最常问的问题",
     "q1": "GlobiPet是什么？",
-    "a1": "GlobiPet是欧洲首个综合宠物超级应用，在一个平台上结合兽医服务、远程医疗、产品市场、AI健康工具和宠物主人社区。",
+    "a1": "GlobiPet 是一款综合宠物超级应用，在一个平台上结合兽医服务、远程医疗、产品市场、AI健康工具和宠物主人社区。",
     "q2": "如何创建账户？",
     "a2": "点击右上角\"注册\"，填写电子邮件、姓名和密码。也可以使用Google登录。注册免费。",
     "q3": "GlobiPet是免费的吗？",
@@ -1811,5 +1805,19 @@
     "details": "客户档案",
     "sort": "排序",
     "addTag": "添加"
+  },
+  "productInfo": {
+    "tabDescription": "描述",
+    "tabShipping": "配送与退货",
+    "title": "配送与退货",
+    "freeShipping": "订单超过 €{{amount}} 免运费",
+    "securePayment": "通过 Viva 安全支付",
+    "withdrawal14": "14 天撤销权",
+    "methodsTitle": "配送方式",
+    "boxnow": "BOX NOW — 自提柜取件",
+    "acs": "ACS — 送货上门",
+    "elta": "ELTA — 送货上门",
+    "freeOverNote": "订单超过 €{{amount}} 免运费。",
+    "withdrawalText": "作为消费者，您可以在收货后 14 天内无理由撤销购买。"
   }
 }

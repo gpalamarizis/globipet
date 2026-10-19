@@ -123,7 +123,7 @@ function ImportTab() {
   const downloadTemplate = (type: 'products' | 'services') => {
     const headers = type === 'products'
       ? [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.category'), t('providerDash.stock')]
-      : [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.type'), t('providerDash.durationMin')]
+      : [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.type')]
     const ws = XLSX.utils.aoa_to_sheet([headers, headers.map(() => t('providerDash.sampleName'))])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Template')
@@ -854,7 +854,6 @@ export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
   const canAccess = user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin'
-  if (!canAccess) return <Navigate to="/" replace />
 
   const { data: stats } = useQuery({
     queryKey: ['provider-stats'],
@@ -909,6 +908,8 @@ export default function ProviderDashboard() {
     ...(sellsProducts ? [{ id: 'insights', label: t('providerDash.tabInsights'), icon: BarChart3 }] : []),
     ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
   ]
+
+  if (!canAccess) return <Navigate to="/" replace />
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">

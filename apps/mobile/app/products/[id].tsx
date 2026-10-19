@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Mod
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShoppingBag, Star, Heart, Minus, Plus } from 'lucide-react-native'
+import { ShoppingBag, Star, Heart, Minus, Plus, Truck, ShieldCheck, RotateCcw } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
+import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '../../src/lib/shipping'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -164,6 +165,31 @@ export default function ProductDetailScreen() {
           </Card>
         )}
 
+        {/* Ίδιες πληροφορίες με την καρτέλα «Αποστολή & επιστροφές» του web. */}
+        <Card>
+          <Text style={s.sectionTitle}>{t('productInfo.title')}</Text>
+          <View style={s.infoRow}>
+            <Truck size={icon.sm} color={colors.brand} />
+            <View style={s.infoText}>
+              <Text style={s.infoTitle}>{t('productInfo.freeShipping', { amount: FREE_SHIPPING_OVER })}</Text>
+              {SHIPPING_PRICES.map(m => (
+                <Text key={m.id} style={s.infoDesc}>{t(m.labelKey)}: €{m.price.toFixed(2)}</Text>
+              ))}
+            </View>
+          </View>
+          <View style={s.infoRow}>
+            <ShieldCheck size={icon.sm} color={colors.brand} />
+            <View style={s.infoText}><Text style={s.infoTitle}>{t('productInfo.securePayment')}</Text></View>
+          </View>
+          <View style={s.infoRow}>
+            <RotateCcw size={icon.sm} color={colors.brand} />
+            <View style={s.infoText}>
+              <Text style={s.infoTitle}>{t('productInfo.withdrawal14')}</Text>
+              <Text style={s.infoDesc}>{t('productInfo.withdrawalText')}</Text>
+            </View>
+          </View>
+        </Card>
+
         {reviews.length > 0 && (
           <Card>
             <View style={s.reviewHead}>
@@ -271,6 +297,10 @@ const s = StyleSheet.create({
   qty: { ...type.body, color: colors.text, fontWeight: weight.bold, minWidth: 24, textAlign: 'center' },
   total: { ...type.body, color: colors.text, fontWeight: weight.bold, marginTop: space.md, textAlign: 'right' },
   sectionTitle: { ...type.emphasis, color: colors.text, marginBottom: space.sm },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, marginTop: space.sm },
+  infoText: { flex: 1, gap: 2 },
+  infoTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  infoDesc: { ...type.caption, color: colors.textMuted },
   review: { paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
   reviewTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   reviewName: { ...type.caption, color: colors.text, fontWeight: weight.semibold },

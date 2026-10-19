@@ -1218,12 +1218,6 @@
   "providerCampaignNew": {
     "title": "New campaign"
   },
-  "providerInsights": {
-    "popularSearches": "Popular searches",
-    "shopCategories": "Shop categories",
-    "noData": "No data yet",
-    "noDataHint": "They will appear once searches and orders start coming in."
-  },
   "providerTrn": {
     "tabServices": "Services",
     "tabPackages": "Packages",
@@ -1557,7 +1551,7 @@
   },
   "about": {
     "title": "Who We Are",
-    "hero": "GlobiPet is the first comprehensive Pet Super-App in Europe — a single platform for every need of your pet and its owner.",
+    "hero": "GlobiPet is a comprehensive Pet Super-App — a single platform for every need of your pet and its owner.",
     "mission": {
       "title": "Our Mission",
       "pets": {
@@ -1577,9 +1571,9 @@
       "title": "The Founders",
       "subtitle": "The team behind GlobiPet",
       "roles": {
-        "ceo": "CEO & Co-Founder",
-        "cto": "CTO & Co-Founder",
-        "coo": "COO & Co-Founder"
+        "ceo": "CEO & CTO · Co-Founder",
+        "pm": "Product Manager · Co-Founder",
+        "cfo": "CFO & COO · Co-Founder"
       },
       "bios": {
         "palamarizis": "Mechanical Engineer (NTUA) with 20+ years in digital governance and technology. Former CIO of the Greek Government.",
@@ -1593,7 +1587,7 @@
       "items": {
         "telehealth": {
           "title": "Telehealth",
-          "desc": "Video call with a qualified vet anytime. Instant access to professional care without waiting."
+          "desc": "Video call with a vet who is available at that moment. Professional care without travelling."
         },
         "aiHealth": {
           "title": "AI Health",
@@ -1661,7 +1655,7 @@
     "title": "Frequently Asked Questions",
     "subtitle": "The most common questions from our users",
     "q1": "What is GlobiPet?",
-    "a1": "GlobiPet is the first integrated pet super-app in Europe combining veterinary services, telemedicine, product marketplace, AI health tools and pet owner community in one platform.",
+    "a1": "GlobiPet is an integrated pet super-app combining veterinary services, telemedicine, product marketplace, AI health tools and pet owner community in one platform.",
     "q2": "How do I create an account?",
     "a2": "Click \"Sign Up\" at top right, fill in email, name and password. You can also sign in with Google. Registration is free.",
     "q3": "Is GlobiPet free to use?",
@@ -1811,5 +1805,19 @@
     "details": "Customer card",
     "sort": "Sort",
     "addTag": "Add"
+  },
+  "productInfo": {
+    "tabDescription": "Description",
+    "tabShipping": "Shipping & returns",
+    "title": "Shipping & returns",
+    "freeShipping": "Free shipping over €{{amount}}",
+    "securePayment": "Secure payment via Viva",
+    "withdrawal14": "14-day right of withdrawal",
+    "methodsTitle": "Delivery options",
+    "boxnow": "BOX NOW — locker pickup",
+    "acs": "ACS — home delivery",
+    "elta": "ELTA — home delivery",
+    "freeOverNote": "Orders over €{{amount}} ship for free.",
+    "withdrawalText": "As a consumer you can withdraw from the purchase within 14 days of delivery, without giving a reason."
   }
 }

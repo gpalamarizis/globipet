@@ -31,7 +31,7 @@ export default function ProviderImport() {
 
   const cols = kind === 'products'
     ? [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.category'), t('providerDash.stock')]
-    : [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.type'), t('providerDash.durationMin')]
+    : [t('providerDash.name'), t('providerDash.price'), t('providerDash.description'), t('providerDash.type')]
 
   const pick = async () => {
     try {

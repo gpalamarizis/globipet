@@ -13,6 +13,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { Product } from '@/types'
+import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '@/lib/shipping'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -248,9 +249,9 @@ export default function ProductDetail() {
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-3 pt-2">
             {[
-              { icon: <Truck size={16} />, text: 'Free shipping €50+' },
-              { icon: <Shield size={16} />, text: 'Secure payment' },
-              { icon: <RotateCcw size={16} />, text: '30-day returns' },
+              { icon: <Truck size={16} />, text: t('productInfo.freeShipping', { amount: FREE_SHIPPING_OVER }) },
+              { icon: <Shield size={16} />, text: t('productInfo.securePayment') },
+              { icon: <RotateCcw size={16} />, text: t('productInfo.withdrawal14') },
             ].map((b, i) => (
               <div key={i} className="flex flex-col items-center gap-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-center">
                 <span className="text-brand-900">{b.icon}</span>
@@ -270,9 +271,9 @@ export default function ProductDetail() {
                 tab === t_
                   ? 'border-brand-900 text-brand-900'
                   : 'border-transparent text-gray-500 hover:text-gray-700')}>
-              {t_ === 'description' ? t('common.filter') === 'Filter' ? 'Description' : 'Περιγραφή'
+              {t_ === 'description' ? t('productInfo.tabDescription')
                : t_ === 'reviews' ? t('common.reviews')
-               : 'Shipping'}
+               : t('productInfo.tabShipping')}
             </button>
           ))}
         </div>
@@ -383,9 +384,11 @@ export default function ProductDetail() {
         {tab === 'shipping' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
             {[
-              { icon: '🚚', title: 'Standard Shipping', desc: '3-5 business days • Free over €50' },
-              { icon: '⚡', title: 'Express Shipping', desc: '1-2 business days • €4.99' },
-              { icon: '🔄', title: 'Returns', desc: '30 days free returns' },
+              { icon: '🚚', title: t('productInfo.methodsTitle'),
+                desc: SHIPPING_PRICES.map(m => `${t(m.labelKey)}: €${m.price.toFixed(2)}`).join(' · ') },
+              { icon: '🎁', title: t('productInfo.freeShipping', { amount: FREE_SHIPPING_OVER }),
+                desc: t('productInfo.freeOverNote', { amount: FREE_SHIPPING_OVER }) },
+              { icon: '🔄', title: t('productInfo.withdrawal14'), desc: t('productInfo.withdrawalText') },
             ].map((s, i) => (
               <div key={i} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <span className="text-2xl">{s.icon}</span>
