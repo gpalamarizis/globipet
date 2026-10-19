@@ -239,11 +239,11 @@ export default function ProviderPackagesPage() {
                                 {pkg.size && <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', meta.color, 'border')}>{t(SIZE_LABELS[pkg.size])}</span>}
                                 {pkg.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200">{MODALITY_LABELS[pkg.modality] ? t(MODALITY_LABELS[pkg.modality]) : pkg.modality}</span>}
                                 {pkg.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-orange-50 text-orange-700 border border-orange-200">{pkg.pet_type === 'dog' ? '🐕' : pkg.pet_type === 'cat' ? '🐈' : '🐾'}</span>}
-                                {pkg.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">Add-on</span>}
+                                {pkg.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">{t('pgProvPackages.addon')}</span>}
                               </div>
                               {pkg.description && <p className="text-xs text-gray-500 mt-1 line-clamp-1">{pkg.description}</p>}
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                <span className="flex items-center gap-1"><Clock size={11}/> {pkg.duration_minutes}΄</span>
+                                <span className="flex items-center gap-1"><Clock size={11}/> {t('pgProvPackages.minutes', { count: pkg.duration_minutes })}</span>
                               </div>
                             </div>
                             <div className="text-right shrink-0">
@@ -441,9 +441,9 @@ function PresetCatalogModal({ open, onClose, serviceId, category, onImported }: 
                               {tpl.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{t(SIZE_LABELS[tpl.size])}</span>}
                               {tpl.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{MODALITY_LABELS[tpl.modality] ? t(MODALITY_LABELS[tpl.modality]) : tpl.modality}</span>}
                               {tpl.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700">{tpl.pet_type === 'dog' ? '🐕' : tpl.pet_type === 'cat' ? '🐈' : '🐾'}</span>}
-                              {tpl.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Add-on</span>}
+                              {tpl.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">{t('pgProvPackages.addon')}</span>}
                             </div>
-                            <p className="text-xs text-gray-400 mt-0.5">{tpl.duration_minutes}΄ · {t(meta.labelKey)}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{t('pgProvPackages.minutes', { count: tpl.duration_minutes })} · {t(meta.labelKey)}</p>
                             {tpl.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{tpl.description}</p>}
                           </div>
                         </div>
@@ -463,7 +463,7 @@ function PresetCatalogModal({ open, onClose, serviceId, category, onImported }: 
                                   className="input pl-7 py-1.5 text-sm"
                                   onClick={e => e.stopPropagation()}/>
                               </div>
-                              <span className="text-xs text-gray-400">· {tpl.duration_minutes}΄</span>
+                              <span className="text-xs text-gray-400">· {t('pgProvPackages.minutes', { count: tpl.duration_minutes })}</span>
                             </div>
                           </motion.div>
                         )}
@@ -821,7 +821,7 @@ function CustomPackageModal({ open, onClose, serviceId, editing, onSaved }: any)
               </div>
             </div>
             <div className="flex flex-wrap gap-4 pt-2">
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_addon} onChange={e => setForm({...form, is_addon: e.target.checked})}/> Add-on</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_addon} onChange={e => setForm({...form, is_addon: e.target.checked})}/> {t('pgProvPackages.addon')}</label>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => setForm({...form, is_active: e.target.checked})}/>{t('providerPkg.fActiveN')}</label>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import i18n from './i18n'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -44,7 +45,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.message || 'Κάτι πήγε στραβά'
+    const message = error.response?.data?.message || i18n.t('apiMsg.generic')
     const url: string = error.config?.url || ''
 
     if (status === 401 && !AUTH_ENDPOINTS.some(p => url.includes(p))) {
@@ -55,7 +56,7 @@ api.interceptors.response.use(
         window.location.href = '/login'
       }
     } else if (status === 429) {
-      toast.error('Πάρα πολλά αιτήματα. Δοκιμάστε σε λίγο.')
+      toast.error(i18n.t('apiMsg.tooMany'))
     }
     // Don't show global toast for 500 errors - let components handle them
 

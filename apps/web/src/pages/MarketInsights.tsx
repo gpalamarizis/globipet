@@ -87,10 +87,10 @@ export default function MarketInsights() {
           <div>
             <h1 className="section-title mb-1 flex items-center gap-2">
               <Flame size={22} className="text-orange-500" />
-              {t('insights.popularTitle', 'Δημοφιλέστερα προϊόντα')}
+              {t('insights.popularTitle')}
             </h1>
             <p className="text-gray-500 text-sm">
-              {t('insights.popularSubtitle', 'Αυτά επιλέγουν οι υπόλοιποι ιδιοκτήτες')}
+              {t('insights.popularSubtitle')}
             </p>
           </div>
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
@@ -98,7 +98,7 @@ export default function MarketInsights() {
               <button key={r} onClick={() => setDays(r)}
                 className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                   days === r ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-                {r} {t('insights.days', 'ημέρες')}
+                {t('insights.daysCount', { count: r })}
               </button>
             ))}
           </div>
@@ -110,10 +110,10 @@ export default function MarketInsights() {
           <div className="text-center py-24">
             <Flame size={44} className="mx-auto text-gray-200 mb-4" />
             <p className="font-semibold text-gray-900 dark:text-white mb-2">
-              {t('insights.noPopular', 'Δεν υπάρχουν ακόμη δημοφιλή προϊόντα')}
+              {t('insights.noPopular')}
             </p>
             <Link to="/marketplace" className="btn-primary mt-2">
-              {t('insights.browse', 'Δες το κατάστημα')}
+              {t('insights.browse')}
             </Link>
           </div>
         ) : (
@@ -159,7 +159,7 @@ export default function MarketInsights() {
                   </div>
                   {!p.in_stock && (
                     <p className="text-[10px] text-red-500 mt-1">
-                      {t('insights.outOfStock', 'Εξαντλήθηκε')}
+                      {t('insights.outOfStock')}
                     </p>
                   )}
                 </div>
@@ -180,9 +180,9 @@ export default function MarketInsights() {
     <div className="page-container py-16 text-center">
       <BarChart3 size={44} className="mx-auto text-gray-200 mb-4" />
       <p className="font-semibold text-gray-900 dark:text-white mb-2">
-        {(error as any)?.message || t('insights.noAccess', 'Δεν έχεις πρόσβαση σε αυτά τα στατιστικά')}
+        {(error as any)?.message || t('insights.noAccess')}
       </p>
-      <Link to="/" className="btn-primary mt-2">{t('nav.home', 'Αρχική')}</Link>
+      <Link to="/" className="btn-primary mt-2">{t('nav.home')}</Link>
     </div>
   )
 
@@ -201,11 +201,11 @@ export default function MarketInsights() {
     <div className="page-container py-8 pb-24 lg:pb-8">
       <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div>
-          <h1 className="section-title mb-1">{t('insights.title', 'Στατιστικά καταστήματος')}</h1>
+          <h1 className="section-title mb-1">{t('insights.title')}</h1>
           <p className="text-gray-500 text-sm">
             {data?.scope === 'platform'
-              ? t('insights.scopePlatform', 'Όλο το κατάστημα')
-              : t('insights.scopeProvider', 'Τα δικά σου προϊόντα')}
+              ? t('insights.scopePlatform')
+              : t('insights.scopeProvider')}
           </p>
         </div>
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
@@ -213,7 +213,7 @@ export default function MarketInsights() {
             <button key={r} onClick={() => setDays(r)}
               className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                 days === r ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-              {r === 365 ? t('insights.year', '1 έτος') : `${r} ${t('insights.days', 'ημέρες')}`}
+              {r === 365 ? t('insights.year') : t('insights.daysCount', { count: r })}
             </button>
           ))}
         </div>
@@ -222,11 +222,11 @@ export default function MarketInsights() {
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         {[
-          { icon: Euro,        label: t('insights.revenue', 'Έσοδα'),        value: formatCurrency(totals.revenue) },
-          { icon: ShoppingBag, label: t('insights.units', 'Τεμάχια'),        value: String(totals.units) },
-          { icon: Package,     label: t('insights.orders', 'Παραγγελίες'),   value: String(totals.orders) },
-          { icon: Eye,         label: t('insights.views', 'Προβολές'),       value: String(totals.views) },
-          { icon: TrendingUp,  label: t('insights.conversion', 'Μετατροπή'), value: `${overallConversion.toFixed(1)}%` },
+          { icon: Euro,        label: t('insights.revenue'),        value: formatCurrency(totals.revenue) },
+          { icon: ShoppingBag, label: t('insights.units'),        value: String(totals.units) },
+          { icon: Package,     label: t('insights.orders'),   value: String(totals.orders) },
+          { icon: Eye,         label: t('insights.views'),       value: String(totals.views) },
+          { icon: TrendingUp,  label: t('insights.conversion'), value: `${overallConversion.toFixed(1)}%` },
         ].map((s, i) => (
           <div key={i} className="card p-4">
             <s.icon size={15} className="text-gray-400 mb-2" />
@@ -243,7 +243,7 @@ export default function MarketInsights() {
             className={cn('px-2.5 py-1.5 rounded-full text-xs font-medium transition-all',
               !category ? 'bg-brand-900 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700')}>
-            {t('insights.allCategories', 'Όλες')}
+            {t('insights.allCategories')}
           </button>
           {categories.map((c: any) => (
             <button key={c.category} onClick={() => setCategory(c.category)}
@@ -262,7 +262,7 @@ export default function MarketInsights() {
         return (
           <div className="card p-5 mb-6">
             <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-4">
-              {t('insights.overTime', 'Έσοδα ανά ημέρα')}
+              {t('insights.overTime')}
             </h2>
             <div className="flex items-end gap-[2px] h-32">
               {data.daily.map((d: any) => (
@@ -284,31 +284,31 @@ export default function MarketInsights() {
       <div className="card overflow-hidden mb-6">
         <div className="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800 flex-wrap">
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mr-2">
-            {t('insights.products', 'Προϊόντα')}
+            {t('insights.products')}
           </h2>
-          <SortButton k="revenue"    label={t('insights.revenue', 'Έσοδα')} />
-          <SortButton k="units"      label={t('insights.units', 'Τεμάχια')} />
-          <SortButton k="views"      label={t('insights.views', 'Προβολές')} />
-          <SortButton k="conversion" label={t('insights.conversion', 'Μετατροπή')} />
-          <SortButton k="rating"     label={t('insights.rating', 'Βαθμολογία')} />
+          <SortButton k="revenue"    label={t('insights.revenue')} />
+          <SortButton k="units"      label={t('insights.units')} />
+          <SortButton k="views"      label={t('insights.views')} />
+          <SortButton k="conversion" label={t('insights.conversion')} />
+          <SortButton k="rating"     label={t('insights.rating')} />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500">
               <tr>
-                <th className="px-3 py-2 text-left">{t('insights.product', 'Προϊόν')}</th>
-                <th className="px-3 py-2 text-right">{t('insights.views', 'Προβολές')}</th>
-                <th className="px-3 py-2 text-right">{t('insights.units', 'Τεμάχια')}</th>
-                <th className="px-3 py-2 text-right">{t('insights.conversion', 'Μετατροπή')}</th>
-                <th className="px-3 py-2 text-right">{t('insights.revenue', 'Έσοδα')}</th>
-                <th className="px-3 py-2 text-right">{t('insights.stock', 'Απόθεμα')}</th>
+                <th className="px-3 py-2 text-left">{t('insights.product')}</th>
+                <th className="px-3 py-2 text-right">{t('insights.views')}</th>
+                <th className="px-3 py-2 text-right">{t('insights.units')}</th>
+                <th className="px-3 py-2 text-right">{t('insights.conversion')}</th>
+                <th className="px-3 py-2 text-right">{t('insights.revenue')}</th>
+                <th className="px-3 py-2 text-right">{t('insights.stock')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {rows.length === 0 && (
                 <tr><td colSpan={6} className="px-3 py-10 text-center text-gray-400">
-                  {t('insights.noProducts', 'Κανένα προϊόν σε αυτό το εύρος')}
+                  {t('insights.noProducts')}
                 </td></tr>
               )}
               {rows.map((r: any) => {
@@ -361,10 +361,10 @@ export default function MarketInsights() {
         <div className="card p-5">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-1.5">
             <AlertTriangle size={14} className="text-amber-500" />
-            {t('insights.lowStock', 'Χαμηλό απόθεμα')}
+            {t('insights.lowStock')}
           </h3>
           {(data?.low_stock ?? []).length === 0
-            ? <p className="text-sm text-gray-400">{t('insights.none', '—')}</p>
+            ? <p className="text-sm text-gray-400">{t('insights.none')}</p>
             : data.low_stock.map((r: any) => (
                 <div key={r.product_id} className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
                   <Link to={`/marketplace/${r.product_id}`} className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-brand-900">
@@ -378,13 +378,13 @@ export default function MarketInsights() {
         <div className="card p-5">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-1.5">
             <EyeOff size={14} className="text-gray-400" />
-            {t('insights.neverViewed', 'Χωρίς καμία προβολή')}
+            {t('insights.neverViewed')}
           </h3>
           <p className="text-[11px] text-gray-400 mb-2">
-            {t('insights.neverViewedHint', 'Κανείς δεν τα άνοιξε — ίσως χρειάζονται φωτογραφία ή καλύτερο τίτλο.')}
+            {t('insights.neverViewedHint')}
           </p>
           {(data?.never_viewed ?? []).length === 0
-            ? <p className="text-sm text-gray-400">{t('insights.none', '—')}</p>
+            ? <p className="text-sm text-gray-400">{t('insights.none')}</p>
             : data.never_viewed.map((r: any) => (
                 <div key={r.product_id} className="py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
                   <Link to={`/marketplace/${r.product_id}`} className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-brand-900">

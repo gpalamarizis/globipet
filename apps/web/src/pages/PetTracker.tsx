@@ -209,10 +209,10 @@ export default function PetTracker() {
     if (!iso) return '—'
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
     if (m < 1) return t('tracker.now')
-    if (m < 60) return `${m} ${t('tracker.minutesAgo')}`
+    if (m < 60) return t('tracker.minutesAgoCount', { count: m })
     const h = Math.floor(m / 60)
-    if (h < 24) return `${h} ${t('tracker.hoursAgo')}`
-    return `${Math.floor(h / 24)} ${t('tracker.daysAgo', 'ημέρες πριν')}`
+    if (h < 24) return t('tracker.hoursAgoCount', { count: h })
+    return t('tracker.daysAgoCount', { count: Math.floor(h / 24) })
   }
 
   return (
@@ -255,10 +255,10 @@ export default function PetTracker() {
         <div className="card p-8 text-center">
           <MapPin size={28} className="mx-auto text-gray-300 mb-3" />
           <p className="text-gray-600 dark:text-gray-300 font-medium mb-1">
-            {t('tracker.noPets', 'Δεν έχεις καταχωρημένα κατοικίδια')}
+            {t('tracker.noPets')}
           </p>
           <p className="text-sm text-gray-500">
-            {t('tracker.noPetsHint', 'Πρόσθεσε πρώτα ένα κατοικίδιο και μετά σύνδεσε τη συσκευή GPS του.')}
+            {t('tracker.noPetsHint')}
           </p>
         </div>
       )}
@@ -280,12 +280,12 @@ export default function PetTracker() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{row.pet.name}</p>
-                        {lost && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">{t('pets.lostBadge')}</span>}
+                        {lost && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">{t('petsExtra.lostBadge')}</span>}
                       </div>
                       <p className="text-xs text-gray-500 truncate">
                         {row.location
                           ? `${row.location.latitude.toFixed(4)}, ${row.location.longitude.toFixed(4)}`
-                          : t('tracker.noSignalYet', 'Καμία θέση ακόμη')}
+                          : t('tracker.noSignalYet')}
                       </p>
                     </div>
                     <div className={cn('w-2.5 h-2.5 rounded-full shrink-0',
@@ -313,7 +313,7 @@ export default function PetTracker() {
 
                   {!row.tracker && (
                     <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
-                      {t('tracker.noDevice', 'Χωρίς συνδεδεμένη συσκευή')}
+                      {t('tracker.noDevice')}
                     </p>
                   )}
                 </motion.div>
@@ -339,7 +339,7 @@ export default function PetTracker() {
               <p className="text-sm text-gray-500">
                 {selected.tracker
                   ? (selected.tracker.name || selected.tracker.device_id)
-                  : t('tracker.noDevice', 'Χωρίς συνδεδεμένη συσκευή')}
+                  : t('tracker.noDevice')}
               </p>
             </div>
             {selected.location && (
@@ -467,7 +467,7 @@ function DeviceManager({
            onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="font-bold text-gray-900 dark:text-white">
-            {t('tracker.devicesTitle', 'Συσκευές GPS')}
+            {t('tracker.devicesTitle')}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
         </div>
@@ -477,7 +477,7 @@ function DeviceManager({
           {issued?.token && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
-                {t('tracker.tokenOnce', 'Αντίγραψε το τώρα — δεν εμφανίζεται ξανά')}
+                {t('tracker.tokenOnce')}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-xs bg-white dark:bg-gray-800 rounded px-2 py-1.5 break-all">
@@ -489,7 +489,7 @@ function DeviceManager({
               </div>
               {issued.ingestUrl && (
                 <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 break-all">
-                  {t('tracker.ingestUrl', 'URL αποστολής θέσης')}: <code>{issued.ingestUrl}</code>
+                  {t('tracker.ingestUrl')}: <code>{issued.ingestUrl}</code>
                 </p>
               )}
             </div>
@@ -499,7 +499,7 @@ function DeviceManager({
           {(devicesQuery.data ?? []).length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {t('tracker.myDevices', 'Οι συσκευές μου')}
+                {t('tracker.myDevices')}
               </p>
               {devicesQuery.data!.map(d => (
                 <div key={d.id} className="flex items-center gap-2 border border-gray-100 dark:border-gray-800 rounded-xl p-3">
@@ -514,13 +514,13 @@ function DeviceManager({
                   </div>
                   <button
                     onClick={() => regenerate.mutate(d.id)}
-                    title={t('tracker.newToken', 'Νέο token')}
+                    title={t('tracker.newToken')}
                     className="text-gray-400 hover:text-brand-900 p-1 shrink-0">
                     <RefreshCw size={14} />
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(t('tracker.confirmRemoveDevice', 'Να αφαιρεθεί η συσκευή;'))) remove.mutate(d.id)
+                      if (confirm(t('tracker.confirmRemoveDevice'))) remove.mutate(d.id)
                     }}
                     className="text-gray-400 hover:text-red-600 p-1 shrink-0">
                     <Trash2 size={14} />
@@ -533,18 +533,18 @@ function DeviceManager({
           {/* Register a new device */}
           <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {t('tracker.addDevice', 'Προσθήκη συσκευής')}
+              {t('tracker.addDevice')}
             </p>
 
             {rows.length === 0 ? (
               <p className="text-sm text-gray-500">
-                {t('tracker.noPetsHint', 'Πρόσθεσε πρώτα ένα κατοικίδιο και μετά σύνδεσε τη συσκευή GPS του.')}
+                {t('tracker.noPetsHint')}
               </p>
             ) : (
               <>
                 <div>
                   <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                    {t('tracker.pet', 'Κατοικίδιο')}
+                    {t('tracker.pet')}
                   </label>
                   <select
                     value={form.pet_id}
@@ -556,29 +556,29 @@ function DeviceManager({
 
                 <div>
                   <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                    {t('tracker.deviceId', 'Αναγνωριστικό συσκευής')} <span className="text-red-500">*</span>
+                    {t('tracker.deviceId')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     value={form.device_id}
                     onChange={e => setForm(f => ({ ...f, device_id: e.target.value }))}
-                    placeholder="IMEI / serial"
+                    placeholder={t('tracker.deviceIdPlaceholder')}
                     className="input w-full mt-1" />
                   <p className="text-[11px] text-gray-400 mt-1">
-                    {t('tracker.deviceIdHint', 'Το IMEI ή ο σειριακός αριθμός που αναγράφεται στο κολάρο.')}
+                    {t('tracker.deviceIdHint')}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                      {t('tracker.brand', 'Μάρκα')}
+                      {t('tracker.brand')}
                     </label>
                     <input value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
                            className="input w-full mt-1" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                      {t('tracker.model', 'Μοντέλο')}
+                      {t('tracker.model')}
                     </label>
                     <input value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
                            className="input w-full mt-1" />
@@ -587,7 +587,7 @@ function DeviceManager({
 
                 <div>
                   <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                    {t('tracker.deviceName', 'Όνομα (προαιρετικό)')}
+                    {t('tracker.deviceName')}
                   </label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                          className="input w-full mt-1" />
@@ -598,12 +598,12 @@ function DeviceManager({
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t border-gray-100 dark:border-gray-800">
-          <button onClick={onClose} className="btn-secondary text-sm">{t('common.close', 'Κλείσιμο')}</button>
+          <button onClick={onClose} className="btn-secondary text-sm">{t('common.close')}</button>
           <button
             onClick={() => register.mutate()}
             disabled={register.isPending || !form.pet_id || form.device_id.trim().length < 4}
             className="btn-primary text-sm inline-flex items-center gap-1.5">
-            <Wifi size={14} /> {register.isPending ? t('common.loading') : t('tracker.register', 'Καταχώρηση')}
+            <Wifi size={14} /> {register.isPending ? t('common.loading') : t('tracker.register')}
           </button>
         </div>
       </div>

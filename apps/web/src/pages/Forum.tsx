@@ -22,13 +22,13 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
  */
 
 const CATEGORIES = [
-  { value: '',          labelKey: 'forum.categories.all',       fallback: 'Όλα',        emoji: '💬' },
-  { value: 'health',    labelKey: 'forum.categories.health',    fallback: 'Υγεία',      emoji: '🩺' },
-  { value: 'nutrition', labelKey: 'forum.categories.nutrition', fallback: 'Διατροφή',   emoji: '🍽️' },
-  { value: 'training',  labelKey: 'forum.categories.training',  fallback: 'Εκπαίδευση', emoji: '🎓' },
-  { value: 'behavior',  labelKey: 'forum.categories.behavior',  fallback: 'Συμπεριφορά',emoji: '🧠' },
-  { value: 'adoption',  labelKey: 'forum.categories.adoption',  fallback: 'Υιοθεσία',   emoji: '🏠' },
-  { value: 'general',   labelKey: 'forum.categories.general',   fallback: 'Γενικά',     emoji: '🐾' },
+  { value: '',          labelKey: 'common.all',                 emoji: '💬' },
+  { value: 'health',    labelKey: 'forum.categories.health',    emoji: '🩺' },
+  { value: 'nutrition', labelKey: 'forum.categories.nutrition', emoji: '🍽️' },
+  { value: 'training',  labelKey: 'forum.categories.training',  emoji: '🎓' },
+  { value: 'behavior',  labelKey: 'forum.categories.behavior',  emoji: '🧠' },
+  { value: 'adoption',  labelKey: 'forum.categories.adoption',  emoji: '🏠' },
+  { value: 'general',   labelKey: 'forum.categories.general',   emoji: '🐾' },
 ]
 
 export default function Forum() {
@@ -57,7 +57,7 @@ export default function Forum() {
       queryClient.invalidateQueries({ queryKey: ['forum-topics'] })
       setForm({ title: '', content: '', category: 'general' })
       setCompose(false)
-      toast.success(t('forum.posted', 'Το θέμα δημοσιεύτηκε'))
+      toast.success(t('forum.posted'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -65,21 +65,21 @@ export default function Forum() {
   const topics = data?.data ?? []
   const catLabel = (v: string) => {
     const c = CATEGORIES.find(x => x.value === v)
-    return c ? t(c.labelKey, c.fallback) : v
+    return c ? t(c.labelKey) : v
   }
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="section-title mb-1">{t('nav.forum', 'Φόρουμ')}</h1>
+          <h1 className="section-title mb-1">{t('nav.forum')}</h1>
           <p className="text-gray-500 text-sm">
-            {t('forum.subtitle', 'Ρώτησε την κοινότητα, μοιράσου την εμπειρία σου')}
+            {t('forum.subtitle')}
           </p>
         </div>
         {isAuthenticated && (
           <button onClick={() => setCompose(!compose)} className="btn-primary flex items-center gap-2 shrink-0">
-            <Plus size={16} /> {t('forum.newTopic', 'Νέο θέμα')}
+            <Plus size={16} /> {t('forum.newTopic')}
           </button>
         )}
       </div>
@@ -90,27 +90,27 @@ export default function Forum() {
             className="card p-4 mb-6 space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-sm text-gray-900 dark:text-white">
-                {t('forum.newTopic', 'Νέο θέμα')}
+                {t('forum.newTopic')}
               </p>
               <button onClick={() => setCompose(false)} className="btn-ghost p-1.5"><X size={16} /></button>
             </div>
-            <input className="input" placeholder={t('forum.titlePlaceholder', 'Τίτλος...')}
+            <input className="input" placeholder={t('forum.titlePlaceholder')}
               value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
             <select className="input" value={form.category}
               onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
               {CATEGORIES.filter(c => c.value).map(c => (
-                <option key={c.value} value={c.value}>{c.emoji} {t(c.labelKey, c.fallback)}</option>
+                <option key={c.value} value={c.value}>{c.emoji} {t(c.labelKey)}</option>
               ))}
             </select>
             <textarea className="input resize-none" rows={5}
-              placeholder={t('forum.contentPlaceholder', 'Περίγραψε το ερώτημά σου...')}
+              placeholder={t('forum.contentPlaceholder')}
               value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} />
             <div className="flex justify-end">
               <button onClick={() => createTopic.mutate()}
                 disabled={!form.title.trim() || !form.content.trim() || createTopic.isPending}
                 className="btn-primary text-sm flex items-center gap-1.5">
                 <Send size={14} />
-                {createTopic.isPending ? t('common.loading') : t('forum.publish', 'Δημοσίευση')}
+                {createTopic.isPending ? t('common.loading') : t('forum.publish')}
               </button>
             </div>
           </motion.div>
@@ -119,7 +119,7 @@ export default function Forum() {
 
       <div className="relative mb-4">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input className="input pl-10 py-2.5" placeholder={t('forum.searchPlaceholder', 'Αναζήτηση θέματος...')}
+        <input className="input pl-10 py-2.5" placeholder={t('forum.searchPlaceholder')}
           value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
@@ -130,7 +130,7 @@ export default function Forum() {
               category === c.value
                 ? 'bg-brand-900 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300')}>
-            <span>{c.emoji}</span>{t(c.labelKey, c.fallback)}
+            <span>{c.emoji}</span>{t(c.labelKey)}
           </button>
         ))}
       </div>
@@ -141,10 +141,10 @@ export default function Forum() {
         <div className="text-center py-20">
           <MessageSquare size={44} className="mx-auto text-gray-200 mb-4" />
           <p className="font-semibold text-gray-900 dark:text-white mb-2">
-            {t('forum.empty', 'Κανένα θέμα ακόμη')}
+            {t('forum.empty')}
           </p>
           <p className="text-gray-500 text-sm">
-            {t('forum.emptyDesc', 'Ξεκίνησε εσύ τη συζήτηση.')}
+            {t('forum.emptyDesc')}
           </p>
         </div>
       ) : (

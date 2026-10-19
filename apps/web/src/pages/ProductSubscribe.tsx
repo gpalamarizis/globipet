@@ -4,8 +4,10 @@ import { ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { useTranslation } from 'react-i18next'
 
 export default function ProductSubscribe() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -29,11 +31,11 @@ export default function ProductSubscribe() {
     // original axios error is gone by then. Reading err.response.data.message
     // always found undefined, so the real reason ("you already have an active
     // subscription for this product") was replaced by the generic fallback.
-    onError: (err: any) => toast.error(err?.message || 'Σφάλμα δημιουργίας συνδρομής'),
+    onError: (err: any) => toast.error(err?.message || t('pgSubscribe.createError')),
   })
 
   if (isLoading) return <div className="page-container py-16 flex justify-center"><LoadingSpinner /></div>
-  if (!product) return <div className="page-container py-16 text-center text-gray-500">Το προϊόν δεν βρέθηκε</div>
+  if (!product) return <div className="page-container py-16 text-center text-gray-500">{t('pgSubscribe.notFound')}</div>
 
   const discountPercent = discountData?.discount_percent ?? 0
   const monthlyPrice = Math.round(product.price * (1 - discountPercent / 100) * 100) / 100
@@ -41,8 +43,8 @@ export default function ProductSubscribe() {
   if (!product.is_subscribable) {
     return (
       <div className="page-container py-16 text-center">
-        <p className="text-gray-500 mb-4">Αυτό το προϊόν δεν διαθέτει επιλογή συνδρομής.</p>
-        <button onClick={() => navigate(`/marketplace/${id}`)} className="btn-secondary">Πίσω στο προϊόν</button>
+        <p className="text-gray-500 mb-4">{t('pgSubscribe.notSubscribable')}</p>
+        <button onClick={() => navigate(`/marketplace/${id}`)} className="btn-secondary">{t('pgSubscribe.backToProduct')}</button>
       </div>
     )
   }
@@ -54,32 +56,32 @@ export default function ProductSubscribe() {
           {product.image_url && <img src={product.image_url} alt={product.name} className="w-16 h-16 rounded-xl object-cover" />}
           <div>
             <h1 className="font-bold text-lg text-gray-900 dark:text-white">{product.name}</h1>
-            <p className="text-sm text-gray-500">Συνδρομή 12 μηνών</p>
+            <p className="text-sm text-gray-500">{t('pgSubscribe.duration')}</p>
           </div>
         </div>
 
         <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 mb-6">
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-2xl font-bold text-brand-900 dark:text-brand-400">€{monthlyPrice}</span>
-            <span className="text-sm text-gray-500">/μήνα</span>
+            <span className="text-sm text-gray-500">{t('pgSubscribe.perMonth')}</span>
             {discountPercent > 0 && (
               <span className="text-xs text-gray-400 line-through ml-1">€{product.price}</span>
             )}
           </div>
           {discountPercent > 0 && (
-            <p className="text-xs text-green-700 font-medium">Έκπτωση {discountPercent}% σε σχέση με μεμονωμένη αγορά</p>
+            <p className="text-xs text-green-700 font-medium">{t('pgSubscribe.discount', { percent: discountPercent })}</p>
           )}
         </div>
 
         <ul className="space-y-3 mb-6">
           <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Truck size={16} className="text-brand-900 dark:text-brand-400" /> Αυτόματη μηνιαία παράδοση, 12 φορές
+            <Truck size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featDelivery')}
           </li>
           <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <ShieldCheck size={16} className="text-brand-900 dark:text-brand-400" /> Ασφαλής χρέωση κάρτας κάθε μήνα
+            <ShieldCheck size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featSecure')}
           </li>
           <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <RotateCcw size={16} className="text-brand-900 dark:text-brand-400" /> Ακύρωση οποιαδήποτε στιγμή
+            <RotateCcw size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featCancel')}
           </li>
         </ul>
 
@@ -88,7 +90,7 @@ export default function ProductSubscribe() {
           disabled={checkout.isPending}
           className="btn-primary w-full py-3 disabled:opacity-60"
         >
-          {checkout.isPending ? 'Μεταφορά στην πληρωμή...' : 'Ξεκίνα τη συνδρομή'}
+          {checkout.isPending ? t('pgSubscribe.redirecting') : t('pgSubscribe.start')}
         </button>
       </div>
     </div>

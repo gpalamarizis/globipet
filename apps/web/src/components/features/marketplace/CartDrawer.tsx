@@ -5,8 +5,10 @@ import { useEffect } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export default function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
 
@@ -42,14 +44,14 @@ export default function CartDrawer({ open, onClose }: { open: boolean; onClose: 
       {/* Drawer */}
       <div className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white dark:bg-gray-900 shadow-modal z-[101] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="font-semibold flex items-center gap-2"><ShoppingCart size={18}/>Καλάθι ({cart.length})</h2>
-          <button onClick={onClose} className="btn-ghost p-2" aria-label="Κλείσιμο"><X size={18}/></button>
+          <h2 className="font-semibold flex items-center gap-2"><ShoppingCart size={18}/>{t('cmpCart.title', { count: cart.length })}</h2>
+          <button onClick={onClose} className="btn-ghost p-2" aria-label={t('common.close')}><X size={18}/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {cart.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <ShoppingCart size={40} className="mx-auto mb-3 opacity-30"/>
-              <p className="text-sm">Το καλάθι σας είναι άδειο</p>
+              <p className="text-sm">{t('cart.empty')}</p>
             </div>
           ) : cart.map((item: any) => (
             <div key={item.id} className="flex gap-3 items-center">
@@ -71,11 +73,11 @@ export default function CartDrawer({ open, onClose }: { open: boolean; onClose: 
         {cart.length > 0 && (
           <div className="p-4 border-t border-gray-100 dark:border-gray-800">
             <div className="flex justify-between mb-4">
-              <span className="text-sm text-gray-500">Σύνολο</span>
+              <span className="text-sm text-gray-500">{t('cart.total')}</span>
               <span className="font-bold text-lg text-gray-900 dark:text-white">{formatCurrency(total)}</span>
             </div>
             <Link to="/checkout" onClick={onClose} className="btn-primary w-full flex items-center justify-center gap-2">
-              Ολοκλήρωση αγοράς <ArrowRight size={16}/>
+              {t('cart.checkout')} <ArrowRight size={16}/>
             </Link>
           </div>
         )}

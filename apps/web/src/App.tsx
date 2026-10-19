@@ -103,7 +103,7 @@ const queryClient = new QueryClient({
        */
       onError: (err: any) => {
         if (err?.statusCode === 401) return
-        toast.error(err?.message || err?.response?.data?.message || 'Η ενέργεια απέτυχε')
+        toast.error(err?.message || err?.response?.data?.message || i18n.t('appShell.actionFailed'))
       },
     },
   },

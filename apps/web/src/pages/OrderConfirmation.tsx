@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle, XCircle, Loader2, Package } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useTranslation } from 'react-i18next'
 
 /**
  * Where the customer lands after paying.
@@ -19,6 +20,7 @@ import { api } from '@/lib/api'
  *   on "pending" until the customer reloaded by hand.
  */
 export default function OrderConfirmation() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -84,33 +86,32 @@ export default function OrderConfirmation() {
       {waiting ? (
         <>
           <Loader2 size={56} className="mx-auto text-brand-900 animate-spin mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Επιβεβαίωση πληρωμής...</h1>
-          <p className="text-gray-500">Μην κλείσεις αυτή τη σελίδα.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.verifying')}</h1>
+          <p className="text-gray-500">{t('pgOrderConfirm.dontClose')}</p>
         </>
       ) : isPaid ? (
         <>
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Η πληρωμή ολοκληρώθηκε! 🎉</h1>
-          <p className="text-gray-500 mb-6">Η παραγγελία σας επιβεβαιώθηκε και θα την επεξεργαστούμε σύντομα.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.paidTitle')}</h1>
+          <p className="text-gray-500 mb-6">{t('pgOrderConfirm.paidDesc')}</p>
           <div className="card p-4 mb-6 text-left">
-            <p className="text-sm text-gray-500">Αριθμός παραγγελίας</p>
+            <p className="text-sm text-gray-500">{t('orderConfirm.orderNumber')}</p>
             <p className="font-mono font-bold text-gray-900 dark:text-white">#{id?.slice(0, 8)}</p>
-            <p className="text-sm text-gray-500 mt-2">Σύνολο</p>
+            <p className="text-sm text-gray-500 mt-2">{t('orderConfirm.total')}</p>
             <p className="font-bold text-gray-900 dark:text-white">€{order?.total_amount?.toFixed(2)}</p>
           </div>
           <button onClick={() => navigate('/orders')} className="btn-primary w-full">
-            <Package size={16} className="inline mr-2"/>Οι παραγγελίες μου
+            <Package size={16} className="inline mr-2"/>{t('orderConfirm.myOrders')}
           </button>
         </>
       ) : (
         <>
           <XCircle size={56} className="mx-auto text-amber-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Εκκρεμεί πληρωμή</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.pendingTitle')}</h1>
           <p className="text-gray-500 mb-6">
-            Η παραγγελία δημιουργήθηκε αλλά η πληρωμή δεν έχει επιβεβαιωθεί ακόμα.
-            Αν χρεώθηκες, επικοινώνησε μαζί μας με τον αριθμό #{id?.slice(0, 8)}.
+            {t('pgOrderConfirm.pendingDesc', { id: id?.slice(0, 8) })}
           </p>
-          <button onClick={() => navigate('/orders')} className="btn-secondary w-full">Οι παραγγελίες μου</button>
+          <button onClick={() => navigate('/orders')} className="btn-secondary w-full">{t('orderConfirm.myOrders')}</button>
         </>
       )}
     </div>

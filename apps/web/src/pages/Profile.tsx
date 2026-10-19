@@ -12,7 +12,7 @@ import NotificationSettingsCard from '@/components/NotificationSettingsCard'
 import MyDataCard from '@/components/MyDataCard'
 
 const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
-const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
+const TIER_LABEL_KEYS: Record<string, string> = { bronze: 'loyalty.bronze', silver: 'loyalty.silver', gold: 'loyalty.gold', platinum: 'loyalty.platinum' }
 const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
 
 export default function Profile() {
@@ -100,9 +100,9 @@ export default function Profile() {
       const url = await uploadFile(file, 'profiles')
       await api.patch('/users/me', { profile_photo: url })
       updateUser({ ...user!, profile_photo: url })
-      toast.success('Φωτογραφία ενημερώθηκε!')
+      toast.success(t('pgProfile.photoUpdated'))
     } catch {
-      toast.error('Σφάλμα κατά το upload')
+      toast.error(t('pgProfile.uploadError'))
     } finally {
       setUploading(false)
     }
@@ -117,19 +117,19 @@ export default function Profile() {
 
   // Achievements computed from real user data, not hardcoded
   const achievements = [
-    { icon: '🐾', title: 'Πρώτο Κατοικίδιο', desc: 'Προσθέσατε το πρώτο σας κατοικίδιο', unlocked: pets.length >= 1 },
-    { icon: '🛒', title: 'Πρώτη Αγορά',       desc: 'Ολοκληρώσατε την πρώτη σας παραγγελία', unlocked: orders.length >= 1 },
-    { icon: '⭐', title: 'Super Reviewer',    desc: 'Γράψατε 5 κριτικές',          unlocked: reviews.length >= 5 },
-    { icon: '📅', title: 'Τακτικός',          desc: '10 κρατήσεις υπηρεσιών',      unlocked: bookings.length >= 10 },
-    { icon: '🏆', title: 'Loyalty Gold',      desc: 'Φτάσατε Gold επίπεδο',        unlocked: tier === 'gold' || tier === 'platinum' },
-    { icon: '❤️', title: 'Pet Lover',         desc: 'Προσθέσατε 3 κατοικίδια',     unlocked: pets.length >= 3 },
+    { icon: '🐾', title: t('pgProfile.ach.firstPetTitle'), desc: t('pgProfile.ach.firstPetDesc'), unlocked: pets.length >= 1 },
+    { icon: '🛒', title: t('pgProfile.ach.firstOrderTitle'),       desc: t('pgProfile.ach.firstOrderDesc'), unlocked: orders.length >= 1 },
+    { icon: '⭐', title: t('pgProfile.ach.reviewerTitle'),    desc: t('pgProfile.ach.reviewerDesc'),          unlocked: reviews.length >= 5 },
+    { icon: '📅', title: t('pgProfile.ach.regularTitle'),          desc: t('pgProfile.ach.regularDesc'),      unlocked: bookings.length >= 10 },
+    { icon: '🏆', title: t('pgProfile.ach.goldTitle'),      desc: t('pgProfile.ach.goldDesc'),        unlocked: tier === 'gold' || tier === 'platinum' },
+    { icon: '❤️', title: t('pgProfile.ach.petLoverTitle'),         desc: t('pgProfile.ach.petLoverDesc'),     unlocked: pets.length >= 3 },
   ]
 
   if (!user) return (
     <div className="page-container py-16 text-center">
       <p className="text-2xl mb-3">🔒</p>
-      <p className="font-semibold text-gray-900 dark:text-white mb-2">Απαιτείται σύνδεση</p>
-      <a href="/login" className="btn-primary inline-block">Σύνδεση</a>
+      <p className="font-semibold text-gray-900 dark:text-white mb-2">{t('authExtra.requiredTitle')}</p>
+      <a href="/login" className="btn-primary inline-block">{t('auth.login')}</a>
     </div>
   )
 
@@ -163,7 +163,7 @@ export default function Profile() {
             )}
             <p className="text-sm text-gray-500">{user.email}</p>
             <span className="inline-block mt-1 text-xs bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 px-2 py-0.5 rounded-full font-medium">
-              {user.role === 'service_provider' ? '🩺 Πάροχος' : user.role === 'admin' ? '⚡ Admin' : '🐾 Ιδιοκτήτης'}
+              {user.role === 'service_provider' ? t('pgProfile.roleProvider') : user.role === 'admin' ? t('pgProfile.roleAdmin') : t('pgProfile.roleOwner')}
             </span>
           </div>
 
@@ -189,7 +189,7 @@ export default function Profile() {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.bio')}</label>
-              <textarea className="input resize-none" rows={2} placeholder="Λίγα λόγια για εσάς..."
+              <textarea className="input resize-none" rows={2} placeholder={t('pgProfile.bioPlaceholder')}
                 value={form.bio} onChange={e => setForm(f => ({...f, bio: e.target.value}))} />
             </div>
             <div>
@@ -199,7 +199,7 @@ export default function Profile() {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('profile.city')}</label>
-              <input className="input" placeholder="Αθήνα" value={form.city}
+              <input className="input" placeholder={t('pgProfile.cityPlaceholder')} value={form.city}
                 onChange={e => setForm(f => ({...f, city: e.target.value}))} />
             </div>
             <div className="col-span-2">
@@ -251,14 +251,14 @@ export default function Profile() {
       {/* Tab content */}
       {activeTab === 'overview' && (
         <div className="card p-5">
-          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — {TIER_LABELS[tier] ?? tier}</h3>
+          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — {TIER_LABEL_KEYS[tier] ? t(TIER_LABEL_KEYS[tier]) : tier}</h3>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
             <div className="bg-orange-500 h-3 rounded-full"
               style={{ width: nextThreshold ? `${Math.min(100, (totalPoints / nextThreshold) * 100)}%` : '100%' }} />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
             <span>{totalPoints} {t('loyalty.points')}</span>
-            <span>{nextThreshold ? `${nextThreshold} για ${TIER_LABELS[nextTier]}` : 'Ανώτατο επίπεδο'}</span>
+            <span>{nextThreshold ? t('pgProfile.pointsForTier', { points: nextThreshold, tier: t(TIER_LABEL_KEYS[nextTier]) }) : t('pgProfile.maxTier')}</span>
           </div>
         </div>
       )}

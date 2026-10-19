@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Inbox, Mail, MailOpen, X, Tag, Clock, ArrowRight, Sparkles,
 } from 'lucide-react'
@@ -36,6 +37,7 @@ type Message = {
 }
 
 export default function InboxPage() {
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [open, setOpen] = useState<Message | null>(null)
 
@@ -67,11 +69,11 @@ export default function InboxPage() {
   const when = (iso: string) => {
     const d = new Date(iso)
     const h = Math.round((Date.now() - d.getTime()) / 36e5)
-    if (h < 1) return 'μόλις τώρα'
-    if (h < 24) return `πριν ${h} ${h === 1 ? 'ώρα' : 'ώρες'}`
+    if (h < 1) return t('pgInbox.justNow')
+    if (h < 24) return t('pgInbox.hoursAgo', { count: h })
     const days = Math.round(h / 24)
-    if (days < 7) return `πριν ${days} ${days === 1 ? 'μέρα' : 'μέρες'}`
-    return d.toLocaleDateString('el-GR')
+    if (days < 7) return t('pgInbox.daysAgo', { count: days })
+    return d.toLocaleDateString(i18n.language)
   }
 
   return (
@@ -84,23 +86,22 @@ export default function InboxPage() {
           </div>
           <div>
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
-              Μηνύματα
+              {t('pgInbox.title')}
             </h1>
             <p className="text-sm text-gray-500">
-              {unread > 0 ? `${unread} νέα` : 'Από τους παρόχους σου'}
+              {unread > 0 ? t('pgInbox.newCount', { count: unread }) : t('pgInbox.fromProviders')}
             </p>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="card p-12 text-center text-gray-500">Φόρτωση...</div>
+          <div className="card p-12 text-center text-gray-500">{t('common.loading')}</div>
         ) : messages.length === 0 ? (
           <div className="card p-12 text-center">
             <Inbox size={40} className="mx-auto text-gray-300 mb-3" />
-            <p className="font-medium text-gray-700 dark:text-gray-300">Κανένα μήνυμα</p>
+            <p className="font-medium text-gray-700 dark:text-gray-300">{t('pgInbox.noMessages')}</p>
             <p className="text-sm text-gray-500 mt-1">
-              Εδώ θα βλέπεις προσφορές και ενημερώσεις από τους παρόχους που
-              έχεις χρησιμοποιήσει.
+              {t('pgInbox.noMessagesHint')}
             </p>
           </div>
         ) : (
@@ -189,7 +190,7 @@ export default function InboxPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles size={15} className="text-brand-900 dark:text-yellow-400" />
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {open.campaign_title || 'Ειδική προσφορά'}
+                      {open.campaign_title || t('pgInbox.specialOffer')}
                     </span>
                   </div>
 
@@ -202,16 +203,16 @@ export default function InboxPage() {
                     return left != null && left > 0 ? (
                       <p className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                         <Clock size={11} />
-                        Ισχύει για {left} {left === 1 ? 'ακόμα μέρα' : 'ακόμα μέρες'}
+                        {t('pgInbox.validDays', { count: left })}
                       </p>
                     ) : left != null ? (
-                      <p className="text-xs text-red-500 mt-1">Η προσφορά έληξε</p>
+                      <p className="text-xs text-red-500 mt-1">{t('pgInbox.offerExpired')}</p>
                     ) : null
                   })()}
 
                   <Link to="/services" onClick={() => setOpen(null)}
                     className="btn-primary w-full justify-center mt-3 text-sm">
-                    Δες τις υπηρεσίες <ArrowRight size={15} className="ml-1" />
+                    {t('pgInbox.seeServices')} <ArrowRight size={15} className="ml-1" />
                   </Link>
                 </div>
               )}

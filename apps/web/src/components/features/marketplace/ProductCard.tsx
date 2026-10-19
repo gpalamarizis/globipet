@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import type { Product } from '@/types'
+import { useTranslation } from 'react-i18next'
 
 interface Props { product: Product; viewMode?: 'grid' | 'list' }
 
@@ -22,6 +23,7 @@ const categoryIllustration: Record<string, { Icon: typeof Bone, bg: string, fg: 
 const defaultIllustration = { Icon: Package, bg: 'bg-gray-50 dark:bg-gray-800', fg: 'text-gray-300 dark:text-gray-600' }
 
 export default function ProductCard({ product, viewMode = 'grid' }: Props) {
+  const { t } = useTranslation()
   const { isAuthenticated, user } = useAuthStore()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -35,8 +37,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
     // Price, name and image are resolved from the products table on the
     // server; sending them here is ignored.
     mutationFn: () => api.post('/cart', { product_id: product.id, quantity: 1 }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }); toast.success('Προστέθηκε στο καλάθι!') },
-    onError: (err: any) => toast.error(err?.message || 'Δεν προστέθηκε στο καλάθι'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }); toast.success(t('cart.added')) },
+    onError: (err: any) => toast.error(err?.message || t('cmpProductCard.addError')),
   })
 
   const toggleWishlist = useMutation({
@@ -45,12 +47,12 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
     // wishlist row id — so it matched nothing and un-favouriting never worked.
     mutationFn: () => api.post('/wishlist', { product_id: product.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
-    onError: (err: any) => toast.error(err?.message || 'Δεν αποθηκεύτηκε'),
+    onError: (err: any) => toast.error(err?.message || t('cmpProductCard.wishlistError')),
   })
 
   /** Sending someone to log in beats a button that silently does nothing. */
   const requireAuth = (action: () => void) => {
-    if (!isAuthenticated) { toast('Συνδέσου για να συνεχίσεις'); navigate('/login'); return }
+    if (!isAuthenticated) { toast(t('cmpProductCard.loginToContinue')); navigate('/login'); return }
     action()
   }
 
@@ -70,7 +72,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="shrink-0 flex flex-col items-end gap-2">
           <p className="font-bold text-brand-900">{formatCurrency(product.sale_price || product.price)}</p>
           {product.sale_price && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
-          <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>Καλάθι</button>
+          <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>{t('marketplace.addToCart')}</button>
         </div>
       </div>
     )

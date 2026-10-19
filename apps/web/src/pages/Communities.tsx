@@ -5,9 +5,11 @@ import { Users, MapPin, Plus, X, Send, Image, ChevronLeft, Navigation, Loader2, 
 import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
 
 export default function Communities() {
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const [view, setView] = useState<'list' | 'chat'>('list')
@@ -33,8 +35,8 @@ export default function Communities() {
   const getGPS = () => {
     setGpsLoading(true)
     navigator.geolocation.getCurrentPosition(
-      pos => { setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGpsLoading(false); toast.success('Τοποθεσία εντοπίστηκε!') },
-      () => { setGpsLoading(false); toast.error('Δεν επιτράπηκε πρόσβαση στην τοποθεσία') }
+      pos => { setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGpsLoading(false); toast.success(t('pgCommunities.locationFound')) },
+      () => { setGpsLoading(false); toast.error(t('pgCommunities.locationDenied')) }
     )
   }
 
@@ -77,25 +79,25 @@ export default function Communities() {
       qc.invalidateQueries({ queryKey: ['communities'] })
       setShowCreateModal(false)
       setForm({ name: '', description: '', address: '', city: user?.city || '', radius_km: 1.0, latitude: null, longitude: null })
-      toast.success(`Κοινότητα δημιουργήθηκε! ${res.data.nearbyInvited > 0 ? `${res.data.nearbyInvited} χρήστες ειδοποιήθηκαν.` : ''}`)
+      toast.success(`${t('pgCommunities.created')} ${res.data.nearbyInvited > 0 ? t('pgCommunities.usersNotified', { count: res.data.nearbyInvited }) : ''}`)
     },
-    onError: (e: any) => toast.error(e?.message || 'Σφάλμα δημιουργίας'),
+    onError: (e: any) => toast.error(e?.message || t('pgCommunities.createError')),
   })
 
   const joinCommunity = useMutation({
     mutationFn: (id: string) => api.post(`/communities/${id}/join`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success('Έγινες μέλος!') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success(t('pgCommunities.joined')) },
   })
 
   const leaveCommunity = useMutation({
     mutationFn: (id: string) => api.delete(`/communities/${id}/leave`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success('Αποχώρησες') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success(t('pgCommunities.left')) },
   })
 
   const sendMessage = useMutation({
     mutationFn: (payload: { content?: string; image_url?: string }) => api.post(`/communities/${selectedId}/messages`, payload),
     onSuccess: () => { refetchMessages(); setMsgText('') },
-    onError: () => toast.error('Σφάλμα αποστολής'),
+    onError: () => toast.error(t('pgCommunities.sendError')),
   })
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,7 +107,7 @@ export default function Communities() {
     try {
       const url = await uploadFile(file, 'communities')
       sendMessage.mutate({ image_url: url })
-    } catch { toast.error('Σφάλμα upload') }
+    } catch { toast.error(t('pgCommunities.uploadError')) }
     finally { setImgUploading(false) }
   }
 
@@ -115,9 +117,9 @@ export default function Communities() {
       const res = await api.get('/communities/geocode', { params: { address: form.address || form.city } })
       if (res.data.lat) {
         setForm(f => ({ ...f, latitude: res.data.lat, longitude: res.data.lon }))
-        toast.success('Διεύθυνση εντοπίστηκε!')
-      } else toast.error('Δεν βρέθηκαν συντεταγμένες')
-    } catch { toast.error('Σφάλμα geocoding') }
+        toast.success(t('pgCommunities.addressFound'))
+      } else toast.error(t('pgCommunities.noCoordinates'))
+    } catch { toast.error(t('pgCommunities.geocodingError')) }
   }
 
   const openChat = (id: string) => { setSelectedId(id); setView('chat') }
@@ -139,26 +141,26 @@ export default function Communities() {
                   <Users size={24} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">Τοπικές Κοινότητες</h1>
-                  <p className="text-sm text-gray-500">Βρες ιδιοκτήτες κοντά σου</p>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('pgCommunities.title')}</h1>
+                  <p className="text-sm text-gray-500">{t('pgCommunities.subtitle')}</p>
                 </div>
               </div>
               <button onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium hover:bg-purple-600 transition-colors">
-                <Plus size={16} /> Νέα Κοινότητα
+                <Plus size={16} /> {t('pgCommunities.newCommunity')}
               </button>
             </div>
 
             {/* GPS Button */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm mb-4 flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900 dark:text-white text-sm">Εύρεση κοντινών κοινοτήτων</p>
-                <p className="text-xs text-gray-400">{userCoords ? `📍 GPS ενεργό` : 'Ενεργοποίησε το GPS για κοντινά αποτελέσματα'}</p>
+                <p className="font-medium text-gray-900 dark:text-white text-sm">{t('pgCommunities.findNearby')}</p>
+                <p className="text-xs text-gray-400">{userCoords ? t('pgCommunities.gpsActiveHint') : t('pgCommunities.enableGps')}</p>
               </div>
               <button onClick={getGPS} disabled={gpsLoading}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userCoords ? 'bg-green-100 text-green-700' : 'bg-purple-500 text-white hover:bg-purple-600'}`}>
                 {gpsLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
-                {userCoords ? 'GPS Ενεργό' : 'GPS'}
+                {userCoords ? t('pgCommunities.gpsActive') : 'GPS'}
               </button>
             </div>
 
@@ -167,9 +169,9 @@ export default function Communities() {
             ) : data?.communities?.length === 0 ? (
               <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl shadow-sm">
                 <p className="text-4xl mb-3">🏘️</p>
-                <p className="font-semibold text-gray-900 dark:text-white mb-1">Δεν βρέθηκαν κοινότητες</p>
-                <p className="text-sm text-gray-500 mb-4">Δημιούργησε την πρώτη κοινότητα στην περιοχή σου!</p>
-                <button onClick={() => setShowCreateModal(true)} className="px-6 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-medium">Δημιουργία</button>
+                <p className="font-semibold text-gray-900 dark:text-white mb-1">{t('pgCommunities.noneFound')}</p>
+                <p className="text-sm text-gray-500 mb-4">{t('pgCommunities.createFirst')}</p>
+                <button onClick={() => setShowCreateModal(true)} className="px-6 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-medium">{t('pgCommunities.create')}</button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -193,22 +195,22 @@ export default function Communities() {
                         {c.description && <p className="text-sm text-gray-500 mb-1 line-clamp-1">{c.description}</p>}
                         <div className="flex items-center gap-3 text-xs text-gray-400">
                           <span className="flex items-center gap-1"><MapPin size={10} />{c.city}</span>
-                          <span className="flex items-center gap-1"><Users size={10} />{c.member_count} μέλη</span>
-                          <span>📏 {c.radius_km}km ακτίνα</span>
+                          <span className="flex items-center gap-1"><Users size={10} />{t('pgCommunities.members', { count: c.member_count })}</span>
+                          <span>📏 {t('pgCommunities.radiusKm', { km: c.radius_km })}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-800">
                       <button onClick={() => openChat(c.id)} className="flex-1 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl text-sm font-medium">
-                        💬 Chat
+                        💬 {t('pgCommunities.chat')}
                       </button>
                       {c.members?.some((m: any) => m.user_email === myEmail) ? (
                         <button onClick={() => leaveCommunity.mutate(c.id)} className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500">
-                          Αποχώρηση
+                          {t('pgCommunities.leave')}
                         </button>
                       ) : (
                         <button onClick={() => joinCommunity.mutate(c.id)} className="px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium">
-                          Συμμετοχή
+                          {t('pgCommunities.join')}
                         </button>
                       )}
                     </div>
@@ -228,11 +230,11 @@ export default function Communities() {
               </button>
               <div className="flex-1">
                 <h2 className="font-semibold text-gray-900 dark:text-white">{community.name}</h2>
-                <p className="text-xs text-gray-400">{community.member_count} μέλη · {community.city}</p>
+                <p className="text-xs text-gray-400">{t('pgCommunities.members', { count: community.member_count })} · {community.city}</p>
               </div>
               {!isMember && (
                 <button onClick={() => joinCommunity.mutate(community.id)} className="px-3 py-1.5 bg-purple-500 text-white rounded-xl text-xs font-medium">
-                  Συμμετοχή
+                  {t('pgCommunities.join')}
                 </button>
               )}
             </div>
@@ -259,19 +261,19 @@ export default function Communities() {
                 <div className="text-center py-10 px-6">
                   <Lock size={28} className="mx-auto text-gray-300 mb-3" />
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                    Η συζήτηση είναι για τα μέλη
+                    {t('pgCommunities.membersOnly')}
                   </p>
                   <p className="text-xs text-gray-400 mb-4">
-                    Γίνε μέλος για να δεις και να συμμετέχεις.
+                    {t('pgCommunities.membersOnlyHint')}
                   </p>
                   <button onClick={() => joinCommunity.mutate(community.id)}
                     className="px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium">
-                    Συμμετοχή
+                    {t('pgCommunities.join')}
                   </button>
                 </div>
               )}
               {isMember && community.messages?.length === 0 && (
-                <div className="text-center py-8 text-gray-400 text-sm">Δεν υπάρχουν μηνύματα ακόμα. Ξεκίνησε τη συζήτηση!</div>
+                <div className="text-center py-8 text-gray-400 text-sm">{t('pgCommunities.noMessages')}</div>
               )}
               {community.messages?.map((msg: any) => {
                 const isMe = msg.author_email === myEmail
@@ -286,7 +288,7 @@ export default function Communities() {
                         {msg.content && <p className="text-sm">{msg.content}</p>}
                         {msg.image_url && <img src={msg.image_url} className="max-w-full rounded-xl mt-1" alt="img" />}
                       </div>
-                      <span className="text-[10px] text-gray-400 mt-0.5 mx-1">{new Date(msg.created_at).toLocaleTimeString('el', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-[10px] text-gray-400 mt-0.5 mx-1">{new Date(msg.created_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 )
@@ -302,7 +304,7 @@ export default function Communities() {
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 <input className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2 text-sm outline-none"
-                  placeholder="Γράψε μήνυμα..." value={msgText} onChange={e => setMsgText(e.target.value)}
+                  placeholder={t('pgCommunities.messagePlaceholder')} value={msgText} onChange={e => setMsgText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && msgText.trim()) { e.preventDefault(); sendMessage.mutate({ content: msgText.trim() }) } }} />
                 <button onClick={() => msgText.trim() && sendMessage.mutate({ content: msgText.trim() })}
                   disabled={!msgText.trim() || sendMessage.isPending}
@@ -312,7 +314,7 @@ export default function Communities() {
               </div>
             ) : (
               <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-3 text-center text-sm text-purple-600">
-                Γίνε μέλος για να στείλεις μήνυμα
+                {t('pgCommunities.joinToMessage')}
               </div>
             )}
           </div>
@@ -327,33 +329,33 @@ export default function Communities() {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="fixed inset-x-4 top-4 bottom-4 z-50 max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Νέα Κοινότητα</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('pgCommunities.newCommunity')}</h3>
                 <button onClick={() => setShowCreateModal(false)}><X size={18} className="text-gray-400" /></button>
               </div>
               <div className="space-y-3">
-                <div><label className={labelCls}>Όνομα *</label><input className={inputCls} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="π.χ. Κυνόφιλοι Κολωνακίου" /></div>
-                <div><label className={labelCls}>Περιγραφή</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
+                <div><label className={labelCls}>{t('pgCommunities.form.name')}</label><input className={inputCls} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder={t('pgCommunities.form.namePlaceholder')} /></div>
+                <div><label className={labelCls}>{t('pgCommunities.form.description')}</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
                 <div>
-                  <label className={labelCls}>Διεύθυνση / Περιοχή *</label>
+                  <label className={labelCls}>{t('pgCommunities.form.address')}</label>
                   <div className="flex gap-2">
-                    <input className={inputCls} value={form.address} onChange={e => setForm(f => ({...f, address: e.target.value}))} placeholder="π.χ. Πλατεία Κολωνακίου, Αθήνα" />
-                    <button onClick={geocodeAddress} className="px-3 py-2 bg-purple-500 text-white rounded-xl text-xs whitespace-nowrap">Εύρεση</button>
+                    <input className={inputCls} value={form.address} onChange={e => setForm(f => ({...f, address: e.target.value}))} placeholder={t('pgCommunities.form.addressPlaceholder')} />
+                    <button onClick={geocodeAddress} className="px-3 py-2 bg-purple-500 text-white rounded-xl text-xs whitespace-nowrap">{t('pgCommunities.form.find')}</button>
                   </div>
                   {form.latitude && <p className="text-xs text-green-600 mt-1">✅ {form.latitude.toFixed(4)}, {form.longitude?.toFixed(4)}</p>}
                 </div>
-                <div><label className={labelCls}>Ή χρησιμοποίησε GPS</label>
+                <div><label className={labelCls}>{t('pgCommunities.form.orUseGps')}</label>
                   <button onClick={() => {
                     navigator.geolocation.getCurrentPosition(pos => {
                       setForm(f => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }))
-                      toast.success('GPS εντοπίστηκε!')
+                      toast.success(t('pgCommunities.gpsFound'))
                     })
                   }} className="w-full py-2 border border-purple-200 text-purple-600 rounded-xl text-sm flex items-center justify-center gap-2">
-                    <Navigation size={14} /> Χρήση GPS
+                    <Navigation size={14} /> {t('pgCommunities.form.useGps')}
                   </button>
                 </div>
-                <div><label className={labelCls}>Πόλη *</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} /></div>
+                <div><label className={labelCls}>{t('pgCommunities.form.city')}</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} /></div>
                 <div>
-                  <label className={labelCls}>Ακτίνα: {form.radius_km} km</label>
+                  <label className={labelCls}>{t('pgCommunities.form.radius', { km: form.radius_km })}</label>
                   <input type="range" min="0.5" max="5" step="0.5" value={form.radius_km} onChange={e => setForm(f => ({...f, radius_km: parseFloat(e.target.value)}))}
                     className="w-full accent-purple-500" />
                   <div className="flex justify-between text-xs text-gray-400"><span>0.5km</span><span>5km</span></div>
@@ -361,7 +363,7 @@ export default function Communities() {
               </div>
               <button onClick={() => createCommunity.mutate()} disabled={!form.name || !form.city || (!form.latitude && !form.address) || createCommunity.isPending}
                 className="w-full mt-4 py-3 bg-purple-500 text-white rounded-xl font-medium disabled:opacity-50">
-                {createCommunity.isPending ? 'Δημιουργία...' : 'Δημιουργία Κοινότητας'}
+                {createCommunity.isPending ? t('pgCommunities.creating') : t('pgCommunities.createCommunity')}
               </button>
             </motion.div>
           </>

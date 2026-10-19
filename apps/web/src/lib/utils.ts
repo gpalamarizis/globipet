@@ -1,5 +1,12 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import i18n from './i18n'
+
+/** Η γλώσσα του χρήστη για ημερομηνίες/ποσά (πριν ήταν πάντα el-GR). */
+const locale = () => {
+  const l = i18n.language || 'el'
+  return l.startsWith('el') ? 'el-GR' : l
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -10,11 +17,11 @@ export function createPageUrl(pageName: string): string {
 }
 
 export function formatCurrency(amount: number, currency = 'EUR'): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency }).format(amount)
+  return new Intl.NumberFormat(locale(), { style: 'currency', currency }).format(amount)
 }
 
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  return new Date(date).toLocaleDateString('el-GR', options ?? {
+  return new Date(date).toLocaleDateString(locale(), options ?? {
     day: 'numeric', month: 'long', year: 'numeric'
   })
 }
@@ -26,10 +33,10 @@ export function formatRelativeTime(date: string | Date): string {
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
-  if (minutes < 1) return 'Μόλις τώρα'
-  if (minutes < 60) return `${minutes}λ`
-  if (hours < 24) return `${hours}ω`
-  if (days < 7) return `${days}μ`
+  if (minutes < 1) return i18n.t('relTime.justNow')
+  if (minutes < 60) return i18n.t('relTime.minutes', { count: minutes })
+  if (hours < 24) return i18n.t('relTime.hours', { count: hours })
+  if (days < 7) return i18n.t('relTime.days', { count: days })
   return formatDate(date, { day: 'numeric', month: 'short' })
 }
 
@@ -56,9 +63,4 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, ms = 300) {
 export const speciesEmoji: Record<string, string> = {
   dog: '🐶', cat: '🐱', bird: '🐦', rabbit: '🐰',
   fish: '🐟', reptile: '🦎', horse: '🐴', other: '🐾',
-}
-
-export const speciesLabel: Record<string, string> = {
-  dog: 'Σκύλος', cat: 'Γάτα', bird: 'Πτηνό', rabbit: 'Κουνέλι',
-  fish: 'Ψάρι', reptile: 'Ερπετό', horse: 'Άλογο', other: 'Άλλο',
 }

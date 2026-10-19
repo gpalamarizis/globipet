@@ -33,7 +33,7 @@ export default function UserMenu({ open, onClose }: { open: boolean; onClose: ()
               { to: '/my-pets',    icon: PawPrint,      label: t('nav.myPets') },
               { to: '/bookings',   icon: Calendar,      label: t('nav.myBookings') },
               { to: '/orders',     icon: ShoppingBag,   label: t('orders.title') },
-              { to: '/wishlist',   icon: Heart,         label: 'Wishlist' },
+              { to: '/wishlist',   icon: Heart,         label: t('cmpUserMenu.wishlist') },
               { to: '/tracker',    icon: MapPin,        label: t('nav.petTracker') },
               { to: '/telehealth', icon: MessageSquare, label: t('nav.telehealth') },
             ].map(item => (
@@ -47,7 +47,7 @@ export default function UserMenu({ open, onClose }: { open: boolean; onClose: ()
               <Link to="/provider/packages"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-800 mt-1">
                 <Package size={15} className="text-gray-400" />
-                Τα πακέτα μου
+                {t('cmpUserMenu.myPackages')}
               </Link>
             )}
             {(user?.role === 'service_provider' || user?.role === 'admin') && (

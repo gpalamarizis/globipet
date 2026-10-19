@@ -46,24 +46,24 @@ export default function BreedDetail() {
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🐾</p>
       <p className="font-semibold text-gray-900 dark:text-white mb-3">
-        {t('breeds.notFound', 'Η ράτσα δεν βρέθηκε')}
+        {t('pgBreedDetail.notFound')}
       </p>
-      <Link to="/breeds" className="btn-primary">{t('nav.breeds', 'Ράτσες')}</Link>
+      <Link to="/breeds" className="btn-primary">{t('nav.breeds')}</Link>
     </div>
   )
 
   const weight = breed.weight_min && breed.weight_max
     ? `${breed.weight_min}–${breed.weight_max} kg`
-    : breed.weight_max ? `έως ${breed.weight_max} kg` : null
+    : breed.weight_max ? t('pgBreedDetail.upTo', { max: breed.weight_max }) : null
   const lifespan = breed.lifespan_min && breed.lifespan_max
-    ? `${breed.lifespan_min}–${breed.lifespan_max} ${t('breeds.years', 'χρόνια')}`
+    ? `${breed.lifespan_min}–${breed.lifespan_max} ${t('pgBreedDetail.years')}`
     : null
 
   return (
     <div className="page-container py-6 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <button onClick={() => navigate('/breeds')}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-900 mb-4">
-        <ArrowLeft size={15} /> {t('nav.breeds', 'Ράτσες')}
+        <ArrowLeft size={15} /> {t('nav.breeds')}
       </button>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
@@ -119,25 +119,25 @@ export default function BreedDetail() {
 
         <div className="card p-5 space-y-3">
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-1">
-            {t('breeds.needs', 'Απαιτήσεις')}
+            {t('pgBreedDetail.needs')}
           </h2>
-          <Rating icon={Scissors}       label={t('breeds.grooming', 'Περιποίηση')}  value={breed.grooming_needs} />
-          <Rating icon={Activity}       label={t('breeds.exercise', 'Άσκηση')}      value={breed.exercise_needs} />
-          <Rating icon={GraduationCap}  label={t('breeds.training', 'Εκπαίδευση')}  value={breed.trainability} />
+          <Rating icon={Scissors}       label={t('pgBreedDetail.grooming')}  value={breed.grooming_needs} />
+          <Rating icon={Activity}       label={t('pgBreedDetail.exercise')}      value={breed.exercise_needs} />
+          <Rating icon={GraduationCap}  label={t('pgBreedDetail.training')}  value={breed.trainability} />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: Baby,     label: t('breeds.children', 'Παιδιά'),      ok: breed.good_with_children },
-            { icon: PawPrint, label: t('breeds.otherPets', 'Άλλα ζώα'),   ok: breed.good_with_pets },
-            { icon: Home,     label: t('breeds.apartment', 'Διαμέρισμα'), ok: breed.apartment_friendly },
+            { icon: Baby,     label: t('pgBreedDetail.children'),      ok: breed.good_with_children },
+            { icon: PawPrint, label: t('pgBreedDetail.otherPets'),   ok: breed.good_with_pets },
+            { icon: Home,     label: t('pgBreedDetail.apartment'), ok: breed.apartment_friendly },
           ].map((c, i) => (
             <div key={i} className={cn('card p-3 text-center',
               c.ok ? '' : 'opacity-50')}>
               <c.icon size={16} className={cn('mx-auto mb-1.5', c.ok ? 'text-green-500' : 'text-gray-400')} />
               <p className="text-[11px] text-gray-500">{c.label}</p>
               <p className={cn('text-xs font-semibold', c.ok ? 'text-green-600' : 'text-gray-400')}>
-                {c.ok ? t('common.yes', 'Ναι') : t('common.no', 'Όχι')}
+                {c.ok ? t('common.yes') : t('common.no')}
               </p>
             </div>
           ))}
@@ -148,7 +148,7 @@ export default function BreedDetail() {
             {breed.pros?.length > 0 && (
               <div className="card p-5">
                 <h3 className="font-semibold text-sm text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
-                  <ThumbsUp size={14} /> {t('breeds.pros', 'Υπέρ')}
+                  <ThumbsUp size={14} /> {t('pgBreedDetail.pros')}
                 </h3>
                 <ul className="space-y-1.5">
                   {breed.pros.map((p: string, i: number) => (
@@ -160,7 +160,7 @@ export default function BreedDetail() {
             {breed.cons?.length > 0 && (
               <div className="card p-5">
                 <h3 className="font-semibold text-sm text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                  <ThumbsDown size={14} /> {t('breeds.cons', 'Κατά')}
+                  <ThumbsDown size={14} /> {t('pgBreedDetail.cons')}
                 </h3>
                 <ul className="space-y-1.5">
                   {breed.cons.map((c: string, i: number) => (
@@ -175,7 +175,7 @@ export default function BreedDetail() {
         {breed.health_issues?.length > 0 && (
           <div className="card p-5">
             <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <HeartPulse size={14} className="text-red-500" /> {t('breeds.health', 'Συχνά προβλήματα υγείας')}
+              <HeartPulse size={14} className="text-red-500" /> {t('pgBreedDetail.health')}
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {breed.health_issues.map((h: string, i: number) => (
@@ -185,7 +185,7 @@ export default function BreedDetail() {
               ))}
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              {t('breeds.healthNote', 'Ενδεικτικά, βάσει της ράτσας. Δεν αντικαθιστά κτηνιατρική γνωμάτευση.')}
+              {t('pgBreedDetail.healthNote')}
             </p>
           </div>
         )}

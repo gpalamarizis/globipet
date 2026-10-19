@@ -11,7 +11,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 
 export default function Home() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
@@ -53,15 +53,15 @@ export default function Home() {
   }
 
   const categories = [
-    { icon: Scissors,      label: 'Περιποίηση',    type: 'grooming',    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
-    { icon: Stethoscope,   label: 'Κτηνίατρος',    type: 'veterinary',  color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
-    { emoji: '🚶',         label: 'Βόλτα',          type: 'walking',     color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
-    { icon: HomeIcon,      label: 'Φιλοξενία',      type: 'pet_sitting', color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-    { icon: GraduationCap, label: 'Εκπαίδευση',    type: 'training',    color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' },
-    { icon: Car,           label: 'Μεταφορά',       type: 'pet_taxi',    color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' },
-    { icon: Video,         label: 'Τηλειατρική',    type: 'telehealth',  color: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400' },
-    { icon: Pill,          label: 'Φαρμακείο',      type: 'pharmacy',    color: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
-    { icon: Shield,        label: 'Ασφάλεια',       type: 'insurance',   color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' },
+    { icon: Scissors,      label: t('home.categories.grooming'),    type: 'grooming',    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
+    { icon: Stethoscope,   label: t('home.categories.veterinary'),    type: 'veterinary',  color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
+    { emoji: '🚶',         label: t('home.categories.walking'),          type: 'walking',     color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
+    { icon: HomeIcon,      label: t('home.categories.hosting'),      type: 'pet_sitting', color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
+    { icon: GraduationCap, label: t('home.categories.training'),    type: 'training',    color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' },
+    { icon: Car,           label: t('home.categories.transport'),       type: 'pet_taxi',    color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' },
+    { icon: Video,         label: t('home.categories.telehealth'),    type: 'telehealth',  color: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400' },
+    { icon: Pill,          label: t('home.categories.pharmacy'),      type: 'pharmacy',    color: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
+    { icon: Shield,        label: t('home.categories.insurance'),       type: 'insurance',   color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' },
   ]
 
   // Duplicate for seamless loop
@@ -101,28 +101,28 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
                 className="inline-flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/30 rounded-full px-4 py-2 mb-6">
                 <Zap size={14} className="text-yellow-400" />
-                <p className="text-xs font-bold text-yellow-400 tracking-widest uppercase">AI Powered Pet Platform</p>
+                <p className="text-xs font-bold text-yellow-400 tracking-widest uppercase">{t('pgHome.aiPlatform')}</p>
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-4xl lg:text-6xl font-display font-black text-white leading-tight max-w-3xl drop-shadow-2xl">
-                Ο γιατρός του κατοικιδίου σου<br/>είναι πάντα <span className="text-yellow-400">διαθέσιμος</span>
+                {t('home.hero.title1')}<br/>{t('home.hero.title2')} <span className="text-yellow-400">{t('home.hero.title3')}</span>
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.8 }}
                 className="text-base lg:text-lg text-white/90 mt-6 max-w-2xl leading-relaxed drop-shadow-lg">
-                Ανάλυση συμπτωμάτων, health tracking, emotion detection και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.
+                {t('home.hero.subtitle')}
               </motion.p>
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.8 }}
                 className="flex flex-wrap gap-2 justify-center mt-8">
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">AI Health Check</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Emotion Detector</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Wellness Tracker</span>
-                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">Τηλεϊατρική 24-7</span>
+                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">{t('home.hero.badges.aiHealth')}</span>
+                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">{t('home.hero.badges.emotion')}</span>
+                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">{t('home.hero.badges.wellness')}</span>
+                <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs px-4 py-2 rounded-full">{t('home.featured.telehealth.title')}</span>
               </motion.div>
 
               <motion.div
@@ -138,10 +138,10 @@ export default function Home() {
                         : '/pricing'                                    // expired/none → show plans
                   }
                   className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
-                  Δοκίμασε δωρεάν
+                  {t('home.hero.tryFree')}
                 </Link>
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
-                  Μάθε περισσότερα
+                  {t('home.hero.learnMore')}
                 </Link>
               </motion.div>
 
@@ -150,15 +150,15 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3, duration: 0.8 }}
                 className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-6 text-white/80 text-xs">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-yellow-400" />Πιστοποιημένοι πάροχοι
+                  <ShieldCheck size={14} className="text-yellow-400" />{t('home.trust.verified')}
                 </span>
                 <span className="hidden sm:inline text-white/30">·</span>
                 <span className="flex items-center gap-1.5">
-                  <Star size={14} className="text-yellow-400 fill-yellow-400" />4.9 μέση βαθμολογία
+                  <Star size={14} className="text-yellow-400 fill-yellow-400" />{t('home.trust.rating')}
                 </span>
                 <span className="hidden sm:inline text-white/30">·</span>
                 <span className="flex items-center gap-1.5">
-                  <Lock size={14} className="text-yellow-400" />Ασφαλείς πληρωμές
+                  <Lock size={14} className="text-yellow-400" />{t('home.trust.securePayments')}
                 </span>
               </motion.div>
 
@@ -174,9 +174,9 @@ export default function Home() {
                 <span className="text-3xl">👋</span>
                 <div className="min-w-0">
                   <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
-                    Καλώς ήρθες πίσω, <span className="text-brand-900 dark:text-yellow-400">{user.full_name?.split(' ')[0] || 'φίλε'}</span>!
+                    {t('home.welcome.title')}, <span className="text-brand-900 dark:text-yellow-400">{user.full_name?.split(' ')[0] || t('home.welcome.friend')}</span>!
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Δες τι έχει σήμερα για σένα και τα κατοικίδιά σου</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.welcome.subtitle')}</p>
                 </div>
                 {/* AI trial badge — active → jump into AI Health, expired → pricing */}
                 {(user as any).ai_subscription_status === 'trial' && (user as any).ai_trial_started_at && (() => {
@@ -200,9 +200,9 @@ export default function Home() {
                         <Sparkles size={16} className={expired ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} />
                       </div>
                       <div className="text-left">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Δωρεάν δοκιμή AI</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{t('pgHome.trialLabel')}</div>
                         <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">
-                          {expired ? 'Έληξε — Δες πλάνα' : `${daysLeft} ${daysLeft === 1 ? 'ημέρα' : 'ημέρες'}`}
+                          {expired ? t('pgHome.trialExpired') : t('pgHome.trialDays', { count: daysLeft })}
                         </div>
                       </div>
                     </Link>
@@ -221,16 +221,16 @@ export default function Home() {
                     </div>
                     <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">Επόμενο ραντεβού</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{t('home.cards.nextBooking')}</h3>
                   {nextBooking ? (
                     <>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || 'Ραντεβού'}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || t('home.cards.appointment')}</p>
                       <p className="text-xs text-brand-900 dark:text-yellow-400 font-semibold mt-1">
-                        {new Date(nextBooking.start_time).toLocaleDateString('el-GR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(nextBooking.start_time).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Δεν έχεις προγραμματισμένο ραντεβού. Κάνε κράτηση τώρα!</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.cards.noBooking')}</p>
                   )}
                 </Link>
 
@@ -243,11 +243,11 @@ export default function Home() {
                     </div>
                     <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">Τα κατοικίδιά μου</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{t('home.cards.myPets')}</h3>
                   {myPets && myPets.length > 0 ? (
                     <>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {myPets.length} {myPets.length === 1 ? 'κατοικίδιο' : 'κατοικίδια'} εγγεγραμμένα
+                        {t('pgHome.petsRegistered', { count: myPets.length })}
                       </p>
                       <div className="flex -space-x-2 mt-2">
                         {myPets.slice(0, 4).map((pet: any, i: number) => (
@@ -259,7 +259,7 @@ export default function Home() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Πρόσθεσε το πρώτο σου κατοικίδιο για να ξεκινήσεις!</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.cards.noPets')}</p>
                   )}
                 </Link>
 
@@ -274,8 +274,8 @@ export default function Home() {
                       </div>
                       <ArrowRight size={16} className="text-white/80 group-hover:translate-x-1 transition-transform" />
                     </div>
-                    <h3 className="font-bold text-sm mb-1">AI Health Check</h3>
-                    <p className="text-xs text-white/80">Γρήγορος έλεγχος υγείας με τεχνητή νοημοσύνη</p>
+                    <h3 className="font-bold text-sm mb-1">{t('home.cards.aiHealthTitle')}</h3>
+                    <p className="text-xs text-white/80">{t('home.cards.aiHealthDesc')}</p>
                   </div>
                 </Link>
 
@@ -292,16 +292,16 @@ export default function Home() {
           className="flex flex-col sm:flex-row gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-2xl shadow-lg max-w-xl mx-auto">
           <div className="flex items-center gap-2.5 flex-1 px-3">
             <Search size={15} className="text-gray-400 shrink-0" />
-            <input type="text" placeholder="Τι ψάχνεις; grooming, κτηνίατρος…"
+            <input type="text" placeholder={t('home.search.queryPlaceholder')}
               value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
           </div>
           <div className="hidden sm:flex items-center gap-2 px-3 border-l border-gray-100 dark:border-gray-700">
             <MapPin size={13} className="text-gray-400 shrink-0" />
-            <input type="text" placeholder="Πόλη" value={searchCity} onChange={e => setSearchCity(e.target.value)}
+            <input type="text" placeholder={t('home.search.cityPlaceholder')} value={searchCity} onChange={e => setSearchCity(e.target.value)}
               className="w-24 bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-900 dark:text-white" />
           </div>
-          <button type="submit" className="btn-primary shrink-0 rounded-xl">Αναζήτηση</button>
+          <button type="submit" className="btn-primary shrink-0 rounded-xl">{t('home.search.button')}</button>
         </motion.form>
       </div>
 
@@ -310,12 +310,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
-              { path: '/telehealth', emoji: '🩺', title: 'Τηλεϊατρική',       sub: 'Βιντεοκλήση με κτηνίατρο',  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=600&q=80' },
-              { path: '/ai-health',  emoji: '🧠', title: 'AI Υγεία',           sub: 'Ανάλυση φωτογραφίας',       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80' },
-              { path: '/passport',   emoji: '📋', title: 'Ιατρικός Φάκελος',  sub: 'Πλήρες ιστορικό υγείας',    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80' },
-              { path: '/services',   emoji: '✂️', title: 'Υπηρεσίες',          sub: 'Grooming, εκπαίδευση κ.α.', bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
-              { path: '/marketplace', emoji: '🛍️', title: 'Κατάστημα',        sub: 'Τροφές, παιχνίδια, αξεσουάρ', bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=600&q=80' },
-              { path: '/legal',      emoji: '⚖️', title: 'Νομική Υποστήριξη', sub: 'AI νομικός σύμβουλος',       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
+              { path: '/telehealth', emoji: '🩺', title: t('home.featured.telehealth.title'),       sub: t('home.featured.telehealth.sub'),  bg: 'from-blue-500 to-blue-700',    img: 'https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=600&q=80' },
+              { path: '/ai-health',  emoji: '🧠', title: t('home.featured.aiHealth.title'),           sub: t('home.featured.aiHealth.sub'),       bg: 'from-purple-500 to-purple-700', img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80' },
+              { path: '/passport',   emoji: '📋', title: t('home.featured.medicalFile.title'),  sub: t('home.featured.medicalFile.sub'),    bg: 'from-orange-500 to-orange-700', img: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&q=80' },
+              { path: '/services',   emoji: '✂️', title: t('home.featured.services.title'),          sub: t('home.featured.services.sub'), bg: 'from-green-500 to-green-700',   img: 'https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=600&q=80' },
+              { path: '/marketplace', emoji: '🛍️', title: t('pgHome.shopTitle'),        sub: t('pgHome.shopSub'), bg: 'from-teal-500 to-teal-700',   img: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=600&q=80' },
+              { path: '/legal',      emoji: '⚖️', title: t('home.featured.legal.title'), sub: t('home.featured.legal.sub'),       bg: 'from-indigo-500 to-indigo-700', img: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=600&q=80' },
             ].map(item => (
               <Link key={item.path + item.title} to={item.path}
                 className="relative overflow-hidden rounded-2xl aspect-[4/3] group cursor-pointer block shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
@@ -339,11 +339,11 @@ export default function Home() {
         <div className="page-container">
           <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="section-title">Μάθε τις υπηρεσίες μας...</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Βρες τον καλύτερο πάροχο κοντά σου</p>
+              <h2 className="section-title">{t('home.categoriesSection.title')}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{t('home.categoriesSection.subtitle')}</p>
             </div>
             <Link to="/services" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
-              Όλες <ArrowRight size={14} />
+              {t('home.categoriesSection.viewAll')} <ArrowRight size={14} />
             </Link>
           </div>
           <div className="grid grid-cols-5 lg:grid-cols-9 gap-2">
@@ -374,11 +374,11 @@ export default function Home() {
         <div className="page-container">
           <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="section-title">Marketplace</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Τροφές, παιχνίδια και αξεσουάρ με delivery</p>
+              <h2 className="section-title">{t('home.marketplaceSection.title')}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{t('pgHome.marketplaceSub')}</p>
             </div>
             <Link to="/marketplace" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
-              Όλα <ArrowRight size={14} />
+              {t('home.marketplaceSection.viewAll')} <ArrowRight size={14} />
             </Link>
           </div>
           {loadingProducts
@@ -396,7 +396,7 @@ export default function Home() {
                           <ShoppingBag size={32} className="text-brand-900 dark:text-brand-400" />
                         </div>}
                     <div>
-                      <p className="text-[10px] font-bold text-brand-900 dark:text-brand-400 uppercase tracking-wider mb-1">Προτεινόμενο</p>
+                      <p className="text-[10px] font-bold text-brand-900 dark:text-brand-400 uppercase tracking-wider mb-1">{t('home.marketplaceSection.featured')}</p>
                       <p className="font-semibold text-gray-900 dark:text-white mb-2 leading-snug">{featuredProducts.data[0].name}</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-brand-900 dark:text-brand-400">€{featuredProducts.data[0].price}</span>
@@ -405,7 +405,7 @@ export default function Home() {
                         )}
                       </div>
                       <span className="inline-block mt-3 bg-brand-900 text-white text-xs font-semibold px-4 py-1.5 rounded-lg">
-                        Προσθήκη στο καλάθι
+                        {t('home.marketplaceSection.addToCart')}
                       </span>
                     </div>
                   </Link>
@@ -440,8 +440,8 @@ export default function Home() {
       {/* ── AI BANNER ────────────────────────────────────── */}
       {/* ── FOOTER CTA ───────────────────────────────────── */}
       <section className="bg-brand-900 py-16 px-4 text-center text-white">
-        <h2 className="text-3xl font-display font-bold tracking-tight mb-3">Ξεκίνα δωρεάν σήμερα</h2>
-        <p className="text-white/70 text-sm mb-8">Πάνω από 50.000 ιδιοκτήτες κατοικίδιων εμπιστεύονται το GlobiPet</p>
+        <h2 className="text-3xl font-display font-bold tracking-tight mb-3">{t('home.footerCta.title')}</h2>
+        <p className="text-white/70 text-sm mb-8">{t('home.footerCta.subtitle')}</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <a
             href="https://apps.apple.com"

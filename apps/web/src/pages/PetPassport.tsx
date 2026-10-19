@@ -65,9 +65,10 @@ function Field({ label, value }: { label: string; value?: any }) {
 }
 
 function EmptyState({ label, onAdd }: { label: string; onAdd: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className="text-center py-12">
-      <p className="text-gray-400 mb-3">Δεν υπάρχουν εγγραφές</p>
+      <p className="text-gray-400 mb-3">{t('pgPassport.noRecords')}</p>
       <button onClick={onAdd} className="btn-primary text-sm px-4 py-2 flex items-center gap-2 mx-auto"><Plus size={14} />{label}</button>
     </div>
   )
@@ -75,6 +76,7 @@ function EmptyState({ label, onAdd }: { label: string; onAdd: () => void }) {
 
 // ─── MODAL WRAPPER ───────────────────────────────────────────────
 function Modal({ title, onClose, onSave, saving, children }: any) {
+  const { t } = useTranslation()
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4" onClick={onClose}>
@@ -87,8 +89,8 @@ function Modal({ title, onClose, onSave, saving, children }: any) {
         </div>
         <div className="space-y-3">{children}</div>
         <div className="flex gap-3 mt-5">
-          <button onClick={onClose} className="btn-secondary flex-1">Άκυρο</button>
-          <button onClick={onSave} disabled={saving} className="btn-primary flex-1">{saving ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
+          <button onClick={onClose} className="btn-secondary flex-1">{t('pgPassport.cancel')}</button>
+          <button onClick={onSave} disabled={saving} className="btn-primary flex-1">{saving ? t('pgPassport.saving') : t('common.save')}</button>
         </div>
       </motion.div>
     </motion.div>
@@ -115,7 +117,7 @@ function F({ label, name, form, setForm, type = 'text', options }: any) {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────
 export default function PetPassport() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
@@ -142,12 +144,12 @@ export default function PetPassport() {
   function useCrud(endpoint: string, idField = 'id') {
     const create = useMutation({
       mutationFn: (data: any) => api.post(`/passport/${endpoint}/${activePetId}`, data),
-      onSuccess: () => { inv(); setModal(null); setForm({}); toast.success('Αποθηκεύτηκε!') },
-      onError: () => toast.error('Σφάλμα αποθήκευσης'),
+      onSuccess: () => { inv(); setModal(null); setForm({}); toast.success(t('pgPassport.savedToast')) },
+      onError: () => toast.error(t('pgPassport.saveError')),
     })
     const remove = useMutation({
       mutationFn: (id: string) => api.delete(`/passport/${endpoint}/${id}`),
-      onSuccess: () => { inv(); toast.success('Διαγράφηκε') },
+      onSuccess: () => { inv(); toast.success(t('common.deleted')) },
     })
     return { create, remove }
   }
@@ -168,11 +170,11 @@ export default function PetPassport() {
 
   const addAccess = useMutation({
     mutationFn: (data: any) => api.post(`/passport/access/${activePetId}`, data),
-    onSuccess: () => { inv(); setModal(null); setForm({}); toast.success('Πρόσβαση χορηγήθηκε') },
+    onSuccess: () => { inv(); setModal(null); setForm({}); toast.success(t('pgPassport.accessGranted')) },
   })
   const revokeAccess = useMutation({
     mutationFn: (id: string) => api.delete(`/passport/access/${id}`),
-    onSuccess: () => { inv(); toast.success('Πρόσβαση ανακλήθηκε') },
+    onSuccess: () => { inv(); toast.success(t('pgPassport.accessRevoked')) },
   })
 
   const openModal = (type: string, defaults: any = {}) => { setModal(type); setForm(defaults) }
@@ -190,15 +192,15 @@ export default function PetPassport() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"><BookOpen size={20} className="text-orange-600" /></div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Ιατρικός Φάκελος</h1>
-              <p className="text-sm text-gray-500">Πλήρες ιστορικό υγείας & διαβατήριο κατοικιδίου</p>
+              <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('pgPassport.title')}</h1>
+              <p className="text-sm text-gray-500">{t('pgPassport.subtitle')}</p>
             </div>
           </div>
           {activePetId && (
             <a href={`${import.meta.env.VITE_API_URL || 'https://api.globipet.com'}/passport/${activePetId}/pdf`}
               target="_blank" rel="noreferrer"
               className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5">
-              <FileDown size={15} /> Εξαγωγή PDF
+              <FileDown size={15} /> {t('pgPassport.exportPdf')}
             </a>
           )}
         </div>
@@ -216,7 +218,7 @@ export default function PetPassport() {
           </div>
         )}
 
-        {!activePetId && <div className="card p-8 text-center text-gray-400">Επίλεξε κατοικίδιο για να δεις τον φάκελο</div>}
+        {!activePetId && <div className="card p-8 text-center text-gray-400">{t('pgPassport.selectPet')}</div>}
 
         {activePetId && !isLoading && pet && (
           <>
@@ -226,14 +228,14 @@ export default function PetPassport() {
                 {p.allergies?.length > 0 && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                     <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                    <div><p className="text-xs font-bold text-red-700 mb-1">ΑΛΛΕΡΓΙΕΣ</p>
+                    <div><p className="text-xs font-bold text-red-700 mb-1">{t('pgPassport.alertAllergies')}</p>
                       <p className="text-xs text-red-600">{p.allergies.map((a: any) => a.allergen).join(', ')}</p></div>
                   </div>
                 )}
                 {p.chronicConditions?.filter((c: any) => c.status === 'active').length > 0 && (
                   <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
                     <Heart size={16} className="text-yellow-600 shrink-0 mt-0.5" />
-                    <div><p className="text-xs font-bold text-yellow-700 mb-1">ΧΡΟΝΙΕΣ ΠΑΘΗΣΕΙΣ</p>
+                    <div><p className="text-xs font-bold text-yellow-700 mb-1">{t('pgPassport.alertChronic')}</p>
                       <p className="text-xs text-yellow-600">{p.chronicConditions.filter((c: any) => c.status === 'active').map((c: any) => c.condition).join(', ')}</p></div>
                   </div>
                 )}
@@ -278,15 +280,15 @@ export default function PetPassport() {
 
                     Age is what the Pet row actually carries.
                   */}
-                  {[['Είδος', pet.species], ['Ράτσα', pet.breed], ['Φύλο', pet.gender],
-                    ['Ηλικία', pet.age ? `${pet.age} ετών` : null],
-                    ['Χρώμα', pet.color],
-                    ['Μικροτσίπ', pet.microchip_number],
+                  {[[t('pgPassport.species'), pet.species], [t('pgPassport.breed'), pet.breed], [t('pgPassport.gender'), pet.gender],
+                    [t('pgPassport.age'), pet.age ? t('pgPassport.ageYears', { count: pet.age }) : null],
+                    [t('pgPassport.color'), pet.color],
+                    [t('pgPassport.microchip'), pet.microchip_number],
                     // Three states, not two. Null means nobody has said, and
                     // the filter below drops the row rather than guessing.
-                    ['Στειρωμένο', pet.is_sterilized === true ? 'Ναι'
-                      : pet.is_sterilized === false ? 'Όχι' : null],
-                    ['Εμβολιασμοί', pet.vaccination_status]
+                    [t('pgPassport.sterilised'), pet.is_sterilized === true ? t('common.yes')
+                      : pet.is_sterilized === false ? t('common.no') : null],
+                    [t('pgPassport.vaccinations'), pet.vaccination_status]
                   ].filter(([, v]) => v).map(([l, v]) => (
                     <div key={l}><p className="text-xs text-gray-400">{l}</p><p className="font-medium text-gray-900 dark:text-white">{v as string}</p></div>
                   ))}
@@ -297,14 +299,14 @@ export default function PetPassport() {
             {/* ── VACCINES ── */}
             {activeTab === 'vaccines' && (
               <>
-                <button onClick={() => openModal('vaccine', { date_administered: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Εμβόλιο</button>
-                {(p.vaccinations || []).length === 0 ? <EmptyState label="Προσθήκη εμβολίου" onAdd={() => openModal('vaccine', {})} /> :
+                <button onClick={() => openModal('vaccine', { date_administered: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVaccine')}</button>
+                {(p.vaccinations || []).length === 0 ? <EmptyState label={t('pgPassport.addVaccine')} onAdd={() => openModal('vaccine', {})} /> :
                   (p.vaccinations || []).map((v: any) => (
                     <RecordCard key={v.id} title={v.vaccine_name} subtitle={`${v.vaccine_type} · ${v.vet_name || ''}`} date={v.date_administered}
-                      badge={v.next_due_date && new Date(v.next_due_date) < new Date() ? 'Εκπρόθεσμο' : v.next_due_date ? `Επόμενο: ${v.next_due_date}` : undefined}
+                      badge={v.next_due_date && new Date(v.next_due_date) < new Date() ? t('pgPassport.overdue') : v.next_due_date ? t('pgPassport.nextDue', { date: v.next_due_date }) : undefined}
                       badgeColor={v.next_due_date && new Date(v.next_due_date) < new Date() ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => vac.remove.mutate(v.id)}>
-                      <Field label="Τύπος" value={v.vaccine_type} /><Field label="Κτηνίατρος" value={v.vet_name} /><Field label="Σημειώσεις" value={v.notes} />
+                      <Field label={t('pgPassport.type')} value={v.vaccine_type} /><Field label={t('pgPassport.vet')} value={v.vet_name} /><Field label={t('pgPassport.notes')} value={v.notes} />
                     </RecordCard>
                   ))}
               </>
@@ -313,11 +315,11 @@ export default function PetPassport() {
             {/* ── HEALTH ── */}
             {activeTab === 'health' && (
               <>
-                <button onClick={() => openModal('health', { date: new Date().toISOString().split('T')[0], record_type: 'examination' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Εξέταση</button>
-                {(p.healthRecords || []).length === 0 ? <EmptyState label="Προσθήκη εξέτασης" onAdd={() => openModal('health', {})} /> :
+                <button onClick={() => openModal('health', { date: new Date().toISOString().split('T')[0], record_type: 'examination' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newExam')}</button>
+                {(p.healthRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addExam')} onAdd={() => openModal('health', {})} /> :
                   (p.healthRecords || []).map((h: any) => (
                     <RecordCard key={h.id} title={h.title} subtitle={`${h.record_type} · ${h.vet_name || ''} · ${h.clinic_name || ''}`} date={h.date} onDelete={() => health.remove.mutate(h.id)}>
-                      <Field label="Περιγραφή" value={h.description} /><Field label="Κόστος" value={h.cost ? `${h.cost}€` : null} /><Field label="Επόμενο Ραντεβού" value={h.next_appointment} />
+                      <Field label={t('pgPassport.description')} value={h.description} /><Field label={t('pgPassport.cost')} value={h.cost ? `${h.cost}€` : null} /><Field label={t('pgPassport.nextAppointment')} value={h.next_appointment} />
                     </RecordCard>
                   ))}
               </>
@@ -326,14 +328,14 @@ export default function PetPassport() {
             {/* ── MEDICATIONS ── */}
             {activeTab === 'meds' && (
               <>
-                <button onClick={() => openModal('med', { start_date: new Date().toISOString().split('T')[0], is_active: true })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Φάρμακο</button>
-                {(p.medications || []).length === 0 ? <EmptyState label="Προσθήκη φαρμάκου" onAdd={() => openModal('med', {})} /> :
+                <button onClick={() => openModal('med', { start_date: new Date().toISOString().split('T')[0], is_active: true })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMed')}</button>
+                {(p.medications || []).length === 0 ? <EmptyState label={t('pgPassport.addMed')} onAdd={() => openModal('med', {})} /> :
                   (p.medications || []).map((m: any) => (
                     <RecordCard key={m.id} title={`${m.name} ${m.dosage}`} subtitle={`${m.frequency} · ${m.prescribed_by || ''}`}
                       date={`${m.start_date}${m.end_date ? ' → ' + m.end_date : ''}`}
-                      badge={m.is_active ? 'Ενεργό' : 'Ολοκληρώθηκε'} badgeColor={m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
+                      badge={m.is_active ? t('pgPassport.activeBadge') : t('pgPassport.completed')} badgeColor={m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
                       onDelete={() => meds.remove.mutate(m.id)}>
-                      <Field label="Δραστική" value={m.active_ingredient} /><Field label="Οδός χορήγησης" value={m.route} /><Field label="Αιτία" value={m.reason} /><Field label="Παρενέργειες" value={m.side_effects} />
+                      <Field label={t('pgPassport.activeIngredientShort')} value={m.active_ingredient} /><Field label={t('pgPassport.routeOfAdmin')} value={m.route} /><Field label={t('pgPassport.reason')} value={m.reason} /><Field label={t('pgPassport.sideEffects')} value={m.side_effects} />
                     </RecordCard>
                   ))}
               </>
@@ -342,14 +344,14 @@ export default function PetPassport() {
             {/* ── LAB ── */}
             {activeTab === 'lab' && (
               <>
-                <button onClick={() => openModal('lab', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Εργαστηριακή</button>
-                {(p.labResults || []).length === 0 ? <EmptyState label="Προσθήκη αποτελέσματος" onAdd={() => openModal('lab', {})} /> :
+                <button onClick={() => openModal('lab', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newLab')}</button>
+                {(p.labResults || []).length === 0 ? <EmptyState label={t('pgPassport.addResult')} onAdd={() => openModal('lab', {})} /> :
                   (p.labResults || []).map((l: any) => (
                     <RecordCard key={l.id} title={l.title} subtitle={`${l.result_type} · ${l.lab_name || ''} · ${l.vet_name || ''}`} date={l.date}
-                      badge={l.is_abnormal ? 'Παθολογικά' : 'Φυσιολογικά'} badgeColor={l.is_abnormal ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
+                      badge={l.is_abnormal ? t('pgPassport.abnormal') : t('pgPassport.normal')} badgeColor={l.is_abnormal ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => lab.remove.mutate(l.id)}>
-                      <Field label="Ευρήματα" value={l.findings} /><Field label="Εργαστήριο" value={l.lab_name} />
-                      {l.file_urls?.length > 0 && <p className="font-medium">Αρχεία: {l.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">Αρχείο {i+1} <ExternalLink size={10} className="inline"/></a>)}</p>}
+                      <Field label={t('pgPassport.findings')} value={l.findings} /><Field label={t('pgPassport.laboratory')} value={l.lab_name} />
+                      {l.file_urls?.length > 0 && <p className="font-medium">{t('pgPassport.files')}: {l.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">{t('pgPassport.fileN', { n: i+1 })} <ExternalLink size={10} className="inline"/></a>)}</p>}
                     </RecordCard>
                   ))}
               </>
@@ -358,12 +360,12 @@ export default function PetPassport() {
             {/* ── IMAGING ── */}
             {activeTab === 'imaging' && (
               <>
-                <button onClick={() => openModal('imaging', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Απεικόνιση</button>
-                {(p.imaging || []).length === 0 ? <EmptyState label="Προσθήκη απεικονιστικής" onAdd={() => openModal('imaging', {})} /> :
+                <button onClick={() => openModal('imaging', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newImaging')}</button>
+                {(p.imaging || []).length === 0 ? <EmptyState label={t('pgPassport.addImaging')} onAdd={() => openModal('imaging', {})} /> :
                   (p.imaging || []).map((img: any) => (
                     <RecordCard key={img.id} title={img.imaging_type.toUpperCase()} subtitle={`${img.body_region || ''} · ${img.vet_name || ''} · ${img.clinic_name || ''}`} date={img.date} onDelete={() => imaging.remove.mutate(img.id)}>
-                      <Field label="Ευρήματα" value={img.findings} /><Field label="Έκθεση" value={img.report} />
-                      {img.file_urls?.length > 0 && <p>Αρχεία: {img.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">Εικόνα {i+1}</a>)}</p>}
+                      <Field label={t('pgPassport.findings')} value={img.findings} /><Field label={t('pgPassport.report')} value={img.report} />
+                      {img.file_urls?.length > 0 && <p>{t('pgPassport.files')}: {img.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">{t('pgPassport.imageN', { n: i+1 })}</a>)}</p>}
                     </RecordCard>
                   ))}
               </>
@@ -372,12 +374,12 @@ export default function PetPassport() {
             {/* ── SURGERY ── */}
             {activeTab === 'surgery' && (
               <>
-                <button onClick={() => openModal('surgery', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Χειρουργείο</button>
-                {(p.surgeries || []).length === 0 ? <EmptyState label="Προσθήκη χειρουργείου" onAdd={() => openModal('surgery', {})} /> :
+                <button onClick={() => openModal('surgery', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newSurgery')}</button>
+                {(p.surgeries || []).length === 0 ? <EmptyState label={t('pgPassport.addSurgery')} onAdd={() => openModal('surgery', {})} /> :
                   (p.surgeries || []).map((s: any) => (
                     <RecordCard key={s.id} title={s.procedure} subtitle={`${s.surgeon_name || ''} · ${s.clinic_name || ''}`} date={s.date} onDelete={() => surgery.remove.mutate(s.id)}>
-                      <Field label="Κατηγορία" value={s.category} /><Field label="Αναισθησία" value={s.anesthesia} /><Field label="Διάρκεια" value={s.duration_min ? `${s.duration_min} λεπτά` : null} />
-                      <Field label="Επιπλοκές" value={s.complications} /><Field label="Αποτέλεσμα" value={s.outcome} /><Field label="Follow-up" value={s.follow_up} /><Field label="Κόστος" value={s.cost ? `${s.cost}€` : null} />
+                      <Field label={t('pgPassport.category')} value={s.category} /><Field label={t('pgPassport.anesthesia')} value={s.anesthesia} /><Field label={t('pgPassport.duration')} value={s.duration_min ? t('pgPassport.minutes', { count: s.duration_min }) : null} />
+                      <Field label={t('pgPassport.complications')} value={s.complications} /><Field label={t('pgPassport.outcome')} value={s.outcome} /><Field label={t('pgPassport.followUp')} value={s.follow_up} /><Field label={t('pgPassport.cost')} value={s.cost ? `${s.cost}€` : null} />
                     </RecordCard>
                   ))}
               </>
@@ -386,12 +388,12 @@ export default function PetPassport() {
             {/* ── ALLERGIES ── */}
             {activeTab === 'allergies' && (
               <>
-                <button onClick={() => openModal('allergy', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Αλλεργία</button>
-                {(p.allergies || []).length === 0 ? <EmptyState label="Προσθήκη αλλεργίας" onAdd={() => openModal('allergy', {})} /> :
+                <button onClick={() => openModal('allergy', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newAllergy')}</button>
+                {(p.allergies || []).length === 0 ? <EmptyState label={t('pgPassport.addAllergy')} onAdd={() => openModal('allergy', {})} /> :
                   (p.allergies || []).map((a: any) => (
                     <RecordCard key={a.id} title={a.allergen} subtitle={`${a.allergen_type} · ${a.reaction || ''}`}
                       badge={a.severity} badgeColor={severityColor(a.severity)} onDelete={() => allergy.remove.mutate(a.id)}>
-                      <Field label="Αντίδραση" value={a.reaction} /><Field label="Θεραπεία" value={a.treatment} /><Field label="Διεγνώσθηκε από" value={a.diagnosed_by} />
+                      <Field label={t('pgPassport.reaction')} value={a.reaction} /><Field label={t('pgPassport.treatment')} value={a.treatment} /><Field label={t('pgPassport.diagnosedBy')} value={a.diagnosed_by} />
                     </RecordCard>
                   ))}
               </>
@@ -400,14 +402,14 @@ export default function PetPassport() {
             {/* ── CHRONIC ── */}
             {activeTab === 'chronic' && (
               <>
-                <button onClick={() => openModal('chronic', { status: 'active' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Χρόνια Πάθηση</button>
-                {(p.chronicConditions || []).length === 0 ? <EmptyState label="Προσθήκη πάθησης" onAdd={() => openModal('chronic', {})} /> :
+                <button onClick={() => openModal('chronic', { status: 'active' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newChronic')}</button>
+                {(p.chronicConditions || []).length === 0 ? <EmptyState label={t('pgPassport.addCondition')} onAdd={() => openModal('chronic', {})} /> :
                   (p.chronicConditions || []).map((c: any) => (
                     <RecordCard key={c.id} title={c.condition} subtitle={`${c.diagnosed_by || ''} · ${c.clinic_name || ''}`} date={c.diagnosed_date}
-                      badge={c.status === 'active' ? 'Ενεργή' : c.status === 'managed' ? 'Ελεγχόμενη' : 'Σε ύφεση'}
+                      badge={c.status === 'active' ? t('pgPassport.chronicStatus.active') : c.status === 'managed' ? t('pgPassport.chronicStatus.managed') : t('pgPassport.chronicStatus.resolved')}
                       badgeColor={c.status === 'active' ? 'bg-red-100 text-red-700' : c.status === 'managed' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => chronic.remove.mutate(c.id)}>
-                      <Field label="ICD Κωδικός" value={c.icd_code} /><Field label="Σχέδιο θεραπείας" value={c.treatment_plan} /><Field label="Παρακολούθηση" value={c.monitoring} />
+                      <Field label={t('pgPassport.icdCode')} value={c.icd_code} /><Field label={t('pgPassport.treatmentPlan')} value={c.treatment_plan} /><Field label={t('pgPassport.monitoring')} value={c.monitoring} />
                     </RecordCard>
                   ))}
               </>
@@ -416,11 +418,11 @@ export default function PetPassport() {
             {/* ── DENTAL ── */}
             {activeTab === 'dental' && (
               <>
-                <button onClick={() => openModal('dental', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Οδοντιατρική Πράξη</button>
-                {(p.dentalRecords || []).length === 0 ? <EmptyState label="Προσθήκη οδοντιατρικής" onAdd={() => openModal('dental', {})} /> :
+                <button onClick={() => openModal('dental', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newDental')}</button>
+                {(p.dentalRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addDental')} onAdd={() => openModal('dental', {})} /> :
                   (p.dentalRecords || []).map((d: any) => (
                     <RecordCard key={d.id} title={d.procedure} subtitle={`${d.vet_name || ''} · ${d.clinic_name || ''}`} date={d.date} onDelete={() => dental.remove.mutate(d.id)}>
-                      <Field label="Δόντια" value={d.teeth_treated} /><Field label="Ευρήματα" value={d.findings} /><Field label="Στάδιο" value={d.grade} /><Field label="Επόμενος καθαρισμός" value={d.next_due} /><Field label="Κόστος" value={d.cost ? `${d.cost}€` : null} />
+                      <Field label={t('pgPassport.teeth')} value={d.teeth_treated} /><Field label={t('pgPassport.findings')} value={d.findings} /><Field label={t('pgPassport.stage')} value={d.grade} /><Field label={t('pgPassport.nextCleaning')} value={d.next_due} /><Field label={t('pgPassport.cost')} value={d.cost ? `${d.cost}€` : null} />
                     </RecordCard>
                   ))}
               </>
@@ -429,24 +431,24 @@ export default function PetPassport() {
             {/* ── WEIGHT CHART ── */}
             {activeTab === 'weight' && (
               <>
-                <button onClick={() => openModal('weight', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Μέτρηση</button>
+                <button onClick={() => openModal('weight', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMeasurement')}</button>
                 {(p.weightRecords || []).length > 1 && (
                   <div className="card p-4 mb-4">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Γράφημα Βάρους</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgPassport.weightChart')}</p>
                     <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={p.weightRecords.map((w: any) => ({ date: w.date.slice(5), kg: w.weight_kg }))}>
                         <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
-                        <Tooltip formatter={(v: any) => [`${v} kg`, 'Βάρος']} />
+                        <Tooltip formatter={(v: any) => [`${v} kg`, t('pgPassport.weight')]} />
                         <Line type="monotone" dataKey="kg" stroke="#E65100" strokeWidth={2} dot={{ r: 4, fill: '#E65100' }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 )}
-                {(p.weightRecords || []).length === 0 ? <EmptyState label="Προσθήκη μέτρησης" onAdd={() => openModal('weight', {})} /> :
+                {(p.weightRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addMeasurement')} onAdd={() => openModal('weight', {})} /> :
                   (p.weightRecords || []).slice().reverse().map((w: any) => (
                     <RecordCard key={w.id} title={`${w.weight_kg} kg`} subtitle={`BCS: ${w.bcs || '-'}/9 · ${w.vet_name || ''}`} date={w.date} onDelete={() => weight.remove.mutate(w.id)}>
-                      <Field label="Σημειώσεις" value={w.notes} />
+                      <Field label={t('pgPassport.notes')} value={w.notes} />
                     </RecordCard>
                   ))}
               </>
@@ -455,13 +457,13 @@ export default function PetPassport() {
             {/* ── GENETIC ── */}
             {activeTab === 'genetic' && (
               <>
-                <button onClick={() => openModal('genetic', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Γενετική Εξέταση</button>
-                {(p.geneticTests || []).length === 0 ? <EmptyState label="Προσθήκη γενετικής" onAdd={() => openModal('genetic', {})} /> :
+                <button onClick={() => openModal('genetic', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newGenetic')}</button>
+                {(p.geneticTests || []).length === 0 ? <EmptyState label={t('pgPassport.addGenetic')} onAdd={() => openModal('genetic', {})} /> :
                   (p.geneticTests || []).map((g: any) => (
                     <RecordCard key={g.id} title={g.test_name} subtitle={g.provider} date={g.date} onDelete={() => genetic.remove.mutate(g.id)}>
-                      <Field label="Αποτελέσματα" value={g.results} />
-                      {g.breeds_detected?.length > 0 && <p><span className="font-medium">Ράτσες:</span> {g.breeds_detected.join(', ')}</p>}
-                      {g.conditions_found?.length > 0 && <p><span className="font-medium">Παθήσεις:</span> {g.conditions_found.join(', ')}</p>}
+                      <Field label={t('pgPassport.results')} value={g.results} />
+                      {g.breeds_detected?.length > 0 && <p><span className="font-medium">{t('pgPassport.breeds')}:</span> {g.breeds_detected.join(', ')}</p>}
+                      {g.conditions_found?.length > 0 && <p><span className="font-medium">{t('pgPassport.conditions')}:</span> {g.conditions_found.join(', ')}</p>}
                     </RecordCard>
                   ))}
               </>
@@ -470,14 +472,14 @@ export default function PetPassport() {
             {/* ── VITALS ── */}
             {activeTab === 'vitals' && (
               <>
-                <button onClick={() => openModal('vitals', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέα Μέτρηση Ζωτικών</button>
-                {(p.vitalSigns || []).length === 0 ? <EmptyState label="Προσθήκη ζωτικών" onAdd={() => openModal('vitals', {})} /> :
+                <button onClick={() => openModal('vitals', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVitals')}</button>
+                {(p.vitalSigns || []).length === 0 ? <EmptyState label={t('pgPassport.addVitals')} onAdd={() => openModal('vitals', {})} /> :
                   (p.vitalSigns || []).map((v: any) => (
                     <RecordCard key={v.id} title={`${v.temperature_c ? v.temperature_c + '°C' : ''} ${v.heart_rate ? v.heart_rate + ' bpm' : ''} ${v.weight_kg ? v.weight_kg + ' kg' : ''}`.trim()} subtitle={v.vet_name} date={v.date} onDelete={() => vitals.remove.mutate(v.id)}>
-                      <Field label="Θερμοκρασία" value={v.temperature_c ? `${v.temperature_c}°C` : null} />
-                      <Field label="Καρδιακοί παλμοί" value={v.heart_rate ? `${v.heart_rate} bpm` : null} />
-                      <Field label="Αναπνευστικός ρυθμός" value={v.respiratory_rate ? `${v.respiratory_rate} /min` : null} />
-                      <Field label="Αρτηριακή πίεση" value={v.blood_pressure} /><Field label="Τριχοειδής επαναπλήρωση" value={v.capillary_refill} />
+                      <Field label={t('pgPassport.temperature')} value={v.temperature_c ? `${v.temperature_c}°C` : null} />
+                      <Field label={t('pgPassport.heartRate')} value={v.heart_rate ? `${v.heart_rate} bpm` : null} />
+                      <Field label={t('pgPassport.respRate')} value={v.respiratory_rate ? `${v.respiratory_rate} /min` : null} />
+                      <Field label={t('pgPassport.bloodPressure')} value={v.blood_pressure} /><Field label={t('pgPassport.crt')} value={v.capillary_refill} />
                     </RecordCard>
                   ))}
               </>
@@ -487,19 +489,19 @@ export default function PetPassport() {
             {activeTab === 'pedigree' && (
               <div className="card p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900 dark:text-white">Στοιχεία Pedigree</h3>
-                  <button onClick={() => openModal('pedigree', p.pedigree || {})} className="btn-secondary text-xs flex items-center gap-1.5"><Edit2 size={13} />Επεξεργασία</button>
+                  <h3 className="font-bold text-gray-900 dark:text-white">{t('pgPassport.pedigreeTitle')}</h3>
+                  <button onClick={() => openModal('pedigree', p.pedigree || {})} className="btn-secondary text-xs flex items-center gap-1.5"><Edit2 size={13} />{t('common.edit')}</button>
                 </div>
                 {p.pedigree ? (
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    {[['Αρ. Εγγραφής', p.pedigree.registration_number], ['Kennel Club', p.pedigree.kennel_club],
-                      ['Πατέρας', p.pedigree.father_name], ['Μητέρα', p.pedigree.mother_name],
-                      ['Εκτροφέας', p.pedigree.breeder_name], ['Επικοινωνία', p.pedigree.breeder_contact]
+                    {[[t('pgPassport.regNumber'), p.pedigree.registration_number], [t('pgPassport.kennelClub'), p.pedigree.kennel_club],
+                      [t('pgPassport.father'), p.pedigree.father_name], [t('pgPassport.mother'), p.pedigree.mother_name],
+                      [t('pgPassport.breeder'), p.pedigree.breeder_name], [t('pgPassport.contact'), p.pedigree.breeder_contact]
                     ].filter(([, v]) => v).map(([l, v]) => (
                       <div key={l}><p className="text-xs text-gray-400">{l}</p><p className="font-medium">{v as string}</p></div>
                     ))}
                   </div>
-                ) : <EmptyState label="Προσθήκη Pedigree" onAdd={() => openModal('pedigree', {})} />}
+                ) : <EmptyState label={t('pgPassport.addPedigree')} onAdd={() => openModal('pedigree', {})} />}
               </div>
             )}
 
@@ -509,22 +511,22 @@ export default function PetPassport() {
                 {/* Info banner */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div className="card p-4 border-l-4 border-blue-500">
-                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🇬🇷 Εσωτερικό Ταξίδι</p>
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">{t('pgPassport.domesticTravel')}</p>
                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>✅ Μικροτσίπ (ISO 11784/11785)</li>
-                      <li>✅ Εμβόλιο Λύσσας σε ισχύ</li>
-                      <li>✅ Βιβλιάριο υγείας</li>
-                      <li>✅ Κτηνιατρικό πιστοποιητικό</li>
+                      <li>✅ {t('pgPassport.microchipIso')}</li>
+                      <li>✅ {t('pgPassport.rabiesValid')}</li>
+                      <li>✅ {t('pgPassport.healthBooklet')}</li>
+                      <li>✅ {t('pgPassport.vetCertificate')}</li>
                     </ul>
                   </div>
                   <div className="card p-4 border-l-4 border-orange-500">
-                    <p className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">🌍 Διεθνές Ταξίδι (ΕΕ)</p>
+                    <p className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">{t('pgPassport.intlTravel')}</p>
                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>✅ EU Pet Passport</li>
-                      <li>✅ Μικροτσίπ πριν τον εμβολιασμό</li>
-                      <li>✅ Εμβόλιο Λύσσας (21+ ημέρες)</li>
-                      <li>✅ Τίτλοι αντισωμάτων (εκτός ΕΕ)</li>
-                      <li>✅ Θεράπευση Echinococcus (σκύλοι)</li>
+                      <li>✅ {t('pgPassport.euPetPassport')}</li>
+                      <li>✅ {t('pgPassport.microchipBeforeVaccine')}</li>
+                      <li>✅ {t('pgPassport.rabies21')}</li>
+                      <li>✅ {t('pgPassport.antibodyTitre')}</li>
+                      <li>✅ {t('pgPassport.echinococcus')}</li>
                     </ul>
                   </div>
                 </div>
@@ -532,13 +534,13 @@ export default function PetPassport() {
                 {/* Passport checklist status */}
                 {passport && (
                   <div className="card p-4 mb-4 bg-gray-50 dark:bg-gray-800/50">
-                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3">📋 Κατάσταση Εγγράφων</p>
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3">{t('pgPassport.docStatus')}</p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {[
-                        { label: 'Μικροτσίπ', ok: !!(pet as any)?.microchip },
-                        { label: 'Εμβόλιο Λύσσας', ok: (passport.vaccinations || []).some((v: any) => v.vaccine_type === 'rabies' && (!v.next_due_date || new Date(v.next_due_date) > new Date())) },
-                        { label: 'Εξέταση SNAP', ok: (passport.healthRecords || []).length > 0 },
-                        { label: 'Ταξιδιωτικά Έγγραφα', ok: (passport.travelDocs || []).length > 0 },
+                        { label: t('pgPassport.microchip'), ok: !!(pet as any)?.microchip },
+                        { label: t('pgPassport.rabiesVaccine'), ok: (passport.vaccinations || []).some((v: any) => v.vaccine_type === 'rabies' && (!v.next_due_date || new Date(v.next_due_date) > new Date())) },
+                        { label: t('pgPassport.snapTest'), ok: (passport.healthRecords || []).length > 0 },
+                        { label: t('pgPassport.travelDocs'), ok: (passport.travelDocs || []).length > 0 },
                       ].map(({ label, ok }) => (
                         <div key={label} className={cn('flex items-center gap-2 p-2 rounded-lg', ok ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20')}>
                           <span>{ok ? '✅' : '❌'}</span>
@@ -549,11 +551,11 @@ export default function PetPassport() {
                   </div>
                 )}
 
-                <button onClick={() => openModal('travel', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Νέο Ταξίδι / Έγγραφο</button>
-                {(p.travelDocs || []).length === 0 ? <EmptyState label="Προσθήκη ταξιδιού" onAdd={() => openModal('travel', {})} /> :
+                <button onClick={() => openModal('travel', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newTravelDoc')}</button>
+                {(p.travelDocs || []).length === 0 ? <EmptyState label={t('pgPassport.addTravel')} onAdd={() => openModal('travel', {})} /> :
                   (p.travelDocs || []).map((t: any) => (
                     <RecordCard key={t.id} title={`${t.origin_city || ''} → ${t.destination_city}`} subtitle={`${t.travel_type} · ${t.carrier || ''}`} date={t.departure_date} onDelete={() => travel.remove.mutate(t.id)}>
-                      <Field label="Χώρα" value={t.destination_country} /><Field label="Επιστροφή" value={t.return_date} /><Field label="Κωδικός" value={t.booking_ref} />
+                      <Field label={t('pgPassport.country')} value={t.destination_country} /><Field label={t('pgPassport.returnLabel')} value={t.return_date} /><Field label={t('pgPassport.code')} value={t.booking_ref} />
                     </RecordCard>
                   ))}
               </>
@@ -565,18 +567,18 @@ export default function PetPassport() {
                 <div className="card p-4 mb-4 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30">
                   <div className="flex items-start gap-2">
                     <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-700 dark:text-blue-300">Χορήγησε πρόσβαση σε συγκεκριμένους κτηνιάτρους για να δουν τον φάκελο του ζώου σου. Μπορείς να ανακαλέσεις την πρόσβαση οποτεδήποτε.</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">{t('pgPassport.accessInfo')}</p>
                   </div>
                 </div>
-                <button onClick={() => openModal('access', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />Χορήγηση Πρόσβασης</button>
+                <button onClick={() => openModal('access', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.grantAccess')}</button>
                 {(p.accessList || []).length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">Κανείς κτηνίατρος δεν έχει πρόσβαση ακόμα</div>
+                  <div className="text-center py-12 text-gray-400">{t('pgPassport.noVetAccess')}</div>
                 ) : (p.accessList || []).map((a: any) => (
                   <RecordCard key={a.id} title={a.provider_name} subtitle={a.provider_email}
-                    badge={a.status === 'approved' ? 'Εγκεκριμένη' : 'Ανακλήθηκε'}
+                    badge={a.status === 'approved' ? t('pgPassport.approved') : t('pgPassport.revoked')}
                     badgeColor={a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
                     onDelete={a.status === 'approved' ? () => revokeAccess.mutate(a.id) : undefined}>
-                    <Field label="Αιτία" value={a.reason} /><Field label="Εγκρίθηκε" value={a.granted_at ? new Date(a.granted_at).toLocaleDateString('el-GR') : null} /><Field label="Λήξη" value={a.expires_at ? new Date(a.expires_at).toLocaleDateString('el-GR') : 'Χωρίς λήξη'} />
+                    <Field label={t('pgPassport.reason')} value={a.reason} /><Field label={t('pgPassport.grantedOn')} value={a.granted_at ? new Date(a.granted_at).toLocaleDateString(i18n.language) : null} /><Field label={t('pgPassport.expiry')} value={a.expires_at ? new Date(a.expires_at).toLocaleDateString(i18n.language) : t('pgPassport.noExpiry')} />
                   </RecordCard>
                 ))}
               </>
@@ -584,200 +586,200 @@ export default function PetPassport() {
           </>
         )}
 
-        {isLoading && <div className="text-center py-16 text-gray-400">Φόρτωση φακέλου...</div>}
+        {isLoading && <div className="text-center py-16 text-gray-400">{t('pgPassport.loadingRecord')}</div>}
       </div>
 
       {/* ─── MODALS ─────────────────────────────────────────────── */}
       <AnimatePresence>
         {modal === 'vaccine' && (
-          <Modal title="Νέο Εμβόλιο" onClose={() => setModal(null)} onSave={() => vac.create.mutate(form)} saving={vac.create.isPending}>
-            <F label="Εμβόλιο *" name="vaccine_name" form={form} setForm={setForm} />
-            <F label="Τύπος" name="vaccine_type" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'core',label:'Core'},{value:'non_core',label:'Non-Core'},{value:'rabies',label:'Λύσσα'},{value:'other',label:'Άλλο'}]} />
-            <F label="Ημ. Χορήγησης *" name="date_administered" form={form} setForm={setForm} type="date" />
-            <F label="Επόμενη Δόση" name="next_due_date" form={form} setForm={setForm} type="date" />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Σημειώσεις" name="notes" form={form} setForm={setForm} type="textarea" />
+          <Modal title={t('pgPassport.newVaccine')} onClose={() => setModal(null)} onSave={() => vac.create.mutate(form)} saving={vac.create.isPending}>
+            <F label={t('pgPassport.vaccineReq')} name="vaccine_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.type')} name="vaccine_type" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'core',label:t('pgPassport.vacType.core')},{value:'non_core',label:t('pgPassport.vacType.nonCore')},{value:'rabies',label:t('pgPassport.vacType.rabies')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.dateAdministeredReq')} name="date_administered" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.nextDose')} name="next_due_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'health' && (
-          <Modal title="Νέα Εξέταση" onClose={() => setModal(null)} onSave={() => health.create.mutate(form)} saving={health.create.isPending}>
-            <F label="Τίτλος *" name="title" form={form} setForm={setForm} />
-            <F label="Τύπος" name="record_type" form={form} setForm={setForm} options={['examination','diagnosis','follow_up','specialist','emergency','other']} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Περιγραφή" name="description" form={form} setForm={setForm} type="textarea" />
-            <F label="Κόστος (€)" name="cost" form={form} setForm={setForm} type="number" />
-            <F label="Επόμενο Ραντεβού" name="next_appointment" form={form} setForm={setForm} type="date" />
+          <Modal title={t('pgPassport.newExam')} onClose={() => setModal(null)} onSave={() => health.create.mutate(form)} saving={health.create.isPending}>
+            <F label={t('pgPassport.titleReq')} name="title" form={form} setForm={setForm} />
+            <F label={t('pgPassport.type')} name="record_type" form={form} setForm={setForm} options={[{value:'examination',label:t('pgPassport.recordType.examination')},{value:'diagnosis',label:t('pgPassport.recordType.diagnosis')},{value:'follow_up',label:t('pgPassport.recordType.followUp')},{value:'specialist',label:t('pgPassport.recordType.specialist')},{value:'emergency',label:t('pgPassport.recordType.emergency')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.description')} name="description" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.nextAppointment')} name="next_appointment" form={form} setForm={setForm} type="date" />
           </Modal>
         )}
 
         {modal === 'med' && (
-          <Modal title="Νέο Φάρμακο" onClose={() => setModal(null)} onSave={() => meds.create.mutate(form)} saving={meds.create.isPending}>
-            <F label="Όνομα Φαρμάκου *" name="name" form={form} setForm={setForm} />
-            <F label="Δραστική Ουσία" name="active_ingredient" form={form} setForm={setForm} />
-            <F label="Δοσολογία *" name="dosage" form={form} setForm={setForm} />
-            <F label="Συχνότητα *" name="frequency" form={form} setForm={setForm} options={['Μία φορά/ημέρα','Δύο φορές/ημέρα','Τρεις φορές/ημέρα','Εβδομαδιαία','Μηνιαία','Κατά ανάγκη']} />
-            <F label="Οδός Χορήγησης" name="route" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'oral',label:'Από το στόμα'},{value:'injection',label:'Ένεση'},{value:'topical',label:'Τοπικά'},{value:'eye_drops',label:'Οφθαλμικές σταγόνες'},{value:'ear_drops',label:'Ωτικές σταγόνες'}]} />
-            <F label="Ημ. Έναρξης *" name="start_date" form={form} setForm={setForm} type="date" />
-            <F label="Ημ. Λήξης" name="end_date" form={form} setForm={setForm} type="date" />
-            <F label="Συνταγογραφήθηκε από" name="prescribed_by" form={form} setForm={setForm} />
-            <F label="Αιτία χορήγησης" name="reason" form={form} setForm={setForm} />
-            <F label="Πιθανές Παρενέργειες" name="side_effects" form={form} setForm={setForm} type="textarea" />
+          <Modal title={t('pgPassport.newMed')} onClose={() => setModal(null)} onSave={() => meds.create.mutate(form)} saving={meds.create.isPending}>
+            <F label={t('pgPassport.medNameReq')} name="name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.activeIngredient')} name="active_ingredient" form={form} setForm={setForm} />
+            <F label={t('pgPassport.dosageReq')} name="dosage" form={form} setForm={setForm} />
+            <F label={t('pgPassport.frequencyReq')} name="frequency" form={form} setForm={setForm} options={['onceDaily','twiceDaily','threeDaily','weekly','monthly','asNeeded'].map(k => ({ value: t(`pgPassport.freq.${k}`, { lng: 'el' }), label: t(`pgPassport.freq.${k}`) }))} />
+            <F label={t('pgPassport.routeOfAdminCap')} name="route" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'oral',label:t('pgPassport.route.oral')},{value:'injection',label:t('pgPassport.route.injection')},{value:'topical',label:t('pgPassport.route.topical')},{value:'eye_drops',label:t('pgPassport.route.eyeDrops')},{value:'ear_drops',label:t('pgPassport.route.earDrops')}]} />
+            <F label={t('pgPassport.startDateReq')} name="start_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.endDate')} name="end_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.prescribedBy')} name="prescribed_by" form={form} setForm={setForm} />
+            <F label={t('pgPassport.reasonForAdmin')} name="reason" form={form} setForm={setForm} />
+            <F label={t('pgPassport.possibleSideEffects')} name="side_effects" form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'lab' && (
-          <Modal title="Νέα Εργαστηριακή Εξέταση" onClose={() => setModal(null)} onSave={() => lab.create.mutate(form)} saving={lab.create.isPending}>
-            <F label="Τίτλος *" name="title" form={form} setForm={setForm} />
-            <F label="Τύπος Εξέτασης" name="result_type" form={form} setForm={setForm} options={[{value:'blood_count',label:'Αιματολογικό'},{value:'biochemistry',label:'Βιοχημικός Έλεγχος'},{value:'urine',label:'Ούρων'},{value:'fecal',label:'Κοπράνων'},{value:'biopsy',label:'Βιοψία'},{value:'culture',label:'Καλλιέργεια'},{value:'hormone',label:'Ορμόνες'},{value:'serology',label:'Ορολογία'},{value:'other',label:'Άλλο'}]} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Εργαστήριο" name="lab_name" form={form} setForm={setForm} />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Ευρήματα" name="findings" form={form} setForm={setForm} type="textarea" />
+          <Modal title={t('pgPassport.newLabTitle')} onClose={() => setModal(null)} onSave={() => lab.create.mutate(form)} saving={lab.create.isPending}>
+            <F label={t('pgPassport.titleReq')} name="title" form={form} setForm={setForm} />
+            <F label={t('pgPassport.testType')} name="result_type" form={form} setForm={setForm} options={[{value:'blood_count',label:t('pgPassport.labType.bloodCount')},{value:'biochemistry',label:t('pgPassport.labType.biochemistry')},{value:'urine',label:t('pgPassport.labType.urine')},{value:'fecal',label:t('pgPassport.labType.fecal')},{value:'biopsy',label:t('pgPassport.labType.biopsy')},{value:'culture',label:t('pgPassport.labType.culture')},{value:'hormone',label:t('pgPassport.labType.hormone')},{value:'serology',label:t('pgPassport.labType.serology')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.laboratory')} name="lab_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
             <div className="flex items-center gap-2">
               <input type="checkbox" id="abnormal" checked={form.is_abnormal || false} onChange={e => setForm((f: any) => ({ ...f, is_abnormal: e.target.checked }))} />
-              <label htmlFor="abnormal" className="text-sm text-gray-700 dark:text-gray-300">Παθολογικά Αποτελέσματα</label>
+              <label htmlFor="abnormal" className="text-sm text-gray-700 dark:text-gray-300">{t('pgPassport.abnormalResults')}</label>
             </div>
           </Modal>
         )}
 
         {modal === 'imaging' && (
-          <Modal title="Νέα Απεικονιστική Εξέταση" onClose={() => setModal(null)} onSave={() => imaging.create.mutate(form)} saving={imaging.create.isPending}>
-            <F label="Τύπος *" name="imaging_type" form={form} setForm={setForm} options={[{value:'xray',label:'Ακτινογραφία (X-Ray)'},{value:'ultrasound',label:'Υπερηχογράφημα'},{value:'ct',label:'CT Scan'},{value:'mri',label:'MRI'},{value:'endoscopy',label:'Ενδοσκόπηση'},{value:'echocardiogram',label:'Ηχοκαρδιογράφημα'},{value:'other',label:'Άλλο'}]} />
-            <F label="Περιοχή Σώματος" name="body_region" form={form} setForm={setForm} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Ευρήματα" name="findings" form={form} setForm={setForm} type="textarea" />
-            <F label="Έκθεση" name="report" form={form} setForm={setForm} type="textarea" />
+          <Modal title={t('pgPassport.newImagingTitle')} onClose={() => setModal(null)} onSave={() => imaging.create.mutate(form)} saving={imaging.create.isPending}>
+            <F label={t('pgPassport.typeReq')} name="imaging_type" form={form} setForm={setForm} options={[{value:'xray',label:t('pgPassport.imgType.xray')},{value:'ultrasound',label:t('pgPassport.imgType.ultrasound')},{value:'ct',label:t('pgPassport.imgType.ct')},{value:'mri',label:t('pgPassport.imgType.mri')},{value:'endoscopy',label:t('pgPassport.imgType.endoscopy')},{value:'echocardiogram',label:t('pgPassport.imgType.echocardiogram')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.bodyRegion')} name="body_region" form={form} setForm={setForm} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.report')} name="report" form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'surgery' && (
-          <Modal title="Νέο Χειρουργείο / Επέμβαση" onClose={() => setModal(null)} onSave={() => surgery.create.mutate(form)} saving={surgery.create.isPending}>
-            <F label="Επέμβαση *" name="procedure" form={form} setForm={setForm} />
-            <F label="Κατηγορία" name="category" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'orthopedic',label:'Ορθοπεδική'},{value:'soft_tissue',label:'Μαλακών Ιστών'},{value:'dental',label:'Οδοντιατρική'},{value:'ophthalmic',label:'Οφθαλμολογική'},{value:'neurological',label:'Νευρολογική'},{value:'reproductive',label:'Αναπαραγωγική'},{value:'other',label:'Άλλη'}]} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Χειρουργός" name="surgeon_name" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Αναισθησία" name="anesthesia" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'general',label:'Γενική'},{value:'local',label:'Τοπική'},{value:'sedation',label:'Κατακόρυφη'}]} />
-            <F label="Διάρκεια (λεπτά)" name="duration_min" form={form} setForm={setForm} type="number" />
-            <F label="Επιπλοκές" name="complications" form={form} setForm={setForm} type="textarea" />
-            <F label="Αποτέλεσμα" name="outcome" form={form} setForm={setForm} />
-            <F label="Follow-up" name="follow_up" form={form} setForm={setForm} />
-            <F label="Κόστος (€)" name="cost" form={form} setForm={setForm} type="number" />
+          <Modal title={t('pgPassport.newSurgeryTitle')} onClose={() => setModal(null)} onSave={() => surgery.create.mutate(form)} saving={surgery.create.isPending}>
+            <F label={t('pgPassport.procedureReq')} name="procedure" form={form} setForm={setForm} />
+            <F label={t('pgPassport.category')} name="category" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'orthopedic',label:t('pgPassport.surgCat.orthopedic')},{value:'soft_tissue',label:t('pgPassport.surgCat.softTissue')},{value:'dental',label:t('pgPassport.surgCat.dental')},{value:'ophthalmic',label:t('pgPassport.surgCat.ophthalmic')},{value:'neurological',label:t('pgPassport.surgCat.neurological')},{value:'reproductive',label:t('pgPassport.surgCat.reproductive')},{value:'other',label:t('pgPassport.otherF')}]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.surgeon')} name="surgeon_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.anesthesia')} name="anesthesia" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'general',label:t('pgPassport.anesth.general')},{value:'local',label:t('pgPassport.anesth.local')},{value:'sedation',label:t('pgPassport.anesth.sedation')}]} />
+            <F label={t('pgPassport.durationMin')} name="duration_min" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.complications')} name="complications" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.outcome')} name="outcome" form={form} setForm={setForm} />
+            <F label={t('pgPassport.followUp')} name="follow_up" form={form} setForm={setForm} />
+            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
           </Modal>
         )}
 
         {modal === 'allergy' && (
-          <Modal title="Νέα Αλλεργία" onClose={() => setModal(null)} onSave={() => allergy.create.mutate(form)} saving={allergy.create.isPending}>
-            <F label="Αλλεργιογόνο *" name="allergen" form={form} setForm={setForm} />
-            <F label="Τύπος" name="allergen_type" form={form} setForm={setForm} options={[{value:'food',label:'Τροφής'},{value:'medication',label:'Φαρμάκου'},{value:'environmental',label:'Περιβαλλοντικό'},{value:'insect',label:'Εντόμου'},{value:'contact',label:'Επαφής'},{value:'other',label:'Άλλο'}]} />
-            <F label="Αντίδραση" name="reaction" form={form} setForm={setForm} type="textarea" />
-            <F label="Σοβαρότητα" name="severity" form={form} setForm={setForm} options={[{value:'mild',label:'Ήπια'},{value:'moderate',label:'Μέτρια'},{value:'severe',label:'Σοβαρή'},{value:'anaphylactic',label:'Αναφυλακτική'}]} />
-            <F label="Θεραπεία" name="treatment" form={form} setForm={setForm} />
-            <F label="Διεγνώσθηκε από" name="diagnosed_by" form={form} setForm={setForm} />
-            <F label="Ημ. Διάγνωσης" name="diagnosed_date" form={form} setForm={setForm} type="date" />
+          <Modal title={t('pgPassport.newAllergy')} onClose={() => setModal(null)} onSave={() => allergy.create.mutate(form)} saving={allergy.create.isPending}>
+            <F label={t('pgPassport.allergenReq')} name="allergen" form={form} setForm={setForm} />
+            <F label={t('pgPassport.type')} name="allergen_type" form={form} setForm={setForm} options={[{value:'food',label:t('pgPassport.allergenType.food')},{value:'medication',label:t('pgPassport.allergenType.medication')},{value:'environmental',label:t('pgPassport.allergenType.environmental')},{value:'insect',label:t('pgPassport.allergenType.insect')},{value:'contact',label:t('pgPassport.allergenType.contact')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.reaction')} name="reaction" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.severity')} name="severity" form={form} setForm={setForm} options={[{value:'mild',label:t('pgPassport.severityOpt.mild')},{value:'moderate',label:t('pgPassport.severityOpt.moderate')},{value:'severe',label:t('pgPassport.severityOpt.severe')},{value:'anaphylactic',label:t('pgPassport.severityOpt.anaphylactic')}]} />
+            <F label={t('pgPassport.treatment')} name="treatment" form={form} setForm={setForm} />
+            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" form={form} setForm={setForm} />
+            <F label={t('pgPassport.diagnosisDate')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
           </Modal>
         )}
 
         {modal === 'chronic' && (
-          <Modal title="Νέα Χρόνια Πάθηση" onClose={() => setModal(null)} onSave={() => chronic.create.mutate(form)} saving={chronic.create.isPending}>
-            <F label="Πάθηση *" name="condition" form={form} setForm={setForm} />
-            <F label="ICD Κωδικός" name="icd_code" form={form} setForm={setForm} />
-            <F label="Κατάσταση" name="status" form={form} setForm={setForm} options={[{value:'active',label:'Ενεργή'},{value:'managed',label:'Ελεγχόμενη'},{value:'resolved',label:'Σε ύφεση'}]} />
-            <F label="Ημ. Διάγνωσης" name="diagnosed_date" form={form} setForm={setForm} type="date" />
-            <F label="Διεγνώσθηκε από" name="diagnosed_by" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Σχέδιο Θεραπείας" name="treatment_plan" form={form} setForm={setForm} type="textarea" />
-            <F label="Παρακολούθηση" name="monitoring" form={form} setForm={setForm} />
+          <Modal title={t('pgPassport.newChronic')} onClose={() => setModal(null)} onSave={() => chronic.create.mutate(form)} saving={chronic.create.isPending}>
+            <F label={t('pgPassport.conditionReq')} name="condition" form={form} setForm={setForm} />
+            <F label={t('pgPassport.icdCode')} name="icd_code" form={form} setForm={setForm} />
+            <F label={t('pgPassport.status')} name="status" form={form} setForm={setForm} options={[{value:'active',label:t('pgPassport.chronicStatus.active')},{value:'managed',label:t('pgPassport.chronicStatus.managed')},{value:'resolved',label:t('pgPassport.chronicStatus.resolved')}]} />
+            <F label={t('pgPassport.diagnosisDate')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.treatmentPlanCap')} name="treatment_plan" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.monitoring')} name="monitoring" form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'dental' && (
-          <Modal title="Νέα Οδοντιατρική Πράξη" onClose={() => setModal(null)} onSave={() => dental.create.mutate(form)} saving={dental.create.isPending}>
-            <F label="Πράξη *" name="procedure" form={form} setForm={setForm} options={[{value:'cleaning',label:'Καθαρισμός'},{value:'extraction',label:'Εξαγωγή'},{value:'xray',label:'Ακτινογραφία Δοντιών'},{value:'root_canal',label:'Ριζοθεραπεία'},{value:'other',label:'Άλλο'}]} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Κλινική" name="clinic_name" form={form} setForm={setForm} />
-            <F label="Δόντια / Περιοχή" name="teeth_treated" form={form} setForm={setForm} />
-            <F label="Ευρήματα" name="findings" form={form} setForm={setForm} type="textarea" />
-            <F label="Στάδιο Νόσου" name="grade" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Stage 1',label:'Στάδιο 1'},{value:'Stage 2',label:'Στάδιο 2'},{value:'Stage 3',label:'Στάδιο 3'},{value:'Stage 4',label:'Στάδιο 4'}]} />
-            <F label="Επόμενος Καθαρισμός" name="next_due" form={form} setForm={setForm} type="date" />
-            <F label="Κόστος (€)" name="cost" form={form} setForm={setForm} type="number" />
+          <Modal title={t('pgPassport.newDental')} onClose={() => setModal(null)} onSave={() => dental.create.mutate(form)} saving={dental.create.isPending}>
+            <F label={t('pgPassport.procedureActReq')} name="procedure" form={form} setForm={setForm} options={[{value:'cleaning',label:t('pgPassport.dentalProc.cleaning')},{value:'extraction',label:t('pgPassport.dentalProc.extraction')},{value:'xray',label:t('pgPassport.dentalProc.xray')},{value:'root_canal',label:t('pgPassport.dentalProc.rootCanal')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.teethArea')} name="teeth_treated" form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.diseaseStage')} name="grade" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Stage 1',label:t('pgPassport.stageN', { n: 1 })},{value:'Stage 2',label:t('pgPassport.stageN', { n: 2 })},{value:'Stage 3',label:t('pgPassport.stageN', { n: 3 })},{value:'Stage 4',label:t('pgPassport.stageN', { n: 4 })}]} />
+            <F label={t('pgPassport.nextCleaningCap')} name="next_due" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
           </Modal>
         )}
 
         {modal === 'weight' && (
-          <Modal title="Νέα Μέτρηση Βάρους" onClose={() => setModal(null)} onSave={() => weight.create.mutate(form)} saving={weight.create.isPending}>
-            <F label="Βάρος (kg) *" name="weight_kg" form={form} setForm={setForm} type="number" />
-            <F label="BCS (1-9)" name="bcs" form={form} setForm={setForm} options={[{value:'',label:'—'},...[1,2,3,4,5,6,7,8,9].map(n => ({value:String(n),label:`${n} — ${['Καχεκτικό','Λεπτό','Ελαφρώς Λεπτό','Ιδανικό','Ιδανικό','Ελαφρώς Παχύ','Παχύ','Παχύσαρκο','Σοβαρά Παχύσαρκο'][n-1]}`}))]} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Σημειώσεις" name="notes" form={form} setForm={setForm} />
+          <Modal title={t('pgPassport.newWeightTitle')} onClose={() => setModal(null)} onSave={() => weight.create.mutate(form)} saving={weight.create.isPending}>
+            <F label={t('pgPassport.weightKgReq')} name="weight_kg" form={form} setForm={setForm} type="number" />
+            <F label="BCS (1-9)" name="bcs" form={form} setForm={setForm} options={[{value:'',label:'—'},...[1,2,3,4,5,6,7,8,9].map(n => ({value:String(n),label:`${n} — ${[t('pgPassport.bcs.emaciated'),t('pgPassport.bcs.thin'),t('pgPassport.bcs.slightlyThin'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.slightlyOverweight'),t('pgPassport.bcs.overweight'),t('pgPassport.bcs.obese'),t('pgPassport.bcs.severelyObese')][n-1]}`}))]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'genetic' && (
-          <Modal title="Νέα Γενετική Εξέταση" onClose={() => setModal(null)} onSave={() => genetic.create.mutate(form)} saving={genetic.create.isPending}>
-            <F label="Εξέταση *" name="test_name" form={form} setForm={setForm} />
-            <F label="Πάροχος" name="provider" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Embark',label:'Embark'},{value:'Wisdom Panel',label:'Wisdom Panel'},{value:'DNAmy',label:'DNAmy'},{value:'other',label:'Άλλος'}]} />
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Αποτελέσματα" name="results" form={form} setForm={setForm} type="textarea" />
+          <Modal title={t('pgPassport.newGenetic')} onClose={() => setModal(null)} onSave={() => genetic.create.mutate(form)} saving={genetic.create.isPending}>
+            <F label={t('pgPassport.testReq')} name="test_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.provider')} name="provider" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Embark',label:'Embark'},{value:'Wisdom Panel',label:'Wisdom Panel'},{value:'DNAmy',label:'DNAmy'},{value:'other',label:t('pgPassport.otherM')}]} />
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.results')} name="results" form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'vitals' && (
-          <Modal title="Νέα Μέτρηση Ζωτικών Σημείων" onClose={() => setModal(null)} onSave={() => vitals.create.mutate(form)} saving={vitals.create.isPending}>
-            <F label="Ημερομηνία *" name="date" form={form} setForm={setForm} type="date" />
-            <F label="Θερμοκρασία (°C)" name="temperature_c" form={form} setForm={setForm} type="number" />
-            <F label="Καρδιακοί Παλμοί (bpm)" name="heart_rate" form={form} setForm={setForm} type="number" />
-            <F label="Αναπνευστικός Ρυθμός (/min)" name="respiratory_rate" form={form} setForm={setForm} type="number" />
-            <F label="Βάρος (kg)" name="weight_kg" form={form} setForm={setForm} type="number" />
-            <F label="Αρτηριακή Πίεση" name="blood_pressure" form={form} setForm={setForm} />
-            <F label="Τριχοειδής Επαναπλήρωση" name="capillary_refill" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'<2sec',label:'< 2 δευτ. (Φυσιολογική)'},{value:'2-3sec',label:'2-3 δευτ. (Παθολογική)'},{value:'>3sec',label:'> 3 δευτ. (Κρίσιμη)'}]} />
-            <F label="Κτηνίατρος" name="vet_name" form={form} setForm={setForm} />
-            <F label="Σημειώσεις" name="notes" form={form} setForm={setForm} />
+          <Modal title={t('pgPassport.newVitalsTitle')} onClose={() => setModal(null)} onSave={() => vitals.create.mutate(form)} saving={vitals.create.isPending}>
+            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.temperatureC')} name="temperature_c" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.heartRateBpm')} name="heart_rate" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.respRateMin')} name="respiratory_rate" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.weightKg')} name="weight_kg" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.bloodPressureCap')} name="blood_pressure" form={form} setForm={setForm} />
+            <F label={t('pgPassport.crtCap')} name="capillary_refill" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'<2sec',label:t('pgPassport.crtOpt.normal')},{value:'2-3sec',label:t('pgPassport.crtOpt.prolonged')},{value:'>3sec',label:t('pgPassport.crtOpt.critical')}]} />
+            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'pedigree' && (
-          <Modal title="Στοιχεία Pedigree" onClose={() => setModal(null)}
-            onSave={() => api.put(`/passport/pedigree/${activePetId}`, { ...form, certifications: form.certifications ? String(form.certifications).split(',').map((s: string) => s.trim()) : [] }).then(() => { inv(); setModal(null); toast.success('Αποθηκεύτηκε!') })}
+          <Modal title={t('pgPassport.pedigreeTitle')} onClose={() => setModal(null)}
+            onSave={() => api.put(`/passport/pedigree/${activePetId}`, { ...form, certifications: form.certifications ? String(form.certifications).split(',').map((s: string) => s.trim()) : [] }).then(() => { inv(); setModal(null); toast.success(t('pgPassport.savedToast')) })}
             saving={false}>
-            <F label="Αρ. Εγγραφής" name="registration_number" form={form} setForm={setForm} />
-            <F label="Kennel Club" name="kennel_club" form={form} setForm={setForm} />
-            <F label="Όνομα Πατέρα" name="father_name" form={form} setForm={setForm} />
-            <F label="Όνομα Μητέρας" name="mother_name" form={form} setForm={setForm} />
-            <F label="Εκτροφέας" name="breeder_name" form={form} setForm={setForm} />
-            <F label="Επικοινωνία Εκτροφέα" name="breeder_contact" form={form} setForm={setForm} />
-            <F label="Πιστοποιήσεις (χωρισμένες με κόμμα)" name="certifications" form={form} setForm={setForm} />
-            <F label="Σημειώσεις" name="notes" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.regNumber')} name="registration_number" form={form} setForm={setForm} />
+            <F label={t('pgPassport.kennelClub')} name="kennel_club" form={form} setForm={setForm} />
+            <F label={t('pgPassport.fatherName')} name="father_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.motherName')} name="mother_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.breeder')} name="breeder_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.breederContact')} name="breeder_contact" form={form} setForm={setForm} />
+            <F label={t('pgPassport.certifications')} name="certifications" form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'travel' && (
-          <Modal title="Νέο Ταξίδι" onClose={() => setModal(null)} onSave={() => travel.create.mutate(form)} saving={travel.create.isPending}>
-            <F label="Τύπος *" name="travel_type" form={form} setForm={setForm} options={[{value:'flight',label:'✈️ Αεροπλάνο'},{value:'ferry',label:'🚢 Πλοίο'},{value:'train',label:'🚂 Τρένο'},{value:'road',label:'🚗 Οδικώς'},{value:'international',label:'🌍 Διεθνές'}]} />
-            <F label="Αφετηρία" name="origin_city" form={form} setForm={setForm} />
-            <F label="Προορισμός *" name="destination_city" form={form} setForm={setForm} />
-            <F label="Χώρα Προορισμού" name="destination_country" form={form} setForm={setForm} />
-            <F label="Ημ. Αναχώρησης *" name="departure_date" form={form} setForm={setForm} type="date" />
-            <F label="Ημ. Επιστροφής" name="return_date" form={form} setForm={setForm} type="date" />
-            <F label="Μεταφορέας" name="carrier" form={form} setForm={setForm} />
-            <F label="Κωδικός Κράτησης" name="booking_ref" form={form} setForm={setForm} />
+          <Modal title={t('pgPassport.newTrip')} onClose={() => setModal(null)} onSave={() => travel.create.mutate(form)} saving={travel.create.isPending}>
+            <F label={t('pgPassport.typeReq')} name="travel_type" form={form} setForm={setForm} options={[{value:'flight',label:t('pgPassport.travelType.flight')},{value:'ferry',label:t('pgPassport.travelType.ferry')},{value:'train',label:t('pgPassport.travelType.train')},{value:'road',label:t('pgPassport.travelType.road')},{value:'international',label:t('pgPassport.travelType.international')}]} />
+            <F label={t('pgPassport.origin')} name="origin_city" form={form} setForm={setForm} />
+            <F label={t('pgPassport.destinationReq')} name="destination_city" form={form} setForm={setForm} />
+            <F label={t('pgPassport.destCountry')} name="destination_country" form={form} setForm={setForm} />
+            <F label={t('pgPassport.departureReq')} name="departure_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.returnDate')} name="return_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.carrier')} name="carrier" form={form} setForm={setForm} />
+            <F label={t('pgPassport.bookingRef')} name="booking_ref" form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'access' && (
-          <Modal title="Χορήγηση Πρόσβασης σε Κτηνίατρο" onClose={() => setModal(null)} onSave={() => addAccess.mutate(form)} saving={addAccess.isPending}>
-            <F label="Email Κτηνιάτρου *" name="provider_email" form={form} setForm={setForm} type="email" />
-            <F label="Όνομα Κτηνιάτρου" name="provider_name" form={form} setForm={setForm} />
-            <F label="Αιτία / Σχόλιο" name="reason" form={form} setForm={setForm} />
-            <F label="Λήξη Πρόσβασης" name="expires_at" form={form} setForm={setForm} type="date" />
+          <Modal title={t('pgPassport.grantAccessTitle')} onClose={() => setModal(null)} onSave={() => addAccess.mutate(form)} saving={addAccess.isPending}>
+            <F label={t('pgPassport.vetEmailReq')} name="provider_email" form={form} setForm={setForm} type="email" />
+            <F label={t('pgPassport.vetName')} name="provider_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.reasonComment')} name="reason" form={form} setForm={setForm} />
+            <F label={t('pgPassport.accessExpiry')} name="expires_at" form={form} setForm={setForm} type="date" />
           </Modal>
         )}
       </AnimatePresence>

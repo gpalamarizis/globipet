@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import { Mic, MicOff, Video, VideoOff, MessageSquare, PhoneOff, X } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: string; vetName: string; onEnd: () => void }) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const [muted, setMuted] = useState(false)
   const [videoOff, setVideoOff] = useState(false)
@@ -17,7 +19,7 @@ export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: stri
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-white font-medium text-sm">{vetName}</span>
-          <span className="text-gray-400 text-xs">Τηλεϊατρική Συνεδρία</span>
+          <span className="text-gray-400 text-xs">{t('cmpJitsi.session')}</span>
         </div>
         <button onClick={onEnd} className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors">
           <X size={18} />

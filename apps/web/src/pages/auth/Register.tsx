@@ -147,7 +147,7 @@ export default function Register() {
               <input type={showPass ? 'text' : 'password'} className="input" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ημερομηνία γέννησης</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('pgRegister.birthDate')}</label>
               <input type="date" className="input" value={birthDate} max={maxBirthDate()}
                 onChange={e => setBirthDate(e.target.value)} required />
               <p className="text-xs text-gray-400 mt-1">{t('registerExtra.minAgeHint')}</p>

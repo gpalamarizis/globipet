@@ -39,19 +39,19 @@ export default function ForumTopic() {
 
   const postReply = useMutation({
     mutationFn: () => api.post(`/forum/${id}/replies`, { content: reply.trim() }),
-    onSuccess: () => { setReply(''); invalidate(); toast.success(t('forum.replied', 'Η απάντηση στάλθηκε')) },
+    onSuccess: () => { setReply(''); invalidate(); toast.success(t('forum.replied')) },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const markAnswer = useMutation({
     mutationFn: (replyId: string) => api.post(`/forum/replies/${replyId}/answer`),
-    onSuccess: () => { invalidate(); toast.success(t('forum.markedAnswer', 'Σημειώθηκε ως απάντηση')) },
+    onSuccess: () => { invalidate(); toast.success(t('forum.markedAnswer')) },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
   const deleteReply = useMutation({
     mutationFn: (replyId: string) => api.delete(`/forum/replies/${replyId}`),
-    onSuccess: () => { invalidate(); toast.success(t('common.deleted', 'Διαγράφηκε')) },
+    onSuccess: () => { invalidate(); toast.success(t('common.deleted')) },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
@@ -63,9 +63,9 @@ export default function ForumTopic() {
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">💬</p>
       <p className="font-semibold text-gray-900 dark:text-white mb-3">
-        {t('forum.notFound', 'Το θέμα δεν βρέθηκε')}
+        {t('forum.notFound')}
       </p>
-      <Link to="/forum" className="btn-primary">{t('nav.forum', 'Φόρουμ')}</Link>
+      <Link to="/forum" className="btn-primary">{t('nav.forum')}</Link>
     </div>
   )
 
@@ -77,7 +77,7 @@ export default function ForumTopic() {
     <div className="page-container py-6 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <button onClick={() => navigate('/forum')}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-900 mb-4">
-        <ArrowLeft size={15} /> {t('nav.forum', 'Φόρουμ')}
+        <ArrowLeft size={15} /> {t('nav.forum')}
       </button>
 
       {/* The question */}
@@ -86,7 +86,7 @@ export default function ForumTopic() {
           {topic.is_pinned && <Pin size={13} className="text-brand-900 dark:text-yellow-400" />}
           {topic.is_solved && (
             <span className="flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
-              <CheckCircle2 size={11} /> {t('forum.solved', 'Λύθηκε')}
+              <CheckCircle2 size={11} /> {t('forum.solved')}
             </span>
           )}
           <span className="text-xs bg-gray-50 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">
@@ -127,7 +127,7 @@ export default function ForumTopic() {
 
       {/* Replies */}
       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-        {replies.length} {t('forum.replies', 'απαντήσεις')}
+        {t('forum.repliesCount', { count: replies.length })}
       </p>
 
       <div className="space-y-3 mb-6">
@@ -137,7 +137,7 @@ export default function ForumTopic() {
             className={cn('card p-4', r.is_answer && 'ring-2 ring-green-400 dark:ring-green-600')}>
             {r.is_answer && (
               <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400 font-medium mb-2">
-                <CheckCircle2 size={12} /> {t('forum.acceptedAnswer', 'Αποδεκτή απάντηση')}
+                <CheckCircle2 size={12} /> {t('forum.acceptedAnswer')}
               </span>
             )}
             <div className="flex items-center gap-2 mb-2">
@@ -155,14 +155,14 @@ export default function ForumTopic() {
                 {/* Only the person who asked decides what answered it. */}
                 {(isTopicAuthor || isAdmin) && !r.is_answer && (
                   <button onClick={() => markAnswer.mutate(r.id)}
-                    title={t('forum.markAnswer', 'Σήμανση ως απάντηση')}
+                    title={t('forum.markAnswer')}
                     className="text-gray-400 hover:text-green-600 p-1">
                     <Check size={14} />
                   </button>
                 )}
                 {(r.author_email === user?.email || isAdmin) && (
                   <button onClick={() => {
-                      if (confirm(t('forum.confirmDelete', 'Να διαγραφεί η απάντηση;'))) deleteReply.mutate(r.id)
+                      if (confirm(t('forum.confirmDelete'))) deleteReply.mutate(r.id)
                     }}
                     className="text-gray-400 hover:text-red-600 p-1">
                     <Trash2 size={14} />
@@ -180,7 +180,7 @@ export default function ForumTopic() {
           <div className="card p-8 text-center">
             <MessageSquare size={32} className="mx-auto text-gray-200 mb-2" />
             <p className="text-sm text-gray-500">
-              {t('forum.noReplies', 'Καμία απάντηση ακόμη. Βοήθησε πρώτος.')}
+              {t('forum.noReplies')}
             </p>
           </div>
         )}
@@ -190,23 +190,23 @@ export default function ForumTopic() {
       {isAuthenticated ? (
         <div className="card p-4">
           <textarea className="input resize-none" rows={4}
-            placeholder={t('forum.replyPlaceholder', 'Γράψε την απάντησή σου...')}
+            placeholder={t('forum.replyPlaceholder')}
             value={reply} onChange={e => setReply(e.target.value)} />
           <div className="flex justify-end mt-3">
             <button onClick={() => postReply.mutate()}
               disabled={!reply.trim() || postReply.isPending}
               className="btn-primary text-sm flex items-center gap-1.5">
               <Send size={14} />
-              {postReply.isPending ? t('common.loading') : t('forum.reply', 'Απάντηση')}
+              {postReply.isPending ? t('common.loading') : t('forum.reply')}
             </button>
           </div>
         </div>
       ) : (
         <div className="card p-5 text-center">
           <p className="text-sm text-gray-500 mb-3">
-            {t('forum.loginToReply', 'Συνδέσου για να απαντήσεις')}
+            {t('forum.loginToReply')}
           </p>
-          <Link to="/login" className="btn-primary text-sm">{t('auth.login', 'Σύνδεση')}</Link>
+          <Link to="/login" className="btn-primary text-sm">{t('auth.login')}</Link>
         </div>
       )}
     </div>

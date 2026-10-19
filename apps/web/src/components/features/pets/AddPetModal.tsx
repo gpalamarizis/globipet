@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -13,14 +14,14 @@ interface Props {
 }
 
 const species = [
-  { value: 'dog', label: 'Σκύλος', emoji: '🐶' },
-  { value: 'cat', label: 'Γάτα', emoji: '🐱' },
-  { value: 'bird', label: 'Πτηνό', emoji: '🐦' },
-  { value: 'rabbit', label: 'Κουνέλι', emoji: '🐰' },
-  { value: 'fish', label: 'Ψάρι', emoji: '🐟' },
-  { value: 'reptile', label: 'Ερπετό', emoji: '🦎' },
-  { value: 'horse', label: 'Άλογο', emoji: '🐴' },
-  { value: 'other', label: 'Άλλο', emoji: '🐾' },
+  { value: 'dog', labelKey: 'cmpAddPet.species.dog', emoji: '🐶' },
+  { value: 'cat', labelKey: 'cmpAddPet.species.cat', emoji: '🐱' },
+  { value: 'bird', labelKey: 'cmpAddPet.species.bird', emoji: '🐦' },
+  { value: 'rabbit', labelKey: 'cmpAddPet.species.rabbit', emoji: '🐰' },
+  { value: 'fish', labelKey: 'cmpAddPet.species.fish', emoji: '🐟' },
+  { value: 'reptile', labelKey: 'cmpAddPet.species.reptile', emoji: '🦎' },
+  { value: 'horse', labelKey: 'cmpAddPet.species.horse', emoji: '🐴' },
+  { value: 'other', labelKey: 'cmpAddPet.species.other', emoji: '🐾' },
 ]
 
 // is_sterilized is deliberately a three-way choice, not a checkbox. On a pet
@@ -30,6 +31,7 @@ const species = [
 const emptyForm = { name: '', species: 'dog', breed: '', age: '', weight: '', gender: 'male', color: '', microchip_number: '', image_url: '', is_sterilized: '' }
 
 export default function AddPetModal({ open, onClose, editing }: Props) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [form, setForm] = useState(emptyForm)
@@ -64,9 +66,9 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
     try {
       const url = await uploadFile(file, 'pets')
       setForm(f => ({ ...f, image_url: url }))
-      toast.success('Φωτογραφία ανέβηκε!')
+      toast.success(t('cmpAddPet.photoUploaded'))
     } catch {
-      toast.error('Σφάλμα κατά το upload')
+      toast.error(t('cmpAddPet.uploadError'))
     } finally {
       setUploading(false)
     }
@@ -92,11 +94,11 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-pets'] })
-      toast.success(editing ? `${form.name} ενημερώθηκε!` : `${form.name} προστέθηκε!`)
+      toast.success(editing ? t('cmpAddPet.updated', { name: form.name }) : t('cmpAddPet.added', { name: form.name }))
       setForm(emptyForm)
       onClose()
     },
-    onError: () => toast.error('Σφάλμα κατά την αποθήκευση'),
+    onError: () => toast.error(t('cmpAddPet.saveError')),
   })
 
   return (
@@ -113,7 +115,7 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editing ? 'Επεξεργασία κατοικίδιου' : 'Προσθήκη κατοικίδιου'}
+                {editing ? t('cmpAddPet.editTitle') : t('cmpAddPet.addTitle')}
               </h2>
               <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
@@ -123,9 +125,9 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
                 <div onClick={() => fileInputRef.current?.click()}
                   className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-orange-400 transition-colors overflow-hidden">
                   {form.image_url
-                    ? <img src={form.image_url} alt="pet" className="w-full h-full object-cover"/>
+                    ? <img src={form.image_url} alt={t('cmpAddPet.photoAlt')} className="w-full h-full object-cover"/>
                     : uploading
-                      ? <span className="text-xs text-gray-400">Ανέβασμα...</span>
+                      ? <span className="text-xs text-gray-400">{t('cmpAddPet.uploading')}</span>
                       : <Camera size={28} className="text-gray-400"/>
                   }
                 </div>
@@ -133,33 +135,33 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Όνομα *</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.nameLabel')}</label>
                 <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800"
-                  placeholder="π.χ. Ρέξ" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                  placeholder={t('cmpAddPet.namePlaceholder')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Είδος *</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.speciesLabel')}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {species.map(s => (
                     <button key={s.value} type="button" onClick={() => setForm(f => ({ ...f, species: s.value }))}
                       className={`p-2 rounded-xl border text-center transition-all ${form.species === s.value ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-orange-300'}`}>
                       <span className="text-xl block">{s.emoji}</span>
-                      <span className="text-xs text-gray-600 dark:text-gray-400">{s.label}</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">{t(s.labelKey)}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {[['breed','Ράτσα','π.χ. Labrador'],['color','Χρώμα','π.χ. Καφέ']].map(([k,l,p]) => (
+                {[['breed',t('cmpAddPet.breed'),t('cmpAddPet.breedPlaceholder')],['color',t('cmpAddPet.color'),t('cmpAddPet.colorPlaceholder')]].map(([k,l,p]) => (
                   <div key={k}>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{l}</label>
                     <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800"
                       placeholder={p} value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
                   </div>
                 ))}
-                {[['age','Ηλικία (έτη)','π.χ. 3'],['weight','Βάρος (kg)','π.χ. 25']].map(([k,l,p]) => (
+                {[['age',t('cmpAddPet.age'),t('cmpAddPet.agePlaceholder')],['weight',t('cmpAddPet.weight'),t('cmpAddPet.weightPlaceholder')]].map(([k,l,p]) => (
                   <div key={k}>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{l}</label>
                     <input type="number" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800"
@@ -169,9 +171,9 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Φύλο</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.gender')}</label>
                 <div className="flex gap-2">
-                  {[{ v: 'male', l: '♂ Αρσενικό' }, { v: 'female', l: '♀ Θηλυκό' }].map(g => (
+                  {[{ v: 'male', l: t('cmpAddPet.male') }, { v: 'female', l: t('cmpAddPet.female') }].map(g => (
                     <button key={g.v} type="button" onClick={() => setForm(f => ({ ...f, gender: g.v }))}
                       className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${form.gender === g.v ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700' : 'border-gray-200 dark:border-gray-700'}`}>
                       {g.l}
@@ -181,9 +183,9 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Στειρωμένο</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.sterilized')}</label>
                 <div className="flex gap-2">
-                  {[{ v: 'yes', l: 'Ναι' }, { v: 'no', l: 'Όχι' }, { v: '', l: 'Δεν γνωρίζω' }].map(o => (
+                  {[{ v: 'yes', l: t('common.yes') }, { v: 'no', l: t('common.no') }, { v: '', l: t('cmpAddPet.unknown') }].map(o => (
                     <button key={o.v || 'unknown'} type="button" onClick={() => setForm(f => ({ ...f, is_sterilized: o.v }))}
                       className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${form.is_sterilized === o.v ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700' : 'border-gray-200 dark:border-gray-700'}`}>
                       {o.l}
@@ -193,17 +195,17 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Αριθμός Microchip</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.microchip')}</label>
                 <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800"
-                  placeholder="15 ψηφία" value={form.microchip_number} onChange={e => setForm(f => ({ ...f, microchip_number: e.target.value }))} />
+                  placeholder={t('cmpAddPet.microchipPlaceholder')} value={form.microchip_number} onChange={e => setForm(f => ({ ...f, microchip_number: e.target.value }))} />
               </div>
             </div>
 
             <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium">Ακύρωση</button>
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium">{t('common.cancel')}</button>
               <button onClick={() => savePet.mutate()} disabled={!form.name || savePet.isPending}
                 className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-medium disabled:opacity-50">
-                {savePet.isPending ? 'Αποθήκευση...' : editing ? 'Ενημέρωση' : 'Προσθήκη'}
+                {savePet.isPending ? t('cmpAddPet.saving') : editing ? t('cmpAddPet.update') : t('common.add')}
               </button>
             </div>
           </motion.div>

@@ -54,7 +54,7 @@ export default function EventDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
       queryClient.invalidateQueries({ queryKey: ['event', id] })
-      toast.success(t('events.registered', 'Δήλωσες συμμετοχή!'))
+      toast.success(t('events.registered'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -64,7 +64,7 @@ export default function EventDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
       queryClient.invalidateQueries({ queryKey: ['event', id] })
-      toast.success(t('events.cancelled', 'Η συμμετοχή ακυρώθηκε'))
+      toast.success(t('events.cancelled'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -85,9 +85,9 @@ export default function EventDetail() {
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🎪</p>
       <p className="font-semibold text-gray-900 dark:text-white mb-3">
-        {t('events.notFound', 'Η εκδήλωση δεν βρέθηκε')}
+        {t('events.notFound')}
       </p>
-      <Link to="/events" className="btn-primary">{t('nav.events', 'Εκδηλώσεις')}</Link>
+      <Link to="/events" className="btn-primary">{t('nav.events')}</Link>
     </div>
   )
 
@@ -102,7 +102,7 @@ export default function EventDetail() {
     <div className="page-container py-6 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <button onClick={() => navigate('/events')}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-900 mb-4">
-        <ArrowLeft size={15} /> {t('nav.events', 'Εκδηλώσεις')}
+        <ArrowLeft size={15} /> {t('nav.events')}
       </button>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -119,7 +119,7 @@ export default function EventDetail() {
               </h1>
               <span className={cn('badge text-xs shrink-0',
                 event.price > 0 ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700')}>
-                {event.price > 0 ? `€${event.price}` : t('events.free', 'Δωρεάν')}
+                {event.price > 0 ? `€${event.price}` : t('common.free')}
               </span>
             </div>
 
@@ -145,8 +145,8 @@ export default function EventDetail() {
                 <div className={cn('flex items-center gap-2 text-sm',
                   spotsLeft === 0 ? 'text-red-500' : spotsLeft <= 5 ? 'text-amber-600' : 'text-gray-600 dark:text-gray-400')}>
                   {spotsLeft === 0
-                    ? <><Ticket size={15} /> {t('events.soldOut', 'Εξαντλήθηκε')}</>
-                    : <><Users size={15} className="text-gray-400" /> {t('events.spotsLeft', { count: spotsLeft, defaultValue: `${spotsLeft} θέσεις` })}</>}
+                    ? <><Ticket size={15} /> {t('events.soldOut')}</>
+                    : <><Users size={15} className="text-gray-400" /> {t('events.spotsLeft', { count: spotsLeft })}</>}
                 </div>
               )}
             </div>
@@ -166,7 +166,7 @@ export default function EventDetail() {
         {event.description && (
           <div className="card p-5 mb-5">
             <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-              {t('events.about', 'Περιγραφή')}
+              {t('events.about')}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line leading-relaxed">
               {event.description}
@@ -178,41 +178,41 @@ export default function EventDetail() {
         <div className="card p-5 mb-5">
           {!isAuthenticated ? (
             <Link to="/login" className="btn-primary w-full justify-center text-sm">
-              {t('events.loginToJoin', 'Συνδέσου για να δηλώσεις συμμετοχή')}
+              {t('events.loginToJoin')}
             </Link>
           ) : reg?.registered ? (
             <>
               <p className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 font-medium mb-3">
-                <Check size={16} /> {t('events.youAreGoing', 'Δήλωσες συμμετοχή')}
+                <Check size={16} /> {t('events.youAreGoing')}
               </p>
               <button onClick={() => cancel.mutate()} disabled={cancel.isPending}
                 className="btn-secondary w-full justify-center text-sm">
-                {cancel.isPending ? t('common.loading') : t('events.cancelAttendance', 'Ακύρωση συμμετοχής')}
+                {cancel.isPending ? t('common.loading') : t('events.cancelAttendance')}
               </button>
             </>
           ) : spotsLeft === 0 ? (
             <p className="text-sm text-red-500 text-center">
-              {t('events.soldOut', 'Εξαντλήθηκε')}
+              {t('events.soldOut')}
             </p>
           ) : (
             <button onClick={() => register.mutate()} disabled={register.isPending}
               className="btn-primary w-full justify-center text-sm flex items-center gap-2">
               <UserPlus size={15} />
-              {register.isPending ? t('common.loading') : t('events.join', 'Δήλωση συμμετοχής')}
+              {register.isPending ? t('common.loading') : t('events.join')}
             </button>
           )}
         </div>
 
         <div className="card p-5">
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-3">
-            {t('events.organizer', 'Διοργανωτής')}
+            {t('events.organizer')}
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{event.organizer}</p>
           <div className="flex gap-2 flex-wrap">
             {event.organizer_email && (
               <a href={`mailto:${event.organizer_email}?subject=${encodeURIComponent(event.title)}`}
                 className="btn-primary text-sm inline-flex items-center gap-1.5">
-                <Mail size={14} /> {t('events.contactOrganizer', 'Επικοινωνία')}
+                <Mail size={14} /> {t('events.contactOrganizer')}
               </a>
             )}
           </div>

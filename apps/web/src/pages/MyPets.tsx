@@ -30,7 +30,7 @@ export default function MyPets() {
 
   const deletePet = useMutation({
     mutationFn: (id: string) => api.delete(`/pets/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success('Διαγράφηκε') },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-pets'] }); toast.success(t('common.deleted')) },
   })
 
   const toggleLost = useMutation({
@@ -108,21 +108,21 @@ export default function MyPets() {
                     was unreachable from the interface. */}
                 <Link to={`/my-pets/${pet.id}`}
                   className="w-full btn-primary text-xs py-2 mb-2 flex items-center justify-center gap-1.5">
-                  <FileText size={12} /> Ιατρικός φάκελος
+                  <FileText size={12} /> {t('pgMyPets.medicalFile')}
                 </Link>
 
                 <div className="flex gap-2 mb-2">
                   <button onClick={() => setEditPet(pet)} className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1.5">
-                    <Edit size={12} /> Επεξεργασία
+                    <Edit size={12} /> {t('common.edit')}
                   </button>
                   <button onClick={() => toggleLost.mutate({ id: pet.id, isLost: !pet.is_lost })}
                     className={cn('flex-1 text-xs py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5', pet.is_lost ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600')}>
                     <MapPin size={12} /> {pet.is_lost ? t('pets.markAsFound') : t('pets.markAsLost')}
                   </button>
                 </div>
-                <button onClick={() => { if (confirm(`Διαγραφή ${pet.name};`)) deletePet.mutate(pet.id) }}
+                <button onClick={() => { if (confirm(t('pgMyPets.confirmDelete', { name: pet.name }))) deletePet.mutate(pet.id) }}
                   className="w-full btn-ghost text-xs py-1.5 text-red-500 flex items-center justify-center gap-1.5">
-                  <Trash2 size={12} /> Διαγραφή
+                  <Trash2 size={12} /> {t('common.delete')}
                 </button>
               </div>
             </motion.div>

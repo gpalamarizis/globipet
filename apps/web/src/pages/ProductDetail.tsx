@@ -62,7 +62,7 @@ export default function ProductDetail() {
       comment: reviewComment.trim() || undefined,
     }),
     onSuccess: () => {
-      toast.success(t('reviews.thanks', 'Ευχαριστούμε για την αξιολόγηση!'))
+      toast.success(t('reviews.thanks'))
       setReviewComment('')
       queryClient.invalidateQueries({ queryKey: ['product-reviews', id] })
       queryClient.invalidateQueries({ queryKey: ['can-review-product', id] })
@@ -157,7 +157,7 @@ export default function ProductDetail() {
           <div className="flex items-center gap-2">
             {product.brand && <span className="text-sm text-gray-500 font-medium">{product.brand}</span>}
             {product.is_featured && (
-              <span className="badge bg-brand-900 text-white text-xs">⭐ Featured</span>
+              <span className="badge bg-brand-900 text-white text-xs">⭐ {t('pgProductDetail.featured')}</span>
             )}
             {product.discount_percentage && (
               <span className="badge bg-red-500 text-white text-xs">-{product.discount_percentage}%</span>
@@ -198,17 +198,17 @@ export default function ProductDetail() {
               <>
                 <Check size={16} className="text-green-500" />
                 <span className="text-sm text-green-600 font-medium">
-                  {product.stock > 10 ? 'In stock' : `Only ${product.stock} left`}
+                  {product.stock > 10 ? t('pgProductDetail.inStock') : t('pgProductDetail.onlyLeft', { count: product.stock })}
                 </span>
               </>
             ) : (
-              <span className="text-sm text-red-500 font-medium">Out of stock</span>
+              <span className="text-sm text-red-500 font-medium">{t('pgProductDetail.outOfStock')}</span>
             )}
           </div>
 
           {/* Quantity */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Qty:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('pgProductDetail.qty')}</span>
             <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-xl">
               <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 className="p-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-l-xl transition-colors">
@@ -281,7 +281,7 @@ export default function ProductDetail() {
         {tab === 'description' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose dark:prose-invert max-w-none">
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-              {product.description || 'No description available for this product.'}
+              {product.description || t('pgProductDetail.noDescription')}
             </p>
             {/* Το Product δεν έχει πεδίο weight: ο έλεγχος ήταν πάντα ψευδής
                 και ο πίνακας χαρακτηριστικών δεν εμφανιζόταν ποτέ. Τώρα
@@ -309,7 +309,7 @@ export default function ProductDetail() {
             {eligibility?.can_review && (
               <div className="card p-4">
                 <p className="font-semibold text-sm text-gray-900 dark:text-white mb-3">
-                  {t('reviews.writeOne', 'Γράψε την αξιολόγησή σου')}
+                  {t('reviews.writeOne')}
                 </p>
                 <div className="flex items-center gap-1 mb-3">
                   {[1,2,3,4,5].map(s => (
@@ -323,27 +323,27 @@ export default function ProductDetail() {
                   value={reviewComment}
                   onChange={e => setReviewComment(e.target.value)}
                   rows={3}
-                  placeholder={t('reviews.commentPlaceholder', 'Πώς σου φάνηκε; (προαιρετικό)')}
+                  placeholder={t('reviews.commentPlaceholder')}
                   className="input w-full" />
                 <button
                   onClick={() => submitReview.mutate()}
                   disabled={submitReview.isPending}
                   className="btn-primary text-sm mt-3">
-                  {submitReview.isPending ? t('common.loading') : t('reviews.submit', 'Υποβολή')}
+                  {submitReview.isPending ? t('common.loading') : t('reviews.submit')}
                 </button>
               </div>
             )}
 
             {isAuthenticated && eligibility && !eligibility.can_review && eligibility.reason === 'not_purchased' && (
               <p className="text-xs text-gray-400">
-                {t('reviews.onlyBuyers', 'Μόνο όσοι αγόρασαν το προϊόν μπορούν να το αξιολογήσουν.')}
+                {t('reviews.onlyBuyers')}
               </p>
             )}
 
             {reviews.length === 0 ? (
               <div className="text-center py-12">
                 <Star size={40} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">{t('reviews.none', 'Καμία αξιολόγηση ακόμη.')}</p>
+                <p className="text-gray-500">{t('reviews.none')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -369,7 +369,7 @@ export default function ProductDetail() {
                     {r.response && (
                       <div className="mt-3 pl-3 border-l-2 border-brand-200 dark:border-brand-800">
                         <p className="text-xs font-semibold text-brand-900 dark:text-yellow-400 mb-0.5">
-                          {t('reviews.sellerReply', 'Απάντηση πωλητή')}
+                          {t('reviews.sellerReply')}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{r.response}</p>
                       </div>

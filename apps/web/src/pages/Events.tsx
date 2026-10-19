@@ -16,13 +16,13 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
  */
 
 const EVENT_TYPES = [
-  { value: '',           labelKey: 'events.types.all',        fallback: 'Όλα',        emoji: '🎪' },
-  { value: 'meetup',     labelKey: 'events.types.meetup',     fallback: 'Συνάντηση',  emoji: '🐾' },
-  { value: 'show',       labelKey: 'events.types.show',       fallback: 'Έκθεση',     emoji: '🏆' },
-  { value: 'adoption',   labelKey: 'events.types.adoption',   fallback: 'Υιοθεσία',   emoji: '🏠' },
-  { value: 'training',   labelKey: 'events.types.training',   fallback: 'Εκπαίδευση', emoji: '🎓' },
-  { value: 'charity',    labelKey: 'events.types.charity',    fallback: 'Φιλανθρωπία',emoji: '❤️' },
-  { value: 'competition',labelKey: 'events.types.competition',fallback: 'Αγώνας',     emoji: '🥇' },
+  { value: '',           labelKey: 'common.all',              emoji: '🎪' },
+  { value: 'meetup',     labelKey: 'events.types.meetup',     emoji: '🐾' },
+  { value: 'show',       labelKey: 'events.types.show',       emoji: '🏆' },
+  { value: 'adoption',   labelKey: 'events.types.adoption',   emoji: '🏠' },
+  { value: 'training',   labelKey: 'events.types.training',   emoji: '🎓' },
+  { value: 'charity',    labelKey: 'events.types.charity',    emoji: '❤️' },
+  { value: 'competition',labelKey: 'events.types.competition',emoji: '🥇' },
 ]
 
 export default function Events() {
@@ -65,9 +65,9 @@ export default function Events() {
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
       <div className="mb-6">
-        <h1 className="section-title mb-1">{t('nav.events', 'Εκδηλώσεις')}</h1>
+        <h1 className="section-title mb-1">{t('nav.events')}</h1>
         <p className="text-gray-500 text-sm">
-          {t('events.subtitle', 'Συναντήσεις, εκθέσεις και δράσεις για κατοικίδια')}
+          {t('events.subtitle')}
         </p>
       </div>
 
@@ -76,13 +76,13 @@ export default function Events() {
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input className="input pl-10 py-2.5"
-            placeholder={t('events.searchPlaceholder', 'Αναζήτηση εκδήλωσης...')}
+            placeholder={t('events.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="relative">
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input className="input pl-10 py-2.5 w-36"
-            placeholder={t('services.cityPlaceholder', 'Πόλη')}
+            placeholder={t('services.cityPlaceholder')}
             value={city} onChange={e => setCity(e.target.value)} />
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function Events() {
               eventType === et.value
                 ? 'bg-brand-900 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300')}>
-            <span>{et.emoji}</span>{t(et.labelKey, et.fallback)}
+            <span>{et.emoji}</span>{t(et.labelKey)}
           </button>
         ))}
       </div>
@@ -106,7 +106,7 @@ export default function Events() {
             upcomingOnly
               ? 'bg-green-600 text-white border-green-600'
               : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
-          <Calendar size={13} /> {t('events.upcomingOnly', 'Μόνο επερχόμενες')}
+          <Calendar size={13} /> {t('events.upcomingOnly')}
         </button>
       </div>
 
@@ -116,16 +116,16 @@ export default function Events() {
         <div className="text-center py-24">
           <Calendar size={48} className="mx-auto text-gray-200 mb-4" />
           <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('events.noResults', 'Καμία εκδήλωση')}
+            {t('events.noResults')}
           </p>
           <p className="text-gray-500 text-sm">
-            {t('events.noResultsDesc', 'Δοκίμασε άλλη πόλη ή κατηγορία.')}
+            {t('events.noResultsDesc')}
           </p>
         </div>
       ) : (
         <>
           <p className="text-sm text-gray-500 mb-4">
-            {data.total} {t('events.results', 'εκδηλώσεις')}
+            {t('pgEvents.resultsCount', { count: data.total })}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {events.map((ev: any, i: number) => {
@@ -143,7 +143,7 @@ export default function Events() {
                         : <div className="w-full h-full flex items-center justify-center text-4xl">🎪</div>}
                       {ev.is_featured && (
                         <div className="absolute top-2 right-2 badge bg-brand-900 text-white text-[10px] flex items-center gap-1">
-                          <Sparkles size={9} /> {t('events.featured', 'Προτεινόμενη')}
+                          <Sparkles size={9} /> {t('events.featured')}
                         </div>
                       )}
                       {ev.price > 0 && (
@@ -153,7 +153,7 @@ export default function Events() {
                       )}
                       {ev.price === 0 && (
                         <div className="absolute bottom-2 left-2 badge bg-green-500 text-white text-[10px] font-bold">
-                          {t('events.free', 'Δωρεάν')}
+                          {t('common.free')}
                         </div>
                       )}
                     </div>
@@ -175,8 +175,8 @@ export default function Events() {
                         <div className={cn('flex items-center gap-1 text-xs mt-2',
                           left === 0 ? 'text-red-500' : left <= 5 ? 'text-amber-600' : 'text-gray-500')}>
                           {left === 0
-                            ? <><Ticket size={11} /> {t('events.soldOut', 'Εξαντλήθηκε')}</>
-                            : <><Users size={11} /> {t('events.spotsLeft', { count: left, defaultValue: `${left} θέσεις` })}</>}
+                            ? <><Ticket size={11} /> {t('events.soldOut')}</>
+                            : <><Users size={11} /> {t('events.spotsLeft', { count: left })}</>}
                         </div>
                       )}
                     </div>

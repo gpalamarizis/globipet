@@ -4,8 +4,10 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { CheckCircle, XCircle, Loader2, Video, Calendar, Clock } from 'lucide-react'
 import { api } from '@/lib/api'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
+import { useTranslation } from 'react-i18next'
 
 export default function TelehealthConfirmation() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -50,8 +52,8 @@ export default function TelehealthConfirmation() {
       {isPaid ? (
         <>
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Η πληρωμή επιβεβαιώθηκε!</h1>
-          <p className="text-sm text-gray-500 mb-6">Η συνεδρία σου με {consultation.provider_name} είναι έτοιμη.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgTeleConfirm.paidTitle')}</h1>
+          <p className="text-sm text-gray-500 mb-6">{t('pgTeleConfirm.paidDesc', { name: consultation.provider_name })}</p>
           <div className="card p-4 mb-6 text-left space-y-2">
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <Calendar size={14} className="text-gray-400" /> {consultation.scheduled_date}
@@ -61,22 +63,22 @@ export default function TelehealthConfirmation() {
             </div>
           </div>
           <button onClick={() => setActiveCall(true)} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
-            <Video size={16} /> Είσοδος στην κλήση
+            <Video size={16} /> {t('pgTeleConfirm.joinCall')}
           </button>
-          <button onClick={() => navigate('/telehealth')} className="btn-secondary w-full mt-3">Πίσω στην Τηλεϊατρική</button>
+          <button onClick={() => navigate('/telehealth')} className="btn-secondary w-full mt-3">{t('pgTeleConfirm.back')}</button>
         </>
       ) : isPending ? (
         <>
           <Loader2 size={56} className="mx-auto text-blue-500 mb-4 animate-spin" />
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Επιβεβαίωση πληρωμής...</h1>
-          <p className="text-sm text-gray-500">Περιμένουμε επιβεβαίωση από τη Viva Wallet. Μην κλείσεις αυτή τη σελίδα.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgTeleConfirm.verifying')}</h1>
+          <p className="text-sm text-gray-500">{t('pgTeleConfirm.verifyingDesc')}</p>
         </>
       ) : (
         <>
           <XCircle size={56} className="mx-auto text-red-500 mb-4" />
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Η πληρωμή δεν ολοκληρώθηκε</h1>
-          <p className="text-sm text-gray-500 mb-6">Δοκίμασε ξανά ή επικοινώνησε μαζί μας αν χρεώθηκες.</p>
-          <button onClick={() => navigate('/telehealth')} className="btn-primary w-full">Πίσω στην Τηλεϊατρική</button>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgTeleConfirm.failedTitle')}</h1>
+          <p className="text-sm text-gray-500 mb-6">{t('pgTeleConfirm.failedDesc')}</p>
+          <button onClick={() => navigate('/telehealth')} className="btn-primary w-full">{t('pgTeleConfirm.back')}</button>
         </>
       )}
     </div>

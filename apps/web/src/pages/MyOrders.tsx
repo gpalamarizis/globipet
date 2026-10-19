@@ -33,7 +33,7 @@ export default function MyOrders() {
   if (!isAuthenticated) return (
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🔒</p>
-      <p className="font-semibold text-gray-900 dark:text-white mb-2">{t('auth.requiredTitle')}</p>
+      <p className="font-semibold text-gray-900 dark:text-white mb-2">{t('authExtra.requiredTitle')}</p>
       <Link to="/login" className="btn-primary inline-block">{t('auth.login')}</Link>
     </div>
   )

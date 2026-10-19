@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 type AnalysisType = 'skin' | 'eye' | 'stool_urine'
 
@@ -37,30 +38,31 @@ const analysisTypes = [
   {
     id: 'skin' as AnalysisType,
     icon: Microscope,
-    title: 'Ανάλυση Δέρματος',
-    description: 'Ανίχνευση δερματικών παθήσεων, εξανθημάτων, τριχόπτωσης',
+    titleKey: 'pgAiHealth.skinTitle',
+    descriptionKey: 'pgAiHealth.skinDesc',
     color: 'orange',
-    examples: ['Εξάνθημα / Ερεθισμός', 'Τριχόπτωση', 'Τραύμα / Πληγή', 'Παράσιτα', 'Αλλεργία'],
+    exampleKeys: ['pgAiHealth.skinEx1', 'pgAiHealth.skinEx2', 'pgAiHealth.skinEx3', 'pgAiHealth.skinEx4', 'pgAiHealth.skinEx5'],
   },
   {
     id: 'eye' as AnalysisType,
     icon: Eye,
-    title: 'Ανάλυση Ματιών',
-    description: 'Ανίχνευση οφθαλμολογικών προβλημάτων και παθήσεων',
+    titleKey: 'pgAiHealth.eyeTitle',
+    descriptionKey: 'pgAiHealth.eyeDesc',
     color: 'blue',
-    examples: ['Ερυθρότητα / Φλεγμονή', 'Έκκριση', 'Θολερότητα', 'Οίδημα βλεφάρου', 'Κερατίτιδα'],
+    exampleKeys: ['pgAiHealth.eyeEx1', 'pgAiHealth.eyeEx2', 'pgAiHealth.eyeEx3', 'pgAiHealth.eyeEx4', 'pgAiHealth.eyeEx5'],
   },
   {
     id: 'stool_urine' as AnalysisType,
     icon: FlaskConical,
-    title: 'Ούρα & Περιττώματα',
-    description: 'AI ανάλυση δείγματος με πλήρες ιστορικό ζώου',
+    titleKey: 'pgAiHealth.stoolTitle',
+    descriptionKey: 'pgAiHealth.stoolDesc',
     color: 'teal',
-    examples: ['Αίμα στα κόπρανα', 'Διάρροια', 'Σκούρα ούρα', 'Αλλαγή χρώματος', 'Ασυνήθιστη σύσταση'],
+    exampleKeys: ['pgAiHealth.stoolEx1', 'pgAiHealth.stoolEx2', 'pgAiHealth.stoolEx3', 'pgAiHealth.stoolEx4', 'pgAiHealth.stoolEx5'],
   },
 ]
 
 export default function AiPetHealth() {
+  const { t } = useTranslation()
   const [step, setStep] = useState<'select' | 'upload' | 'analyzing' | 'result'>('select')
   const [analysisType, setAnalysisType] = useState<AnalysisType | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -99,7 +101,7 @@ export default function AiPetHealth() {
       setResult(data)
       setStep('result')
     } catch (err: any) {
-      toast.error('Σφάλμα κατά την ανάλυση')
+      toast.error(t('pgAiHealth.errAnalysis'))
       setStep('upload')
       setUploading(false)
     }
@@ -114,9 +116,9 @@ export default function AiPetHealth() {
   }
 
   const severityConfig = {
-    low: { color: 'green', label: 'Χαμηλή ανησυχία', icon: CheckCircle },
-    medium: { color: 'orange', label: 'Μέτρια ανησυχία', icon: AlertTriangle },
-    high: { color: 'red', label: 'Υψηλή ανησυχία', icon: AlertTriangle },
+    low: { color: 'green', label: t('pgAiHealth.sevLow'), icon: CheckCircle },
+    medium: { color: 'orange', label: t('pgAiHealth.sevMedium'), icon: AlertTriangle },
+    high: { color: 'red', label: t('pgAiHealth.sevHigh'), icon: AlertTriangle },
   }
 
   return (
@@ -128,8 +130,8 @@ export default function AiPetHealth() {
           <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Stethoscope size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">AI Pet Health Assistant</h1>
-          <p className="text-gray-500 dark:text-gray-400">Ανάλυση φωτογραφιών με τεχνητή νοημοσύνη για έγκαιρη διάγνωση</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgAiHealth.title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400">{t('pgAiHealth.subtitle')}</p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -144,25 +146,25 @@ export default function AiPetHealth() {
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${type.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900/20' : type.color === 'teal' ? 'bg-teal-100 dark:bg-teal-900/20' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
                       <type.icon size={24} className={type.color === 'orange' ? 'text-orange-500' : type.color === 'teal' ? 'text-teal-500' : 'text-blue-500'} />
                     </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{type.title}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{type.description}</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t(type.titleKey)}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t(type.descriptionKey)}</p>
                     <div className="space-y-1">
-                      {type.examples.map(ex => (
+                      {type.exampleKeys.map(ex => (
                         <div key={ex} className="flex items-center gap-2 text-xs text-gray-400">
                           <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                          {ex}
+                          {t(ex)}
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center gap-1 mt-4 text-orange-500 text-sm font-medium group-hover:gap-2 transition-all">
-                      Επιλογή <ChevronRight size={16} />
+                      {t('pgAiHealth.select')} <ChevronRight size={16} />
                     </div>
                   </button>
                 ))}
               </div>
 
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
-                <strong>⚠️ Σημαντικό:</strong> Το AI assistant παρέχει ενδεικτική ανάλυση και δεν υποκαθιστά την επίσκεψη σε κτηνίατρο. Σε περίπτωση αμφιβολίας, επικοινωνήστε με εξειδικευμένο κτηνίατρο.
+                <strong>{t('pgAiHealth.importantLabel')}</strong> {t('pgAiHealth.importantText')}
               </div>
             </motion.div>
           )}
@@ -177,9 +179,9 @@ export default function AiPetHealth() {
                   </button>
                   <div>
                     <h2 className="font-semibold text-gray-900 dark:text-white">
-                      {analysisType === 'skin' ? '🔬 Ανάλυση Δέρματος' : '👁️ Ανάλυση Ματιών'}
+                      {analysisType === 'skin' ? `🔬 ${t('pgAiHealth.skinTitle')}` : `👁️ ${t('pgAiHealth.eyeTitle')}`}
                     </h2>
-                    <p className="text-sm text-gray-400">Ανεβάστε φωτογραφία για ανάλυση</p>
+                    <p className="text-sm text-gray-400">{t('pgAiHealth.uploadSubtitle')}</p>
                   </div>
                 </div>
 
@@ -187,12 +189,12 @@ export default function AiPetHealth() {
                   <div onClick={() => fileInputRef.current?.click()}
                     className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-12 text-center cursor-pointer hover:border-orange-400 transition-colors">
                     <Camera size={40} className="text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium mb-1">Κλικ για επιλογή φωτογραφίας</p>
-                    <p className="text-gray-400 text-sm">JPG, PNG έως 5MB</p>
+                    <p className="text-gray-500 font-medium mb-1">{t('pgAiHealth.clickToSelect')}</p>
+                    <p className="text-gray-400 text-sm">{t('pgAiHealth.fileHint')}</p>
                   </div>
                 ) : (
                   <div className="relative">
-                    <img src={imageUrl} alt="preview" className="w-full max-h-80 object-contain rounded-xl bg-gray-100 dark:bg-gray-800" />
+                    <img src={imageUrl} alt={t('pgAiHealth.previewAlt')} className="w-full max-h-80 object-contain rounded-xl bg-gray-100 dark:bg-gray-800" />
                     <button onClick={() => { setImageUrl(null); setImageFile(null) }}
                       className="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white">
                       <X size={16} />
@@ -205,18 +207,18 @@ export default function AiPetHealth() {
                 {imageUrl && (
                   <div className="mt-4 space-y-3">
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-sm text-gray-500">
-                      <strong className="text-gray-700 dark:text-gray-300">Συμβουλές για καλύτερα αποτελέσματα:</strong>
+                      <strong className="text-gray-700 dark:text-gray-300">{t('pgAiHealth.tipsTitle')}</strong>
                       <ul className="mt-1 space-y-1 list-disc list-inside">
                         {analysisType === 'skin'
-                          ? ['Φωτογραφίστε κοντά στην πάσχουσα περιοχή', 'Καλός φωτισμός χωρίς φλας', 'Η περιοχή να είναι καθαρή']
-                          : ['Κρατήστε το μάτι ανοιχτό', 'Φυσικό φως χωρίς λάμψη', 'Φωτογραφίστε και τα δύο μάτια αν υπάρχει σύγκριση']
+                          ? [t('pgAiHealth.skinTip1'), t('pgAiHealth.skinTip2'), t('pgAiHealth.skinTip3')]
+                          : [t('pgAiHealth.eyeTip1'), t('pgAiHealth.eyeTip2'), t('pgAiHealth.eyeTip3')]
                         }
                       </ul>
                     </div>
                     <button onClick={handleAnalyze}
                       className="w-full py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
                       <Stethoscope size={18} />
-                      Εκκίνηση Ανάλυσης AI
+                      {t('pgAiHealth.startAnalysis')}
                     </button>
                   </div>
                 )}
@@ -231,8 +233,8 @@ export default function AiPetHealth() {
               <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
                 <Stethoscope size={36} className="text-white" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ανάλυση σε εξέλιξη...</h2>
-              <p className="text-gray-400 mb-6">{uploading ? 'Μεταφόρτωση φωτογραφίας...' : 'Το AI αναλύει την εικόνα...'}</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('pgAiHealth.analyzing')}</h2>
+              <p className="text-gray-400 mb-6">{uploading ? t('pgAiHealth.uploading') : t('pgAiHealth.aiAnalyzing')}</p>
               <div className="flex justify-center gap-1">
                 {[0,1,2].map(i => (
                   <div key={i} className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -266,7 +268,7 @@ export default function AiPetHealth() {
 
                     {/* Findings */}
                     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🔍 Ευρήματα</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('pgAiHealth.findings')}</h3>
                       <ul className="space-y-2">
                         {result.findings.map((f, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -280,7 +282,7 @@ export default function AiPetHealth() {
                     {/* Possible conditions */}
                     {result.conditions.length > 0 && (
                       <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📋 Πιθανές Παθήσεις</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('pgAiHealth.conditions')}</h3>
                         <div className="flex flex-wrap gap-2">
                           {result.conditions.map((c, i) => (
                             <span key={i} className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-full text-sm">{renderItem(c)}</span>
@@ -291,16 +293,16 @@ export default function AiPetHealth() {
 
                     {/* Recommendation */}
                     <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">💡 Σύσταση</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('pgAiHealth.recommendation')}</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{result.recommendation}</p>
                     </div>
 
                     {/* CTA */}
                     <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-5 text-white">
-                      <h3 className="font-semibold mb-1">Θέλετε επαγγελματική γνώμη;</h3>
-                      <p className="text-sm text-orange-100 mb-3">Συνδεθείτε με εξειδικευμένο κτηνίατρο τώρα</p>
+                      <h3 className="font-semibold mb-1">{t('pgAiHealth.ctaTitle')}</h3>
+                      <p className="text-sm text-orange-100 mb-3">{t('pgAiHealth.ctaDesc')}</p>
                       <Link to="/telehealth" className="block w-full py-2.5 bg-white text-orange-600 rounded-xl font-medium text-center text-sm hover:bg-orange-50 transition-colors">
-                        Τηλεϊατρική Συνεδρία →
+                        {t('pgAiHealth.ctaButton')}
                       </Link>
                     </div>
 
@@ -308,7 +310,7 @@ export default function AiPetHealth() {
                     <div className="text-xs text-gray-400 text-center px-4">{result.disclaimer}</div>
 
                     <button onClick={handleReset} className="w-full py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      Νέα Ανάλυση
+                      {t('pgAiHealth.newAnalysis')}
                     </button>
                   </div>
                 )

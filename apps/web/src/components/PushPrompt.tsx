@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/auth'
 import {
   isPushSupported, isStandalone, getPermissionState,
@@ -45,6 +46,7 @@ function dismissedRecently(): boolean {
 }
 
 export default function PushPrompt() {
+  const { t } = useTranslation()
   const { isAuthenticated } = useAuthStore()
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -80,11 +82,11 @@ export default function PushPrompt() {
     setBusy(false)
     setVisible(false)
     if (result.ok) {
-      toast.success('Οι ειδοποιήσεις ενεργοποιήθηκαν')
+      toast.success(t('cmpPushPrompt.enabled'))
     } else if (result.reason === 'denied') {
-      toast('Μπορείτε να τις ενεργοποιήσετε αργότερα από το προφίλ σας')
+      toast(t('cmpPushPrompt.deniedHint'))
     } else {
-      toast.error('Κάτι πήγε στραβά. Δοκιμάστε ξανά από το προφίλ σας.')
+      toast.error(t('cmpPushPrompt.error'))
     }
     // Είτε πέτυχε είτε όχι, δεν ξαναρωτάμε σύντομα.
     try { localStorage.setItem(DISMISS_KEY, String(Date.now())) } catch {}
@@ -107,26 +109,25 @@ export default function PushPrompt() {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 dark:text-white">
-                  Να σας ειδοποιούμε;
+                  {t('cmpPushPrompt.title')}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Θα μαθαίνετε αμέσως για κρατήσεις, παραγγελίες και μηνύματα — ακόμα κι όταν
-                  η σελίδα είναι κλειστή.
+                  {t('cmpPushPrompt.body')}
                 </p>
 
                 <div className="flex gap-2 mt-4">
                   <button onClick={enable} disabled={busy}
                     className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
                     <Bell size={14} />
-                    {busy ? 'Παρακαλώ περιμένετε…' : 'Ενεργοποίηση'}
+                    {busy ? t('cmpPushPrompt.wait') : t('cmpPushPrompt.enable')}
                   </button>
                   <button onClick={dismiss} className="btn-ghost px-4 py-2 text-sm">
-                    Όχι τώρα
+                    {t('cmpPushPrompt.notNow')}
                   </button>
                 </div>
               </div>
 
-              <button onClick={dismiss} aria-label="Κλείσιμο"
+              <button onClick={dismiss} aria-label={t('common.close')}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
                 <X size={16} />
               </button>

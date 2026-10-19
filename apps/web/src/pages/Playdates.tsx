@@ -5,20 +5,22 @@ import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List }
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
 
 const eventTypes = [
-  { value: 'walk', label: '🚶 Βόλτα' },
-  { value: 'play', label: '🎾 Παιχνίδι' },
-  { value: 'meetup', label: '🐾 Meetup' },
-  { value: 'training', label: '🎓 Εκπαίδευση' },
-  { value: 'other', label: '✨ Άλλο' },
+  { value: 'walk', emoji: '🚶', labelKey: 'pgPlaydates.types.walk' },
+  { value: 'play', emoji: '🎾', labelKey: 'pgPlaydates.types.play' },
+  { value: 'meetup', emoji: '🐾', labelKey: 'pgPlaydates.types.meetup' },
+  { value: 'training', emoji: '🎓', labelKey: 'pgPlaydates.types.training' },
+  { value: 'other', emoji: '✨', labelKey: 'pgPlaydates.types.other' },
 ]
 
 const petTypeOptions = ['dog', 'cat', 'rabbit', 'bird', 'other']
 const petTypeEmoji: Record<string, string> = { dog: '🐶', cat: '🐱', rabbit: '🐰', bird: '🐦', other: '🐾' }
 
 export default function Playdates() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const [tab, setTab] = useState<'discover' | 'my'>('discover')
@@ -51,8 +53,8 @@ export default function Playdates() {
 
   const createEvent = useMutation({
     mutationFn: () => api.post('/playdates', form),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); setShowCreateModal(false); setForm({ title: '', description: '', event_type: 'meetup', date: '', time: '', duration_minutes: 60, location: '', city: user?.city || '', max_participants: 10, pet_types: [], is_public: true }); toast.success('Το event δημιουργήθηκε!') },
-    onError: () => toast.error('Σφάλμα δημιουργίας'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); setShowCreateModal(false); setForm({ title: '', description: '', event_type: 'meetup', date: '', time: '', duration_minutes: 60, location: '', city: user?.city || '', max_participants: 10, pet_types: [], is_public: true }); toast.success(t('pgPlaydates.created')) },
+    onError: () => toast.error(t('pgPlaydates.createError')),
   })
 
   const sendInvite = useMutation({
@@ -62,20 +64,20 @@ export default function Playdates() {
       inviteUserId
         ? { invitee_id: inviteUserId, message: inviteMsg }
         : { invitee_email: inviteEmail, message: inviteMsg }),
-    onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success('Πρόσκληση στάλθηκε!') },
+    onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success(t('pgPlaydates.inviteSent')) },
     // Ήταν γραμμένο δύο φορές. Το δεύτερο υπερίσχυε, οπότε ο χρήστης
     // έβλεπε σκέτο «Σφάλμα» αντί για το ειδικό μήνυμα.
-    onError: (e: any) => toast.error(e?.message || 'Η πρόσκληση δεν στάλθηκε'),
+    onError: (e: any) => toast.error(e?.message || t('pgPlaydates.inviteFailed')),
   })
 
   const respondInvite = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/playdates/invitation/${id}`, { status }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success('Απάντηση καταχωρήθηκε!') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success(t('pgPlaydates.responseSaved')) },
   })
 
   const deleteEvent = useMutation({
     mutationFn: (id: string) => api.delete(`/playdates/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success('Διαγράφηκε') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success(t('common.deleted')) },
   })
 
   const togglePetType = (pt: string) => setForm(f => ({ ...f, pet_types: f.pet_types.includes(pt) ? f.pet_types.filter(p => p !== pt) : [...f.pet_types, pt] }))
@@ -98,22 +100,22 @@ export default function Playdates() {
               <Dog size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pet Playdates</h1>
-              <p className="text-sm text-gray-500">Βρες παρέα για το κατοικίδιό σου</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('pgPlaydates.title')}</h1>
+              <p className="text-sm text-gray-500">{t('pgPlaydates.subtitle')}</p>
             </div>
           </div>
           <button onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-colors">
-            <Plus size={16} /> Νέο Event
+            <Plus size={16} /> {t('pgPlaydates.newEvent')}
           </button>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white dark:bg-gray-900 rounded-2xl p-1.5 mb-4 shadow-sm">
-          {[{ id: 'discover', label: '🔍 Ανακάλυψη' }, { id: 'my', label: '⭐ Δικά μου' }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id as any)}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${tab === t.id ? 'bg-green-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>
-              {t.label}
+          {[{ id: 'discover', label: t('pgPlaydates.tabs.discover') }, { id: 'my', label: t('pgPlaydates.tabs.mine') }].map(tb => (
+            <button key={tb.id} onClick={() => setTab(tb.id as any)}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${tab === tb.id ? 'bg-green-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}>
+              {tb.label}
             </button>
           ))}
         </div>
@@ -123,13 +125,13 @@ export default function Playdates() {
             {/* Filters */}
             <div className="flex gap-2 mb-4 flex-wrap">
               <input className="flex-1 min-w-32 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none dark:bg-gray-900"
-                placeholder="🏙️ Πόλη..." value={cityFilter} onChange={e => setCityFilter(e.target.value)} />
+                placeholder={t('pgPlaydates.cityFilter')} value={cityFilter} onChange={e => setCityFilter(e.target.value)} />
               <div className="flex gap-1 overflow-x-auto">
-                <button onClick={() => setFilterType('all')} className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${filterType === 'all' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600'}`}>Όλα</button>
+                <button onClick={() => setFilterType('all')} className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${filterType === 'all' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600'}`}>{t('common.all')}</button>
                 {eventTypes.map(et => (
                   <button key={et.value} onClick={() => setFilterType(et.value)}
                     className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${filterType === et.value ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600'}`}>
-                    {et.label}
+                    {et.emoji} {t(et.labelKey)}
                   </button>
                 ))}
               </div>
@@ -142,14 +144,14 @@ export default function Playdates() {
                 {/* Events */}
                 {data?.events?.length > 0 && (
                   <div className="mb-6">
-                    <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📅 Events κοντά σου</h2>
+                    <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('pgPlaydates.eventsNearYou')}</h2>
                     <div className="space-y-3">
                       {data.events.map((ev: any) => (
                         <div key={ev.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-lg">{eventTypes.find(t => t.value === ev.event_type)?.label.split(' ')[0] || '🐾'}</span>
+                                <span className="text-lg">{eventTypes.find(et => et.value === ev.event_type)?.emoji || '🐾'}</span>
                                 <h3 className="font-semibold text-gray-900 dark:text-white">{ev.title}</h3>
                               </div>
                               {ev.description && <p className="text-sm text-gray-500 mb-2">{ev.description}</p>}
@@ -161,17 +163,17 @@ export default function Playdates() {
                             </div>
                             {ev.creator_email === user?.email && (
                               <div className="flex gap-1">
-                                <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">Πρόσκληση</button>
+                                <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">{t('pgPlaydates.invite')}</button>
                                 <button onClick={() => deleteEvent.mutate(ev.id)} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                               </div>
                             )}
                             {ev.creator_email !== user?.email && (
-                              <button onClick={() => setShowInviteModal(ev.id)} className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-xl">Συμμετοχή</button>
+                              <button onClick={() => setShowInviteModal(ev.id)} className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-xl">{t('pgPlaydates.join')}</button>
                             )}
                           </div>
                           {ev.invitations?.length > 0 && (
                             <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-50 dark:border-gray-800">
-                              <span className="text-xs text-gray-400">Συμμετέχουν:</span>
+                              <span className="text-xs text-gray-400">{t('pgPlaydates.participants')}</span>
                               {ev.invitations.slice(0, 5).map((inv: any, i: number) => (
                                 <div key={i} className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs overflow-hidden">
                                   {inv.invitee_photo ? <img src={inv.invitee_photo} className="w-full h-full object-cover" /> : inv.invitee_name[0]}
@@ -188,13 +190,13 @@ export default function Playdates() {
                 {/* Nearby owners */}
                 {data?.nearbyOwners?.length > 0 && (
                   <div>
-                    <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">👥 Ιδιοκτήτες κοντά σου</h2>
+                    <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('pgPlaydates.ownersNearYou')}</h2>
                     <div className="grid grid-cols-2 gap-3">
                       {data.nearbyOwners.map((owner: any) => (
                         <button key={owner.id}
                           onClick={() => {
                             const mine = data?.events?.filter((e: any) => e.creator_email === user?.email) ?? []
-                            if (!mine.length) { toast.error('Δημιούργησε πρώτα μια εκδήλωση'); return }
+                            if (!mine.length) { toast.error(t('pgPlaydates.createEventFirst')); return }
                             setInviteUserId(owner.id)
                             setInviteEmail('')
                             setShowInviteModal(mine[0].id)
@@ -216,8 +218,8 @@ export default function Playdates() {
                 {data?.events?.length === 0 && data?.nearbyOwners?.length === 0 && (
                   <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl shadow-sm">
                     <p className="text-4xl mb-3">🐾</p>
-                    <p className="font-semibold text-gray-900 dark:text-white mb-1">Δεν βρέθηκαν αποτελέσματα</p>
-                    <p className="text-sm text-gray-500">Δοκίμασε άλλη πόλη ή δημιούργησε το πρώτο event!</p>
+                    <p className="font-semibold text-gray-900 dark:text-white mb-1">{t('common.noResults')}</p>
+                    <p className="text-sm text-gray-500">{t('pgPlaydates.emptyHint')}</p>
                   </div>
                 )}
               </>
@@ -229,20 +231,20 @@ export default function Playdates() {
           <div className="space-y-6">
             {/* My events */}
             <div>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📅 Events που δημιούργησα</h2>
-              {myData?.events?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Δεν έχεις δημιουργήσει events ακόμα</p>}
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('pgPlaydates.myEvents')}</h2>
+              {myData?.events?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">{t('pgPlaydates.noMyEvents')}</p>}
               <div className="space-y-3">
                 {myData?.events?.map((ev: any) => (
                   <div key={ev.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900 dark:text-white">{ev.title}</h3>
                       <div className="flex gap-2">
-                        <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">+ Πρόσκληση</button>
+                        <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">{t('pgPlaydates.addInvite')}</button>
                         <button onClick={() => deleteEvent.mutate(ev.id)} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                       </div>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{ev.date} {ev.time} · {ev.location}</p>
-                    <p className="text-xs text-gray-400">{ev.invitations?.filter((i: any) => i.status === 'accepted').length} αποδέχθηκαν</p>
+                    <p className="text-xs text-gray-400">{t('pgPlaydates.acceptedCount', { count: ev.invitations?.filter((i: any) => i.status === 'accepted').length })}</p>
                   </div>
                 ))}
               </div>
@@ -250,8 +252,8 @@ export default function Playdates() {
 
             {/* My invitations */}
             <div>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📬 Προσκλήσεις που έλαβα</h2>
-              {myData?.invitations?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Δεν έχεις λάβει προσκλήσεις ακόμα</p>}
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('pgPlaydates.receivedInvites')}</h2>
+              {myData?.invitations?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">{t('pgPlaydates.noInvites')}</p>}
               <div className="space-y-3">
                 {myData?.invitations?.map((inv: any) => (
                   <div key={inv.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
@@ -262,16 +264,16 @@ export default function Playdates() {
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => respondInvite.mutate({ id: inv.id, status: 'accepted' })}
                           className="flex-1 py-2 bg-green-500 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-1">
-                          <Check size={14} /> Αποδοχή
+                          <Check size={14} /> {t('pgPlaydates.accept')}
                         </button>
                         <button onClick={() => respondInvite.mutate({ id: inv.id, status: 'declined' })}
                           className="flex-1 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-600 dark:text-gray-400">
-                          Απόρριψη
+                          {t('pgPlaydates.decline')}
                         </button>
                       </div>
                     ) : (
                       <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${inv.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {inv.status === 'accepted' ? '✅ Αποδέχθηκες' : '❌ Απέρριψες'}
+                        {inv.status === 'accepted' ? t('pgPlaydates.youAccepted') : t('pgPlaydates.youDeclined')}
                       </span>
                     )}
                   </div>
@@ -290,38 +292,38 @@ export default function Playdates() {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="fixed inset-x-4 top-4 bottom-4 z-50 max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Νέο Playdate Event</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('pgPlaydates.modalTitle')}</h3>
                 <button onClick={() => setShowCreateModal(false)}><X size={18} className="text-gray-400" /></button>
               </div>
               <div className="space-y-3">
-                <div><label className={labelCls}>Τίτλος *</label><input className={inputCls} value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} placeholder="π.χ. Βόλτα στο Πεδίον Άρεως" /></div>
-                <div><label className={labelCls}>Τύπος</label>
+                <div><label className={labelCls}>{t('pgPlaydates.form.title')}</label><input className={inputCls} value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} placeholder={t('pgPlaydates.form.titlePlaceholder')} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.type')}</label>
                   <div className="flex flex-wrap gap-2">
                     {eventTypes.map(et => (
                       <button key={et.value} type="button" onClick={() => setForm(f => ({...f, event_type: et.value}))}
                         className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${form.event_type === et.value ? 'bg-green-500 text-white border-green-500' : 'border-gray-200 dark:border-gray-700 text-gray-600'}`}>
-                        {et.label}
+                        {et.emoji} {t(et.labelKey)}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div><label className={labelCls}>Περιγραφή</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.description')}</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className={labelCls}>Ημερομηνία *</label><input type="date" className={inputCls} value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} /></div>
-                  <div><label className={labelCls}>Ώρα *</label><input type="time" className={inputCls} value={form.time} onChange={e => setForm(f => ({...f, time: e.target.value}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.date')}</label><input type="date" className={inputCls} value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.time')}</label><input type="time" className={inputCls} value={form.time} onChange={e => setForm(f => ({...f, time: e.target.value}))} /></div>
                 </div>
-                <div><label className={labelCls}>Τοποθεσία *</label><input className={inputCls} value={form.location} onChange={e => setForm(f => ({...f, location: e.target.value}))} placeholder="π.χ. Πεδίον Άρεως, Αθήνα" /></div>
-                <div><label className={labelCls}>Πόλη *</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.location')}</label><input className={inputCls} value={form.location} onChange={e => setForm(f => ({...f, location: e.target.value}))} placeholder={t('pgPlaydates.form.locationPlaceholder')} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.city')}</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} /></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className={labelCls}>Διάρκεια (λεπτά)</label><input type="number" className={inputCls} value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: Number(e.target.value)}))} /></div>
-                  <div><label className={labelCls}>Μέγιστοι συμμετέχοντες</label><input type="number" className={inputCls} value={form.max_participants} onChange={e => setForm(f => ({...f, max_participants: Number(e.target.value)}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.duration')}</label><input type="number" className={inputCls} value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: Number(e.target.value)}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.maxParticipants')}</label><input type="number" className={inputCls} value={form.max_participants} onChange={e => setForm(f => ({...f, max_participants: Number(e.target.value)}))} /></div>
                 </div>
-                <div><label className={labelCls}>Είδη κατοικίδιων</label>
+                <div><label className={labelCls}>{t('pgPlaydates.form.petTypes')}</label>
                   <div className="flex flex-wrap gap-2">
                     {petTypeOptions.map(pt => (
                       <button key={pt} type="button" onClick={() => togglePetType(pt)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${form.pet_types.includes(pt) ? 'bg-green-500 text-white border-green-500' : 'border-gray-200 dark:border-gray-700 text-gray-600'}`}>
-                        {petTypeEmoji[pt]} {pt}
+                        {petTypeEmoji[pt]} {t(`pgPlaydates.petTypes.${pt}`)}
                       </button>
                     ))}
                   </div>
@@ -329,7 +331,7 @@ export default function Playdates() {
               </div>
               <button onClick={() => createEvent.mutate()} disabled={!form.title || !form.date || !form.time || !form.location || !form.city || createEvent.isPending}
                 className="w-full mt-4 py-3 bg-green-500 text-white rounded-xl font-medium disabled:opacity-50">
-                {createEvent.isPending ? 'Δημιουργία...' : 'Δημιουργία Event'}
+                {createEvent.isPending ? t('pgPlaydates.creating') : t('pgPlaydates.createEvent')}
               </button>
             </motion.div>
           </>
@@ -344,25 +346,25 @@ export default function Playdates() {
               onClick={e => e.stopPropagation()}
               className="w-full max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Αποστολή Πρόσκλησης</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('pgPlaydates.sendInvite')}</h3>
                 <button onClick={() => { setShowInviteModal(null); setInviteUserId(null) }}><X size={18} className="text-gray-400" /></button>
               </div>
               <div className="space-y-3">
                 {inviteUserId ? (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Πρόσκληση προς{' '}
+                    {t('pgPlaydates.inviteTo')}{' '}
                     <strong className="text-gray-900 dark:text-white">
-                      {data?.nearbyOwners?.find((o: any) => o.id === inviteUserId)?.full_name ?? 'τον χρήστη'}
+                      {data?.nearbyOwners?.find((o: any) => o.id === inviteUserId)?.full_name ?? t('pgPlaydates.theUser')}
                     </strong>
                   </p>
                 ) : (
-                  <div><label className={labelCls}>Email χρήστη *</label><input className={inputCls} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.userEmail')}</label><input className={inputCls} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" /></div>
                 )}
-                <div><label className={labelCls}>Μήνυμα (προαιρετικό)</label><textarea className={inputCls} rows={2} value={inviteMsg} onChange={e => setInviteMsg(e.target.value)} placeholder="Έλα να βγάλουμε τα σκυλιά μαζί!" /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.messageOptional')}</label><textarea className={inputCls} rows={2} value={inviteMsg} onChange={e => setInviteMsg(e.target.value)} placeholder={t('pgPlaydates.messagePlaceholder')} /></div>
               </div>
               <button onClick={() => sendInvite.mutate()} disabled={!inviteEmail || sendInvite.isPending}
                 className="w-full mt-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-medium disabled:opacity-50">
-                {sendInvite.isPending ? 'Αποστολή...' : 'Αποστολή Πρόσκλησης'}
+                {sendInvite.isPending ? t('pgPlaydates.sending') : t('pgPlaydates.sendInvite')}
               </button>
             </motion.div>
           </motion.div>

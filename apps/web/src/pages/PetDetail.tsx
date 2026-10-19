@@ -102,10 +102,10 @@ export default function PetDetail() {
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🐾</p>
       <p className="font-semibold text-gray-900 dark:text-white mb-2">
-        {t('petDetail.notFound', 'Το κατοικίδιο δεν βρέθηκε')}
+        {t('pgPetDetail.notFound')}
       </p>
       <button onClick={() => navigate('/my-pets')} className="btn-primary mt-2">
-        {t('petDetail.backToPets', 'Τα κατοικίδιά μου')}
+        {t('pgPetDetail.backToPets')}
       </button>
     </div>
   )
@@ -122,17 +122,17 @@ export default function PetDetail() {
   const latestWeight = weightRecords.length ? weightRecords[weightRecords.length - 1] : null
 
   const tabs = [
-    { id: 'overview',  label: t('petDetail.tabs.overview', 'Επισκόπηση') },
-    { id: 'medical',   label: t('petDetail.tabs.medical', 'Ιατρικά') },
-    { id: 'vaccines',  label: t('petDetail.tabs.vaccines', 'Εμβόλια') },
-    { id: 'location',  label: t('petDetail.tabs.location', 'Τοποθεσία') },
+    { id: 'overview',  label: t('pgPetDetail.tabs.overview') },
+    { id: 'medical',   label: t('pgPetDetail.tabs.medical') },
+    { id: 'vaccines',  label: t('pgPetDetail.tabs.vaccines') },
+    { id: 'location',  label: t('pgPetDetail.tabs.location') },
   ] as const
 
   return (
     <div className="page-container py-6 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <button onClick={() => navigate('/my-pets')}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-900 mb-4">
-        <ArrowLeft size={15} /> {t('petDetail.backToPets', 'Τα κατοικίδιά μου')}
+        <ArrowLeft size={15} /> {t('pgPetDetail.backToPets')}
       </button>
 
       {/* Header */}
@@ -140,7 +140,7 @@ export default function PetDetail() {
         <div className="h-28 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 relative">
           {pet.is_lost && (
             <div className="absolute top-3 left-3 bg-red-600 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
-              <AlertTriangle size={11} /> {t('petsExtra.lostBadge', 'Χαμένο')}
+              <AlertTriangle size={11} /> {t('petsExtra.lostBadge')}
             </div>
           )}
         </div>
@@ -152,7 +152,7 @@ export default function PetDetail() {
           </div>
           <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white mt-3">{pet.name}</h1>
           <p className="text-sm text-gray-500">
-            {[pet.breed || pet.species, pet.age && `${pet.age} ${t('pets.years', 'ετών')}`, pet.color]
+            {[pet.breed || pet.species, pet.age && `${pet.age} ${t('pets.years')}`, pet.color]
               .filter(Boolean).join(' · ')}
           </p>
 
@@ -163,14 +163,14 @@ export default function PetDetail() {
                 <button onClick={() => setTab('vaccines')}
                   className="flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">
                   <Syringe size={11} />
-                  {t('petDetail.vaccinesDue', { count: overdueVaccines.length, defaultValue: `${overdueVaccines.length} εμβόλια εκκρεμούν` })}
+                  {t('pgPetDetail.vaccinesDue', { count: overdueVaccines.length })}
                 </button>
               )}
               {allergies.length > 0 && (
                 <button onClick={() => setTab('medical')}
                   className="flex items-center gap-1.5 text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-2.5 py-1 rounded-full">
                   <ShieldAlert size={11} />
-                  {t('petDetail.allergiesCount', { count: allergies.length, defaultValue: `${allergies.length} αλλεργίες` })}
+                  {t('pgPetDetail.allergiesCount', { count: allergies.length })}
                 </button>
               )}
             </div>
@@ -195,10 +195,10 @@ export default function PetDetail() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { icon: Weight,      label: t('petDetail.weight', 'Βάρος'),   value: latestWeight ? `${latestWeight.weight_kg} kg` : pet.weight ? `${pet.weight} kg` : '—' },
-                { icon: Syringe,     label: t('petDetail.vaccines', 'Εμβόλια'), value: String(vaccinations.length) },
-                { icon: Pill,        label: t('petDetail.meds', 'Φάρμακα'),   value: String(activeMeds.length) },
-                { icon: Stethoscope, label: t('petDetail.visits', 'Επισκέψεις'), value: String(healthRecords.length) },
+                { icon: Weight,      label: t('pgPetDetail.weight'),   value: latestWeight ? `${latestWeight.weight_kg} kg` : pet.weight ? `${pet.weight} kg` : '—' },
+                { icon: Syringe,     label: t('pgPetDetail.vaccines'), value: String(vaccinations.length) },
+                { icon: Pill,        label: t('pgPetDetail.meds'),   value: String(activeMeds.length) },
+                { icon: Stethoscope, label: t('pgPetDetail.visits'), value: String(healthRecords.length) },
               ].map((s, i) => (
                 <div key={i} className="card p-3 text-center">
                   <s.icon size={15} className="mx-auto mb-1.5 text-gray-400" />
@@ -210,16 +210,16 @@ export default function PetDetail() {
 
             <div className="card p-5">
               <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-                {t('petDetail.details', 'Στοιχεία')}
+                {t('pgPetDetail.details')}
               </h3>
               {[
-                [t('petDetail.species', 'Είδος'), pet.species],
-                [t('petDetail.breed', 'Ράτσα'), pet.breed],
-                [t('petDetail.gender', 'Φύλο'), pet.gender === 'male' ? '♂' : pet.gender === 'female' ? '♀' : null],
-                [t('petDetail.microchip', 'Microchip'), pet.microchip_number],
-                [t('petDetail.sterilized', 'Στειρωμένο'),
-                  pet.is_sterilized === true ? t('common.yes', 'Ναι')
-                    : pet.is_sterilized === false ? t('common.no', 'Όχι') : null],
+                [t('pgPetDetail.species'), pet.species],
+                [t('pgPetDetail.breed'), pet.breed],
+                [t('pgPetDetail.gender'), pet.gender === 'male' ? '♂' : pet.gender === 'female' ? '♀' : null],
+                [t('pgPetDetail.microchip'), pet.microchip_number],
+                [t('pgPetDetail.sterilized'),
+                  pet.is_sterilized === true ? t('common.yes')
+                    : pet.is_sterilized === false ? t('common.no') : null],
               ].filter(([, v]) => v).map(([k, v]) => (
                 <Row key={String(k)} title={String(k)} right={String(v)} />
               ))}
@@ -228,7 +228,7 @@ export default function PetDetail() {
             {chronicConditions.length > 0 && (
               <div className="card p-5">
                 <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                  <Activity size={14} /> {t('petDetail.chronic', 'Χρόνιες παθήσεις')}
+                  <Activity size={14} /> {t('pgPetDetail.chronic')}
                 </h3>
                 {chronicConditions.map((c: any) => (
                   <Row key={c.id} title={c.condition}
@@ -246,7 +246,7 @@ export default function PetDetail() {
             {allergies.length > 0 && (
               <div className="card p-5">
                 <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                  <ShieldAlert size={14} className="text-red-500" /> {t('petDetail.allergies', 'Αλλεργίες')}
+                  <ShieldAlert size={14} className="text-red-500" /> {t('pgPetDetail.allergies')}
                 </h3>
                 {allergies.map((a: any) => (
                   <Row key={a.id} title={a.allergen}
@@ -260,7 +260,7 @@ export default function PetDetail() {
             {activeMeds.length > 0 && (
               <div className="card p-5">
                 <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                  <Pill size={14} /> {t('petDetail.activeMeds', 'Ενεργή αγωγή')}
+                  <Pill size={14} /> {t('pgPetDetail.activeMeds')}
                 </h3>
                 {activeMeds.map((m: any) => (
                   <Row key={m.id} title={m.name}
@@ -272,10 +272,10 @@ export default function PetDetail() {
 
             <div className="card p-5">
               <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                <Stethoscope size={14} /> {t('petDetail.history', 'Ιατρικό ιστορικό')}
+                <Stethoscope size={14} /> {t('pgPetDetail.history')}
               </h3>
               {healthRecords.length === 0
-                ? <Empty icon={Stethoscope} text={t('petDetail.noRecords', 'Καμία καταχώρηση ακόμη')} />
+                ? <Empty icon={Stethoscope} text={t('pgPetDetail.noRecords')} />
                 : healthRecords.map((r: any) => (
                     <Row key={r.id} title={r.title}
                       subtitle={[r.record_type, r.vet_name, r.clinic_name].filter(Boolean).join(' · ')}
@@ -288,14 +288,14 @@ export default function PetDetail() {
         {tab === 'vaccines' && (
           <div className="card p-5">
             {vaccinations.length === 0
-              ? <Empty icon={Syringe} text={t('petDetail.noVaccines', 'Κανένα εμβόλιο καταχωρημένο')} />
+              ? <Empty icon={Syringe} text={t('pgPetDetail.noVaccines')} />
               : vaccinations.map((v: any) => {
                   const due = isOverdue(v.next_due_date)
                   return (
                     <Row key={v.id}
                       title={v.vaccine_name}
                       subtitle={[
-                        `${t('petDetail.given', 'Χορηγήθηκε')}: ${d(v.date_administered)}`,
+                        `${t('pgPetDetail.given')}: ${d(v.date_administered)}`,
                         v.vet_name,
                       ].filter(Boolean).join(' · ')}
                       right={v.next_due_date
@@ -334,7 +334,7 @@ export default function PetDetail() {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${latest.latitude},${latest.longitude}`}
                     target="_blank" rel="noopener noreferrer"
                     className="btn-secondary text-xs inline-flex items-center gap-1.5">
-                    <MapPin size={13} /> {t('tracker.directions', 'Οδηγίες')}
+                    <MapPin size={13} /> {t('tracker.directions')}
                   </a>
                 )}
               </div>
@@ -342,24 +342,24 @@ export default function PetDetail() {
               <div className="card p-5 text-center">
                 <MapPin size={28} className="mx-auto text-gray-300 mb-2" />
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  {t('petDetail.noDevice', 'Καμία συνδεδεμένη συσκευή GPS')}
+                  {t('pgPetDetail.noDevice')}
                 </p>
                 <Link to="/tracker" className="text-sm text-brand-900 dark:text-yellow-400 hover:underline">
-                  {t('petDetail.addDevice', 'Σύνδεσε συσκευή')} <ChevronRight size={12} className="inline" />
+                  {t('pgPetDetail.addDevice')} <ChevronRight size={12} className="inline" />
                 </Link>
               </div>
             )}
 
             <div className="card p-5">
               <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-                {t('petDetail.locationHistory', 'Ιστορικό θέσεων')}
+                {t('pgPetDetail.locationHistory')}
               </h3>
               {locations.length === 0
-                ? <Empty icon={MapPin} text={t('petDetail.noLocations', 'Καμία καταγεγραμμένη θέση')} />
+                ? <Empty icon={MapPin} text={t('pgPetDetail.noLocations')} />
                 : locations.map((loc: any) => (
                     <Row key={loc.id}
                       title={`${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`}
-                      subtitle={loc.status === 'lost' ? t('tracker.lost', 'Χαμένο') : t('tracker.safe', 'Ασφαλές')}
+                      subtitle={loc.status === 'lost' ? t('tracker.lost') : t('tracker.safe')}
                       right={new Date(loc.created_at).toLocaleString(locale, {
                         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}

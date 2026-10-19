@@ -16,17 +16,17 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
  */
 
 const SPECIES = [
-  { value: '',     labelKey: 'breeds.species.all', fallback: 'Όλα',    emoji: '🐾' },
-  { value: 'dog',  labelKey: 'breeds.species.dog', fallback: 'Σκύλοι', emoji: '🐶' },
-  { value: 'cat',  labelKey: 'breeds.species.cat', fallback: 'Γάτες',  emoji: '🐱' },
+  { value: '',     labelKey: 'pgBreeds.species.all', emoji: '🐾' },
+  { value: 'dog',  labelKey: 'pgBreeds.species.dog', emoji: '🐶' },
+  { value: 'cat',  labelKey: 'pgBreeds.species.cat', emoji: '🐱' },
 ]
 
 const SIZES = [
-  { value: '',       labelKey: 'breeds.sizes.all',    fallback: 'Όλα' },
-  { value: 'small',  labelKey: 'breeds.sizes.small',  fallback: 'Μικρό' },
-  { value: 'medium', labelKey: 'breeds.sizes.medium', fallback: 'Μεσαίο' },
-  { value: 'large',  labelKey: 'breeds.sizes.large',  fallback: 'Μεγάλο' },
-  { value: 'giant',  labelKey: 'breeds.sizes.giant',  fallback: 'Πολύ μεγάλο' },
+  { value: '',       labelKey: 'pgBreeds.sizes.all' },
+  { value: 'small',  labelKey: 'pgBreeds.sizes.small' },
+  { value: 'medium', labelKey: 'pgBreeds.sizes.medium' },
+  { value: 'large',  labelKey: 'pgBreeds.sizes.large' },
+  { value: 'giant',  labelKey: 'pgBreeds.sizes.giant' },
 ]
 
 export default function BreedExplorer() {
@@ -53,22 +53,22 @@ export default function BreedExplorer() {
 
   const weightRange = (b: any) =>
     b.weight_min && b.weight_max ? `${b.weight_min}–${b.weight_max} kg`
-      : b.weight_max ? `έως ${b.weight_max} kg`
+      : b.weight_max ? t('pgBreeds.upTo', { max: b.weight_max })
       : null
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
       <div className="mb-6">
-        <h1 className="section-title mb-1">{t('nav.breeds', 'Ράτσες')}</h1>
+        <h1 className="section-title mb-1">{t('nav.breeds')}</h1>
         <p className="text-gray-500 text-sm">
-          {t('breeds.subtitle', 'Βρες τη ράτσα που ταιριάζει στη ζωή σου')}
+          {t('pgBreeds.subtitle')}
         </p>
       </div>
 
       <div className="relative mb-4">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
         <input className="input pl-10 py-2.5"
-          placeholder={t('breeds.searchPlaceholder', 'Αναζήτηση ράτσας...')}
+          placeholder={t('pgBreeds.searchPlaceholder')}
           value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
       </div>
 
@@ -79,7 +79,7 @@ export default function BreedExplorer() {
               species === sp.value
                 ? 'bg-brand-900 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300')}>
-            <span>{sp.emoji}</span>{t(sp.labelKey, sp.fallback)}
+            <span>{sp.emoji}</span>{t(sp.labelKey)}
           </button>
         ))}
       </div>
@@ -91,7 +91,7 @@ export default function BreedExplorer() {
               size === sz.value
                 ? 'bg-orange-500 text-white border-orange-500'
                 : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-orange-300')}>
-            <Ruler size={10} />{t(sz.labelKey, sz.fallback)}
+            <Ruler size={10} />{t(sz.labelKey)}
           </button>
         ))}
       </div>
@@ -102,15 +102,15 @@ export default function BreedExplorer() {
         <div className="text-center py-24">
           <PawPrint size={48} className="mx-auto text-gray-200 mb-4" />
           <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('breeds.noResults', 'Καμία ράτσα')}
+            {t('pgBreeds.noResults')}
           </p>
           <p className="text-gray-500 text-sm">
-            {t('breeds.noResultsDesc', 'Δοκίμασε άλλο όνομα ή φίλτρο.')}
+            {t('pgBreeds.noResultsDesc')}
           </p>
         </div>
       ) : (
         <>
-          <p className="text-sm text-gray-500 mb-4">{data.total} {t('breeds.results', 'ράτσες')}</p>
+          <p className="text-sm text-gray-500 mb-4">{data.total} {t('pgBreeds.results')}</p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {breeds.map((b: any, i: number) => (
@@ -142,12 +142,12 @@ export default function BreedExplorer() {
                       )}
                       {b.apartment_friendly && (
                         <span className="flex items-center gap-0.5 text-[10px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full">
-                          <Home size={9} /> {t('breeds.apartment', 'Διαμέρισμα')}
+                          <Home size={9} /> {t('pgBreeds.apartment')}
                         </span>
                       )}
                       {b.good_with_children && (
                         <span className="flex items-center gap-0.5 text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full">
-                          <Baby size={9} /> {t('breeds.children', 'Παιδιά')}
+                          <Baby size={9} /> {t('pgBreeds.children')}
                         </span>
                       )}
                     </div>

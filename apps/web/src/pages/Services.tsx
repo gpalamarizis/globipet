@@ -89,16 +89,16 @@ export default function Services() {
             onChange={(e) => setCity(e.target.value)}
           />
         </div>
-        <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden" role="group" aria-label="Προβολή">
+        <div className="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden" role="group" aria-label={t('marketplace.viewMode')}>
           <button
             onClick={() => setViewMode('list')}
-            aria-label="Προβολή λίστας"
+            aria-label={t('marketplace.viewList')}
             aria-pressed={viewMode === 'list'}
             className={`px-3 py-2 text-sm transition-colors ${viewMode === 'list' ? 'bg-brand-900 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
           ><List size={16} aria-hidden="true" /></button>
           <button
             onClick={() => setViewMode('map')}
-            aria-label="Προβολή χάρτη"
+            aria-label={t('pgServices.viewMap')}
             aria-pressed={viewMode === 'map'}
             className={`px-3 py-2 text-sm transition-colors ${viewMode === 'map' ? 'bg-brand-900 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
           ><Map size={16} aria-hidden="true" /></button>

@@ -4,6 +4,7 @@ import { api, uploadFile } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 type SampleType = 'stool' | 'urine'
 type Species = 'dog' | 'cat'
@@ -26,10 +27,10 @@ interface AnalysisResult {
 }
 
 const SEVERITY_CONFIG = {
-  normal:   { label: 'Φυσιολογικό',  color: 'text-green-700 bg-green-50 border-green-200',  icon: CheckCircle,    iconColor: 'text-green-500' },
-  mild:     { label: 'Ήπιο',          color: 'text-yellow-700 bg-yellow-50 border-yellow-200', icon: Info,          iconColor: 'text-yellow-500' },
-  moderate: { label: 'Μέτριο',        color: 'text-orange-700 bg-orange-50 border-orange-200', icon: AlertTriangle, iconColor: 'text-orange-500' },
-  severe:   { label: 'Σοβαρό',        color: 'text-red-700 bg-red-50 border-red-200',         icon: AlertTriangle, iconColor: 'text-red-500' },
+  normal:   { labelKey: 'pgStool.sevNormal',  color: 'text-green-700 bg-green-50 border-green-200',  icon: CheckCircle,    iconColor: 'text-green-500' },
+  mild:     { labelKey: 'pgStool.sevMild',     color: 'text-yellow-700 bg-yellow-50 border-yellow-200', icon: Info,          iconColor: 'text-yellow-500' },
+  moderate: { labelKey: 'pgStool.sevModerate',   color: 'text-orange-700 bg-orange-50 border-orange-200', icon: AlertTriangle, iconColor: 'text-orange-500' },
+  severe:   { labelKey: 'pgStool.sevSevere',   color: 'text-red-700 bg-red-50 border-red-200',         icon: AlertTriangle, iconColor: 'text-red-500' },
 }
 
 const URGENCY_CONFIG = {
@@ -47,6 +48,7 @@ function renderItem(item: any): string {
 }
 
 export default function AiStoolUrine() {
+  const { t } = useTranslation()
   const [sampleType, setSampleType] = useState<SampleType>('stool')
   const [species, setSpecies] = useState<Species>('dog')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -84,7 +86,7 @@ export default function AiStoolUrine() {
       const url = await uploadFile(file, 'stool-urine')
       setImageUrl(url)
     } catch {
-      toast.error('Σφάλμα κατά το ανέβασμα της εικόνας')
+      toast.error(t('pgStool.errUpload'))
     } finally {
       setUploading(false)
     }
@@ -103,7 +105,7 @@ export default function AiStoolUrine() {
   }
 
   const handleAnalyze = async () => {
-    if (!imageUrl) return toast.error('Ανέβασε πρώτα μια φωτογραφία')
+    if (!imageUrl) return toast.error(t('pgStool.errNoPhoto'))
     setAnalyzing(true)
     setResult(null)
     try {
@@ -125,7 +127,7 @@ export default function AiStoolUrine() {
       const res = await api.post('/ai/stool-urine', payload)
       setResult(res.data)
     } catch (err: any) {
-      toast.error(err?.message || 'Σφάλμα ανάλυσης')
+      toast.error(err?.message || t('pgStool.errAnalysis'))
     } finally {
       setAnalyzing(false)
     }
@@ -142,17 +144,17 @@ export default function AiStoolUrine() {
           <FlaskConical size={20} className="text-teal-600 dark:text-teal-400" />
         </div>
         <div>
-          <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white">AI Ανάλυση Ούρων & Περιττωμάτων</h1>
-          <p className="text-sm text-gray-500">Ανέβασε φωτογραφία για κτηνιατρική αξιολόγηση με AI</p>
+          <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white">{t('pgStool.title')}</h1>
+          <p className="text-sm text-gray-500">{t('pgStool.subtitle')}</p>
         </div>
       </div>
 
       {/* Sample type + Species selector */}
       <div className="card p-4 mb-4 flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Τύπος Δείγματος</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('pgStool.sampleType')}</p>
           <div className="flex gap-2">
-            {([['stool','💩','Περιττώματα'],['urine','💧','Ούρα']] as const).map(([v, em, lb]) => (
+            {([['stool','💩',t('pgStool.stool')],['urine','💧',t('pgStool.urine')]] as const).map(([v, em, lb]) => (
               <button key={v} onClick={() => setSampleType(v)}
                 className={cn('flex-1 py-2 rounded-xl border text-sm font-medium transition-all', sampleType === v ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
                 {em} {lb}
@@ -161,9 +163,9 @@ export default function AiStoolUrine() {
           </div>
         </div>
         <div className="flex-1">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Είδος</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('pgStool.species')}</p>
           <div className="flex gap-2">
-            {([['dog','🐶','Σκύλος'],['cat','🐱','Γάτα']] as const).map(([v, em, lb]) => (
+            {([['dog','🐶',t('pgStool.dog')],['cat','🐱',t('pgStool.cat')]] as const).map(([v, em, lb]) => (
               <button key={v} onClick={() => setSpecies(v)}
                 className={cn('flex-1 py-2 rounded-xl border text-sm font-medium transition-all', species === v ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400')}>
                 {em} {lb}
@@ -175,10 +177,10 @@ export default function AiStoolUrine() {
 
       {/* Photo upload */}
       <div className="card p-4 mb-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Φωτογραφία</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('pgStool.photo')}</p>
         {imageUrl ? (
           <div className="relative">
-            <img src={imageUrl} alt="sample" className="w-full max-h-64 object-contain rounded-xl bg-gray-50 dark:bg-gray-800" />
+            <img src={imageUrl} alt={t('pgStool.sampleAlt')} className="w-full max-h-64 object-contain rounded-xl bg-gray-50 dark:bg-gray-800" />
             <button onClick={() => { setImageUrl(null); setResult(null) }}
               className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow flex items-center justify-center hover:bg-red-50">
               <X size={14} className="text-gray-600" />
@@ -194,8 +196,8 @@ export default function AiStoolUrine() {
                     <Camera size={20} className="text-gray-400" />
                     <Upload size={20} className="text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-500">Κάνε κλικ για φωτογραφία ή ανέβασμα</p>
-                  <p className="text-xs text-gray-400">Τράβηξε από κοντά, με καλό φωτισμό</p>
+                  <p className="text-sm text-gray-500">{t('pgStool.uploadPrompt')}</p>
+                  <p className="text-xs text-gray-400">{t('pgStool.uploadHint')}</p>
                 </>}
           </div>
         )}
@@ -207,8 +209,8 @@ export default function AiStoolUrine() {
         <button onClick={() => setShowHistory(h => !h)}
           className="w-full flex items-center justify-between p-4 text-left">
           <div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Ιστορικό Ζώου</p>
-            <p className="text-xs text-gray-500 mt-0.5">Προαιρετικό αλλά βελτιώνει σημαντικά την ανάλυση</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('pgStool.historyTitle')}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{t('pgStool.historyHint')}</p>
           </div>
           {showHistory ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
         </button>
@@ -219,10 +221,10 @@ export default function AiStoolUrine() {
             {/* Pre-fill from pets */}
             {pets.length > 0 && (
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Συμπλήρωση από υπάρχον κατοικίδιο</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.prefillFromPet')}</label>
                 <select onChange={handlePetSelect} defaultValue=""
                   className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400">
-                  <option value="">— Επίλεξε κατοικίδιο —</option>
+                  <option value="">{t('pgStool.selectPet')}</option>
                   {pets.map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name} ({p.species})</option>
                   ))}
@@ -232,27 +234,27 @@ export default function AiStoolUrine() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Ράτσα</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.breed')}</label>
                 <input value={form.breed} onChange={e => setForm(f => ({...f, breed: e.target.value}))}
-                  placeholder="π.χ. Labrador" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                  placeholder={t('pgStool.breedPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Ηλικία (έτη)</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.age')}</label>
                 <input type="number" min="0" max="25" value={form.age_years} onChange={e => setForm(f => ({...f, age_years: e.target.value}))}
-                  placeholder="π.χ. 4" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                  placeholder={t('pgStool.agePh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Βάρος (kg)</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.weight')}</label>
                 <input type="number" min="0" value={form.weight_kg} onChange={e => setForm(f => ({...f, weight_kg: e.target.value}))}
-                  placeholder="π.χ. 12" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                  placeholder={t('pgStool.weightPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Στείρωση</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.sterilized')}</label>
                 <select value={form.is_sterilized} onChange={e => setForm(f => ({...f, is_sterilized: e.target.value as any}))}
                   className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400">
-                  <option value="">Άγνωστο</option>
-                  <option value="true">Ναι, στειρωμένο</option>
-                  <option value="false">Όχι</option>
+                  <option value="">{t('pgStool.unknown')}</option>
+                  <option value="true">{t('pgStool.yesSterilized')}</option>
+                  <option value="false">{t('pgStool.no')}</option>
                 </select>
               </div>
             </div>
@@ -261,38 +263,38 @@ export default function AiStoolUrine() {
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={form.ate_from_street} onChange={e => setForm(f => ({...f, ate_from_street: e.target.checked}))}
                 className="w-4 h-4 rounded accent-teal-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Έφαγε κάτι από τον δρόμο ή άγνωστη τροφή πρόσφατα</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('pgStool.ateFromStreet')}</span>
             </label>
 
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Πρόσφατα φάρμακα / αντιπαρασιτικά</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.recentMeds')}</label>
               <input value={form.recent_medications} onChange={e => setForm(f => ({...f, recent_medications: e.target.value}))}
-                placeholder="π.χ. Nexgard πριν 3 μέρες" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                placeholder={t('pgStool.recentMedsPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Πρόσφατη αλλαγή διατροφής</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.dietChange')}</label>
               <input value={form.diet_change} onChange={e => setForm(f => ({...f, diet_change: e.target.value}))}
-                placeholder="π.χ. άλλαξα σε Royal Canin πριν 5 μέρες" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                placeholder={t('pgStool.dietChangePh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Πότε ήταν τα τελευταία φυσιολογικά περιττώματα;</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.lastNormal')}</label>
               <input value={form.last_normal_stool} onChange={e => setForm(f => ({...f, last_normal_stool: e.target.value}))}
-                placeholder="π.χ. χθες το πρωί" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
+                placeholder={t('pgStool.lastNormalPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Άλλα συμπτώματα που παρατήρησες</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.symptoms')}</label>
               <textarea value={form.symptoms} onChange={e => setForm(f => ({...f, symptoms: e.target.value}))}
-                placeholder="π.χ. λήθαργος, εμετός, αρνείται φαγητό, πολυδιψία..." rows={2}
+                placeholder={t('pgStool.symptomsPh')} rows={2}
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Επιπλέον πληροφορίες</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.additional')}</label>
               <textarea value={form.additional_notes} onChange={e => setForm(f => ({...f, additional_notes: e.target.value}))}
-                placeholder="π.χ. πρόσφατα ταξίδι, επαφή με άλλα ζώα, stress..." rows={2}
+                placeholder={t('pgStool.additionalPh')} rows={2}
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
             </div>
           </div>
@@ -303,8 +305,8 @@ export default function AiStoolUrine() {
       <button onClick={handleAnalyze} disabled={!imageUrl || analyzing}
         className="w-full btn-primary py-3 flex items-center justify-center gap-2 mb-8 disabled:opacity-50">
         {analyzing
-          ? <><Loader2 size={18} className="animate-spin" /> Ανάλυση σε εξέλιξη...</>
-          : <><FlaskConical size={18} /> Ανάλυση με AI</>}
+          ? <><Loader2 size={18} className="animate-spin" /> {t('pgStool.analyzing')}</>
+          : <><FlaskConical size={18} /> {t('pgStool.analyze')}</>}
       </button>
 
       {/* Result */}
@@ -314,7 +316,7 @@ export default function AiStoolUrine() {
           <div className={cn('card p-5 border flex items-start gap-4', sev.color)}>
             <sev.icon size={22} className={cn('shrink-0 mt-0.5', sev.iconColor)} />
             <div>
-              <p className="font-bold text-lg">{sev.label}</p>
+              <p className="font-bold text-lg">{t(sev.labelKey)}</p>
               <p className="text-sm mt-1">{result.recommendation}</p>
             </div>
           </div>
@@ -322,18 +324,18 @@ export default function AiStoolUrine() {
           {/* Urgency + summary */}
           <div className="card p-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Επείγον</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('pgStool.urgency')}</p>
               <span className={cn('inline-block px-3 py-1 rounded-full text-xs font-bold', urg.color)}>{result.vet_urgency_el}</span>
             </div>
             {result.color && (
               <div className="text-right">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Χρώμα</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('pgStool.color')}</p>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{result.color}</p>
               </div>
             )}
             {result.consistency && (
               <div className="text-right">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Σύσταση</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('pgStool.consistency')}</p>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{result.consistency}</p>
               </div>
             )}
@@ -342,7 +344,7 @@ export default function AiStoolUrine() {
           {/* Findings */}
           {result.findings?.length > 0 && (
             <div className="card p-4">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">🔍 Ευρήματα</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgStool.findings')}</p>
               <ul className="space-y-1.5">
                 {result.findings.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -356,7 +358,7 @@ export default function AiStoolUrine() {
           {/* Likely causes */}
           {result.likely_causes?.length > 0 && (
             <div className="card p-4">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">💡 Πιθανές Αιτίες</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgStool.likelyCauses')}</p>
               <ul className="space-y-1.5">
                 {result.likely_causes.map((c, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -370,7 +372,7 @@ export default function AiStoolUrine() {
           {/* Context factors */}
           {result.context_factors?.length > 0 && (
             <div className="card p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
-              <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">📋 Επίδραση Ιστορικού</p>
+              <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">{t('pgStool.contextFactors')}</p>
               <ul className="space-y-1.5">
                 {result.context_factors.map((c, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300">
@@ -384,7 +386,7 @@ export default function AiStoolUrine() {
           {/* Home care */}
           {result.home_care?.length > 0 && (
             <div className="card p-4">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">🏠 Τι Κάνεις στο Σπίτι</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgStool.homeCare')}</p>
               <ul className="space-y-1.5">
                 {result.home_care.map((h, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -398,7 +400,7 @@ export default function AiStoolUrine() {
           {/* Warning signs */}
           {result.warning_signs?.length > 0 && (
             <div className="card p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20">
-              <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-3">⚠️ Πήγαινε Αμέσως σε Κτηνίατρο Αν...</p>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-3">{t('pgStool.warningSigns')}</p>
               <ul className="space-y-1.5">
                 {result.warning_signs.map((w, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-red-700 dark:text-red-300">
@@ -412,7 +414,7 @@ export default function AiStoolUrine() {
           {/* Sources */}
           {result.comparison_sources?.length > 0 && (
             <div className="card p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Πηγές Αναφοράς</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('pgStool.sources')}</p>
               <ul className="space-y-1">
                 {result.comparison_sources.map((s, i) => (
                   <li key={i} className="text-xs text-gray-400">{renderItem(s)}</li>

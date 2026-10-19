@@ -234,7 +234,7 @@ export default function Social() {
 
                   {comments.length === 0 && (
                     <p className="text-xs text-gray-400 text-center py-2">
-                      {t('socialExtra.noComments', 'Κανένα σχόλιο ακόμη')}
+                      {t('socialExtra.noComments')}
                     </p>
                   )}
 
@@ -247,7 +247,7 @@ export default function Social() {
                             e.preventDefault(); addComment.mutate()
                           }
                         }}
-                        placeholder={t('socialExtra.commentPlaceholder', 'Γράψε σχόλιο...')}
+                        placeholder={t('socialExtra.commentPlaceholder')}
                         className="input resize-none text-sm py-2 flex-1" />
                       <button onClick={() => addComment.mutate()}
                         disabled={!commentDraft.trim() || addComment.isPending}

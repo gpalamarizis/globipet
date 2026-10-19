@@ -29,17 +29,17 @@ const typeIllustration: Record<string, { Icon: typeof Stethoscope, bg: string, f
 const defaultIllustration = { Icon: PawPrint, bg: 'bg-gray-50 dark:bg-gray-800', fg: 'text-gray-300 dark:text-gray-600' }
 
 // Local label fallback so a missing/incomplete i18n key never shows the raw key to the user
-const typeLabels: Record<string,string> = {
-  veterinary:'Κτηνίατρος', grooming:'Περιποίηση', training:'Εκπαίδευση',
-  pet_sitting:'Φιλοξενία · Ιδιώτης', walking:'Βόλτες', boarding:'Φιλοξενία · Ξενοδοχείο',
-  pet_taxi:'Pet Taxi', photography:'Φωτογράφιση', pharmacy:'Φαρμακείο',
-  adoption:'Υιοθεσία', shelter:'Καταφύγιο', other:'Άλλο',
+const typeLabelKeys: Record<string,string> = {
+  veterinary:'cmpServiceCard.types.veterinary', grooming:'cmpServiceCard.types.grooming', training:'cmpServiceCard.types.training',
+  pet_sitting:'cmpServiceCard.types.pet_sitting', walking:'cmpServiceCard.types.walking', boarding:'cmpServiceCard.types.boarding',
+  pet_taxi:'cmpServiceCard.types.pet_taxi', photography:'cmpServiceCard.types.photography', pharmacy:'cmpServiceCard.types.pharmacy',
+  adoption:'cmpServiceCard.types.adoption', shelter:'cmpServiceCard.types.shelter', other:'cmpServiceCard.types.other',
 }
 
 export default function ServiceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
   const [selectedDate, setSelectedDate] = useState('')
@@ -222,7 +222,7 @@ export default function ServiceDetail() {
             {/* Type badge */}
             <div className="flex items-center gap-2 mb-3">
               <span className="badge bg-brand-50 text-brand-900 dark:bg-brand-900/20 text-xs capitalize">
-                {t(`services.types.${service.service_type}` as any, { defaultValue: typeLabels[service.service_type] || service.service_type })}
+                {t(`services.types.${service.service_type}` as any, { defaultValue: typeLabelKeys[service.service_type] ? t(typeLabelKeys[service.service_type]) : service.service_type })}
               </span>
               {service.is_verified && (
                 <span className="flex items-center gap-1 badge bg-green-50 text-green-700 dark:bg-green-900/20 text-xs">
@@ -471,7 +471,7 @@ export default function ServiceDetail() {
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                       {dates.map(d => {
                         const date = new Date(d)
-                        const day = date.toLocaleDateString('en', { weekday: 'short' })
+                        const day = date.toLocaleDateString(i18n.language, { weekday: 'short' })
                         const num = date.getDate()
                         return (
                           <button key={d} onClick={() => setSelectedDate(d)}

@@ -51,16 +51,16 @@ export default function AiFeatureGuard({ children }: { children: ReactNode }) {
           <Lock size={26} className="text-brand-900 dark:text-yellow-400"/>
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('aiFeatureGuard.title', 'Απαιτείται συνδρομή AI')}
+          {t('aiFeatureGuard.title')}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           {st === 'expired'
-            ? t('aiFeatureGuard.expired', 'Η δωρεάν σου δοκιμή έληξε. Επίλεξε πλάνο για να συνεχίσεις.')
-            : t('aiFeatureGuard.upgrade', 'Αυτή η λειτουργία είναι διαθέσιμη με συνδρομή AI. Ξεκίνησε δωρεάν δοκιμή 30 ημερών.')}
+            ? t('aiFeatureGuard.expired')
+            : t('aiFeatureGuard.upgrade')}
         </p>
         <a href="/pricing" className="btn-primary inline-flex items-center gap-2">
           <Sparkles size={16}/>
-          {t('aiFeatureGuard.viewPlans', 'Δες τα πλάνα')}
+          {t('aiFeatureGuard.viewPlans')}
         </a>
       </div>
     </div>

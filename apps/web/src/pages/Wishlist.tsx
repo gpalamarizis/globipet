@@ -35,7 +35,7 @@ export default function Wishlist() {
     mutationFn: (productId: string) => api.post('/wishlist', { product_id: productId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
-      toast.success(t('wishlist.removed', 'Αφαιρέθηκε από τα αγαπημένα'))
+      toast.success(t('wishlist.removed'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -44,7 +44,7 @@ export default function Wishlist() {
     mutationFn: (productId: string) => api.post('/cart', { product_id: productId, quantity: 1 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] })
-      toast.success(t('cart.added', 'Προστέθηκε στο καλάθι!'))
+      toast.success(t('cart.added'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -53,9 +53,9 @@ export default function Wishlist() {
     <div className="page-container py-16 text-center">
       <p className="text-4xl mb-3">🔒</p>
       <p className="font-semibold text-gray-900 dark:text-white mb-2">
-        {t('authExtra.requiredTitle', 'Απαιτείται σύνδεση')}
+        {t('authExtra.requiredTitle')}
       </p>
-      <Link to="/login" className="btn-primary inline-block">{t('auth.login', 'Σύνδεση')}</Link>
+      <Link to="/login" className="btn-primary inline-block">{t('auth.login')}</Link>
     </div>
   )
 
@@ -67,10 +67,10 @@ export default function Wishlist() {
         </div>
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
-            {t('wishlist.title', 'Αγαπημένα')}
+            {t('wishlist.title')}
           </h1>
           <p className="text-sm text-gray-500">
-            {items.length} {t('wishlist.saved', 'αποθηκευμένα προϊόντα')}
+            {t('wishlist.savedCount', { count: items.length })}
           </p>
         </div>
       </div>
@@ -83,13 +83,13 @@ export default function Wishlist() {
         <div className="text-center py-20">
           <Heart size={48} className="mx-auto text-gray-200 mb-4" />
           <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-            {t('wishlist.empty', 'Δεν έχεις αγαπημένα ακόμη')}
+            {t('wishlist.empty')}
           </h3>
           <p className="text-gray-500 mb-6 text-sm">
-            {t('wishlist.emptyDesc', 'Πάτα την καρδιά σε ό,τι σου αρέσει για να το βρεις εύκολα εδώ.')}
+            {t('wishlist.emptyDesc')}
           </p>
           <Link to="/marketplace" className="btn-primary">
-            {t('wishlist.browse', 'Δες το κατάστημα')}
+            {t('wishlist.browse')}
           </Link>
         </div>
       ) : (
@@ -124,13 +124,13 @@ export default function Wishlist() {
                     onClick={() => addToCart.mutate(item.product_id)}
                     disabled={addToCart.isPending}
                     className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5">
-                    <ShoppingCart size={13} /> {t('wishlist.toCart', 'Καλάθι')}
+                    <ShoppingCart size={13} /> {t('wishlist.toCart')}
                   </button>
                   <button
                     onClick={() => remove.mutate(item.product_id)}
                     disabled={remove.isPending}
                     className="text-xs py-1.5 px-3 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1.5 transition-colors">
-                    <Trash2 size={13} /> {t('common.delete', 'Διαγραφή')}
+                    <Trash2 size={13} /> {t('common.delete')}
                   </button>
                 </div>
               </motion.div>

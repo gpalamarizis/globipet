@@ -13,7 +13,7 @@ import { getLegalDoc, LEGAL_UPDATED } from '@/lib/legal'
  * δεδομένων και απαιτεί έλεγχο από νομικό σύμβουλο.
  */
 export default function TermsOfServicePage() {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const doc = getLegalDoc('terms', i18n.language)
   const updated = new Date(LEGAL_UPDATED).toLocaleDateString(i18n.language || 'el')
 
@@ -30,7 +30,7 @@ export default function TermsOfServicePage() {
               {doc.title}
             </h1>
             <p className="text-sm text-gray-500">
-              {i18n.language?.startsWith('el') ? 'Τελευταία ενημέρωση' : 'Last updated'}: {updated}
+              {t('terms.lastUpdated')}: {updated}
             </p>
           </div>
         </div>
