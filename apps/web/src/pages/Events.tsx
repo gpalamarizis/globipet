@@ -53,7 +53,10 @@ export default function Events() {
   /** Dates are stored as "YYYY-MM-DD" strings, not timestamps. */
   const fmt = (value?: string | null) => {
     if (!value) return '—'
-    const d = new Date(value)
+    // 'YYYY-MM-DD' ως τοπική ημερομηνία· το new Date('YYYY-MM-DD') είναι UTC
+    // και σε ζώνες πίσω από το UTC έδειχνε την προηγούμενη μέρα.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+    const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(value)
     return isNaN(d.getTime())
       ? value
       : d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: 'short' })

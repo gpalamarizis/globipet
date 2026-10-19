@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Search, MapPin, Filter, Map, List, Star, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -51,6 +51,9 @@ export default function Services() {
         min_rating: minRating > 0 ? minRating : undefined,
       }
     }).then(r => r.data),
+    // Κρατά τα προηγούμενα αποτελέσματα όσο φορτώνουν τα νέα: ο χάρτης δεν
+    // ξαναστήνεται σε κάθε αλλαγή φίλτρου, ενημερώνονται μόνο τα markers.
+    placeholderData: keepPreviousData,
   })
 
   const getTypeLabel = (key: string) => {

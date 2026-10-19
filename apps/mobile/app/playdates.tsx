@@ -32,15 +32,18 @@ const TYPE_EMOJI: Record<string, string> = {
   walk: '🚶', play: '🎾', meetup: '🐾', training: '🎓', other: '✨',
 }
 
-const fmtDate = (d?: string) => {
+const fmtDate = (d: string | undefined, lang: string) => {
   if (!d) return '—'
-  const x = new Date(d)
+  // 'YYYY-MM-DD' ως τοπική ημερομηνία: το new Date('YYYY-MM-DD') είναι UTC
+  // και σε ζώνες πίσω από το UTC έδειχνε την προηγούμενη μέρα.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
+  const x = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(d)
   return isNaN(x.getTime()) ? d
-    : x.toLocaleDateString('el-GR', { weekday: 'short', day: '2-digit', month: 'short' })
+    : x.toLocaleDateString(lang, { weekday: 'short', day: '2-digit', month: 'short' })
 }
 
 export default function PlaydatesScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   /**
@@ -52,7 +55,11 @@ export default function PlaydatesScreen() {
    */
   const [creating, setCreating] = useState(false)
   const [pTitle, setPTitle] = useState('')
-  const [pDate, setPDate] = useState(new Date(Date.now() + 864e5).toISOString().slice(0, 10))
+  // Αύριο, από τοπικά έτος/μήνα/ημέρα (το toISOString είναι UTC).
+  const [pDate, setPDate] = useState(() => {
+    const d = new Date(Date.now() + 864e5)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [pTime, setPTime] = useState('18:00')
   const [pLocation, setPLocation] = useState('')
   const [pCity, setPCity] = useState('')
@@ -63,8 +70,10 @@ export default function PlaydatesScreen() {
       title: pTitle.trim(),
       date: pDate,
       time: pTime,
-      location: pLocation.trim() || undefined,
-      city: pCity.trim() || undefined,
+      // Ο server θέλει υποχρεωτικά title, date, time, location, city (400
+      // αλλιώς) — το κουμπί αποθήκευσης ελέγχει τα ίδια, όπως το web.
+      location: pLocation.trim(),
+      city: pCity.trim(),
       max_participants: pMax ? parseInt(pMax, 10) : undefined,
       is_public: true,
     }),
@@ -95,7 +104,11 @@ export default function PlaydatesScreen() {
     queryFn: () => api.get('/playdates/my').then(r => r.data?.data ?? r.data),
     enabled: isAuthenticated,
   })
-  const invitations: any[] = mine?.invitations ?? mine?.received ?? []
+  // Μόνο όσες περιμένουν απάντηση: το /playdates/my επιστρέφει και τις ήδη
+  // αποδεκτές/απορριφθείσες, και τις συμμετοχές του ίδιου (accepted), που
+  // εμφανίζονταν ξανά με κουμπιά αποδοχής/απόρριψης.
+  const invitations: any[] = (mine?.invitations ?? mine?.received ?? [])
+    .filter((i: any) => !i.status || i.status === 'pending')
 
   const respondInvite = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -109,11 +122,24 @@ export default function PlaydatesScreen() {
 
   const [invitingFor, setInvitingFor] = useState<any>(null)
   const [inviteEmail, setInviteEmail] = useState('')
+  // Προαιρετικό μήνυμα πρόσκλησης — το backend το δέχεται (έως 500
+  // χαρακτήρες) και το web το στέλνει.
+  const [inviteMsg, setInviteMsg] = useState('')
+  // Ιδιοκτήτης από τη λίστα «κοντά σου»: στέλνεται με invitee_id, αφού το
+  // endpoint δεν επιστρέφει πια email.
+  const [inviteOwner, setInviteOwner] = useState<any>(null)
+  const closeInvite = () => { setInvitingFor(null); setInviteOwner(null) }
 
   const sendInvite = useMutation({
-    mutationFn: () => api.post(`/playdates/${invitingFor.id}/invite`, { email: inviteEmail.trim() }),
+    // Το backend δέχεται invitee_id ή invitee_email — όχι `email`, που
+    // γύριζε πάντα 400 «Λείπει ο παραλήπτης».
+    mutationFn: () => api.post(`/playdates/${invitingFor.id}/invite`,
+      inviteOwner
+        ? { invitee_id: inviteOwner.id, message: inviteMsg.trim() || undefined }
+        : { invitee_email: inviteEmail.trim(), message: inviteMsg.trim() || undefined }),
     onSuccess: () => {
-      setInvitingFor(null); setInviteEmail('')
+      qc.invalidateQueries({ queryKey: ['playdates-mine'] })
+      closeInvite(); setInviteEmail(''); setInviteMsg('')
       Alert.alert(t('play.inviteSent'), t('play.inviteSentHint'))
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
@@ -133,13 +159,15 @@ export default function PlaydatesScreen() {
   const join = useMutation({
     mutationFn: (id: string) => api.post(`/playdates/${id}/join`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('play.join_failed')),
+    // Ο interceptor απορρίπτει με το σφάλμα του axios: το e.message είναι
+    // «Request failed with status code…». Το μήνυμα του server είναι στο response.
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('play.join_failed')),
   })
 
   const leave = useMutation({
     mutationFn: (id: string) => api.delete(`/playdates/${id}/join`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('play.leave_failed')),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('play.leave_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -169,6 +197,9 @@ export default function PlaydatesScreen() {
                 <Text style={s.inviteMeta} numberOfLines={1}>
                   {inv.event?.date ?? inv.date} {inv.event?.time ?? inv.time}
                 </Text>
+                {!!inv.message && (
+                  <Text style={s.inviteMsg} numberOfLines={3}>“{inv.message}”</Text>
+                )}
               </View>
               <TouchableOpacity style={s.accept}
                 onPress={() => respondInvite.mutate({ id: inv.id, status: 'accepted' })}>
@@ -222,7 +253,7 @@ export default function PlaydatesScreen() {
 
                 <View style={s.metaRow}>
                   <Calendar size={icon.xs} color={colors.textLight} />
-                  <Text style={s.meta}>{fmtDate(ev.date)}</Text>
+                  <Text style={s.meta}>{fmtDate(ev.date, i18n.language)}</Text>
                   {!!ev.time && (
                     <>
                       <Clock size={icon.xs} color={colors.textLight} />
@@ -256,10 +287,26 @@ export default function PlaydatesScreen() {
                     size="sm"
                     full
                     disabled={!joined && !!full}
-                    loading={join.isPending || leave.isPending}
+                    loading={(join.isPending && join.variables === ev.id) || (leave.isPending && leave.variables === ev.id)}
                     onPress={() => joined ? leave.mutate(ev.id) : join.mutate(ev.id)}
                     style={{ marginTop: space.md }}
                   />
+                )}
+                {/* Ο διοργανωτής: πρόσκληση και διαγραφή, όπως στο web. Πριν, το
+                    παράθυρο πρόσκλησης δεν άνοιγε από πουθενά. */}
+                {isAuthenticated && mine && (
+                  <View style={[s.sheetActions, { marginTop: space.md }]}>
+                    <Button label={t('play.invitation')} size="sm" variant="secondary"
+                      icon={<UserPlus size={icon.sm} color={colors.text} />}
+                      onPress={() => { setInviteOwner(null); setInvitingFor(ev) }} style={{ flex: 1 }} />
+                    <Button label={t('common.delete')} size="sm" variant="secondary"
+                      icon={<Trash2 size={icon.sm} color={colors.danger} />}
+                      loading={removePlaydate.isPending && removePlaydate.variables === ev.id}
+                      onPress={() => Alert.alert(t('common.delete'), t('play.deleteQ', { title: ev.title }), [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        { text: t('common.delete'), style: 'destructive', onPress: () => removePlaydate.mutate(ev.id) },
+                      ])} style={{ flex: 1 }} />
+                  </View>
                 )}
                 {!isAuthenticated && (
                   <Button label={t('play.login_join')} variant="secondary" size="sm" full
@@ -278,7 +325,12 @@ export default function PlaydatesScreen() {
           <SectionHeader title={t('play.near_you')} />
           <View style={s.ownerRow}>
             {nearby.slice(0, 8).map((o: any) => (
-              <View key={o.id} style={s.owner}>
+              <TouchableOpacity key={o.id} style={s.owner} disabled={!isAuthenticated}
+                onPress={() => {
+                  const own = events.filter((e: any) => e.creator_email === user?.email)
+                  if (!own.length) { Alert.alert(t('play.invite'), t('play.createEventFirst')); return }
+                  setInviteOwner(o); setInvitingFor(own[0])
+                }}>
                 <View style={s.ownerAvatar}>
                   {o.profile_photo
                     ? <Image source={{ uri: o.profile_photo }} style={s.ownerImg} />
@@ -289,7 +341,7 @@ export default function PlaydatesScreen() {
                 <Text style={s.ownerName} numberOfLines={1}>
                   {o.full_name?.split(' ')[0]}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </>
@@ -314,7 +366,8 @@ export default function PlaydatesScreen() {
               <Button label={t('common.cancel')} variant="secondary"
                 onPress={() => setCreating(false)} style={{ flex: 1 }} />
               <Button label={t('common.save')}
-                disabled={pTitle.trim().length < 2 || !pDate || createPlaydate.isPending}
+                disabled={pTitle.trim().length < 2 || !pDate || !pTime.trim()
+                  || !pLocation.trim() || !pCity.trim() || createPlaydate.isPending}
                 loading={createPlaydate.isPending}
                 onPress={() => createPlaydate.mutate()} style={{ flex: 1 }} />
             </View>
@@ -322,18 +375,24 @@ export default function PlaydatesScreen() {
         </View>
       </Modal>
 
-      <Modal visible={!!invitingFor} transparent animationType="slide" onRequestClose={() => setInvitingFor(null)}>
+      <Modal visible={!!invitingFor} transparent animationType="slide" onRequestClose={closeInvite}>
         <View style={s.backdrop}>
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>{t('play.invite')}</Text>
             <Text style={s.inviteMeta}>{invitingFor?.title}</Text>
-            <Input label={t('common.email')} value={inviteEmail} onChangeText={setInviteEmail}
-              keyboardType="email-address" autoCapitalize="none" />
+            {inviteOwner ? (
+              <Text style={s.inviteTitle}>{t('play.inviteTo', { name: inviteOwner.full_name })}</Text>
+            ) : (
+              <Input label={t('common.email')} value={inviteEmail} onChangeText={setInviteEmail}
+                keyboardType="email-address" autoCapitalize="none" />
+            )}
+            <Input label={t('play.messageOptional')} value={inviteMsg} onChangeText={setInviteMsg}
+              placeholder={t('play.messagePlaceholder')} multiline />
             <View style={s.sheetActions}>
               <Button label={t('common.cancel')} variant="secondary"
-                onPress={() => setInvitingFor(null)} style={{ flex: 1 }} />
+                onPress={closeInvite} style={{ flex: 1 }} />
               <Button label={t('play.send')}
-                disabled={!inviteEmail.includes('@') || sendInvite.isPending}
+                disabled={(!inviteOwner && !inviteEmail.includes('@')) || sendInvite.isPending}
                 loading={sendInvite.isPending}
                 onPress={() => sendInvite.mutate()} style={{ flex: 1 }} />
             </View>
@@ -350,6 +409,7 @@ const s = StyleSheet.create({
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
   inviteTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
   inviteMeta: { ...type.caption, color: colors.textLight },
+  inviteMsg: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: 2 },
   accept: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.success, alignItems: 'center', justifyContent: 'center' },
   decline: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },

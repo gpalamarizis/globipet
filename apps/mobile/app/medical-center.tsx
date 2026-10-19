@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +14,13 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * Τα τρία AI εργαλεία και η τηλεϊατρική ήταν διάσπαρτα στην Ανακάλυψη. Εδώ
  * μαζεύονται σε ένα σημείο, με την κατάσταση της συνδρομής από πάνω: ο
  * χρήστης βλέπει τι μπορεί να χρησιμοποιήσει πριν πατήσει.
+ *
+ * Η κατάσταση διαβάζεται όπως στο web (PetMedicalCenter/AiFeatureGuard):
+ * το /ai-subscriptions/my-status δίνει `ai_subscription_status`
+ * ('none'|'trial'|'active'|'expired') και `trial_days_left` — όχι
+ * is_subscribed/trial_active/trial_used, που δεν υπάρχουν και έκαναν την
+ * κάρτα να λέει πάντα «χρειάζεται πλάνο». Ίδιο query key με τις άλλες
+ * οθόνες, ώστε η έναρξη δοκιμής να ενημερώνει παντού.
  */
 const TOOLS = [
   { key: 'health',   Icon: Brain,         titleKey: 'ai.health_title',       subKey: 'discover.photo_analysis', route: '/ai-health',      ai: true },
@@ -30,18 +37,23 @@ export default function MedicalCenterScreen() {
   const { isAuthenticated } = useAuthStore()
 
   const { data: status } = useQuery({
-    queryKey: ['ai-status'],
-    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data ?? r.data),
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
     enabled: isAuthenticated,
   })
 
   const startTrial = useMutation({
     mutationFn: () => api.post('/ai-subscriptions/start-trial', {}),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-status'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
+    onError: (e: any) =>
+      Alert.alert(t('ai.trial_failed'), e?.response?.data?.message || t('common.try_again_later')),
   })
 
-  const active = !!status?.is_subscribed || !!status?.trial_active
-  const canTrial = isAuthenticated && status && !status.trial_used && !status.is_subscribed
+  const st = status?.ai_subscription_status
+  const active = st === 'active' || st === 'trial'
+  const expired = st === 'expired'
+  // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
+  const canTrial = isAuthenticated && st === 'none'
 
   return (
     <Screen title={t('medical.title')} back>
@@ -54,9 +66,9 @@ export default function MedicalCenterScreen() {
             <Sparkles size={icon.md} color={active ? colors.success : colors.textMuted} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.statusTitle}>
-                {active ? t('medical.aiActive') : t('medical.aiInactive')}
+                {active ? t('medical.aiActive') : expired ? t('ai.trial_over') : t('medical.aiInactive')}
               </Text>
-              {status?.trial_active && !!status?.trial_days_left && (
+              {st === 'trial' && status?.trial_days_left != null && (
                 <Text style={s.statusMeta}>
                   {t('medical.trialDaysLeft', { count: status.trial_days_left })}
                 </Text>

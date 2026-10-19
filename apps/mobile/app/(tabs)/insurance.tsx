@@ -39,7 +39,9 @@ const TIERS: Record<string, { labelKey: string; bg: string; fg: string }> = {
 
 export default function InsuranceScreen() {
   const tabSpace = useTabSpace()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // Το `name_el` είναι μόνο ελληνικά· στις άλλες γλώσσες το `name`.
+  const nm = (r: any) => (i18n.language === 'el' && r?.name_el) ? r.name_el : (r?.name || r?.name_el)
   const qc = useQueryClient()
   const [petType, setPetType] = useState('')
   const [selected, setSelected] = useState<any>(null)
@@ -113,10 +115,10 @@ export default function InsuranceScreen() {
                     <View style={s.cardTop}>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={s.provider} numberOfLines={1}>
-                          {plan.provider?.name_el || plan.provider?.name}
+                          {nm(plan.provider)}
                         </Text>
                         <Text style={s.planName} numberOfLines={1}>
-                          {plan.name_el || plan.name}
+                          {nm(plan)}
                         </Text>
                       </View>
                       <View style={[s.tierTag, { backgroundColor: tier.bg }]}>
@@ -164,10 +166,10 @@ export default function InsuranceScreen() {
             <View style={s.sheetHeader}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.sheetProvider} numberOfLines={1}>
-                  {selected?.provider?.name_el || selected?.provider?.name}
+                  {nm(selected?.provider)}
                 </Text>
                 <Text style={s.sheetTitle} numberOfLines={2}>
-                  {selected?.name_el || selected?.name}
+                  {nm(selected)}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setSelected(null)} hitSlop={10}>

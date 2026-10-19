@@ -36,6 +36,16 @@ const typeLabelKeys: Record<string,string> = {
   adoption:'cmpServiceCard.types.adoption', shelter:'cmpServiceCard.types.shelter', other:'cmpServiceCard.types.other',
 }
 
+// Τοπική ημερομηνία ⇄ YYYY-MM-DD. Το toISOString() δίνει τη μέρα σε UTC
+// (στην Ελλάδα, μετά τα μεσάνυχτα, ακόμη «χθες») και το new Date('YYYY-MM-DD')
+// διαβάζεται ως UTC — άρα λάθος μέρα σε ζώνες δυτικά του Greenwich.
+const toYmd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const fromYmd = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 export default function ServiceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -158,7 +168,7 @@ export default function ServiceDetail() {
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i + 1)
-    return d.toISOString().split('T')[0]
+    return toYmd(d)
   })
 
   if (isLoading) return (
@@ -470,7 +480,7 @@ export default function ServiceDetail() {
                     </label>
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                       {dates.map(d => {
-                        const date = new Date(d)
+                        const date = fromYmd(d)
                         const day = date.toLocaleDateString(i18n.language, { weekday: 'short' })
                         const num = date.getDate()
                         return (

@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next'
 
 export default function EventCard({ event }: { event: Event }) {
   const { t } = useTranslation()
-  const spotsLeft = event.capacity ? event.capacity - event.registered_count : null
+  // Χωρίς registered_count η αφαίρεση έδινε NaN («NaN θέσεις» / «sold out»).
+  // Ίδιος υπολογισμός με Events.tsx / EventDetail.tsx.
+  const spotsLeft = event.capacity ? Math.max(0, event.capacity - (event.registered_count ?? 0)) : null
   return (
     <Link to={`/events/${event.id}`} className="card overflow-hidden group hover:shadow-card-hover transition-all duration-200 block">
       <div className="aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
@@ -17,7 +19,7 @@ export default function EventCard({ event }: { event: Event }) {
       <div className="p-4">
         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">{event.title}</h3>
         <div className="space-y-1.5 text-xs text-gray-500">
-          <div className="flex items-center gap-1.5"><Calendar size={12}/>{formatDate(event.date, { day:'numeric', month:'short', year:'numeric' })} · {event.time}</div>
+          <div className="flex items-center gap-1.5"><Calendar size={12}/>{formatDate(/^\d{4}-\d{2}-\d{2}$/.test(event.date) ? new Date(+event.date.slice(0, 4), +event.date.slice(5, 7) - 1, +event.date.slice(8, 10)) : event.date, { day:'numeric', month:'short', year:'numeric' })} · {event.time}</div>
           <div className="flex items-center gap-1.5"><MapPin size={12}/>{event.city}, {event.country}</div>
           {spotsLeft !== null && <div className="flex items-center gap-1.5"><Users size={12}/>{spotsLeft > 0 ? t('cmpEventCard.spotsAvailable', { count: spotsLeft }) : t('cmpEventCard.soldOut')}</div>}
         </div>

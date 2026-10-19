@@ -3,6 +3,7 @@ import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
 import { sendAiTrialStartedEmail } from '../lib/email.js'
 import { serverError } from '../lib/errors.js'
+import { getRequestLang, translateRecords, translateRecord } from '../lib/i18n.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const TRIAL_DAYS = 30
@@ -16,12 +17,15 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
   }
 
   // GET /ai-subscriptions/plans
+  // Τα `name`/`description` περνούν από τον πίνακα μεταφράσεων (ai_plan),
+  // όπως ράτσες και ασφάλειες. Χωρίς μετάφραση επιστρέφεται το πρωτότυπο,
+  // οπότε η απάντηση για όσους δεν έχουν μετάφραση μένει ίδια.
   app.get('/plans', async (req, reply) => {
     const plans = await prisma.aiSubscriptionPlan.findMany({
       where: { is_active: true },
       orderBy: [{ is_featured: 'desc' }, { display_order: 'asc' }, { price_monthly: 'asc' }],
     })
-    return reply.send({ data: plans })
+    return reply.send({ data: await translateRecords('ai_plan', plans, getRequestLang(req)) })
   })
 
   // GET /ai-subscriptions/my-status
@@ -62,6 +66,7 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
         },
       })
     }
+    if (plan) plan = await translateRecord('ai_plan', plan, getRequestLang(req))
     return reply.send({ data: { ...user, trial_days_left: daysLeft, plan } })
   })
 

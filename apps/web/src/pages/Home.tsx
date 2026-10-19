@@ -47,6 +47,14 @@ export default function Home() {
     enabled: isAuthenticated,
     staleTime: 60_000,
   })
+  // Οι μέρες δοκιμής έρχονται από τον server (my-status → trial_days_left,
+  // με βάση το TRIAL_DAYS του backend), όχι από σταθερό 30 εδώ.
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     navigate(`/services?q=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(searchCity)}`)
@@ -179,10 +187,10 @@ export default function Home() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.welcome.subtitle')}</p>
                 </div>
                 {/* AI trial badge — active → jump into AI Health, expired → pricing */}
-                {(user as any).ai_subscription_status === 'trial' && (user as any).ai_trial_started_at && (() => {
-                  const started = new Date((user as any).ai_trial_started_at).getTime()
-                  const daysUsed = Math.floor((Date.now() - started) / 86400000)
-                  const daysLeft = Math.max(0, 30 - daysUsed)
+                {/* Το my-status γυρίζει τη δοκιμή σε 'expired' όταν τελειώσει, γι' αυτό
+                    η ληγμένη δοκιμή αναγνωρίζεται και από αυτή την κατάσταση. */}
+                {aiStatus?.ai_trial_started_at && (aiStatus.ai_subscription_status === 'trial' || aiStatus.ai_subscription_status === 'expired') && (() => {
+                  const daysLeft = aiStatus.ai_subscription_status === 'trial' ? Math.max(0, Number(aiStatus.trial_days_left ?? 0)) : 0
                   const expired = daysLeft === 0
                   return (
                     <Link

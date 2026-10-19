@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, Check, Star } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
@@ -27,21 +27,28 @@ export default function PricingScreen() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [annual, setAnnual] = useState(false)
+  const qc = useQueryClient()
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['ai-plans'],
     queryFn: () => api.get('/ai-subscriptions/plans').then(r => r.data?.data ?? []),
   })
 
+  // Ίδιο key και ίδια πεδία με web/ai-health: `ai_subscription_status`
+  // ('none'|'trial'|'active'|'expired'). Τα is_subscribed/trial_used δεν
+  // υπάρχουν στην απάντηση, οπότε η κάρτα δοκιμής δεν έβγαινε ποτέ.
   const { data: status } = useQuery({
-    queryKey: ['ai-status'],
-    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data ?? r.data),
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
     enabled: isAuthenticated,
   })
 
   const startTrial = useMutation({
     mutationFn: () => api.post('/ai-subscriptions/start-trial', {}),
-    onSuccess: () => Alert.alert(t('ai.try_free'), t('ai.trial_desc')),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ai-subscription-status'] })
+      Alert.alert(t('ai.try_free'), t('ai.trial_desc'))
+    },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('ai.trial_failed')),
   })
 
@@ -64,7 +71,8 @@ export default function PricingScreen() {
   const monthly = (p: any) =>
     annual && p.price_annual ? p.price_annual / 12 : p.price_monthly
 
-  const canTrial = isAuthenticated && status && !status.trial_used && !status.is_subscribed
+  // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
+  const canTrial = isAuthenticated && status?.ai_subscription_status === 'none'
 
   return (
     <Screen title={t('pricing.title')} back scroll={false}>

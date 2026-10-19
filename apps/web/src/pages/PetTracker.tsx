@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { loadMapbox } from '@/lib/loadMapbox'
 import toast from 'react-hot-toast'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || ''
@@ -21,6 +22,12 @@ const SPECIES_EMOJI: Record<string, string> = {
   hamster: '🐹', fish: '🐠', reptile: '🦎', horse: '🐴',
 }
 const emojiFor = (species?: string) => SPECIES_EMOJI[String(species).toLowerCase()] ?? '🐾'
+
+// Το popup του χάρτη δέχεται HTML· ό,τι γράφει ο χρήστης (όνομα ζώου)
+// περνά από escape ώστε να μην εκτελείται ως κώδικας.
+const escapeHtml = (v: unknown) => String(v ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 type TrackerRow = {
   pet: {
@@ -68,17 +75,8 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
       map.on('load', () => setReady(true))
     }
 
-    if ((window as any).mapboxgl) { init(); return }
-
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css'
-    document.head.appendChild(link)
-
-    const script = document.createElement('script')
-    script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'
-    script.onload = init
-    document.head.appendChild(script)
+    // Κοινή φόρτωση με τον χάρτη υπηρεσιών (ίδιο script, ξαναδοκιμή μετά από αποτυχία).
+    loadMapbox().then(() => { if (!mapInstance.current) init() }).catch(() => { /* ο χάρτης μένει κενός, όπως πριν */ })
   }, [])
 
   /**
@@ -100,15 +98,15 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
     for (const row of located) {
       const lost = row.pet.is_lost || row.location!.status === 'lost'
       const el = document.createElement('div')
-      el.innerHTML = `<div style="background:${lost ? '#ef4444' : '#f97316'};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer">${emojiFor(row.pet.species)}</div>`
+      el.innerHTML = `<div style="background:${lost ? '#ef4444' : '#f97316'};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer">${escapeHtml(emojiFor(row.pet.species))}</div>`
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([row.location!.longitude, row.location!.latitude])
         .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`
           <div style="padding:8px;font-family:sans-serif">
-            <strong style="font-size:14px">${row.pet.name}</strong>
-            <p style="margin:4px 0;font-size:12px;color:#666">${row.location!.latitude.toFixed(5)}, ${row.location!.longitude.toFixed(5)}</p>
-            <p style="margin:0;font-size:12px;color:${lost ? '#ef4444' : '#22c55e'}">${lost ? '⚠️ ' + t('tracker.lost') : '✅ ' + t('tracker.safe')}</p>
+            <strong style="font-size:14px">${escapeHtml(row.pet.name)}</strong>
+            <p style="margin:4px 0;font-size:12px;color:#666">${Number(row.location!.latitude).toFixed(5)}, ${Number(row.location!.longitude).toFixed(5)}</p>
+            <p style="margin:0;font-size:12px;color:${lost ? '#ef4444' : '#22c55e'}">${escapeHtml(lost ? '⚠️ ' + t('tracker.lost') : '✅ ' + t('tracker.safe'))}</p>
           </div>
         `))
         .addTo(map)
@@ -448,7 +446,7 @@ function DeviceManager({
   const regenerate = useMutation({
     mutationFn: (id: string) => api.post(`/tracker/devices/${id}/token`),
     onSuccess: (res) => {
-      setIssued({ token: res.data?.data?.device_token, ingestUrl: '' })
+      setIssued({ token: res.data?.data?.device_token, ingestUrl: res.data?.setup?.ingest_url ?? '' })
     },
     onError: () => toast.error(t('common.error')),
   })

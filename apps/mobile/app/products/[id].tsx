@@ -79,8 +79,17 @@ export default function ProductDetailScreen() {
   })
 
   const toggleWish = useMutation({
-    mutationFn: () => api.post('/wishlist', { product_id: id }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    // action: ο server κάνει ό,τι ζητήθηκε, οπότε δεύτερο ίδιο αίτημα δεν αναιρεί το πρώτο.
+    mutationFn: () => api.post('/wishlist', { product_id: id, action: wished ? 'remove' : 'add' }),
+    onSuccess: (r: any) => {
+      // Η καρδιά δείχνει αμέσως το αποτέλεσμα του server.
+      qc.setQueriesData({ queryKey: ['wishlist'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        const rest = old.filter((w: any) => (w.product_id ?? w.id) !== id)
+        return r?.data?.added && r.data.data ? [r.data.data, ...rest] : rest
+      })
+      qc.invalidateQueries({ queryKey: ['wishlist'] })
+    },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
@@ -107,7 +116,7 @@ export default function ProductDetailScreen() {
           <View style={s.titleRow}>
             <Text style={s.name}>{product.name}</Text>
             {isAuthenticated && (
-              <TouchableOpacity onPress={() => toggleWish.mutate()} hitSlop={8}>
+              <TouchableOpacity onPress={() => toggleWish.mutate()} disabled={toggleWish.isPending} hitSlop={8}>
                 <Heart size={icon.md} color={wished ? colors.danger : colors.textLight}
                   fill={wished ? colors.danger : 'transparent'} />
               </TouchableOpacity>

@@ -139,7 +139,11 @@
     "start_today": "Start today",
     "top_providers": "Top providers",
     "tracking": "Tracking",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "trialLabel": "Free AI trial",
+    "trialDays": "{{count}} days",
+    "trialDays_one": "{{count}} day",
+    "trialExpired": "Expired — See plans"
   },
   "services": {
     "title": "Services",
@@ -251,7 +255,9 @@
     "publish": "Publish",
     "comments": "Comments",
     "noComments": "No comments yet",
-    "commentHint": "Write a comment"
+    "commentHint": "Write a comment",
+    "share": "Share",
+    "deleteQ": "Delete this post permanently?"
   },
   "profile": {
     "guest_title": "Log in to access",
@@ -462,7 +468,8 @@
     "title": "Communities",
     "discussion": "Discussion",
     "noMessages": "No messages yet",
-    "messageHint": "Write a message"
+    "messageHint": "Write a message",
+    "membersOnly": "The conversation is for members. Join to see it and take part."
   },
   "emo": {
     "angry": "Angry",
@@ -479,7 +486,13 @@
     "subtitle": "How does your pet feel?",
     "tired": "Tired",
     "title": "Emotion analysis",
-    "what_to_do": "What you can do"
+    "what_to_do": "What you can do",
+    "calm": "Calm",
+    "fearful": "Fearful",
+    "stressed": "Stressed",
+    "observations": "Observations",
+    "energy": "Energy {{n}}/10",
+    "welfare": "Welfare {{n}}/10"
   },
   "inbox": {
     "day_ago_one": "1 day ago",
@@ -606,7 +619,16 @@
     "age_years": "{{count}} years old",
     "addRecord": "Add a record",
     "deleteTitle": "Delete record",
-    "deleteQ": "Permanently delete this record?"
+    "deleteQ": "Permanently delete this record?",
+    "docStatus": "Document status",
+    "rabiesVaccine": "Rabies vaccination",
+    "snapTest": "SNAP test",
+    "travelDocs": "Travel documents",
+    "vaccineType": "Vaccine type",
+    "vt_core": "Core",
+    "vt_non_core": "Non-core",
+    "vt_rabies": "Rabies",
+    "vt_other": "Other"
   },
   "play": {
     "create_first": "Create the first one and invite other owners.",
@@ -628,7 +650,12 @@
     "invite": "Invite to a walk",
     "send": "Send",
     "inviteSent": "Invitation sent",
-    "inviteSentHint": "They will see it in their notifications."
+    "inviteSentHint": "They will see it in their notifications.",
+    "deleteQ": "Delete the walk “{{title}}”?",
+    "inviteTo": "Invitation to {{name}}",
+    "createEventFirst": "Create a walk first",
+    "messageOptional": "Message (optional)",
+    "messagePlaceholder": "Let's walk our dogs together!"
   },
   "soon": {
     "title": "The mobile app is coming very soon",
@@ -685,7 +712,9 @@
     "removeQ": "Disconnect this device? The location history is kept.",
     "tokenRotated": "The key has been rotated",
     "newToken": "New key",
-    "tokenHint": "Set the new key on the device so it keeps sending its location."
+    "tokenHint": "Set the new key on the device so it keeps sending its location.",
+    "tokenOnce": "Device key — copy it now, it will not be shown again",
+    "ingestUrl": "Location upload URL"
   },
   "ver": {
     "about": "About",
@@ -1280,7 +1309,22 @@
     "stool": "Stool",
     "urine": "Urine",
     "photoHint": "Good light and a neutral background help the analysis.",
-    "disclaimer": "This analysis is indicative and does not replace a veterinary examination."
+    "disclaimer": "This analysis is indicative and does not replace a veterinary examination.",
+    "sev_normal": "Normal",
+    "sev_mild": "Mild",
+    "sev_moderate": "Moderate",
+    "sev_severe": "Severe",
+    "urgency": "Urgency",
+    "urg_routine": "Routine appointment",
+    "urg_within_48h": "Within 48 hours",
+    "urg_today": "Today",
+    "urg_emergency": "Immediately / Emergency",
+    "color": "Colour",
+    "consistency": "Consistency",
+    "likelyCauses": "Likely causes",
+    "contextFactors": "Effect of history",
+    "homeCare": "What to do at home",
+    "warningSigns": "Go to a vet immediately if…"
   },
   "wishlist": {
     "title": "Wishlist",
@@ -1313,7 +1357,9 @@
     "register": "Register",
     "registered": "You are registered",
     "alreadyRegistered": "You are already registered",
-    "notFound": "Event not found"
+    "notFound": "Event not found",
+    "cancelAttendance": "Cancel registration",
+    "cancelled": "Registration cancelled"
   },
   "breeds": {
     "title": "Breeds",
@@ -1359,7 +1405,12 @@
     "benefitFlexible": "Change or pause whenever you want",
     "benefitCancel": "Cancel at any time",
     "start": "Start the subscription",
-    "vivaNote": "Payment is handled by Viva and repeats every month."
+    "vivaNote": "Payment is handled by Viva and repeats every month.",
+    "duration": "12-month subscription",
+    "benefitDelivery12": "Automatic monthly delivery, 12 times",
+    "benefitSecure": "Secure card charge every month",
+    "paymentNote": "Your card is charged every month for 12 months. After the 12th delivery the subscription ends automatically.",
+    "notSubscribable": "This product has no subscription option."
   },
   "reset": {
     "subtitle": "Choose a new password for your account.",
@@ -1389,7 +1440,9 @@
     "pendingHint": "Once the payment goes through, the session is confirmed.",
     "failed": "The payment failed",
     "failedHint": "Try again from telehealth.",
-    "sessionNumber": "Session number"
+    "sessionNumber": "Session number",
+    "join_call": "Join the video call",
+    "err_open_call": "The video call could not be opened."
   },
   "medical": {
     "title": "Health centre",
@@ -1397,7 +1450,8 @@
     "aiActive": "AI features are active",
     "aiInactive": "AI features need a plan",
     "trialDaysLeft": "{{count}} trial days left",
-    "needsPlan": "Needs a plan"
+    "needsPlan": "Needs a plan",
+    "trialDaysLeft_one": "{{count}} trial day left"
   },
   "privacy": {
     "title": "My data",

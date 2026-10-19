@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Users, Send, MapPin } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
-import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -29,10 +29,39 @@ export default function CommunityDetailScreen() {
     enabled: !!id,
   })
 
+  // Το backend επιστρέφει isMember και member_count (όχι is_member / members_count).
+  const isMember = !!(community?.isMember ?? community?.is_member)
+
   const { data: messages = [] } = useQuery({
     queryKey: ['community-messages', id],
-    queryFn: () => api.get(`/communities/${id}/messages`).then(r => r.data?.data ?? r.data ?? []),
-    enabled: !!id && isAuthenticated,
+    // Σχήμα: { messages: [...] }. Το παλιό `r.data?.data ?? r.data` έδινε το
+    // αντικείμενο αντί για πίνακα. Μόνο για μέλη — στους άλλους το endpoint γυρίζει 403.
+    queryFn: () => api.get(`/communities/${id}/messages`).then(r => r.data?.messages ?? r.data?.data ?? []),
+    enabled: !!id && isAuthenticated && isMember,
+  })
+
+  const refreshMembership = () => {
+    qc.invalidateQueries({ queryKey: ['community', id] })
+    qc.invalidateQueries({ queryKey: ['communities'] })
+    qc.invalidateQueries({ queryKey: ['community-messages', id] })
+  }
+  const join = useMutation({
+    mutationFn: () => api.post(`/communities/${id}/join`),
+    onSuccess: refreshMembership,
+    onError: (e: any) => Alert.alert(t('com.join_failed'), e?.response?.data?.message || t('common.try_again_later')),
+  })
+  const leave = useMutation({
+    mutationFn: () => api.delete(`/communities/${id}/leave`),
+    // Μετά την αποχώρηση τα μηνύματα δεν είναι πια προσβάσιμα: invalidate θα
+    // τα ξαναζητούσε και θα έπαιρνε 403 (με επαναλήψεις). Τα αφαιρούμε.
+    // Το await κρατά τη μετάλλαξη σε εκκρεμότητα ώσπου το isMember να γίνει
+    // false, ώστε κανένα ενδιάμεσο render να μην ξαναζητήσει τα μηνύματα.
+    onSuccess: async () => {
+      qc.removeQueries({ queryKey: ['community-messages', id] })
+      qc.invalidateQueries({ queryKey: ['communities'] })
+      await qc.invalidateQueries({ queryKey: ['community', id] })
+    },
+    onError: (e: any) => Alert.alert(t('play.leave_failed'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
   const send = useMutation({
@@ -64,14 +93,23 @@ export default function CommunityDetailScreen() {
           )}
           {!!community.description && <Text style={s.desc}>{community.description}</Text>}
           <View style={s.badges}>
-            <Badge label={t('com.members') + ': ' + (community.members_count ?? 0)} tone="neutral" />
-            {community.is_member && <Badge label={t('com.member')} tone="success" />}
+            <Badge label={t('com.members') + ': ' + (community.member_count ?? community.members_count ?? 0)} tone="neutral" />
+            {isMember && <Badge label={t('com.member')} tone="success" />}
           </View>
+          {isAuthenticated && (
+            <Button label={isMember ? t('play.leave') : t('play.join')}
+              variant={isMember ? 'secondary' : 'primary'} size="sm" full
+              loading={join.isPending || leave.isPending}
+              onPress={() => isMember ? leave.mutate() : join.mutate()}
+              style={{ marginTop: space.md }} />
+          )}
         </Card>
 
         <Text style={s.sectionTitle}>{t('com.discussion')}</Text>
         {!isAuthenticated ? (
           <Text style={s.hint}>{t('auth.login_to_continue')}</Text>
+        ) : !isMember ? (
+          <Text style={s.hint}>{t('com.membersOnly')}</Text>
         ) : messages.length === 0 ? (
           <Text style={s.hint}>{t('com.noMessages')}</Text>
         ) : messages.map((m: any) => {
@@ -85,7 +123,7 @@ export default function CommunityDetailScreen() {
         })}
       </ScrollView>
 
-      {isAuthenticated && (
+      {isAuthenticated && isMember && (
         <View style={s.composer}>
           <TextInput style={s.input} value={text} onChangeText={setText}
             placeholder={t('com.messageHint')} placeholderTextColor={colors.textLight} />

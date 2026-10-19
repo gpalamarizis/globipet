@@ -11,6 +11,13 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
 /**
  * Μηνιαία συνδρομή τροφής.
  *
+ * ΤΙ ΚΑΝΕΙ Ο SERVER (subscriptions.ts, webhooks.ts)
+ *   Χρέωση κάρτας κάθε μήνα, μία παράδοση τον μήνα, 12 παραδόσεις και μετά
+ *   η συνδρομή λήγει μόνη της. Τιμή = product.price μείον την έκπτωση των
+ *   ρυθμίσεων (όχι η sale_price). Παύση ή αλλαγή δεν υπάρχει — μόνο ακύρωση.
+ *   Η οθόνη έλεγε «παγώνεις όποτε θες» και «πληρωμή μέσω Viva»· τίποτα από
+ *   τα δύο δεν ισχύει, και δεν ανέφερε ότι η διάρκεια είναι 12 μήνες.
+ *
  * Η έκπτωση δεν είναι σταθερή στον κώδικα: έρχεται από τις ρυθμίσεις, ώστε
  * να αλλάζει χωρίς νέα έκδοση της εφαρμογής.
  *
@@ -44,10 +51,11 @@ export default function ProductSubscribeScreen() {
       if (ok) Linking.openURL(url)
       else Alert.alert(t('common.error'), t('checkout.err_open_page'))
     },
-    // Ο interceptor του api απορρίπτει με { message }, οπότε διαβάζουμε από
-    // εκεί — το err.response.data είναι ήδη χαμένο σε αυτό το σημείο.
+    // Ο interceptor του api (src/lib/api.ts) απορρίπτει με το ίδιο το σφάλμα
+    // του axios: το μήνυμα του server είναι στο response.data, ενώ το
+    // e.message είναι το τεχνικό «Request failed with status code…».
     onError: (e: any) =>
-      Alert.alert(t('common.error'), e?.message || e?.response?.data?.message || t('common.something_wrong')),
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
   if (isLoading) return <Screen title={t('subscribe.title')} back><SkeletonRows count={3} /></Screen>
@@ -57,15 +65,25 @@ export default function ProductSubscribeScreen() {
     </Screen>
   )
 
+  // Ίδιο με το web: χωρίς is_subscribable ο server απαντά 400.
+  if (!product.is_subscribable) return (
+    <Screen title={t('subscribe.title')} back>
+      <EmptyState icon={ShoppingBag} title={t('subscribe.notSubscribable')} />
+    </Screen>
+  )
+
   const pct = Number(discountData?.discount_percent ?? discountData?.percent ?? 0)
-  const base = Number(product.sale_price ?? product.price ?? 0)
-  const monthly = pct > 0 ? base * (1 - pct / 100) : base
+  // Ο server χρεώνει με βάση το product.price, όχι τη sale_price.
+  const base = Number(product.price ?? 0)
+  // Στρογγυλοποίηση σε λεπτά όπως ο server (routes/subscriptions.ts), ώστε
+  // το ποσό που βλέπει να είναι αυτό που χρεώνεται.
+  const monthly = Math.round(base * (1 - pct / 100) * 100) / 100
   const saving = base - monthly
 
   const BENEFITS = [
-    { Icon: Truck,       key: 'subscribe.benefitDelivery' },
-    { Icon: RotateCcw,   key: 'subscribe.benefitFlexible' },
-    { Icon: ShieldCheck, key: 'subscribe.benefitCancel' },
+    { Icon: Truck,       key: 'subscribe.benefitDelivery12' },
+    { Icon: ShieldCheck, key: 'subscribe.benefitSecure' },
+    { Icon: RotateCcw,   key: 'subscribe.benefitCancel' },
   ]
 
   return (
@@ -79,6 +97,7 @@ export default function ProductSubscribeScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.name} numberOfLines={2}>{product.name}</Text>
               {!!product.brand && <Text style={s.meta}>{product.brand}</Text>}
+              <Text style={s.meta}>{t('subscribe.duration')}</Text>
             </View>
           </View>
         </Card>
@@ -114,7 +133,7 @@ export default function ProductSubscribeScreen() {
             onPress={() => checkout.mutate()} full />
         )}
 
-        <Text style={s.note}>{t('subscribe.vivaNote')}</Text>
+        <Text style={s.note}>{t('subscribe.paymentNote')}</Text>
       </ScrollView>
     </Screen>
   )

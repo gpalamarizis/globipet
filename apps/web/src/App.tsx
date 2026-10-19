@@ -109,6 +109,13 @@ const queryClient = new QueryClient({
   },
 })
 
+// Αλλαγή γλώσσας → ξαναφόρτωση δεδομένων στη νέα γλώσσα (το api στέλνει
+// Accept-Language). Επίπεδο module: ένας listener, όσο ζει η εφαρμογή.
+const onLanguageChanged = () => { queryClient.invalidateQueries() }
+i18n.on('languageChanged', onLanguageChanged)
+// Στο dev, το HMR ξανατρέχει το module· αφαιρούμε τον παλιό listener.
+import.meta.hot?.dispose(() => { i18n.off('languageChanged', onLanguageChanged) })
+
 /**
  * Ολοκλήρωση σύνδεσης μέσω Google ή Facebook.
  *

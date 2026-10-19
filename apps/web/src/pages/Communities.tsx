@@ -86,12 +86,15 @@ export default function Communities() {
 
   const joinCommunity = useMutation({
     mutationFn: (id: string) => api.post(`/communities/${id}/join`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success(t('pgCommunities.joined')) },
+    // Ανανεώνεται η κοινότητα που πατήθηκε (id), όχι μόνο η ανοιχτή.
+    onSuccess: (_r, id) => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', id] }); toast.success(t('pgCommunities.joined')) },
+    onError: (e: any) => toast.error(e?.message || t('apiMsg.generic')),
   })
 
   const leaveCommunity = useMutation({
     mutationFn: (id: string) => api.delete(`/communities/${id}/leave`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', selectedId] }); toast.success(t('pgCommunities.left')) },
+    onSuccess: (_r, id) => { qc.invalidateQueries({ queryKey: ['communities'] }); qc.invalidateQueries({ queryKey: ['community', id] }); toast.success(t('pgCommunities.left')) },
+    onError: (e: any) => toast.error(e?.message || t('apiMsg.generic')),
   })
 
   const sendMessage = useMutation({
@@ -204,12 +207,14 @@ export default function Communities() {
                       <button onClick={() => openChat(c.id)} className="flex-1 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl text-sm font-medium">
                         💬 {t('pgCommunities.chat')}
                       </button>
-                      {c.members?.some((m: any) => m.user_email === myEmail) ? (
-                        <button onClick={() => leaveCommunity.mutate(c.id)} className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500">
+                      {/* Η λίστα δεν επιστρέφει μέλη (μόνο isMember), οπότε το
+                          c.members?.some(...) ήταν πάντα false. */}
+                      {c.isMember ? (
+                        <button onClick={() => leaveCommunity.mutate(c.id)} disabled={leaveCommunity.isPending && leaveCommunity.variables === c.id} className="px-4 py-2 disabled:opacity-50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500">
                           {t('pgCommunities.leave')}
                         </button>
                       ) : (
-                        <button onClick={() => joinCommunity.mutate(c.id)} className="px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium">
+                        <button onClick={() => joinCommunity.mutate(c.id)} disabled={joinCommunity.isPending && joinCommunity.variables === c.id} className="px-4 py-2 disabled:opacity-50 bg-purple-500 text-white rounded-xl text-sm font-medium">
                           {t('pgCommunities.join')}
                         </button>
                       )}

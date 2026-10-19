@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, Sparkles } from 'lucide-react'
+import { Lock, Sparkles, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -16,7 +16,10 @@ import LoadingScreen from '@/components/ui/LoadingScreen'
  *      and support customers without being asked to buy their own product.
  *   2. Active AI subscription → allowed.
  *   3. Trial period still active → allowed.
- *   4. Otherwise → upgrade card, with a link to /pricing.
+ *   4. Status request failed (network, 5xx) → error card with a retry
+ *      button. We do not know the user's plan, so offering to sell them
+ *      one — possibly to someone who already pays — would be wrong.
+ *   5. Otherwise → upgrade card, with a link to /pricing.
  *
  * Not logged in is handled one level up by <PrivateRoute>, so by the time
  * this component renders the user is always authenticated.
@@ -28,7 +31,7 @@ export default function AiFeatureGuard({ children }: { children: ReactNode }) {
 
   // Admins bypass the subscription check entirely — no query, no waiting.
   // This also avoids a wasted request on every admin page load.
-  const { data: status, isLoading } = useQuery({
+  const { data: status, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['ai-subscription-status'],
     queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
     enabled: !isAdmin,
@@ -37,6 +40,31 @@ export default function AiFeatureGuard({ children }: { children: ReactNode }) {
 
   if (isAdmin) return <>{children}</>
   if (isLoading) return <LoadingScreen />
+
+  // Only when we have no answer at all: a failed background refetch keeps
+  // the last known status, which is still the right thing to act on.
+  if (isError && !status) {
+    return (
+      <div className="page-container py-16">
+        <div className="max-w-lg mx-auto text-center bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={26} className="text-red-500"/>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('aiFeatureGuard.errorTitle')}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            {t('aiFeatureGuard.errorDesc')}
+          </p>
+          <button type="button" onClick={() => refetch()} disabled={isFetching}
+            className="btn-primary inline-flex items-center gap-2 disabled:opacity-60">
+            <RotateCcw size={16} className={isFetching ? 'animate-spin' : ''}/>
+            {t('aiFeatureGuard.retry')}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const st = status?.ai_subscription_status
   const hasAccess = st === 'active' || st === 'trial'

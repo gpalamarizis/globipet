@@ -62,7 +62,7 @@ const analysisTypes = [
 ]
 
 export default function AiPetHealth() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [step, setStep] = useState<'select' | 'upload' | 'analyzing' | 'result'>('select')
   const [analysisType, setAnalysisType] = useState<AnalysisType | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -97,6 +97,7 @@ export default function AiPetHealth() {
       const { data } = await api.post('/ai/pet-health', {
         image_url: uploadedUrl,
         analysis_type: analysisType,
+        lang: i18n.language,
       })
       setResult(data)
       setStep('result')

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Search, Ruler, Baby, Home, Heart, PawPrint } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { localName } from '@/lib/localName'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 /**
@@ -30,7 +31,7 @@ const SIZES = [
 ]
 
 export default function BreedExplorer() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
   const [species, setSpecies] = useState('')
   const [size, setSize] = useState('')
@@ -129,9 +130,9 @@ export default function BreedExplorer() {
                   </div>
                   <div className="p-3">
                     <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-1">
-                      {b.name_el || b.name}
+                      {localName(b, i18n.language)}
                     </p>
-                    {b.name_el && b.name !== b.name_el && (
+                    {b.name && localName(b, i18n.language) !== b.name && (
                       <p className="text-[11px] text-gray-400 line-clamp-1">{b.name}</p>
                     )}
                     <div className="flex flex-wrap gap-1 mt-2">

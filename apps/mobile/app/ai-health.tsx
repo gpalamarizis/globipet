@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native'
-import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Brain, Camera, Images, AlertTriangle, X } from 'lucide-react-native'
+import { useMutation } from '@tanstack/react-query'
+import { Camera, Images, AlertTriangle, X } from 'lucide-react-native'
 import { api } from '@/lib/api'
-import { useAuthStore } from '@/store/auth'
+import AiGate from '@/components/AiGate'
 import { Screen, Card, Button, Badge, Skeleton } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon, touch } from '@/theme'
 
@@ -24,6 +23,10 @@ const typo = theme.type
  *      οθόνη. Τώρα δείχνει σκελετό μέχρι να απαντήσει το backend.
  *   3. Το «Ιατρικό κέντρο» άνοιγε route που δεν υπήρχε. Υπάρχει πλέον ως
  *      οθόνη (app/medical-center.tsx) — το προσωρινό URL του web αφαιρέθηκε.
+ *
+ * Η πύλη (σύνδεση, συνδρομή/δοκιμή, admin, σφάλμα με επανάληψη) ζει πλέον
+ * στο κοινό src/components/AiGate.tsx, ώστε να ισχύει ίδια και στις άλλες
+ * δύο οθόνες AI — όπως το AiFeatureGuard του web.
  */
 
 type AnalysisType = 'skin' | 'eye'
@@ -35,30 +38,11 @@ const SEVERITY = {
 }
 
 export default function AiHealthScreen() {
-  const { t } = useTranslation()
-  const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
-  const queryClient = useQueryClient()
+  const { t, i18n } = useTranslation()
 
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [analysisType, setAnalysisType] = useState<AnalysisType>('skin')
   const [result, setResult] = useState<any>(null)
-
-  const { data: status, isLoading: statusLoading } = useQuery({
-    queryKey: ['ai-subscription-status'],
-    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
-    enabled: isAuthenticated,
-  })
-
-  const startTrial = useMutation({
-    mutationFn: () => api.post('/ai-subscriptions/start-trial'),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
-    onError: (e: any) =>
-      Alert.alert(t('ai.trial_failed'), e?.response?.data?.message || t('common.try_again_later')),
-  })
-
-  const canUseAi =
-    status?.ai_subscription_status === 'trial' || status?.ai_subscription_status === 'active'
 
   const pick = async (fromCamera: boolean) => {
     const permission = fromCamera
@@ -100,6 +84,7 @@ export default function AiHealthScreen() {
       const analysisRes = await api.post('/ai/pet-health', {
         image_url: uploadRes.data?.url,
         analysis_type: analysisType,
+        lang: i18n.language,
       })
       return analysisRes.data
     },
@@ -108,67 +93,10 @@ export default function AiHealthScreen() {
       Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later')),
   })
 
-  // ── Πύλη: χωρίς σύνδεση ──────────────────────────────────────────
-  if (!isAuthenticated) {
-    return (
-      <Screen title={t('ai.health_title')}>
-        <View style={s.gate}>
-          <View style={s.gateIcon}><Brain size={icon.xl} color={colors.brand} /></View>
-          <Text style={s.gateTitle}>{t('ai.need_login')}</Text>
-          <Text style={s.gateText}>{t('ai.login_reason')}</Text>
-          <Button label={t('auth.sign_in')} full onPress={() => router.push('/auth/login')}
-            style={{ marginTop: space.xl }} />
-        </View>
-      </Screen>
-    )
-  }
-
-  // ── Όσο φορτώνει η κατάσταση συνδρομής ───────────────────────────
-  if (statusLoading) {
-    return (
-      <Screen title={t('ai.health_title')}>
-        <View style={{ gap: space.md }}>
-          <Skeleton height={56} round={radius.md} />
-          <Skeleton height={200} round={radius.xl} />
-          <Skeleton height={touch.min} round={radius.md} />
-        </View>
-      </Screen>
-    )
-  }
-
-  // ── Πύλη: χωρίς ενεργή δοκιμή ή συνδρομή ─────────────────────────
-  if (!canUseAi) {
-    const expired = status?.ai_subscription_status === 'expired'
-    return (
-      <Screen title={t('ai.health_title')}>
-        <View style={s.gate}>
-          <View style={s.gateIcon}><Brain size={icon.xl} color={colors.brand} /></View>
-          <Text style={s.gateTitle}>
-            {expired ? t('ai.trial_over') : t('ai.try_free')}
-          </Text>
-          <Text style={s.gateText}>
-            {expired
-              ? t('ai.trial_sub')
-              : t('ai.trial_desc')}
-          </Text>
-          {expired ? (
-            <Button label={t('ai.see_plans')} full
-              onPress={() => router.push('/pricing' as any)}
-              style={{ marginTop: space.xl }} />
-          ) : (
-            <Button label={t('ai.start_trial')} full
-              loading={startTrial.isPending}
-              onPress={() => startTrial.mutate()}
-              style={{ marginTop: space.xl }} />
-          )}
-        </View>
-      </Screen>
-    )
-  }
-
   const severity = result?.severity ? SEVERITY[result.severity as keyof typeof SEVERITY] : null
 
   return (
+    <AiGate title={t('ai.health_title')}>
     <Screen title={t('ai.health_title')} subtitle={t('ai.photo_ai')}>
 
       {/* ── Τι εξετάζουμε ──────────────────────────────────────── */}
@@ -295,25 +223,11 @@ export default function AiHealthScreen() {
         </View>
       ) : null}
     </Screen>
+    </AiGate>
   )
 }
 
 const s = StyleSheet.create({
-  gate: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: space.lg },
-  gateIcon: {
-    width: 88, height: 88, borderRadius: radius.full,
-    backgroundColor: colors.brandLight,
-    alignItems: 'center', justifyContent: 'center', marginBottom: space.lg,
-  },
-  gateTitle: {
-    ...typo.section, fontWeight: weight.bold,
-    color: colors.navy, textAlign: 'center',
-  },
-  gateText: {
-    ...typo.body, color: colors.textMuted,
-    textAlign: 'center', marginTop: space.sm,
-  },
-
   typeRow: { flexDirection: 'row', gap: space.md, marginBottom: space.lg },
   type: {
     flex: 1, minHeight: touch.min,

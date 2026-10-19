@@ -139,7 +139,11 @@
     "start_today": "Commencez aujourd'hui",
     "top_providers": "Meilleurs prestataires",
     "tracking": "Localisation",
-    "welcome": "Bienvenue"
+    "welcome": "Bienvenue",
+    "trialLabel": "Essai IA gratuit",
+    "trialDays": "{{count}} jours",
+    "trialDays_one": "{{count}} jour",
+    "trialExpired": "Expiré — Voir les formules"
   },
   "services": {
     "title": "Services",
@@ -251,7 +255,9 @@
     "publish": "Publier",
     "comments": "Commentaires",
     "noComments": "Aucun commentaire",
-    "commentHint": "Écrire un commentaire"
+    "commentHint": "Écrire un commentaire",
+    "share": "Partager",
+    "deleteQ": "Supprimer définitivement cette publication ?"
   },
   "profile": {
     "guest_title": "Connectez-vous pour accéder",
@@ -462,7 +468,8 @@
     "title": "Communautés",
     "discussion": "Discussion",
     "noMessages": "Aucun message",
-    "messageHint": "Écrire un message"
+    "messageHint": "Écrire un message",
+    "membersOnly": "La discussion est réservée aux membres. Devenez membre pour la voir et y participer."
   },
   "emo": {
     "angry": "En colère",
@@ -479,7 +486,13 @@
     "subtitle": "Que ressent votre animal ?",
     "tired": "Fatigué",
     "title": "Analyse des émotions",
-    "what_to_do": "Ce que vous pouvez faire"
+    "what_to_do": "Ce que vous pouvez faire",
+    "calm": "Calme",
+    "fearful": "Apeuré",
+    "stressed": "Stressé",
+    "observations": "Observations",
+    "energy": "Énergie {{n}}/10",
+    "welfare": "Bien-être {{n}}/10"
   },
   "inbox": {
     "day_ago_one": "il y a 1 jour",
@@ -606,7 +619,16 @@
     "age_years": "{{count}} ans",
     "addRecord": "Ajouter une entrée",
     "deleteTitle": "Supprimer l'entrée",
-    "deleteQ": "Supprimer définitivement cette entrée ?"
+    "deleteQ": "Supprimer définitivement cette entrée ?",
+    "docStatus": "État des documents",
+    "rabiesVaccine": "Vaccin antirabique",
+    "snapTest": "Test SNAP",
+    "travelDocs": "Documents de voyage",
+    "vaccineType": "Type de vaccin",
+    "vt_core": "Essentiel",
+    "vt_non_core": "Non essentiel",
+    "vt_rabies": "Rage",
+    "vt_other": "Autre"
   },
   "play": {
     "create_first": "Créez la première et invitez d'autres propriétaires.",
@@ -628,7 +650,12 @@
     "invite": "Inviter à une promenade",
     "send": "Envoyer",
     "inviteSent": "Invitation envoyée",
-    "inviteSentHint": "Il la verra dans ses notifications."
+    "inviteSentHint": "Il la verra dans ses notifications.",
+    "deleteQ": "Supprimer la promenade « {{title}} » ?",
+    "inviteTo": "Invitation à {{name}}",
+    "createEventFirst": "Créez d'abord une promenade",
+    "messageOptional": "Message (facultatif)",
+    "messagePlaceholder": "Venez promener nos chiens ensemble !"
   },
   "soon": {
     "title": "L'application mobile arrive très bientôt",
@@ -685,7 +712,9 @@
     "removeQ": "Déconnecter cet appareil ? L'historique des positions est conservé.",
     "tokenRotated": "La clé a été renouvelée",
     "newToken": "Nouvelle clé",
-    "tokenHint": "Configurez la nouvelle clé sur l'appareil pour qu'il continue d'envoyer sa position."
+    "tokenHint": "Configurez la nouvelle clé sur l'appareil pour qu'il continue d'envoyer sa position.",
+    "tokenOnce": "Clé de l’appareil — copiez-la maintenant, elle ne sera plus affichée",
+    "ingestUrl": "URL d’envoi de position"
   },
   "ver": {
     "about": "À propos",
@@ -1280,7 +1309,22 @@
     "stool": "Selles",
     "urine": "Urine",
     "photoHint": "Un bon éclairage et un fond neutre aident l'analyse.",
-    "disclaimer": "Cette analyse est indicative et ne remplace pas un examen vétérinaire."
+    "disclaimer": "Cette analyse est indicative et ne remplace pas un examen vétérinaire.",
+    "sev_normal": "Normal",
+    "sev_mild": "Léger",
+    "sev_moderate": "Modéré",
+    "sev_severe": "Grave",
+    "urgency": "Urgence",
+    "urg_routine": "Rendez-vous de routine",
+    "urg_within_48h": "Sous 48 heures",
+    "urg_today": "Aujourd’hui",
+    "urg_emergency": "Immédiatement / Urgence",
+    "color": "Couleur",
+    "consistency": "Consistance",
+    "likelyCauses": "Causes probables",
+    "contextFactors": "Influence des antécédents",
+    "homeCare": "Que faire à la maison",
+    "warningSigns": "Consultez immédiatement un vétérinaire si…"
   },
   "wishlist": {
     "title": "Liste d'envies",
@@ -1313,7 +1357,9 @@
     "register": "S'inscrire",
     "registered": "Inscription enregistrée",
     "alreadyRegistered": "Vous êtes déjà inscrit",
-    "notFound": "Événement introuvable"
+    "notFound": "Événement introuvable",
+    "cancelAttendance": "Annuler l'inscription",
+    "cancelled": "Inscription annulée"
   },
   "breeds": {
     "title": "Races",
@@ -1359,7 +1405,12 @@
     "benefitFlexible": "Modifiez ou suspendez quand vous voulez",
     "benefitCancel": "Résiliation à tout moment",
     "start": "Démarrer l'abonnement",
-    "vivaNote": "Le paiement est géré par Viva et se répète chaque mois."
+    "vivaNote": "Le paiement est géré par Viva et se répète chaque mois.",
+    "duration": "Abonnement de 12 mois",
+    "benefitDelivery12": "Livraison mensuelle automatique, 12 fois",
+    "benefitSecure": "Prélèvement sécurisé sur carte chaque mois",
+    "paymentNote": "Votre carte est débitée chaque mois pendant 12 mois. Après la 12e livraison, l’abonnement prend fin automatiquement.",
+    "notSubscribable": "Ce produit ne propose pas d’abonnement."
   },
   "reset": {
     "subtitle": "Choisissez un nouveau mot de passe.",
@@ -1389,7 +1440,9 @@
     "pendingHint": "Dès que le paiement aboutit, la séance est confirmée.",
     "failed": "Le paiement a échoué",
     "failedHint": "Réessayez depuis la télémédecine.",
-    "sessionNumber": "Numéro de séance"
+    "sessionNumber": "Numéro de séance",
+    "join_call": "Rejoindre l’appel vidéo",
+    "err_open_call": "Impossible d’ouvrir l’appel vidéo."
   },
   "medical": {
     "title": "Centre de santé",
@@ -1397,7 +1450,8 @@
     "aiActive": "Les fonctions IA sont actives",
     "aiInactive": "Les fonctions IA nécessitent une formule",
     "trialDaysLeft": "{{count}} jours d'essai restants",
-    "needsPlan": "Formule requise"
+    "needsPlan": "Formule requise",
+    "trialDaysLeft_one": "{{count}} jour d'essai restant"
   },
   "privacy": {
     "title": "Mes données",

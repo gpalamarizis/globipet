@@ -115,6 +115,13 @@ function F({ label, name, form, setForm, type = 'text', options }: any) {
   )
 }
 
+// Σημερινή τοπική ημερομηνία ως YYYY-MM-DD· σύγκριση με το next_due_date
+// χωρίς new Date('YYYY-MM-DD'), που διαβάζεται ως UTC.
+function localToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────
 export default function PetPassport() {
   const { t, i18n } = useTranslation()
@@ -299,12 +306,12 @@ export default function PetPassport() {
             {/* ── VACCINES ── */}
             {activeTab === 'vaccines' && (
               <>
-                <button onClick={() => openModal('vaccine', { date_administered: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVaccine')}</button>
+                <button onClick={() => openModal('vaccine', { date_administered: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVaccine')}</button>
                 {(p.vaccinations || []).length === 0 ? <EmptyState label={t('pgPassport.addVaccine')} onAdd={() => openModal('vaccine', {})} /> :
                   (p.vaccinations || []).map((v: any) => (
                     <RecordCard key={v.id} title={v.vaccine_name} subtitle={`${v.vaccine_type} · ${v.vet_name || ''}`} date={v.date_administered}
-                      badge={v.next_due_date && new Date(v.next_due_date) < new Date() ? t('pgPassport.overdue') : v.next_due_date ? t('pgPassport.nextDue', { date: v.next_due_date }) : undefined}
-                      badgeColor={v.next_due_date && new Date(v.next_due_date) < new Date() ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
+                      badge={v.next_due_date && String(v.next_due_date).slice(0, 10) < localToday() ? t('pgPassport.overdue') : v.next_due_date ? t('pgPassport.nextDue', { date: v.next_due_date }) : undefined}
+                      badgeColor={v.next_due_date && String(v.next_due_date).slice(0, 10) < localToday() ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => vac.remove.mutate(v.id)}>
                       <Field label={t('pgPassport.type')} value={v.vaccine_type} /><Field label={t('pgPassport.vet')} value={v.vet_name} /><Field label={t('pgPassport.notes')} value={v.notes} />
                     </RecordCard>
@@ -315,7 +322,7 @@ export default function PetPassport() {
             {/* ── HEALTH ── */}
             {activeTab === 'health' && (
               <>
-                <button onClick={() => openModal('health', { date: new Date().toISOString().split('T')[0], record_type: 'examination' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newExam')}</button>
+                <button onClick={() => openModal('health', { date: localToday(), record_type: 'examination' })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newExam')}</button>
                 {(p.healthRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addExam')} onAdd={() => openModal('health', {})} /> :
                   (p.healthRecords || []).map((h: any) => (
                     <RecordCard key={h.id} title={h.title} subtitle={`${h.record_type} · ${h.vet_name || ''} · ${h.clinic_name || ''}`} date={h.date} onDelete={() => health.remove.mutate(h.id)}>
@@ -328,7 +335,7 @@ export default function PetPassport() {
             {/* ── MEDICATIONS ── */}
             {activeTab === 'meds' && (
               <>
-                <button onClick={() => openModal('med', { start_date: new Date().toISOString().split('T')[0], is_active: true })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMed')}</button>
+                <button onClick={() => openModal('med', { start_date: localToday(), is_active: true })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMed')}</button>
                 {(p.medications || []).length === 0 ? <EmptyState label={t('pgPassport.addMed')} onAdd={() => openModal('med', {})} /> :
                   (p.medications || []).map((m: any) => (
                     <RecordCard key={m.id} title={`${m.name} ${m.dosage}`} subtitle={`${m.frequency} · ${m.prescribed_by || ''}`}
@@ -344,7 +351,7 @@ export default function PetPassport() {
             {/* ── LAB ── */}
             {activeTab === 'lab' && (
               <>
-                <button onClick={() => openModal('lab', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newLab')}</button>
+                <button onClick={() => openModal('lab', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newLab')}</button>
                 {(p.labResults || []).length === 0 ? <EmptyState label={t('pgPassport.addResult')} onAdd={() => openModal('lab', {})} /> :
                   (p.labResults || []).map((l: any) => (
                     <RecordCard key={l.id} title={l.title} subtitle={`${l.result_type} · ${l.lab_name || ''} · ${l.vet_name || ''}`} date={l.date}
@@ -360,7 +367,7 @@ export default function PetPassport() {
             {/* ── IMAGING ── */}
             {activeTab === 'imaging' && (
               <>
-                <button onClick={() => openModal('imaging', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newImaging')}</button>
+                <button onClick={() => openModal('imaging', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newImaging')}</button>
                 {(p.imaging || []).length === 0 ? <EmptyState label={t('pgPassport.addImaging')} onAdd={() => openModal('imaging', {})} /> :
                   (p.imaging || []).map((img: any) => (
                     <RecordCard key={img.id} title={img.imaging_type.toUpperCase()} subtitle={`${img.body_region || ''} · ${img.vet_name || ''} · ${img.clinic_name || ''}`} date={img.date} onDelete={() => imaging.remove.mutate(img.id)}>
@@ -374,7 +381,7 @@ export default function PetPassport() {
             {/* ── SURGERY ── */}
             {activeTab === 'surgery' && (
               <>
-                <button onClick={() => openModal('surgery', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newSurgery')}</button>
+                <button onClick={() => openModal('surgery', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newSurgery')}</button>
                 {(p.surgeries || []).length === 0 ? <EmptyState label={t('pgPassport.addSurgery')} onAdd={() => openModal('surgery', {})} /> :
                   (p.surgeries || []).map((s: any) => (
                     <RecordCard key={s.id} title={s.procedure} subtitle={`${s.surgeon_name || ''} · ${s.clinic_name || ''}`} date={s.date} onDelete={() => surgery.remove.mutate(s.id)}>
@@ -418,7 +425,7 @@ export default function PetPassport() {
             {/* ── DENTAL ── */}
             {activeTab === 'dental' && (
               <>
-                <button onClick={() => openModal('dental', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newDental')}</button>
+                <button onClick={() => openModal('dental', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newDental')}</button>
                 {(p.dentalRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addDental')} onAdd={() => openModal('dental', {})} /> :
                   (p.dentalRecords || []).map((d: any) => (
                     <RecordCard key={d.id} title={d.procedure} subtitle={`${d.vet_name || ''} · ${d.clinic_name || ''}`} date={d.date} onDelete={() => dental.remove.mutate(d.id)}>
@@ -431,7 +438,7 @@ export default function PetPassport() {
             {/* ── WEIGHT CHART ── */}
             {activeTab === 'weight' && (
               <>
-                <button onClick={() => openModal('weight', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMeasurement')}</button>
+                <button onClick={() => openModal('weight', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newMeasurement')}</button>
                 {(p.weightRecords || []).length > 1 && (
                   <div className="card p-4 mb-4">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgPassport.weightChart')}</p>
@@ -457,7 +464,7 @@ export default function PetPassport() {
             {/* ── GENETIC ── */}
             {activeTab === 'genetic' && (
               <>
-                <button onClick={() => openModal('genetic', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newGenetic')}</button>
+                <button onClick={() => openModal('genetic', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newGenetic')}</button>
                 {(p.geneticTests || []).length === 0 ? <EmptyState label={t('pgPassport.addGenetic')} onAdd={() => openModal('genetic', {})} /> :
                   (p.geneticTests || []).map((g: any) => (
                     <RecordCard key={g.id} title={g.test_name} subtitle={g.provider} date={g.date} onDelete={() => genetic.remove.mutate(g.id)}>
@@ -472,7 +479,7 @@ export default function PetPassport() {
             {/* ── VITALS ── */}
             {activeTab === 'vitals' && (
               <>
-                <button onClick={() => openModal('vitals', { date: new Date().toISOString().split('T')[0] })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVitals')}</button>
+                <button onClick={() => openModal('vitals', { date: localToday() })} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVitals')}</button>
                 {(p.vitalSigns || []).length === 0 ? <EmptyState label={t('pgPassport.addVitals')} onAdd={() => openModal('vitals', {})} /> :
                   (p.vitalSigns || []).map((v: any) => (
                     <RecordCard key={v.id} title={`${v.temperature_c ? v.temperature_c + '°C' : ''} ${v.heart_rate ? v.heart_rate + ' bpm' : ''} ${v.weight_kg ? v.weight_kg + ' kg' : ''}`.trim()} subtitle={v.vet_name} date={v.date} onDelete={() => vitals.remove.mutate(v.id)}>
@@ -537,8 +544,8 @@ export default function PetPassport() {
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3">{t('pgPassport.docStatus')}</p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {[
-                        { label: t('pgPassport.microchip'), ok: !!(pet as any)?.microchip },
-                        { label: t('pgPassport.rabiesVaccine'), ok: (passport.vaccinations || []).some((v: any) => v.vaccine_type === 'rabies' && (!v.next_due_date || new Date(v.next_due_date) > new Date())) },
+                        { label: t('pgPassport.microchip'), ok: !!pet?.microchip_number },
+                        { label: t('pgPassport.rabiesVaccine'), ok: (passport.vaccinations || []).some((v: any) => v.vaccine_type === 'rabies' && (!v.next_due_date || String(v.next_due_date).slice(0, 10) >= localToday())) },
                         { label: t('pgPassport.snapTest'), ok: (passport.healthRecords || []).length > 0 },
                         { label: t('pgPassport.travelDocs'), ok: (passport.travelDocs || []).length > 0 },
                       ].map(({ label, ok }) => (

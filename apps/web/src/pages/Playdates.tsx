@@ -64,10 +64,22 @@ export default function Playdates() {
       inviteUserId
         ? { invitee_id: inviteUserId, message: inviteMsg }
         : { invitee_email: inviteEmail, message: inviteMsg }),
-    onSuccess: () => { setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success(t('pgPlaydates.inviteSent')) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates-my'] }); setShowInviteModal(null); setInviteEmail(''); setInviteUserId(null); setInviteMsg(''); toast.success(t('pgPlaydates.inviteSent')) },
     // Ήταν γραμμένο δύο φορές. Το δεύτερο υπερίσχυε, οπότε ο χρήστης
     // έβλεπε σκέτο «Σφάλμα» αντί για το ειδικό μήνυμα.
     onError: (e: any) => toast.error(e?.message || t('pgPlaydates.inviteFailed')),
+  })
+
+  // Συμμετοχή/αποχώρηση από τον ίδιο τον χρήστη (POST/DELETE /playdates/:id/join).
+  // Πριν, το «Συμμετοχή» άνοιγε το παράθυρο πρόσκλησης, που επιτρέπεται μόνο στον διοργανωτή.
+  const joinEvent = useMutation({
+    mutationFn: ({ id, leave }: { id: string; leave: boolean }) =>
+      leave ? api.delete(`/playdates/${id}/join`) : api.post(`/playdates/${id}/join`),
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] })
+      toast.success(v.leave ? t('pgPlaydates.left') : t('pgPlaydates.joined'))
+    },
+    onError: (e: any, v) => toast.error(e?.message || (v.leave ? t('pgPlaydates.leaveFailed') : t('pgPlaydates.joinFailed'))),
   })
 
   const respondInvite = useMutation({
@@ -167,9 +179,17 @@ export default function Playdates() {
                                 <button onClick={() => deleteEvent.mutate(ev.id)} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                               </div>
                             )}
-                            {ev.creator_email !== user?.email && (
-                              <button onClick={() => setShowInviteModal(ev.id)} className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-xl">{t('pgPlaydates.join')}</button>
-                            )}
+                            {ev.creator_email !== user?.email && (() => {
+                              const joined = (ev.invitations ?? []).some((i: any) => i.invitee_email === user?.email)
+                              const full = !!ev.max_participants && (ev.invitations?.length || 0) >= ev.max_participants
+                              return (
+                                <button onClick={() => joinEvent.mutate({ id: ev.id, leave: joined })}
+                                  disabled={(!joined && full) || (joinEvent.isPending && joinEvent.variables?.id === ev.id)}
+                                  className={`px-3 py-1.5 text-xs rounded-xl disabled:opacity-50 ${joined ? 'border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400' : 'bg-green-500 text-white'}`}>
+                                  {joined ? t('pgPlaydates.leave') : full ? t('pgPlaydates.full') : t('pgPlaydates.join')}
+                                </button>
+                              )
+                            })()}
                           </div>
                           {ev.invitations?.length > 0 && (
                             <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-50 dark:border-gray-800">
@@ -362,7 +382,7 @@ export default function Playdates() {
                 )}
                 <div><label className={labelCls}>{t('pgPlaydates.messageOptional')}</label><textarea className={inputCls} rows={2} value={inviteMsg} onChange={e => setInviteMsg(e.target.value)} placeholder={t('pgPlaydates.messagePlaceholder')} /></div>
               </div>
-              <button onClick={() => sendInvite.mutate()} disabled={!inviteEmail || sendInvite.isPending}
+              <button onClick={() => sendInvite.mutate()} disabled={(!inviteUserId && !inviteEmail.trim()) || sendInvite.isPending}
                 className="w-full mt-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-medium disabled:opacity-50">
                 {sendInvite.isPending ? t('pgPlaydates.sending') : t('pgPlaydates.sendInvite')}
               </button>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Shield, Check, X, Phone, Globe, ChevronDown, ChevronUp, Star } from 'lucide-react'
 import { api } from '@/lib/api'
+import { localName } from '@/lib/localName'
 import { cn } from '@/lib/utils'
 
 const TIER_KEYS: Record<string, { labelKey: string; color: string; bg: string }> = {
@@ -30,7 +31,7 @@ const COVERAGE_CHIPS = [
 ]
 
 export default function Insurance() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [petType, setPetType] = useState('')
   const [tier, setTier] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -133,8 +134,8 @@ export default function Insurance() {
                         </div>
                       )}
                       <div>
-                        <p className="text-xs text-gray-500">{plan.provider?.name_el || plan.provider?.name}</p>
-                        <h3 className="font-bold text-gray-900 dark:text-white">{plan.name_el || plan.name}</h3>
+                        <p className="text-xs text-gray-500">{localName(plan.provider, i18n.language)}</p>
+                        <h3 className="font-bold text-gray-900 dark:text-white">{localName(plan, i18n.language)}</h3>
                         <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: tierInfo.bg, color: tierInfo.color }}>
                           {t(tierInfo.labelKey)}
                         </span>

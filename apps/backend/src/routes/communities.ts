@@ -65,7 +65,14 @@ const routes: FastifyPluginAsync = async (app) => {
       latitude: true, longitude: true, radius_km: true, image_url: true,
       member_count: true, creator_name: true, created_at: true,
       _count: { select: { messages: true } },
+      // Μόνο η δική μου εγγραφή μέλους (0 ή 1 γραμμή), για το isMember.
+      // Χωρίς αυτό η λίστα δεν ήξερε αν ο χρήστης είναι ήδη μέλος και το
+      // κουμπί έλεγε πάντα «Συμμετοχή». Δεν επιστρέφεται ως έχει.
+      members: { where: { user_email: email }, select: { role: true }, take: 1 },
     }
+    // Προσθετικό πεδίο: isMember (και myRole). Τα υπόλοιπα πεδία μένουν ίδια.
+    const withMembership = <T extends { members: { role: string }[] }>({ members, ...c }: T) =>
+      ({ ...c, isMember: members.length > 0, myRole: members[0]?.role ?? null })
 
     if (Number.isFinite(userLat) && Number.isFinite(userLng)) {
       const box = boundingBox(userLat!, userLng!, searchRadius)
@@ -78,6 +85,7 @@ const routes: FastifyPluginAsync = async (app) => {
         take: 500,
       })
       const nearby = candidates
+        .map(withMembership)
         .map(c => ({ ...c, distance: getDistance(userLat!, userLng!, c.latitude, c.longitude) }))
         .filter(c => c.distance <= searchRadius)
         .sort((a, b) => a.distance - b.distance)
@@ -90,7 +98,7 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       take: 100,
     })
-    return { communities: all, userLat: null, userLng: null }
+    return { communities: all.map(withMembership), userLat: null, userLng: null }
   })
 
   // Geocode helper. Declared before /:id for readability; Fastify matches

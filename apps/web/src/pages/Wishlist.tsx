@@ -30,10 +30,12 @@ export default function Wishlist() {
   })
 
   const remove = useMutation({
-    // POST toggles — it removes the product when it is already saved. The
-    // DELETE route expects the wishlist row id, not the product id.
-    mutationFn: (productId: string) => api.post('/wishlist', { product_id: productId }),
-    onSuccess: () => {
+    // DELETE με το id της γραμμής: δεν εναλλάσσει όπως το POST, οπότε δεύτερο
+    // κλικ (ή λίστα που δεν έχει ανανεωθεί ακόμα) δεν ξαναπροσθέτει το προϊόν.
+    mutationFn: (rowId: string) => api.delete(`/wishlist/${rowId}`),
+    onSuccess: (_res, rowId) => {
+      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old: any) =>
+        Array.isArray(old) ? old.filter((w: any) => w.id !== rowId) : old)
       queryClient.invalidateQueries({ queryKey: ['wishlist'] })
       toast.success(t('wishlist.removed'))
     },
@@ -127,7 +129,7 @@ export default function Wishlist() {
                     <ShoppingCart size={13} /> {t('wishlist.toCart')}
                   </button>
                   <button
-                    onClick={() => remove.mutate(item.product_id)}
+                    onClick={() => remove.mutate(item.id)}
                     disabled={remove.isPending}
                     className="text-xs py-1.5 px-3 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1.5 transition-colors">
                     <Trash2 size={13} /> {t('common.delete')}

@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Search, ChevronRight, Plus,
   Stethoscope, Scissors, Footprints, House, GraduationCap, Car,
-  Brain, FileText, Video, MapPin, ShieldCheck, Pill,
+  Brain, FileText, Video, MapPin, ShieldCheck, Pill, Sparkles,
 } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
@@ -114,6 +114,20 @@ export default function HomeScreen() {
     queryFn: () => api.get('/products?featured=true&limit=4').then(r => r.data?.data ?? []),
   })
 
+  // Δοκιμή AI — ίδιο σήμα με το web. Οι μέρες έρχονται από τον server
+  // (my-status → trial_days_left), όχι από σταθερό αριθμό στην εφαρμογή.
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data ?? null),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  const trialShown = !!aiStatus?.ai_trial_started_at
+    && (aiStatus.ai_subscription_status === 'trial' || aiStatus.ai_subscription_status === 'expired')
+  const trialLeft = aiStatus?.ai_subscription_status === 'trial'
+    ? Math.max(0, Number(aiStatus.trial_days_left ?? 0)) : 0
+  const trialExpired = trialLeft === 0
+
   /**
    * Τράβηγμα προς τα κάτω για ανανέωση.
    *
@@ -127,6 +141,7 @@ export default function HomeScreen() {
       queryClient.invalidateQueries({ queryKey: ['my-pets'] }),
       queryClient.invalidateQueries({ queryKey: ['featured-services'] }),
       queryClient.invalidateQueries({ queryKey: ['featured-products'] }),
+      queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
     ])
     setRefreshing(false)
   }, [queryClient])
@@ -166,6 +181,26 @@ export default function HomeScreen() {
           <Text style={s.searchText}>{t('home.search_placeholder')}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Δοκιμή AI: ενεργή → AI Health, ληγμένη → πλάνα ─────────── */}
+      {isAuthenticated && trialShown && (
+        <View style={[s.section, { paddingTop: space.lg }]}>
+          <TouchableOpacity activeOpacity={0.8}
+            style={[s.trial, trialExpired ? s.trialExpired : s.trialActive]}
+            onPress={() => router.push((trialExpired ? '/pricing' : '/ai-health') as any)}>
+            <View style={[s.trialIcon, { backgroundColor: trialExpired ? colors.dangerBg : colors.warningBg }]}>
+              <Sparkles size={icon.sm} color={trialExpired ? colors.danger : colors.warning} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.trialLabel} numberOfLines={1}>{t('home.trialLabel')}</Text>
+              <Text style={s.trialValue} numberOfLines={1}>
+                {trialExpired ? t('home.trialExpired') : t('home.trialDays', { count: trialLeft })}
+              </Text>
+            </View>
+            <ChevronRight size={icon.sm} color={colors.textLight} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Τα κατοικίδιά μου ────────────────────────────────────────
           Πρώτα, γιατί είναι ο λόγος που ανοίγει κανείς την εφαρμογή. */}
@@ -371,6 +406,16 @@ const s = StyleSheet.create({
   searchText: { ...type.body, color: colors.textLight },
 
   section: { paddingHorizontal: space.lg, paddingTop: space.xxl },
+  trial: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    padding: space.md, borderRadius: radius.lg, borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  trialActive: { borderColor: colors.warning },
+  trialExpired: { borderColor: colors.danger },
+  trialIcon: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  trialLabel: { ...type.caption, color: colors.textMuted },
+  trialValue: { ...type.body, color: colors.text, fontWeight: weight.bold },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginBottom: space.md },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: space.md },

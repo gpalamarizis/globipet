@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { localName } from '@/lib/localName'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 /** Ratings are stored 1-5; render them as filled dots rather than a number. */
@@ -30,7 +31,7 @@ function Rating({ icon: Icon, label, value }: { icon: any; label: string; value?
 export default function BreedDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const { data: breed, isLoading, isError } = useQuery({
     queryKey: ['breed', id],
@@ -78,9 +79,9 @@ export default function BreedDetail() {
           </div>
           <div className="p-5">
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
-              {breed.name_el || breed.name}
+              {localName(breed, i18n.language)}
             </h1>
-            {breed.name_el && breed.name !== breed.name_el && (
+            {breed.name && localName(breed, i18n.language) !== breed.name && (
               <p className="text-sm text-gray-400">{breed.name}</p>
             )}
 

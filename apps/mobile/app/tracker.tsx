@@ -49,6 +49,8 @@ const since = (iso: string | null | undefined, t: (k: string, o?: any) => string
 
 export default function TrackerScreen() {
   const qc = useQueryClient()
+  // Πριν από τα queries: χωρίς σύνδεση δεν ζητάμε ζώα/συσκευές (θα έπαιρναν 401).
+  const { isAuthenticated } = useAuthStore()
 
   /**
    * Διαχείριση συσκευών GPS.
@@ -61,16 +63,21 @@ export default function TrackerScreen() {
   const [devPet, setDevPet] = useState('')
   const [devId, setDevId] = useState('')
   const [devName, setDevName] = useState('')
+  // Το κλειδί εμφανίζεται μία φορά (καταχώρηση ή ανανέωση), μαζί με το URL
+  // αποστολής θέσης — ίδια συμπεριφορά με το web.
+  const [issued, setIssued] = useState<{ token: string; ingestUrl: string } | null>(null)
 
   // Τα κατοικίδια, για να επιλεγεί σε ποιο ανήκει η συσκευή.
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
     queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
   })
 
   const { data: devices = [] } = useQuery({
     queryKey: ['tracker-devices'],
     queryFn: () => api.get('/tracker/devices').then(r => r.data?.data ?? r.data ?? []),
+    enabled: isAuthenticated,
   })
 
   const addDevice = useMutation({
@@ -79,9 +86,11 @@ export default function TrackerScreen() {
       device_id: devId.trim(),
       name: devName.trim() || undefined,
     }),
-    onSuccess: () => {
+    onSuccess: (r: any) => {
+      setIssued({ token: r?.data?.data?.device_token ?? '', ingestUrl: r?.data?.setup?.ingest_url ?? '' })
       qc.invalidateQueries({ queryKey: ['tracker-devices'] })
-      qc.invalidateQueries({ queryKey: ['tracker'] })
+      // Η λίστα θέσεων έχει key ['tracker-latest'] — το ['tracker'] δεν ταίριαζε σε τίποτα.
+      qc.invalidateQueries({ queryKey: ['tracker-latest'] })
       setAdding(false); setDevId(''); setDevName('')
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
@@ -91,7 +100,7 @@ export default function TrackerScreen() {
     mutationFn: (deviceId: string) => api.delete(`/tracker/devices/${deviceId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tracker-devices'] })
-      qc.invalidateQueries({ queryKey: ['tracker'] })
+      qc.invalidateQueries({ queryKey: ['tracker-latest'] })
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -107,8 +116,10 @@ export default function TrackerScreen() {
     mutationFn: (deviceId: string) => api.post(`/tracker/devices/${deviceId}/token`, {}),
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ['tracker-devices'] })
-      const token = r?.data?.token ?? r?.data?.data?.token
-      Alert.alert(t('tracker.tokenRotated'), token ? `${t('tracker.newToken')}: ${token}` : t('tracker.tokenHint'))
+      // Ο server επιστρέφει data.device_token (όχι token) και setup.ingest_url.
+      const token = r?.data?.data?.device_token ?? ''
+      setIssued({ token, ingestUrl: r?.data?.setup?.ingest_url ?? '' })
+      Alert.alert(t('tracker.tokenRotated'), t('tracker.tokenHint'))
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -121,7 +132,6 @@ export default function TrackerScreen() {
 
   const { t } = useTranslation()
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: rows = [], isLoading } = useQuery({
@@ -144,30 +154,6 @@ export default function TrackerScreen() {
 
   if (!isAuthenticated) return (
     <Screen title={t('discover.gps_tracking')}>
-      <Button label={t('tracker.addDevice')}
-        icon={<Plus size={18} color={colors.textOnDark} />}
-        onPress={() => setAdding(true)} full style={{ marginBottom: space.md }} />
-
-      {/* Συνδεδεμένες συσκευές, με δυνατότητα αποσύνδεσης */}
-      {devices.length > 0 && (
-        <Card>
-          <Text style={s.label}>{t('tracker.devices')}</Text>
-          {devices.map((d: any) => (
-            <View key={d.id} style={s.deviceRow}>
-              <Text style={s.deviceTxt} numberOfLines={1}>
-                {d.name || d.device_id}
-              </Text>
-              <TouchableOpacity onPress={() => rotateToken.mutate(d.id)} hitSlop={8}>
-                <KeyRound size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => confirmRemove(d)} hitSlop={8}>
-                <Trash2 size={16} color={colors.danger} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </Card>
-      )}
-
       <EmptyState
         icon={MapPin}
         title={t('pets.login_required')}
@@ -179,6 +165,46 @@ export default function TrackerScreen() {
 
   return (
     <Screen title={t('discover.gps_tracking')} onRefresh={onRefresh} refreshing={refreshing}>
+      {/* Διαχείριση συσκευών: ήταν μέσα στον κλάδο «μη συνδεδεμένος»,
+          οπότε ο συνδεδεμένος χρήστης δεν την έβλεπε ποτέ. */}
+      <Button label={t('tracker.addDevice')}
+        icon={<Plus size={18} color={colors.textOnDark} />}
+        onPress={() => setAdding(true)} full style={{ marginBottom: space.md }} />
+
+      {/* Το κλειδί εμφανίζεται μία φορά — επιλέξιμο κείμενο για αντιγραφή. */}
+      {!!issued?.token && (
+        <Card style={{ marginBottom: space.md, backgroundColor: colors.warningBg }}>
+          <Text style={s.label}>{t('tracker.tokenOnce')}</Text>
+          <Text selectable style={s.token}>{issued.token}</Text>
+          {!!issued.ingestUrl && (
+            <>
+              <Text style={[s.label, { marginTop: space.sm }]}>{t('tracker.ingestUrl')}</Text>
+              <Text selectable style={s.token}>{issued.ingestUrl}</Text>
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* Συνδεδεμένες συσκευές, με δυνατότητα αποσύνδεσης */}
+      {devices.length > 0 && (
+        <Card style={{ marginBottom: space.md }}>
+          <Text style={s.label}>{t('tracker.devices')}</Text>
+          {devices.map((d: any) => (
+            <View key={d.id} style={s.deviceRow}>
+              <Text style={s.deviceTxt} numberOfLines={1}>
+                {d.name || d.device_id}
+              </Text>
+              <TouchableOpacity onPress={() => rotateToken.mutate(d.id)} disabled={rotateToken.isPending} hitSlop={8}>
+                <KeyRound size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => confirmRemove(d)} hitSlop={8}>
+                <Trash2 size={16} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </Card>
+      )}
+
       {isLoading ? (
         <SkeletonRows count={3} height={120} />
       ) : rows.length === 0 ? (
@@ -321,6 +347,7 @@ const s = StyleSheet.create({
   sheetActions: { flexDirection: 'row', gap: space.sm },
   deviceRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.sm, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
   deviceTxt: { ...type.caption, color: colors.textMuted, flex: 1 },
+  token: { ...type.caption, color: colors.text, fontWeight: weight.semibold, marginTop: space.xs },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   avatar: {
     width: 56, height: 56, borderRadius: radius.md,

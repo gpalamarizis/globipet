@@ -139,7 +139,11 @@
     "start_today": "立即开始",
     "top_providers": "顶级服务商",
     "tracking": "定位",
-    "welcome": "欢迎"
+    "welcome": "欢迎",
+    "trialLabel": "AI 免费试用",
+    "trialDays": "{{count}} 天",
+    "trialDays_one": "{{count}} 天",
+    "trialExpired": "已过期 — 查看方案"
   },
   "services": {
     "title": "服务",
@@ -251,7 +255,9 @@
     "publish": "发布",
     "comments": "评论",
     "noComments": "还没有评论",
-    "commentHint": "写评论"
+    "commentHint": "写评论",
+    "share": "分享",
+    "deleteQ": "确定永久删除这条动态吗？"
   },
   "profile": {
     "guest_title": "登录后使用",
@@ -462,7 +468,8 @@
     "title": "社区",
     "discussion": "讨论",
     "noMessages": "还没有消息",
-    "messageHint": "写消息"
+    "messageHint": "写消息",
+    "membersOnly": "讨论仅限成员。加入后即可查看并参与。"
   },
   "emo": {
     "angry": "生气",
@@ -479,7 +486,13 @@
     "subtitle": "您的宠物感受如何？",
     "tired": "疲惫",
     "title": "情绪分析",
-    "what_to_do": "您可以做什么"
+    "what_to_do": "您可以做什么",
+    "calm": "放松",
+    "fearful": "害怕",
+    "stressed": "紧张",
+    "observations": "观察",
+    "energy": "精力 {{n}}/10",
+    "welfare": "健康福祉 {{n}}/10"
   },
   "inbox": {
     "day_ago_one": "1 天前",
@@ -606,7 +619,16 @@
     "age_years": "{{count}} 岁",
     "addRecord": "添加记录",
     "deleteTitle": "删除记录",
-    "deleteQ": "确定永久删除此记录吗？"
+    "deleteQ": "确定永久删除此记录吗？",
+    "docStatus": "证件状态",
+    "rabiesVaccine": "狂犬病疫苗",
+    "snapTest": "SNAP 检测",
+    "travelDocs": "旅行证件",
+    "vaccineType": "疫苗类型",
+    "vt_core": "核心疫苗",
+    "vt_non_core": "非核心疫苗",
+    "vt_rabies": "狂犬病",
+    "vt_other": "其他"
   },
   "play": {
     "create_first": "创建第一个并邀请其他主人。",
@@ -628,7 +650,12 @@
     "invite": "邀请参加活动",
     "send": "发送",
     "inviteSent": "邀请已发送",
-    "inviteSentHint": "对方将在通知中看到。"
+    "inviteSentHint": "对方将在通知中看到。",
+    "deleteQ": "删除活动“{{title}}”？",
+    "inviteTo": "邀请对象：{{name}}",
+    "createEventFirst": "请先创建一个活动",
+    "messageOptional": "留言（可选）",
+    "messagePlaceholder": "一起遛狗吧！"
   },
   "soon": {
     "title": "手机应用即将推出",
@@ -685,7 +712,9 @@
     "removeQ": "确定断开该设备？位置历史将保留。",
     "tokenRotated": "密钥已更新",
     "newToken": "新密钥",
-    "tokenHint": "请在设备上设置新密钥以继续上报位置。"
+    "tokenHint": "请在设备上设置新密钥以继续上报位置。",
+    "tokenOnce": "设备密钥 — 请立即复制，之后不会再显示",
+    "ingestUrl": "位置上报 URL"
   },
   "ver": {
     "about": "简介",
@@ -1280,7 +1309,22 @@
     "stool": "粪便",
     "urine": "尿液",
     "photoHint": "良好的光线和中性背景有助于分析。",
-    "disclaimer": "本分析仅供参考，不能替代兽医检查。"
+    "disclaimer": "本分析仅供参考，不能替代兽医检查。",
+    "sev_normal": "正常",
+    "sev_mild": "轻度",
+    "sev_moderate": "中度",
+    "sev_severe": "重度",
+    "urgency": "紧急程度",
+    "urg_routine": "常规预约",
+    "urg_within_48h": "48 小时内",
+    "urg_today": "今天",
+    "urg_emergency": "立即 / 急诊",
+    "color": "颜色",
+    "consistency": "性状",
+    "likelyCauses": "可能原因",
+    "contextFactors": "病史影响",
+    "homeCare": "居家护理",
+    "warningSigns": "出现以下情况请立即就医…"
   },
   "wishlist": {
     "title": "心愿单",
@@ -1313,7 +1357,9 @@
     "register": "报名",
     "registered": "报名成功",
     "alreadyRegistered": "您已报名",
-    "notFound": "未找到活动"
+    "notFound": "未找到活动",
+    "cancelAttendance": "取消报名",
+    "cancelled": "已取消报名"
   },
   "breeds": {
     "title": "品种",
@@ -1359,7 +1405,12 @@
     "benefitFlexible": "随时更改或暂停",
     "benefitCancel": "随时取消",
     "start": "开始订阅",
-    "vivaNote": "通过 Viva 付款，每月自动续费。"
+    "vivaNote": "通过 Viva 付款，每月自动续费。",
+    "duration": "12 个月订阅",
+    "benefitDelivery12": "每月自动配送，共 12 次",
+    "benefitSecure": "每月安全扣款",
+    "paymentNote": "您的银行卡将每月扣款，共 12 个月。第 12 次配送后订阅自动结束。",
+    "notSubscribable": "该商品不提供订阅选项。"
   },
   "reset": {
     "subtitle": "为您的账号设置新密码。",
@@ -1389,7 +1440,9 @@
     "pendingHint": "付款完成后问诊即确认。",
     "failed": "付款失败",
     "failedHint": "请从远程问诊页重试。",
-    "sessionNumber": "问诊编号"
+    "sessionNumber": "问诊编号",
+    "join_call": "加入视频通话",
+    "err_open_call": "无法打开视频通话。"
   },
   "medical": {
     "title": "健康中心",
@@ -1397,7 +1450,8 @@
     "aiActive": "AI 功能已启用",
     "aiInactive": "AI 功能需要订阅",
     "trialDaysLeft": "试用还剩 {{count}} 天",
-    "needsPlan": "需要订阅"
+    "needsPlan": "需要订阅",
+    "trialDaysLeft_one": "试用还剩 {{count}} 天"
   },
   "privacy": {
     "title": "我的数据",

@@ -154,10 +154,14 @@ const routes: FastifyPluginAsync = async (app) => {
       prisma.petWeightRecord.findMany({ where: { pet_id: petId }, orderBy: { date: 'asc' } }),
     ])
 
+    // Κάθε τιμή από τη βάση/τον χρήστη περνά από escape πριν μπει στο HTML (αποτροπή stored XSS).
+    const esc = (v: unknown) => v == null ? '' : String(v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     const section = (title: string, rows: string) => rows ? `<h2>${title}</h2><table>${rows}</table>` : ''
-    const row = (label: string, val: any) => val ? `<tr><td>${label}</td><td>${val}</td></tr>` : ''
+    const row = (label: string, val: any) => val ? `<tr><td>${esc(label)}</td><td>${esc(val)}</td></tr>` : ''
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ιατρικός Φάκελος - ${pet.name}</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ιατρικός Φάκελος - ${esc(pet.name)}</title>
 <style>
   body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px;max-width:900px;margin:0 auto}
   h1{color:#E65100;border-bottom:3px solid #E65100;padding-bottom:8px;margin-bottom:16px}
@@ -179,10 +183,10 @@ const routes: FastifyPluginAsync = async (app) => {
   <div>
     <h1>🐾 Ιατρικός Φάκελος</h1>
     <div class="pet-info">
-      <strong>${pet.name}</strong> &nbsp;|&nbsp; ${pet.species || ''} ${pet.breed || ''}<br>
-      Ηλικία: ${pet.age != null ? pet.age + ' έτη' : 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${pet.gender || '-'}<br>
-      Αρ. Μικροτσίπ: ${(pet as any).microchip || '-'}<br>
-      Ιδιοκτήτης: ${email}
+      <strong>${esc(pet.name)}</strong> &nbsp;|&nbsp; ${esc(pet.species || '')} ${esc(pet.breed || '')}<br>
+      Ηλικία: ${pet.age != null ? esc(pet.age) + ' έτη' : 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${esc(pet.gender || '-')}<br>
+      Αρ. Μικροτσίπ: ${esc(pet.microchip_number || '-')}<br>
+      Ιδιοκτήτης: ${esc(email)}
     </div>
   </div>
   <div style="text-align:right;font-size:10px;color:#999">
@@ -192,50 +196,50 @@ const routes: FastifyPluginAsync = async (app) => {
 </div>
 
 ${allergies.length ? `<div style="background:#fee2e2;border:2px solid #dc2626;border-radius:8px;padding:10px;margin-bottom:16px">
-  <strong>⚠️ ΑΛΛΕΡΓΙΕΣ:</strong> ${allergies.map(a => `${a.allergen} (${a.severity})`).join(', ')}
+  <strong>⚠️ ΑΛΛΕΡΓΙΕΣ:</strong> ${allergies.map(a => `${esc(a.allergen)} (${esc(a.severity)})`).join(', ')}
 </div>` : ''}
 
 ${chronicConditions.length ? `<div style="background:#fef9c3;border:2px solid #ca8a04;border-radius:8px;padding:10px;margin-bottom:16px">
-  <strong>📋 ΧΡΟΝΙΕΣ ΠΑΘΗΣΕΙΣ:</strong> ${chronicConditions.filter(c => c.status === 'active').map(c => c.condition).join(', ')}
+  <strong>📋 ΧΡΟΝΙΕΣ ΠΑΘΗΣΕΙΣ:</strong> ${chronicConditions.filter(c => c.status === 'active').map(c => esc(c.condition)).join(', ')}
 </div>` : ''}
 
 ${section('Εμβόλια', vaccinations.map(v => `<tr>
-  <td>${v.date_administered}</td><td>${v.vaccine_name}</td><td>${v.vaccine_type}</td>
-  <td>${v.vet_name || '-'}</td><td>${v.next_due_date || '-'}</td>
+  <td>${esc(v.date_administered)}</td><td>${esc(v.vaccine_name)}</td><td>${esc(v.vaccine_type)}</td>
+  <td>${esc(v.vet_name || '-')}</td><td>${esc(v.next_due_date || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Φάρμακα', medications.map(m => `<tr>
-  <td>${m.name} ${m.dosage}</td><td>${m.frequency}</td><td>${m.start_date}→${m.end_date || 'τώρα'}</td>
-  <td>${m.prescribed_by || '-'}</td><td>${m.is_active ? '✅ Ενεργό' : '⬛ Ολοκλήρωσε'}</td>
+  <td>${esc(m.name)} ${esc(m.dosage)}</td><td>${esc(m.frequency)}</td><td>${esc(m.start_date)}→${esc(m.end_date || 'τώρα')}</td>
+  <td>${esc(m.prescribed_by || '-')}</td><td>${m.is_active ? '✅ Ενεργό' : '⬛ Ολοκλήρωσε'}</td>
 </tr>`).join(''))}
 
 ${section('Εξετάσεις', healthRecords.map(h => `<tr>
-  <td>${h.date}</td><td>${h.title}</td><td>${h.vet_name || '-'}</td>
-  <td>${h.clinic_name || '-'}</td><td>${h.description?.slice(0, 100) || '-'}</td>
+  <td>${esc(h.date)}</td><td>${esc(h.title)}</td><td>${esc(h.vet_name || '-')}</td>
+  <td>${esc(h.clinic_name || '-')}</td><td>${esc(h.description?.slice(0, 100) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Εργαστηριακές Εξετάσεις', labResults.map(l => `<tr>
-  <td>${l.date}</td><td>${l.title}</td><td>${l.result_type}</td>
-  <td>${l.vet_name || '-'}</td><td>${l.is_abnormal ? '⚠️ Παθολογικά' : '✅ Φυσιολογικά'}</td>
+  <td>${esc(l.date)}</td><td>${esc(l.title)}</td><td>${esc(l.result_type)}</td>
+  <td>${esc(l.vet_name || '-')}</td><td>${l.is_abnormal ? '⚠️ Παθολογικά' : '✅ Φυσιολογικά'}</td>
 </tr>`).join(''))}
 
 ${section('Απεικονιστικές Εξετάσεις', imaging.map(i => `<tr>
-  <td>${i.date}</td><td>${i.imaging_type.toUpperCase()}</td><td>${i.body_region || '-'}</td>
-  <td>${i.vet_name || '-'}</td><td>${i.findings?.slice(0, 100) || '-'}</td>
+  <td>${esc(i.date)}</td><td>${esc(i.imaging_type.toUpperCase())}</td><td>${esc(i.body_region || '-')}</td>
+  <td>${esc(i.vet_name || '-')}</td><td>${esc(i.findings?.slice(0, 100) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Χειρουργεία', surgeries.map(s => `<tr>
-  <td>${s.date}</td><td>${s.procedure}</td><td>${s.surgeon_name || '-'}</td>
-  <td>${s.clinic_name || '-'}</td><td>${s.outcome || '-'}</td>
+  <td>${esc(s.date)}</td><td>${esc(s.procedure)}</td><td>${esc(s.surgeon_name || '-')}</td>
+  <td>${esc(s.clinic_name || '-')}</td><td>${esc(s.outcome || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Οδοντιατρικά', dentalRecords.map(d => `<tr>
-  <td>${d.date}</td><td>${d.procedure}</td><td>${d.vet_name || '-'}</td>
-  <td>${d.findings || '-'}</td><td>${d.next_due || '-'}</td>
+  <td>${esc(d.date)}</td><td>${esc(d.procedure)}</td><td>${esc(d.vet_name || '-')}</td>
+  <td>${esc(d.findings || '-')}</td><td>${esc(d.next_due || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
-  <td>${w.date}</td><td>${w.weight_kg} kg</td><td>BCS: ${w.bcs || '-'}/9</td><td>${w.notes || '-'}</td>
+  <td>${esc(w.date)}</td><td>${esc(w.weight_kg)} kg</td><td>BCS: ${esc(w.bcs || '-')}/9</td><td>${esc(w.notes || '-')}</td>
 </tr>`).join(''))}
 
 <div class="footer">

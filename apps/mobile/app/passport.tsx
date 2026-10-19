@@ -174,6 +174,24 @@ const TABS: TabSpec[] = [
     badge: { key: 'status' } },
 ]
 
+// Τύπος εμβολίου — ίδιες τιμές με το web. Χωρίς επιλογή δεν στέλνεται και
+// ο server βάζει 'other' (ίδιο default με το web, όπου το πεδίο ξεκινά «—»).
+// Χωρίς αυτό το πεδίο η κάρτα «Κατάσταση εγγράφων» δεν έβρισκε ποτέ λύσσα
+// για εμβόλια που περάστηκαν από το κινητό.
+const VACCINE_TYPES = [
+  { value: 'core', labelKey: 'passport.vt_core' },
+  { value: 'non_core', labelKey: 'passport.vt_non_core' },
+  { value: 'rabies', labelKey: 'passport.vt_rabies' },
+  { value: 'other', labelKey: 'passport.vt_other' },
+]
+
+// Σημερινή τοπική ημερομηνία ως YYYY-MM-DD· σύγκριση με το next_due_date
+// χωρίς new Date('YYYY-MM-DD'), που διαβάζεται ως UTC.
+function localToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function PassportScreen() {
   const qc = useQueryClient()
   const { t } = useTranslation()
@@ -418,6 +436,25 @@ export default function PassportScreen() {
               ) : <EmptyState icon={Award} title={t('passport.no_entries')} />
             )}
 
+            {/* Κατάσταση εγγράφων ταξιδιού — ίδιοι έλεγχοι με το web. */}
+            {tab === 'travel' && data && (
+              <Card>
+                <Text style={[s.recTitle, { marginBottom: space.sm }]}>{t('passport.docStatus')}</Text>
+                {([
+                  ['pets.microchip', !!pet?.microchip_number],
+                  ['passport.rabiesVaccine', (data.vaccinations ?? []).some((v: any) =>
+                    v.vaccine_type === 'rabies' && (!v.next_due_date || String(v.next_due_date).slice(0, 10) >= localToday()))],
+                  ['passport.snapTest', (data.healthRecords ?? []).length > 0],
+                  ['passport.travelDocs', (data.travelDocs ?? []).length > 0],
+                ] as const).map(([k, ok]) => (
+                  <View key={k} style={[s.kv, { alignItems: 'center' }]}>
+                    <Text style={s.k}>{t(k)}</Text>
+                    <Badge label={ok ? t('common.yes') : t('common.no')} tone={ok ? 'success' : 'danger'} />
+                  </View>
+                ))}
+              </Card>
+            )}
+
             {/* Κάθε άλλη κατηγορία: λίστα εγγραφών */}
             {spec.data && (
               records.length === 0
@@ -498,6 +535,23 @@ export default function PassportScreen() {
                 <Input label={t('serviceDetail.date')} value={form[spec.date] ?? ''}
                   onChangeText={v => setForm(f => ({ ...f, [spec.date!]: v }))}
                   placeholder="YYYY-MM-DD" />
+              )}
+              {tab === 'vaccines' && (
+                <View style={{ gap: space.xs }}>
+                  <Text style={s.k}>{t('passport.vaccineType')}</Text>
+                  <View style={s.tabs}>
+                    {VACCINE_TYPES.map(vt => {
+                      const on = form.vaccine_type === vt.value
+                      return (
+                        <TouchableOpacity key={vt.value} activeOpacity={0.7}
+                          style={[s.tab, on && s.tabOn]}
+                          onPress={() => setForm(f => ({ ...f, vaccine_type: on ? '' : vt.value }))}>
+                          <Text style={[s.tabTxt, on && s.tabTxtOn]}>{t(vt.labelKey)}</Text>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </View>
               )}
               {spec.fields?.map(f => (
                 <Input key={f.key} label={t(f.labelKey)} value={form[f.key] ?? ''}

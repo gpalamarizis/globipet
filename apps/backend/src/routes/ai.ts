@@ -2,6 +2,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import prisma from '../lib/prisma.js'
 import { serverError } from '../lib/errors.js'
+import { normLang } from '../lib/i18n.js'
 
 const TRIAL_DAYS = 30
 
@@ -68,6 +69,26 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 
   const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const }
 
+  /**
+   * Γλώσσα των ελεύθερων κειμένων της απάντησης.
+   *
+   * Τα prompts είναι στα ελληνικά, οπότε το μοντέλο απαντούσε πάντα ελληνικά
+   * — και ο χρήστης με αγγλικά/ισπανικά/γαλλικά/κινέζικα διάβαζε ελληνικές
+   * παρατηρήσεις και συμβουλές. Το UI στέλνει πλέον προαιρετικό `lang` στο
+   * σώμα. Χωρίς `lang` (π.χ. η ήδη εγκατεστημένη εφαρμογή) → ελληνικά, όπως
+   * πριν: το prompt μένει αυτούσιο. Οι κωδικοί (emotion, severity,
+   * vet_urgency κ.λπ.) και τα πεδία *_el δεν αλλάζουν, ώστε οι παλιοί πελάτες
+   * να συνεχίσουν να δουλεύουν.
+   */
+  const LANG_NAMES: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French', zh: 'Simplified Chinese',
+  }
+  function langInstruction(body: any): string {
+    const lang = normLang(body?.lang)
+    if (lang === 'el') return ''
+    return `\n\nIMPORTANT: Write every free-text value of the JSON (descriptions, observations, findings, causes, advice, recommendations, notes, disclaimer) in ${LANG_NAMES[lang]}. Keep the JSON keys and the fixed code values (e.g. emotion, overall_emotion, severity, vet_urgency) exactly as specified. Fields whose name ends in _el stay in Greek.`
+  }
+
   // Pet Health Analysis — now compares against public veterinary reference data via web search
   app.post('/pet-health', { preHandler: aiGuard }, async (req: any, reply) => {
     const { image_url, analysis_type, breed, species } = req.body as { image_url: string; analysis_type: 'skin' | 'eye'; breed?: string; species?: string }
@@ -93,7 +114,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
-        system: systemPrompt,
+        system: systemPrompt + langInstruction(req.body),
         tools: [webSearchTool],
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
@@ -149,7 +170,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
-        system: systemPrompt,
+        system: systemPrompt + langInstruction(req.body),
         tools: [webSearchTool],
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
@@ -199,7 +220,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
-        system: systemPrompt,
+        system: systemPrompt + langInstruction(req.body),
         tools: [webSearchTool],
         messages: [{ role: 'user', content: [...imageContents, { type: 'text', text: userPrompt }] }]
       })
@@ -289,7 +310,7 @@ ${contextParts}
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
-        system: systemPrompt,
+        system: systemPrompt + langInstruction(req.body),
         tools: [webSearchTool],
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })

@@ -45,8 +45,18 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
     // POST toggles: it removes the item when it is already saved. The old
     // code called DELETE /wishlist/<product id>, but that route expects the
     // wishlist row id — so it matched nothing and un-favouriting never worked.
-    mutationFn: () => api.post('/wishlist', { product_id: product.id }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+    // action: ο server κάνει ό,τι ζητήθηκε, οπότε δεύτερο ίδιο αίτημα δεν αναιρεί το πρώτο.
+    mutationFn: () => api.post('/wishlist', { product_id: product.id, action: inWishlist ? 'remove' : 'add' }),
+    onSuccess: (res: any) => {
+      // Η καρδιά δείχνει αμέσως το αποτέλεσμα του server, όχι το παλιό cache
+      // μέχρι να έρθει η νέα λίστα.
+      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        const rest = old.filter((w: any) => w.product_id !== product.id)
+        return res?.data?.added && res.data.data ? [res.data.data, ...rest] : rest
+      })
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+    },
     onError: (err: any) => toast.error(err?.message || t('cmpProductCard.wishlistError')),
   })
 
@@ -67,7 +77,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="flex-1 min-w-0">
           <Link to={`/marketplace/${product.id}`}><p className="font-semibold text-gray-900 dark:text-white hover:text-brand-900 truncate">{product.name}</p></Link>
           <p className="text-xs text-gray-500 mt-0.5 truncate">{product.brand}</p>
-          <div className="flex items-center gap-1 mt-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/><span className="text-xs text-gray-500">{product.rating}</span></div>
+          <div className="flex items-center gap-1 mt-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/><span className="text-xs text-gray-500">{Number(product.rating ?? 0).toFixed(1)}</span></div>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-2">
           <p className="font-bold text-brand-900">{formatCurrency(product.sale_price || product.price)}</p>
@@ -95,7 +105,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         {product.brand && <p className="text-[10px] text-gray-400 mt-0.5">{product.brand}</p>}
         <div className="flex items-center gap-0.5 mt-1">
           <Star size={9} className="text-yellow-400 fill-yellow-400"/>
-          <span className="text-[10px] text-gray-500">{product.rating} ({product.reviews_count})</span>
+          <span className="text-[10px] text-gray-500">{Number(product.rating ?? 0).toFixed(1)} ({product.reviews_count ?? 0})</span>
         </div>
         <div className="flex items-center justify-between mt-2">
           <div>
@@ -104,7 +114,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
           </div>
           <div className="flex gap-1">
             {isAuthenticated && (
-              <button onClick={() => toggleWishlist.mutate()} className={cn('p-1.5 rounded-lg transition-colors', inWishlist ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
+              <button onClick={() => toggleWishlist.mutate()} disabled={toggleWishlist.isPending} className={cn('p-1.5 rounded-lg transition-colors disabled:opacity-50', inWishlist ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
                 <Heart size={13} fill={inWishlist ? 'currentColor' : 'none'}/>
               </button>
             )}

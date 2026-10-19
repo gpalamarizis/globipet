@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl, Platform, StatusBar, Modal, TextInput, Alert, ScrollView } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl, Platform, StatusBar, Modal, TextInput, Alert, ScrollView, Share } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Heart, MessageCircle, Users, PenLine, X, Trash2, Send } from 'lucide-react-native'
+import { Heart, MessageCircle, Users, PenLine, X, Trash2, Send, Share2 } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
@@ -74,7 +74,10 @@ export default function SocialScreen() {
 
   const deleteComment = useMutation({
     mutationFn: (cid: string) => api.delete(`/posts/comments/${cid}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['post-comments', commentsFor?.id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['post-comments', commentsFor?.id] })
+      qc.invalidateQueries({ queryKey: ['posts'] })
+    },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
@@ -99,6 +102,30 @@ export default function SocialScreen() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['posts'] }),
   })
 
+  // Διαγραφή δημοσίευσης (συντάκτης ή admin), όπως στο web.
+  const deletePost = useMutation({
+    mutationFn: (pid: string) => api.delete(`/posts/${pid}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+  const confirmDeletePost = (pid: string) =>
+    Alert.alert(t('common.delete'), t('social.deleteQ'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => deletePost.mutate(pid) },
+    ])
+
+  // Κοινοποίηση με το σύστημα. Δεν υπάρχει σελίδα ανά δημοσίευση — ο
+  // σύνδεσμος είναι η ροή στο web (ίδια συμπεριφορά με το web).
+  const sharePost = (p: any) => {
+    const url = 'https://globipet.com/social'
+    const text = String(p.content || '').slice(0, 200)
+    // iOS: το url πάει ξεχωριστά (αλλιώς εμφανίζεται δύο φορές).
+    // Android: αγνοεί το url, οπότε μπαίνει μέσα στο μήνυμα.
+    Share.share(Platform.OS === 'ios'
+      ? { message: text, url }
+      : { message: `${text}\n${url}` }).catch(() => {})
+  }
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     await qc.invalidateQueries({ queryKey: ['posts'] })
@@ -115,7 +142,7 @@ export default function SocialScreen() {
         <Text style={s.subtitle}>{t('social.what_others_share')}</Text>
       </View>
 
-      <TouchableOpacity style={s.composeBtn} activeOpacity={0.8} onPress={() => setComposing(true)}>
+      <TouchableOpacity style={s.composeBtn} activeOpacity={0.8} onPress={() => isAuthenticated ? setComposing(true) : router.push('/auth/login' as any)}>
         <PenLine size={16} color={colors.textOnDark} />
         <Text style={s.composeTxt}>{t('social.write')}</Text>
       </TouchableOpacity>
@@ -170,7 +197,8 @@ export default function SocialScreen() {
               <TouchableOpacity
                 style={s.action}
                 activeOpacity={0.7}
-                disabled={!isAuthenticated}
+                // Χωρίς `disabled`: με αυτό το πάτημα του επισκέπτη δεν έφτανε
+                // ποτέ στο router.push προς τη σύνδεση.
                 onPress={() => isAuthenticated
                   ? toggleLike.mutate({ id: item.id, liked: !!item.liked_by_me })
                   : router.push('/auth/login' as any)}>
@@ -191,6 +219,17 @@ export default function SocialScreen() {
                 <MessageCircle size={icon.md} color={colors.textMuted} />
                 <Text style={s.actionText}>{item.comments_count || 0}</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity style={[s.action, { marginLeft: 'auto' }]} activeOpacity={0.7}
+                accessibilityLabel={t('social.share')} onPress={() => sharePost(item)}>
+                <Share2 size={icon.md} color={colors.textMuted} />
+              </TouchableOpacity>
+              {isAuthenticated && (item.author_email === (user as any)?.email || (user as any)?.role === 'admin') && (
+                <TouchableOpacity style={s.action} activeOpacity={0.7}
+                  accessibilityLabel={t('common.delete')} onPress={() => confirmDeletePost(item.id)}>
+                  <Trash2 size={icon.md} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -235,7 +274,8 @@ export default function SocialScreen() {
                     <Text style={s.commentAuthor}>{c.author_name ?? c.author_email}</Text>
                     <Text style={s.commentTxt}>{c.content}</Text>
                   </View>
-                  {c.author_email === (user as any)?.email && (
+                  {/* Ίδιοι κανόνες με το backend/web: ο συντάκτης του σχολίου ή της δημοσίευσης. */}
+                  {(c.author_email === (user as any)?.email || commentsFor?.author_email === (user as any)?.email) && (
                     <TouchableOpacity onPress={() => deleteComment.mutate(c.id)} hitSlop={8}>
                       <Trash2 size={14} color={colors.danger} />
                     </TouchableOpacity>
@@ -243,7 +283,7 @@ export default function SocialScreen() {
                 </View>
               ))}
             </ScrollView>
-            <View style={s.commentRow}>
+            {isAuthenticated && <View style={s.commentRow}>
               <TextInput style={[s.input, { flex: 1, minHeight: 44 }]} value={commentText}
                 onChangeText={setCommentText} placeholder={t('social.commentHint')}
                 placeholderTextColor={colors.textLight} />
@@ -252,7 +292,7 @@ export default function SocialScreen() {
                 onPress={() => addComment.mutate()}>
                 <Send size={18} color={colors.textOnDark} />
               </TouchableOpacity>
-            </View>
+            </View>}
           </View>
         </View>
       </Modal>

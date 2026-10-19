@@ -144,7 +144,7 @@ export default function MarketInsights() {
                   <div className="flex items-center gap-0.5 mt-1">
                     <Star size={9} className="text-yellow-400 fill-yellow-400" />
                     <span className="text-[10px] text-gray-500">
-                      {p.rating} ({p.reviews_count})
+                      {Number(p.rating ?? 0).toFixed(1)} ({p.reviews_count ?? 0})
                     </span>
                   </div>
                   <div className="flex items-baseline gap-1.5 mt-1.5">

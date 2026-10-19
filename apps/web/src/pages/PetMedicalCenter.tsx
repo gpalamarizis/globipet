@@ -5,12 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Brain, Heart, Activity, Video, Check, Sparkles, Clock } from 'lucide-react'
 import { api } from '@/lib/api'
+import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function PetMedicalCenter() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
@@ -152,7 +153,7 @@ export default function PetMedicalCenter() {
                         {t('pgMedical.popular')}
                       </span>
                     )}
-                    <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{plan.name_el || plan.name}</h3>
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{localName(plan, i18n.language)}</h3>
                     <p className="text-xs text-gray-500 mb-4 leading-relaxed">{plan.description}</p>
                     <div className="flex items-baseline gap-1 mb-5">
                       <span className="text-3xl font-display font-bold text-gray-900 dark:text-white">€{price}</span>

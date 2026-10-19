@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { FlaskConical, Camera, Images, AlertTriangle } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
+import AiGate from '@/components/AiGate'
 import { Screen, Card, Button, Badge } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -19,15 +19,46 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *
  * Το είδος ζώου ΔΕΝ μαντεύεται: ο ίδιος σχηματισμός σημαίνει διαφορετικά
  * πράγματα σε σκύλο και σε γάτα, και ο server το απαιτεί.
+ *
+ * ΑΠΟΤΕΛΕΣΜΑ (19/10) — ίδια πεδία και σειρά με το web (AiStoolUrine.tsx):
+ *   σοβαρότητα + σύσταση, επείγον + χρώμα + σύσταση δείγματος, ευρήματα,
+ *   πιθανές αιτίες, επίδραση ιστορικού, φροντίδα στο σπίτι, σημάδια για
+ *   άμεση επίσκεψη, πηγές, αποποίηση. Πριν: έδειχνε `summary` (δεν
+ *   υπάρχει), αντιστοίχιζε σοβαρότητα low/medium/high ενώ ο server δίνει
+ *   normal/mild/moderate/severe, και δεν έδειχνε καθόλου το `vet_urgency`.
+ *   Οι ετικέτες βγαίνουν από τους κωδικούς (όχι από το `vet_urgency_el`).
+ *   Περνά από την κοινή πύλη συνδρομής AiGate, όπως στο web.
  */
 const SAMPLES = [
   { id: 'stool', labelKey: 'stool.stool' },
   { id: 'urine', labelKey: 'stool.urine' },
 ]
 
+type Tone = 'success' | 'warning' | 'danger'
+const SEVERITY: Record<string, { labelKey: string; tone: Tone }> = {
+  normal:   { labelKey: 'stool.sev_normal',   tone: 'success' },
+  mild:     { labelKey: 'stool.sev_mild',     tone: 'warning' },
+  moderate: { labelKey: 'stool.sev_moderate', tone: 'warning' },
+  severe:   { labelKey: 'stool.sev_severe',   tone: 'danger' },
+}
+const URGENCY: Record<string, { labelKey: string; tone: Tone }> = {
+  routine:    { labelKey: 'stool.urg_routine',    tone: 'success' },
+  within_48h: { labelKey: 'stool.urg_within_48h', tone: 'warning' },
+  today:      { labelKey: 'stool.urg_today',      tone: 'warning' },
+  emergency:  { labelKey: 'stool.urg_emergency',  tone: 'danger' },
+}
+
+// Ίδιο με το web: τα στοιχεία λίστας είναι κείμενα, αλλά το μοντέλο
+// μπορεί να επιστρέψει και αντικείμενα.
+function itemText(item: any): string {
+  if (item == null) return ''
+  if (typeof item === 'string') return item
+  if (typeof item === 'object') return Object.values(item).filter(v => typeof v === 'string').join(' — ')
+  return String(item)
+}
+
 export default function AiStoolUrineScreen() {
-  const { t } = useTranslation()
-  const router = useRouter()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
 
   const [imageUri, setImageUri] = useState<string | null>(null)
@@ -73,6 +104,7 @@ export default function AiStoolUrineScreen() {
         sample_type: sampleType,
         species: pet?.species ?? 'dog',
         pet_id: petId || undefined,
+        lang: i18n.language,
       })
       return res.data?.data ?? res.data
     },
@@ -81,20 +113,22 @@ export default function AiStoolUrineScreen() {
       Alert.alert(t('ai.analysis_failed'), e?.response?.data?.message || t('common.try_again_later')),
   })
 
-  if (!isAuthenticated) return (
-    <Screen title={t('stool.title')} back>
-      <Card>
-        <Text style={s.gateTitle}>{t('ai.need_login')}</Text>
-        <Text style={s.gateText}>{t('ai.login_reason')}</Text>
-        <Button label={t('auth.sign_in')} full onPress={() => router.push('/auth/login' as any)}
-          style={{ marginTop: space.lg }} />
-      </Card>
-    </Screen>
-  )
-
   const canAnalyze = !!imageUri && !!petId && !analyze.isPending
+  const sev = result?.severity ? SEVERITY[result.severity] : null
+  const urg = result?.vet_urgency ? URGENCY[result.vet_urgency] : null
+
+  const list = (titleKey: string, items: any, bullet = '•', danger = false) =>
+    Array.isArray(items) && items.length > 0 ? (
+      <Card>
+        <Text style={[s.listTitle, danger && { color: colors.danger }]}>{t(titleKey)}</Text>
+        {items.map((it: any, i: number) => (
+          <Text key={i} style={[s.bullet, danger && { color: colors.danger }]}>{bullet} {itemText(it)}</Text>
+        ))}
+      </Card>
+    ) : null
 
   return (
+    <AiGate title={t('stool.title')}>
     <Screen title={t('stool.title')} back scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.intro}>{t('stool.subtitle')}</Text>
@@ -153,34 +187,57 @@ export default function AiStoolUrineScreen() {
           onPress={() => analyze.mutate()} full />
 
         {result && (
-          <Card>
-            <View style={s.resultHead}>
-              <FlaskConical size={icon.md} color={colors.brand} />
-              <Text style={s.resultTitle}>{t('ai.findings')}</Text>
-              {!!result.severity && (
+          <>
+            {/* Σοβαρότητα + σύσταση */}
+            <Card>
+              <View style={s.resultHead}>
+                <FlaskConical size={icon.md} color={colors.brand} />
+                <Text style={s.resultTitle}>{t('ai.severity')}</Text>
                 <Badge
-                  label={t(`ai.sev_${result.severity}`, { defaultValue: result.severity })}
-                  tone={result.severity === 'high' ? 'danger' : result.severity === 'medium' ? 'warning' : 'success'} />
+                  label={sev ? t(sev.labelKey) : (result.severity || t('ai.sev_unknown'))}
+                  tone={sev?.tone ?? 'neutral'} />
+              </View>
+              {!!result.recommendation && <Text style={s.resultTxt}>{result.recommendation}</Text>}
+            </Card>
+
+            {/* Επείγον + χρώμα + σύσταση δείγματος */}
+            <Card>
+              <View style={[s.kv, s.kvFirst]}>
+                <Text style={s.k}>{t('stool.urgency')}</Text>
+                <Badge
+                  label={urg ? t(urg.labelKey) : (result.vet_urgency || t('ai.sev_unknown'))}
+                  tone={urg?.tone ?? 'neutral'} />
+              </View>
+              {!!result.color && (
+                <View style={s.kv}>
+                  <Text style={s.k}>{t('stool.color')}</Text>
+                  <Text style={s.v}>{result.color}</Text>
+                </View>
               )}
-            </View>
-            {!!result.summary && <Text style={s.resultTxt}>{result.summary}</Text>}
-            {!!result.findings?.length && result.findings.map((f: string, i: number) => (
-              <Text key={i} style={s.bullet}>• {f}</Text>
-            ))}
-            {!!result.recommendation && (
-              <>
-                <Text style={s.sub}>{t('ai.recommendation')}</Text>
-                <Text style={s.resultTxt}>{result.recommendation}</Text>
-              </>
-            )}
+              {!!result.consistency && (
+                <View style={s.kv}>
+                  <Text style={s.k}>{t('stool.consistency')}</Text>
+                  <Text style={s.v}>{result.consistency}</Text>
+                </View>
+              )}
+            </Card>
+
+            {list('ai.findings', result.findings)}
+            {list('stool.likelyCauses', result.likely_causes)}
+            {list('stool.contextFactors', result.context_factors)}
+            {list('stool.homeCare', result.home_care, '✓')}
+            {list('stool.warningSigns', result.warning_signs, '•', true)}
+            {list('ai.sources', result.comparison_sources)}
+
             <View style={s.warn}>
               <AlertTriangle size={14} color={colors.warning} />
-              <Text style={s.warnTxt}>{t('stool.disclaimer')}</Text>
+              <Text style={s.warnTxt}>{result.disclaimer || t('stool.disclaimer')}</Text>
             </View>
-          </Card>
+          </>
         )}
       </ScrollView>
     </Screen>
+    </AiGate>
   )
 }
 
@@ -205,9 +262,15 @@ const s = StyleSheet.create({
   resultTitle: { ...type.emphasis, color: colors.text, flex: 1 },
   resultTxt: { ...type.body, color: colors.textMuted },
   bullet: { ...type.caption, color: colors.textMuted, marginTop: space.xs },
-  sub: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold, marginTop: space.md },
-  warn: { flexDirection: 'row', gap: space.xs, marginTop: space.md, alignItems: 'flex-start' },
+  listTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  kv: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.md,
+    paddingVertical: space.xs, marginTop: space.xs,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  kvFirst: { borderTopWidth: 0, marginTop: 0 },
+  k: { ...type.caption, color: colors.textMuted, flexShrink: 0, maxWidth: '42%' },
+  v: { ...type.caption, color: colors.text, fontWeight: weight.semibold, flex: 1, textAlign: 'right' },
+  warn: { flexDirection: 'row', gap: space.xs, alignItems: 'flex-start' },
   warnTxt: { ...type.caption, color: colors.textLight, flex: 1 },
-  gateTitle: { ...type.section, color: colors.text },
-  gateText: { ...type.body, color: colors.textMuted, marginTop: space.xs },
 })

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, MessageCircle, Share2, Plus, Image, X, Send, MoreHorizontal, Bookmark, Trash2 } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Plus, Image, X, Send, MoreHorizontal, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { api, uploadFile } from '@/lib/api'
@@ -13,6 +14,9 @@ export default function Social() {
   const { t } = useTranslation()
   const { user, isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  // Ανοιχτό μενού «⋯» (id δημοσίευσης).
+  const [menuFor, setMenuFor] = useState<string | null>(null)
   const [newPost, setNewPost] = useState('')
   const [showCompose, setShowCompose] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -102,6 +106,33 @@ export default function Social() {
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
+  // Διαγραφή δημοσίευσης — DELETE /posts/:id (συντάκτης ή admin).
+  const deletePost = useMutation({
+    mutationFn: (id: string) => api.delete(`/posts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] })
+      toast.success(t('common.deleted'))
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  /**
+   * Κοινοποίηση. Δεν υπάρχει σελίδα ανά δημοσίευση, οπότε ο σύνδεσμος είναι
+   * η ροή. Με Web Share όπου υπάρχει, αλλιώς αντιγραφή στο πρόχειρο.
+   */
+  const sharePost = async (post: any) => {
+    const url = `${window.location.origin}/social`
+    const text = String(post.content || '').slice(0, 200)
+    if (navigator.share) {
+      try { await navigator.share({ title: post.author_name, text, url }); return }
+      catch (e: any) { if (e?.name === 'AbortError') return }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`)
+      toast.success(t('socialExtra.linkCopied'))
+    } catch { toast.error(t('common.error')) }
+  }
+
   const filters = [
     { value: 'all', label: t('social.filters.all') },
     { value: 'trending', label: t('social.filters.trending') },
@@ -187,13 +218,31 @@ export default function Social() {
                     <p className="text-xs text-gray-400">{formatRelativeTime(post.created_at)}{post.pet_name && <span className="text-brand-600"> · 🐾 {post.pet_name}</span>}</p>
                   </div>
                 </div>
-                <button className="btn-ghost p-1.5"><MoreHorizontal size={16} className="text-gray-400" /></button>
+                {/* Το «⋯» δεν έκανε τίποτα. Η μόνη ενέργεια που υποστηρίζει το
+                    backend εδώ είναι η διαγραφή, για τον συντάκτη ή τον admin —
+                    στους υπόλοιπους δεν εμφανίζεται. */}
+                {isAuthenticated && (post.author_email === user?.email || user?.role === 'admin') && (
+                  <div className="relative">
+                    <button onClick={() => setMenuFor(menuFor === post.id ? null : post.id)} aria-label={t('common.actions')} className="btn-ghost p-1.5"><MoreHorizontal size={16} className="text-gray-400" /></button>
+                    {menuFor === post.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMenuFor(null)} />
+                        <div className="absolute right-0 top-full mt-1 z-20 min-w-[140px] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg py-1">
+                          <button onClick={() => { setMenuFor(null); if (window.confirm(t('common.confirmDelete'))) deletePost.mutate(post.id) }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <Trash2 size={14} /> {t('common.delete')}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">{post.content}</p>
               {post.image_url && <img src={post.image_url} alt="" className="w-full rounded-xl object-cover max-h-80 mb-3" />}
               {post.tags?.length > 0 && <div className="flex flex-wrap gap-1.5 mb-3">{post.tags.map((tag: string) => <span key={tag} className="text-xs text-brand-700 dark:text-brand-400 hover:underline cursor-pointer">#{tag}</span>)}</div>}
               <div className="flex items-center gap-1 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <button onClick={() => isAuthenticated && likePost.mutate({ id: post.id, liked: !!post.liked_by_me })} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors', post.liked_by_me ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
+                <button onClick={() => isAuthenticated ? likePost.mutate({ id: post.id, liked: !!post.liked_by_me }) : navigate('/login')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors', post.liked_by_me ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
                   <Heart size={16} fill={post.liked_by_me ? 'currentColor' : 'none'} /><span>{post.likes_count}</span>
                 </button>
                 <button
@@ -202,8 +251,8 @@ export default function Social() {
                     openComments === post.id ? 'text-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}>
                   <MessageCircle size={16} /><span>{post.comments_count}</span>
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-auto"><Bookmark size={16} /></button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><Share2 size={16} /></button>
+                {/* Η «Αποθήκευση» αφαιρέθηκε: δεν υπάρχει πίνακας αποθηκευμένων στο backend. */}
+                <button onClick={() => sharePost(post)} aria-label={t('serviceDetailExtra.share')} title={t('serviceDetailExtra.share')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-auto"><Share2 size={16} /></button>
               </div>
 
               {openComments === post.id && (

@@ -261,7 +261,13 @@ const routes: FastifyPluginAsync = async (app) => {
       })
       // The old token stops working immediately, so the collar must be
       // reconfigured with this value.
-      return { data: { device_token } }
+      // setup is additive: older clients read only data.device_token.
+      return {
+        data: { device_token },
+        setup: {
+          ingest_url: `${process.env.PUBLIC_API_URL || 'https://globipetbackend-production.up.railway.app/api'}/tracker/ingest`,
+        },
+      }
     })
 
     secured.delete('/devices/:id', async (req: any, reply) => {

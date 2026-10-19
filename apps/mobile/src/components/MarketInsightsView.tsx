@@ -163,7 +163,7 @@ export function MarketInsightsView({ title }: { title?: string }) {
                   <Text style={s.tileBrand} numberOfLines={1}>{p.brand || ' '}</Text>
                   <View style={s.ratingRow}>
                     <Star size={11} color={colors.accent} fill={colors.accent} />
-                    <Text style={s.ratingTxt}>{p.rating} ({p.reviews_count})</Text>
+                    <Text style={s.ratingTxt}>{Number(p.rating ?? 0).toFixed(1)} ({p.reviews_count ?? 0})</Text>
                   </View>
                   <View style={s.priceRow}>
                     <Text style={s.price}>{money(p.price)}</Text>

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Linking, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock, XCircle, Stethoscope } from 'lucide-react-native'
+import { CheckCircle2, Clock, XCircle, Stethoscope, Video } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -52,6 +52,17 @@ export default function TelehealthConfirmationScreen() {
   const paid = session?.payment_status === 'paid'
   const failed = session?.payment_status === 'failed'
 
+  // Ίδιο δωμάτιο Jitsi με το web (meet.jit.si/<meeting_url>). Ανοίγει στην
+  // εφαρμογή Jitsi Meet αν είναι εγκατεστημένη, αλλιώς στον browser.
+  const joinCall = async () => {
+    if (!session?.meeting_url) return
+    try {
+      await Linking.openURL(`https://meet.jit.si/${encodeURIComponent(String(session.meeting_url))}`)
+    } catch {
+      Alert.alert(t('common.error'), t('teleConfirm.err_open_call'))
+    }
+  }
+
   return (
     <Screen title={t('teleConfirm.title')} scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
@@ -87,6 +98,10 @@ export default function TelehealthConfirmationScreen() {
           </Card>
         )}
 
+        {paid && !!session?.meeting_url && (
+          <Button label={t('teleConfirm.join_call')} icon={<Video size={18} color={colors.textOnDark} />}
+            onPress={joinCall} full />
+        )}
         <Button label={t('profile.menu.telehealth')} icon={<Stethoscope size={18} color={colors.textOnDark} />}
           onPress={() => router.replace('/telehealth' as any)} full />
         <Button label={t('tele.title')} variant="secondary"

@@ -87,8 +87,18 @@ export default function ProductDetail() {
   const toggleWishlist = useMutation({
     // POST toggles. The previous DELETE passed the product id to a route that
     // expects the wishlist row id, so removing a favourite never worked.
-    mutationFn: () => api.post('/wishlist', { product_id: product!.id }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+    // action: ο server κάνει ό,τι ζητήθηκε, οπότε δεύτερο ίδιο αίτημα δεν αναιρεί το πρώτο.
+    mutationFn: () => api.post('/wishlist', { product_id: product!.id, action: inWishlist ? 'remove' : 'add' }),
+    onSuccess: (res: any) => {
+      // Η καρδιά δείχνει αμέσως το αποτέλεσμα του server, όχι το παλιό cache
+      // μέχρι να έρθει η νέα λίστα.
+      queryClient.setQueriesData({ queryKey: ['wishlist'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        const rest = old.filter((w: any) => w.product_id !== product!.id)
+        return res?.data?.added && res.data.data ? [res.data.data, ...rest] : rest
+      })
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] })
+    },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
@@ -223,27 +233,38 @@ export default function ProductDetail() {
           </div>
 
           {/* CTA buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => isAuthenticated ? addToCart.mutate() : navigate('/login')}
-              disabled={addToCart.isPending || product.stock === 0}
-              className="btn-primary flex-1 flex items-center justify-center gap-2 py-3"
-            >
-              <ShoppingCart size={18} />
-              {addToCart.isPending ? t('common.loading') : t('marketplace.addToCart')}
-            </button>
-            {isAuthenticated && (
-              <button onClick={() => toggleWishlist.mutate()}
-                className={cn('p-3 rounded-xl border-2 transition-all',
-                  inWishlist
-                    ? 'border-red-300 bg-red-50 text-red-500 dark:bg-red-900/20'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-red-300')}>
-                <Heart size={20} fill={inWishlist ? 'currentColor' : 'none'} />
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <button
+                onClick={() => isAuthenticated ? addToCart.mutate() : navigate('/login')}
+                disabled={addToCart.isPending || product.stock === 0}
+                className="btn-primary flex-1 flex items-center justify-center gap-2 py-3"
+              >
+                <ShoppingCart size={18} />
+                {addToCart.isPending ? t('common.loading') : t('marketplace.addToCart')}
               </button>
+              {isAuthenticated && (
+                <button onClick={() => toggleWishlist.mutate()} disabled={toggleWishlist.isPending}
+                  className={cn('p-3 rounded-xl border-2 transition-all disabled:opacity-50',
+                    inWishlist
+                      ? 'border-red-300 bg-red-50 text-red-500 dark:bg-red-900/20'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-red-300')}>
+                  <Heart size={20} fill={inWishlist ? 'currentColor' : 'none'} />
+                </button>
+              )}
+              <button className="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300 transition-all">
+                <Share2 size={20} />
+              </button>
+            </div>
+            {/* Συνδρομή: το κινητό είχε κουμπί, το web δεν είχε κανέναν δρόμο
+                προς τη σελίδα συνδρομής. Μόνο όπου το προϊόν τη δέχεται. */}
+            {(product as any).is_subscribable && (
+              <Link to={`/marketplace/${product.id}/subscribe`}
+                className="btn-secondary w-full flex items-center justify-center gap-2 py-3">
+                <RotateCcw size={18} />
+                {t('pgSubscribe.duration')}
+              </Link>
             )}
-            <button className="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300 transition-all">
-              <Share2 size={20} />
-            </button>
           </div>
 
           {/* Trust badges */}

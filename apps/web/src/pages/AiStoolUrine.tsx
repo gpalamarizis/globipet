@@ -33,11 +33,13 @@ const SEVERITY_CONFIG = {
   severe:   { labelKey: 'pgStool.sevSevere',   color: 'text-red-700 bg-red-50 border-red-200',         icon: AlertTriangle, iconColor: 'text-red-500' },
 }
 
+// Το `vet_urgency` είναι κλειστό σύνολο κωδικών· το `vet_urgency_el` μόνο
+// ελληνικά. Η ετικέτα βγαίνει από τον κωδικό, στη γλώσσα του χρήστη.
 const URGENCY_CONFIG = {
-  routine:    { color: 'bg-green-100 text-green-800' },
-  within_48h: { color: 'bg-yellow-100 text-yellow-800' },
-  today:      { color: 'bg-orange-100 text-orange-800' },
-  emergency:  { color: 'bg-red-100 text-red-800' },
+  routine:    { labelKey: 'pgStool.urgRoutine',   color: 'bg-green-100 text-green-800' },
+  within_48h: { labelKey: 'pgStool.urgWithin48h', color: 'bg-yellow-100 text-yellow-800' },
+  today:      { labelKey: 'pgStool.urgToday',     color: 'bg-orange-100 text-orange-800' },
+  emergency:  { labelKey: 'pgStool.urgEmergency', color: 'bg-red-100 text-red-800' },
 }
 
 function renderItem(item: any): string {
@@ -48,7 +50,7 @@ function renderItem(item: any): string {
 }
 
 export default function AiStoolUrine() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [sampleType, setSampleType] = useState<SampleType>('stool')
   const [species, setSpecies] = useState<Species>('dog')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -123,6 +125,7 @@ export default function AiStoolUrine() {
         last_normal_stool: form.last_normal_stool || undefined,
         symptoms: form.symptoms || undefined,
         additional_notes: form.additional_notes || undefined,
+        lang: i18n.language,
       }
       const res = await api.post('/ai/stool-urine', payload)
       setResult(res.data)
@@ -325,7 +328,7 @@ export default function AiStoolUrine() {
           <div className="card p-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('pgStool.urgency')}</p>
-              <span className={cn('inline-block px-3 py-1 rounded-full text-xs font-bold', urg.color)}>{result.vet_urgency_el}</span>
+              <span className={cn('inline-block px-3 py-1 rounded-full text-xs font-bold', urg.color)}>{t(urg.labelKey)}</span>
             </div>
             {result.color && (
               <div className="text-right">

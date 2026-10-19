@@ -30,8 +30,14 @@ export default function WishlistScreen() {
   })
 
   const remove = useMutation({
-    mutationFn: (product_id: string) => api.post('/wishlist', { product_id }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    // DELETE με το id της γραμμής: δεν εναλλάσσει όπως το POST, οπότε δεύτερο
+    // πάτημα δεν ξαναπροσθέτει το προϊόν.
+    mutationFn: (rowId: string) => api.delete(`/wishlist/${rowId}`),
+    onSuccess: (_r, rowId) => {
+      qc.setQueriesData({ queryKey: ['wishlist'] }, (old: any) =>
+        Array.isArray(old) ? old.filter((w: any) => w.id !== rowId) : old)
+      qc.invalidateQueries({ queryKey: ['wishlist'] })
+    },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
@@ -64,19 +70,23 @@ export default function WishlistScreen() {
       ) : items.map((w: any) => {
         const p = w.product ?? w
         const id = w.product_id ?? p.id
-        const price = p.sale_price ?? p.price
+        // Η γραμμή wishlist έχει product_name / product_price / product_image
+        // (schema.prisma)· name / price / image_url δεν υπάρχουν σε αυτήν.
+        const name = w.product_name ?? p.name
+        const image = w.product_image ?? p.image_url
+        const price = w.product_price ?? p.sale_price ?? p.price
         return (
           <Card key={id} onPress={() => router.push(`/products/${id}` as any)}>
             <View style={s.row}>
-              {p.image_url
-                ? <Image source={{ uri: p.image_url }} style={s.thumb} />
+              {image
+                ? <Image source={{ uri: image }} style={s.thumb} />
                 : <View style={[s.thumb, s.thumbEmpty]}><ShoppingBag size={icon.md} color={colors.textLight} /></View>}
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.name} numberOfLines={2}>{p.name}</Text>
+                <Text style={s.name} numberOfLines={2}>{name}</Text>
                 <Text style={s.price}>€{Number(price ?? 0).toFixed(2)}</Text>
               </View>
               <View style={s.actions}>
-                <TouchableOpacity onPress={() => remove.mutate(id)} hitSlop={8} style={s.iconBtn}>
+                <TouchableOpacity onPress={() => remove.mutate(w.id)} disabled={remove.isPending} hitSlop={8} style={s.iconBtn}>
                   <Heart size={icon.sm} color={colors.danger} fill={colors.danger} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => addToCart.mutate(id)} hitSlop={8} style={s.iconBtn}>

@@ -4,6 +4,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-na
 import * as ImagePicker from 'expo-image-picker'
 import { Camera, Images, Sparkles, X } from 'lucide-react-native'
 import { api } from '@/lib/api'
+import AiGate from '@/components/AiGate'
 import { Screen, Card, Button, Skeleton } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon, touch } from '@/theme'
 
@@ -17,10 +18,30 @@ const typo = theme.type
  *   Είμαστε σε 17. Η παλιά γραμμή έριχνε TypeError μόλις πατούσε κανείς
  *   «Κάμερα» ή «Γκαλερί» — η οθόνη ήταν νεκρή σε παραγωγή. Σωστή μορφή
  *   πλέον: `mediaTypes: ['images']`.
+ *
+ * ΤΙ ΔΙΟΡΘΩΘΗΚΕ (19/10)
+ *   1. Βίντεο: η οθόνη έστελνε `video_url` στο /ai/emotion/video, που δέχεται
+ *      μόνο `frames` (base64 καρέ) → πάντα 400. Το κινητό δεν έχει τρόπο να
+ *      βγάλει καρέ από βίντεο χωρίς νέα native βιβλιοθήκη (π.χ.
+ *      expo-video-thumbnails + νέο build), οπότε η επιλογή περιορίζεται σε
+ *      φωτογραφίες μέχρι να προστεθεί.
+ *   2. Το αποτέλεσμα διάβαζε πεδία που το backend δεν επιστρέφει
+ *      (primary_emotion, description, recommendations): έβγαινε μόνο 🐾.
+ *      Τώρα: emotion, confidence, energy_level, welfare_score,
+ *      observations, advice — όπως το web.
+ *   3. Το συναίσθημα μεταφράζεται από τον κωδικό· το `emotion_el` (μόνο
+ *      ελληνικά) μένει εφεδρεία στα ελληνικά. Το `lang` ζητά από το AI
+ *      τα ελεύθερα κείμενα στη γλώσσα του χρήστη.
+ *   4. Περνά από την ίδια πύλη συνδρομής με το ai-health (AiGate), όπως
+ *      στο web όπου και οι τρεις οθόνες AI είναι μέσα στο AiFeatureGuard.
  */
 
+// Κωδικοί του backend: happy|calm|anxious|fearful|excited|playful|tired|stressed|neutral
 const EMOTIONS: Record<string, { emoji: string; labelKey: string }> = {
   happy:    { emoji: '😊', labelKey: 'emo.happy' },
+  calm:     { emoji: '😌', labelKey: 'emo.calm' },
+  fearful:  { emoji: '😨', labelKey: 'emo.fearful' },
+  stressed: { emoji: '😫', labelKey: 'emo.stressed' },
   sad:      { emoji: '😢', labelKey: 'emo.sad' },
   anxious:  { emoji: '😰', labelKey: 'emo.anxious' },
   angry:    { emoji: '😠', labelKey: 'emo.angry' },
@@ -31,11 +52,10 @@ const EMOTIONS: Record<string, { emoji: string; labelKey: string }> = {
 }
 
 export default function AiEmotionScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
-  const [isVideo, setIsVideo] = useState(false)
 
   const pick = async (fromCamera: boolean) => {
     const permission = fromCamera
@@ -52,35 +72,26 @@ export default function AiEmotionScreen() {
     }
 
     const picked = fromCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 })
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 })
 
     if (!picked.canceled && picked.assets?.[0]) {
       setImageUri(picked.assets[0].uri)
-      setIsVideo(picked.assets[0].type === 'video')
       setResult(null)
     }
   }
 
-  /**
-   * Ανάλυση από φωτογραφία ή βίντεο.
-   *
-   * Μια στιγμιαία φωτογραφία πιάνει μία έκφραση· το βίντεο δείχνει κίνηση
-   * και στάση σώματος, που λένε περισσότερα για τη διάθεση. Το web είχε
-   * και τα δύο, το κινητό μόνο φωτογραφία — παρότι το κινητό τραβά βίντεο
-   * ευκολότερα από οτιδήποτε άλλο.
-   */
+  /** Ανάλυση από φωτογραφία (βλ. σημείωση για το βίντεο πάνω). */
   const analyze = async () => {
     if (!imageUri) return
     setAnalyzing(true)
     setResult(null)
     try {
       const formData = new FormData()
-      const ext = isVideo ? 'mp4' : 'jpg'
-      const filename = imageUri.split('/').pop() || `clip.${ext}`
+      const filename = imageUri.split('/').pop() || 'photo.jpg'
       formData.append('file', {
         uri: imageUri,
-        type: isVideo ? 'video/mp4' : 'image/jpeg',
+        type: 'image/jpeg',
         name: filename,
       } as any)
 
@@ -89,9 +100,7 @@ export default function AiEmotionScreen() {
       })
       const mediaUrl = uploadRes.data?.url || uploadRes.data?.file_url
 
-      const res = isVideo
-        ? await api.post('/ai/emotion/video', { video_url: mediaUrl })
-        : await api.post('/ai/emotion', { image_url: mediaUrl })
+      const res = await api.post('/ai/emotion', { image_url: mediaUrl, lang: i18n.language })
       setResult(res.data)
     } catch (err: any) {
       Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later'))
@@ -102,9 +111,14 @@ export default function AiEmotionScreen() {
 
   const reset = () => { setImageUri(null); setResult(null) }
 
-  const emotion = result?.primary_emotion ? EMOTIONS[result.primary_emotion] : null
+  const emotion = result?.emotion ? EMOTIONS[result.emotion] : null
+  const emotionLabel = emotion
+    ? t(emotion.labelKey)
+    : (i18n.language === 'el' && result?.emotion_el) || result?.emotion || ''
+  const observations: string[] = Array.isArray(result?.observations) ? result.observations : []
 
   return (
+    <AiGate title={t('emo.emotion')}>
     <Screen title={t('emo.emotion')} subtitle={t('emo.from_photo')}>
 
       {/* ── Εικόνα ─────────────────────────────────────────────── */}
@@ -156,31 +170,36 @@ export default function AiEmotionScreen() {
         <View style={{ gap: space.md, marginTop: space.xl }}>
           <Card style={{ alignItems: 'center' }}>
             <Text style={s.emoji}>{emotion?.emoji || '🐾'}</Text>
-            <Text style={s.emotion}>
-              {result.primary_emotion_el || (emotion ? t(emotion.labelKey) : result.primary_emotion)}
-            </Text>
+            <Text style={s.emotion}>{emotionLabel}</Text>
             {typeof result.confidence === 'number' ? (
               <Text style={s.confidence}>
                 {t('emo.confidence', { pct: Math.round(result.confidence * 100) })}
               </Text>
             ) : null}
+            {typeof result.energy_level === 'number' ? (
+              <Text style={s.confidence}>{t('emo.energy', { n: result.energy_level })}</Text>
+            ) : null}
+            {typeof result.welfare_score === 'number' ? (
+              <Text style={s.confidence}>{t('emo.welfare', { n: result.welfare_score })}</Text>
+            ) : null}
           </Card>
 
-          {result.description ? (
+          {observations.length > 0 ? (
             <Card>
-              <Text style={s.body}>{result.description}</Text>
+              <Text style={s.cardTitle}>{t('emo.observations')}</Text>
+              {observations.map((o: string, i: number) => (
+                <View key={i} style={s.bullet}>
+                  <View style={s.dot} />
+                  <Text style={s.bulletText}>{o}</Text>
+                </View>
+              ))}
             </Card>
           ) : null}
 
-          {result.recommendations?.length > 0 ? (
+          {result.advice ? (
             <Card>
               <Text style={s.cardTitle}>{t('emo.what_to_do')}</Text>
-              {result.recommendations.map((r: string, i: number) => (
-                <View key={i} style={s.bullet}>
-                  <View style={s.dot} />
-                  <Text style={s.bulletText}>{r}</Text>
-                </View>
-              ))}
+              <Text style={s.body}>{result.advice}</Text>
             </Card>
           ) : null}
 
@@ -188,6 +207,7 @@ export default function AiEmotionScreen() {
         </View>
       ) : null}
     </Screen>
+    </AiGate>
   )
 }
 

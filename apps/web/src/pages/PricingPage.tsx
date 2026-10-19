@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Heart, Sparkles, Activity, Check, Zap, X } from 'lucide-react'
 import { api } from '@/lib/api'
+import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -32,7 +33,7 @@ const FEATURE_META = [
 ] as const
 
 export default function PricingPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
   const { isAuthenticated } = useAuthStore()
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
@@ -140,7 +141,7 @@ export default function PricingPage() {
                   <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
                     {isBundle ? `${t('pricing.bundle')} (${featureCount})` : t('pricing.individual')}
                   </p>
-                  <h3 className="font-bold text-xl text-gray-900 dark:text-white mt-1">{plan.name_el || plan.name}</h3>
+                  <h3 className="font-bold text-xl text-gray-900 dark:text-white mt-1">{localName(plan, i18n.language)}</h3>
                 </div>
 
                 <div className="mb-4">

@@ -36,7 +36,7 @@ export default function PetQuickWidget() {
     { icon: Calendar, label: t('cmpPetWidget.newBooking'), path: '/services', color: 'bg-blue-500 hover:bg-blue-600' },
     { icon: Video,    label: t('nav.telehealth'),   path: '/telehealth', color: 'bg-teal-500 hover:bg-teal-600' },
     { icon: Brain,    label: t('cmpPetWidget.aiHealth'),     path: '/ai-health',  color: 'bg-purple-500 hover:bg-purple-600' },
-    { icon: Stethoscope, label: t('cmpPetWidget.petProfile'), path: firstPet ? `/pets/${firstPet.id}` : '/pets', color: 'bg-orange-500 hover:bg-orange-600' },
+    { icon: Stethoscope, label: t('cmpPetWidget.petProfile'), path: firstPet ? `/my-pets/${firstPet.id}` : '/my-pets', color: 'bg-orange-500 hover:bg-orange-600' },
   ]
 
   return (

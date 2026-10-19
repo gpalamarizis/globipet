@@ -37,6 +37,10 @@ api.interceptors.request.use((config) => {
     // Corrupted storage should not take every request down with it. The
     // request goes out unauthenticated and the 401 handler cleans up.
   }
+  // Η γλώσσα της εφαρμογής, ώστε το backend να επιστρέφει μεταφρασμένα
+  // δεδομένα σε αυτήν (getRequestLang: ?lang → preferred_language → Accept-Language).
+  const lang = (i18n.resolvedLanguage || i18n.language || '').slice(0, 2).toLowerCase()
+  if (/^[a-z]{2}$/.test(lang)) config.headers['Accept-Language'] = lang
   return config
 })
 

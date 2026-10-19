@@ -27,7 +27,7 @@ const speciesOptions = [
 ]
 
 export default function AiEmotion() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const [mode, setMode] = useState<Mode>('select')
   const [species, setSpecies] = useState('dog')
@@ -44,30 +44,51 @@ export default function AiEmotion() {
   // Each frame is a billed AI request. Live analysis stops on its own after
   // this many so an unattended camera cannot run up a bill.
   const MAX_LIVE_FRAMES = 20
+  // Ίδιο με το κείμενο «κάθε 4 δευτερόλεπτα» (pgEmotion.liveCameraDesc).
+  const LIVE_INTERVAL_MS = 4000
 
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
+  // Η άδεια κάμερας μπορεί να αργήσει. Αν στο μεταξύ η σελίδα έκλεισε, ο
+  // χρήστης άλλαξε λειτουργία ή πάτησε διακοπή, η ροή που έρχεται μετά
+  // σταματά αμέσως αντί να μείνει η κάμερα αναμμένη.
+  const mountedRef = useRef(false)
+  const liveAttemptRef = useRef(0)
+  const modeRef = useRef<Mode>(mode)
+  modeRef.current = mode
+
   // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true
     return () => {
+      mountedRef.current = false
       stopLive()
     }
   }, [])
 
   const startLive = async () => {
+    const attempt = ++liveAttemptRef.current
+    const startMode = modeRef.current
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      if (!mountedRef.current || attempt !== liveAttemptRef.current || modeRef.current !== startMode) {
+        stream.getTracks().forEach(tr => tr.stop())
+        return
+      }
       streamRef.current = stream
-      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
+      // Το <video> της ζωντανής κάμερας αποδίδεται μόνο σε mode 'live', άρα
+      // εδώ το videoRef είναι ακόμη null. Η ροή συνδέεται στο attachVideo
+      // μόλις το στοιχείο μπει στη σελίδα.
+      if (videoRef.current) attachVideo(videoRef.current)
       setMode('live')
       setIsRecording(true)
       toast.success(t('pgEmotion.cameraOn'))
     } catch {
-      toast.error(t('pgEmotion.cameraDenied'))
+      if (mountedRef.current && attempt === liveAttemptRef.current) toast.error(t('pgEmotion.cameraDenied'))
     }
   }
 
@@ -81,6 +102,8 @@ export default function AiEmotion() {
    * every few seconds after the user had navigated away, until the tab closed.
    */
   const stopLive = useCallback(() => {
+    // Ακυρώνει και μια αίτηση κάμερας που περιμένει ακόμη την άδεια.
+    liveAttemptRef.current++
     if (liveIntervalRef.current) {
       clearInterval(liveIntervalRef.current)
       liveIntervalRef.current = null
@@ -88,6 +111,19 @@ export default function AiEmotion() {
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     setIsRecording(false)
     setLiveInterval(null)
+  }, [])
+
+  /**
+   * Callback ref του <video> της κάμερας. Πριν, η ροή δινόταν στο videoRef
+   * μέσα στο startLive, όταν το <video> δεν υπήρχε ακόμη (mode 'select'):
+   * η εικόνα έμενε μαύρη και το captureFrame έστελνε κενά καρέ.
+   */
+  const attachVideo = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el
+    if (el && streamRef.current && el.srcObject !== streamRef.current) {
+      el.srcObject = streamRef.current
+      el.play().catch(() => { /* autoPlay καλύπτει την έναρξη */ })
+    }
   }, [])
 
   const captureFrame = useCallback((): string | null => {
@@ -111,11 +147,12 @@ export default function AiEmotion() {
         image_base64: frame,
         media_type: 'image/jpeg',
         species,
-        context: 'Real-time camera analysis'
+        context: 'Real-time camera analysis',
+        lang: i18n.language,
       })
       setLiveResult(data)
     } catch { /* silent fail for live */ }
-  }, [captureFrame, species])
+  }, [captureFrame, species, i18n.language])
 
   const startAnalysis = () => {
     setFrameCount(0)
@@ -131,7 +168,7 @@ export default function AiEmotion() {
         analyzeFrame()
         return current
       })
-    }, 5000)
+    }, LIVE_INTERVAL_MS)
     liveIntervalRef.current = interval
     setLiveInterval(interval)
     analyzeFrame() // αμέσως
@@ -164,6 +201,7 @@ export default function AiEmotion() {
         image_base64: base64,
         media_type: 'image/jpeg',
         species,
+        lang: i18n.language,
       })
       setResult(data)
       setMode('result_upload')
@@ -174,7 +212,10 @@ export default function AiEmotion() {
   }
 
   const analyzeUploadedVideo = async () => {
-    if (!uploadedVideo || !videoRef.current) return
+    // Τα καρέ βγαίνουν από δικό της <video> (παρακάτω). Ο έλεγχος του
+    // videoRef — που δείχνει μόνο στη ζωντανή κάμερα και εδώ είναι πάντα
+    // null — σταματούσε την ανάλυση βίντεο πριν ξεκινήσει.
+    if (!uploadedVideo || !videoPreview) return
     setMode('analyzing')
     try {
       // Extract frames from video
@@ -185,7 +226,7 @@ export default function AiEmotion() {
 
       await new Promise(res => { video.onloadedmetadata = res })
       const duration = Math.min(video.duration, 30) // max 30 sec
-      const frameCount = Math.min(5, Math.floor(duration))
+      const frameCount = Math.max(1, Math.min(5, Math.floor(duration)))
       const canvas = document.createElement('canvas')
       canvas.width = 640; canvas.height = 480
       const ctx = canvas.getContext('2d')!
@@ -201,6 +242,7 @@ export default function AiEmotion() {
         frames,
         species,
         duration_seconds: Math.round(duration),
+        lang: i18n.language,
       })
       setResult(data)
       setMode('result_upload')
@@ -222,6 +264,14 @@ export default function AiEmotion() {
   }
 
   const getEmotionColor = (emotion: string) => emotionColors[emotion] || 'gray'
+
+  // Το `emotion` είναι κωδικός από κλειστό σύνολο· το `emotion_el` μόνο
+  // ελληνικά. Ετικέτα από τον κωδικό, με το ελληνικό ως εφεδρεία μόνο στα
+  // ελληνικά.
+  const emotionLabel = (code?: string, el?: string) =>
+    t(`pgEmotion.emo_${code}`, {
+      defaultValue: (i18n.language.startsWith('el') && el) || code || el || '',
+    })
 
   const WelfareBar = ({ score }: { score: number }) => (
     <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
@@ -307,7 +357,7 @@ export default function AiEmotion() {
             <motion.div key="live" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm mb-4">
                 <div className="relative">
-                  <video ref={videoRef} className="w-full max-h-80 object-cover bg-black" autoPlay muted playsInline />
+                  <video ref={attachVideo} className="w-full max-h-80 object-cover bg-black" autoPlay muted playsInline />
                   <canvas ref={canvasRef} className="hidden" />
                   <div className="absolute top-3 left-3 flex items-center gap-2">
                     <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
@@ -344,7 +394,7 @@ export default function AiEmotion() {
                   <div className="flex items-center gap-4 mb-4">
                     <span className="text-5xl">{emotionEmoji[liveResult.emotion] || '🐾'}</span>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{liveResult.emotion_el}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{emotionLabel(liveResult.emotion, liveResult.emotion_el)}</p>
                       <p className="text-sm text-gray-400">{t('pgEmotion.confidence', { pct: Math.round(liveResult.confidence * 100) })}</p>
                     </div>
                   </div>
@@ -424,7 +474,9 @@ export default function AiEmotion() {
                 <div className="flex items-center gap-4 mb-4">
                   <span className="text-6xl">{emotionEmoji[result.overall_emotion || result.emotion] || '🐾'}</span>
                   <div>
-                    <p className="text-3xl font-bold">{result.overall_emotion_el || result.emotion_el}</p>
+                    <p className="text-3xl font-bold">{result.overall_emotion
+                      ? emotionLabel(result.overall_emotion, result.overall_emotion_el)
+                      : emotionLabel(result.emotion, result.emotion_el)}</p>
                     <p className="text-purple-200 text-sm">{t('pgEmotion.confidence', { pct: Math.round((result.confidence || 0) * 100) })}</p>
                   </div>
                 </div>
@@ -451,7 +503,7 @@ export default function AiEmotion() {
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(result.body_language).map(([key, val]) => (
                         <div key={key} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5">
-                          <p className="text-xs font-medium text-gray-500 capitalize mb-0.5">{key}</p>
+                          <p className="text-xs font-medium text-gray-500 capitalize mb-0.5">{t(`pgEmotion.bl_${key}`, { defaultValue: key })}</p>
                           <p className="text-xs text-gray-700 dark:text-gray-300">{val as string}</p>
                         </div>
                       ))}

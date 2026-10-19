@@ -9,6 +9,16 @@ import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
+// Τοπική ημερομηνία ⇄ YYYY-MM-DD. Το toISOString() δίνει τη μέρα σε UTC
+// (στην Ελλάδα, μετά τα μεσάνυχτα, ακόμη «χθες») και το new Date('YYYY-MM-DD')
+// διαβάζεται ως UTC — άρα λάθος μέρα σε ζώνες δυτικά του Greenwich.
+const toYmd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const fromYmd = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 /**
  * Λεπτομέρεια υπηρεσίας και κράτηση.
  *
@@ -27,7 +37,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   checkout. Κανένα email «επιβεβαιώθηκε» δεν φεύγει πριν μπουν τα χρήματα.
  */
 export default function ServiceDetailScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -77,7 +87,7 @@ export default function ServiceDetailScreen() {
   const dates = useMemo(() => Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i + 1)
-    return d.toISOString().split('T')[0]
+    return toYmd(d)
   }), [])
 
   const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
@@ -120,7 +130,7 @@ export default function ServiceDetailScreen() {
       else Alert.alert(t('common.error'), t('checkout.err_open_page'))
     },
     onError: (e: any) =>
-      Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('booking.err_book')),
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('booking.err_book')),
   })
 
   // Προεπισκόπηση έκπτωσης καμπάνιας — ο server υπολογίζει το ίδιο στην κράτηση.
@@ -276,14 +286,14 @@ export default function ServiceDetailScreen() {
               </View>
               <View style={[s.chipRow, { flexWrap: 'wrap' }]}>
                 {dates.map(d => {
-                  const dt = new Date(d)
+                  const dt = fromYmd(d)
                   const on = date === d
                   return (
                     <TouchableOpacity key={d} activeOpacity={0.7}
                       style={[s.day, on && s.dayOn]}
                       onPress={() => setDate(d)}>
                       <Text style={[s.dayName, on && s.chipTextOn]}>
-                        {dt.toLocaleDateString(undefined, { weekday: 'short' })}
+                        {dt.toLocaleDateString(i18n.language, { weekday: 'short' })}
                       </Text>
                       <Text style={[s.dayNum, on && s.chipTextOn]}>{dt.getDate()}</Text>
                     </TouchableOpacity>

@@ -86,8 +86,8 @@ export default function ServiceCard({ service }: { service: Service }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Star size={12} className="text-yellow-400 fill-yellow-400"/>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{service.rating}</span>
-            <span className="text-xs text-gray-400">({service.reviews_count})</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{Number(service.rating ?? 0).toFixed(1)}</span>
+            <span className="text-xs text-gray-400">({service.reviews_count ?? 0})</span>
           </div>
           <p className="font-bold text-sm text-brand-900 dark:text-brand-400">{t('cmpServiceCard.fromPrice', { price: service.price })}</p>
         </div>

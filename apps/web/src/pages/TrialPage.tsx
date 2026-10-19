@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Sparkles, Heart, Activity, Check, Clock, ArrowRight } from 'lucide-react'
 import { api } from '@/lib/api'
+import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -38,7 +39,7 @@ const FEATURE_META = [
 ] as const
 
 export default function TrialPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -103,7 +104,7 @@ export default function TrialPage() {
             <div className="text-left flex-1">
               <p className="font-bold text-gray-900 dark:text-white">{t('trial.status.trialActive')}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('trial.status.trialActiveDesc', { days: status.trial_days_left, plan: status.plan?.name_el || status.plan?.name || 'AI' })}
+                {t('trial.status.trialActiveDesc', { days: status.trial_days_left, plan: localName(status.plan, i18n.language) || 'AI' })}
               </p>
             </div>
           </div>
@@ -114,7 +115,7 @@ export default function TrialPage() {
             <div className="text-left flex-1">
               <p className="font-bold text-gray-900 dark:text-white">{t('trial.status.activeSubscription')}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {status.plan?.name_el || status.plan?.name}
+                {localName(status.plan, i18n.language)}
               </p>
             </div>
           </div>
@@ -155,7 +156,7 @@ export default function TrialPage() {
                     <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
                       {isBundle ? `${t('trial.bundle')} (${featureCount})` : t('trial.individual')}
                     </p>
-                    <h3 className="font-bold text-xl text-gray-900 dark:text-white mt-1">{plan.name_el || plan.name}</h3>
+                    <h3 className="font-bold text-xl text-gray-900 dark:text-white mt-1">{localName(plan, i18n.language)}</h3>
                     {plan.description && (
                       <p className="text-xs text-gray-500 mt-2 line-clamp-3">{plan.description}</p>
                     )}

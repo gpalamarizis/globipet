@@ -31,7 +31,9 @@ const TIERS: Record<string, { labelKey: string; tone: any }> = {
 }
 
 export default function InsuranceScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // Το `name_el` είναι μόνο ελληνικά· στις άλλες γλώσσες το `name`.
+  const nm = (r: any) => (i18n.language === 'el' && r?.name_el) ? r.name_el : (r?.name || r?.name_el)
   const qc = useQueryClient()
   const [selected, setSelected] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -76,10 +78,10 @@ export default function InsuranceScreen() {
                 <View style={s.top}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.provider} numberOfLines={1}>
-                      {plan.provider?.name_el || plan.provider?.name}
+                      {nm(plan.provider)}
                     </Text>
                     <Text style={s.name} numberOfLines={1}>
-                      {plan.name_el || plan.name}
+                      {nm(plan)}
                     </Text>
                   </View>
                   <Badge label={t(tier.labelKey)} tone={tier.tone} />
@@ -125,10 +127,10 @@ export default function InsuranceScreen() {
             <View style={s.sheetHeader}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.provider} numberOfLines={1}>
-                  {selected?.provider?.name_el || selected?.provider?.name}
+                  {nm(selected?.provider)}
                 </Text>
                 <Text style={s.sheetTitle} numberOfLines={2}>
-                  {selected?.name_el || selected?.name}
+                  {nm(selected)}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setSelected(null)} hitSlop={12}>

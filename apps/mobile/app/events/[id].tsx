@@ -49,6 +49,17 @@ export default function EventDetailScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
+  // Ακύρωση συμμετοχής (DELETE /events/:id/register), όπως στο web.
+  const cancel = useMutation({
+    mutationFn: () => api.delete(`/events/${id}/register`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['event-registration', id] })
+      qc.invalidateQueries({ queryKey: ['event', id] })
+      Alert.alert(t('events.cancelled'), event?.title ?? '')
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
   if (isLoading) return <Screen title={t('events.title')} back><SkeletonRows count={3} /></Screen>
   if (!event) return (
     <Screen title={t('events.title')} back>
@@ -57,7 +68,10 @@ export default function EventDetailScreen() {
   )
 
   const full = event.capacity != null && (event.registered_count ?? 0) >= event.capacity
-  const already = !!registration?.id
+  // Το /registration επιστρέφει { registered, registration, spots_left } — δεν
+  // έχει `id`, οπότε το !!registration?.id ήταν πάντα false και ο εγγεγραμμένος
+  // έβλεπε ξανά «Δήλωση συμμετοχής» (και έπαιρνε 409).
+  const already = registration?.registered ?? registration?.registration?.status === 'registered'
 
   return (
     <Screen title={event.title} back scroll={false}>
@@ -97,7 +111,11 @@ export default function EventDetailScreen() {
         )}
 
         {already ? (
-          <Badge label={t('events.alreadyRegistered')} tone="success" />
+          <>
+            <Badge label={t('events.alreadyRegistered')} tone="success" />
+            <Button label={t('events.cancelAttendance')} variant="secondary" full
+              loading={cancel.isPending} onPress={() => cancel.mutate()} />
+          </>
         ) : !isAuthenticated ? (
           <Button label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} full />
         ) : (

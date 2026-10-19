@@ -139,7 +139,11 @@
     "start_today": "Empieza hoy",
     "top_providers": "Mejores proveedores",
     "tracking": "Localización",
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "trialLabel": "Prueba gratuita de IA",
+    "trialDays": "{{count}} días",
+    "trialDays_one": "{{count}} día",
+    "trialExpired": "Caducada — Ver planes"
   },
   "services": {
     "title": "Servicios",
@@ -251,7 +255,9 @@
     "publish": "Publicar",
     "comments": "Comentarios",
     "noComments": "Aún no hay comentarios",
-    "commentHint": "Escribe un comentario"
+    "commentHint": "Escribe un comentario",
+    "share": "Compartir",
+    "deleteQ": "¿Eliminar esta publicación definitivamente?"
   },
   "profile": {
     "guest_title": "Inicia sesión para acceder",
@@ -462,7 +468,8 @@
     "title": "Comunidades",
     "discussion": "Discusión",
     "noMessages": "Aún no hay mensajes",
-    "messageHint": "Escribe un mensaje"
+    "messageHint": "Escribe un mensaje",
+    "membersOnly": "La conversación es solo para miembros. Únete para verla y participar."
   },
   "emo": {
     "angry": "Enfadado",
@@ -479,7 +486,13 @@
     "subtitle": "¿Cómo se siente tu mascota?",
     "tired": "Cansado",
     "title": "Análisis de emociones",
-    "what_to_do": "Qué puedes hacer"
+    "what_to_do": "Qué puedes hacer",
+    "calm": "Tranquilo",
+    "fearful": "Asustado",
+    "stressed": "Estresado",
+    "observations": "Observaciones",
+    "energy": "Energía {{n}}/10",
+    "welfare": "Bienestar {{n}}/10"
   },
   "inbox": {
     "day_ago_one": "hace 1 día",
@@ -606,7 +619,16 @@
     "age_years": "{{count}} años",
     "addRecord": "Añadir registro",
     "deleteTitle": "Eliminar registro",
-    "deleteQ": "¿Eliminar definitivamente este registro?"
+    "deleteQ": "¿Eliminar definitivamente este registro?",
+    "docStatus": "Estado de los documentos",
+    "rabiesVaccine": "Vacuna antirrábica",
+    "snapTest": "Test SNAP",
+    "travelDocs": "Documentos de viaje",
+    "vaccineType": "Tipo de vacuna",
+    "vt_core": "Esencial",
+    "vt_non_core": "No esencial",
+    "vt_rabies": "Rabia",
+    "vt_other": "Otro"
   },
   "play": {
     "create_first": "Crea la primera e invita a otros propietarios.",
@@ -628,7 +650,12 @@
     "invite": "Invitar a un paseo",
     "send": "Enviar",
     "inviteSent": "Invitación enviada",
-    "inviteSentHint": "La verá en sus notificaciones."
+    "inviteSentHint": "La verá en sus notificaciones.",
+    "deleteQ": "¿Eliminar el paseo «{{title}}»?",
+    "inviteTo": "Invitación para {{name}}",
+    "createEventFirst": "Crea primero un paseo",
+    "messageOptional": "Mensaje (opcional)",
+    "messagePlaceholder": "¡Vamos a pasear a los perros juntos!"
   },
   "soon": {
     "title": "La app móvil llega muy pronto",
@@ -685,7 +712,9 @@
     "removeQ": "¿Desconectar el dispositivo? El historial de ubicaciones se conserva.",
     "tokenRotated": "La clave se ha renovado",
     "newToken": "Nueva clave",
-    "tokenHint": "Configura la nueva clave en el dispositivo para que siga enviando ubicación."
+    "tokenHint": "Configura la nueva clave en el dispositivo para que siga enviando ubicación.",
+    "tokenOnce": "Clave del dispositivo — cópiala ahora, no se volverá a mostrar",
+    "ingestUrl": "URL de envío de ubicación"
   },
   "ver": {
     "about": "Sobre ti",
@@ -1280,7 +1309,22 @@
     "stool": "Heces",
     "urine": "Orina",
     "photoHint": "Buena luz y fondo neutro ayudan al análisis.",
-    "disclaimer": "El análisis es orientativo y no sustituye un examen veterinario."
+    "disclaimer": "El análisis es orientativo y no sustituye un examen veterinario.",
+    "sev_normal": "Normal",
+    "sev_mild": "Leve",
+    "sev_moderate": "Moderado",
+    "sev_severe": "Grave",
+    "urgency": "Urgencia",
+    "urg_routine": "Cita habitual",
+    "urg_within_48h": "En 48 horas",
+    "urg_today": "Hoy",
+    "urg_emergency": "Inmediato / Urgencia",
+    "color": "Color",
+    "consistency": "Consistencia",
+    "likelyCauses": "Causas probables",
+    "contextFactors": "Influencia del historial",
+    "homeCare": "Qué hacer en casa",
+    "warningSigns": "Ve al veterinario de inmediato si…"
   },
   "wishlist": {
     "title": "Lista de deseos",
@@ -1313,7 +1357,9 @@
     "register": "Inscribirse",
     "registered": "Inscripción registrada",
     "alreadyRegistered": "Ya estás inscrito",
-    "notFound": "Evento no encontrado"
+    "notFound": "Evento no encontrado",
+    "cancelAttendance": "Cancelar inscripción",
+    "cancelled": "Inscripción cancelada"
   },
   "breeds": {
     "title": "Razas",
@@ -1359,7 +1405,12 @@
     "benefitFlexible": "Cambia o pausa cuando quieras",
     "benefitCancel": "Cancela cuando quieras",
     "start": "Iniciar suscripción",
-    "vivaNote": "El pago se realiza a través de Viva y se repite cada mes."
+    "vivaNote": "El pago se realiza a través de Viva y se repite cada mes.",
+    "duration": "Suscripción de 12 meses",
+    "benefitDelivery12": "Entrega mensual automática, 12 veces",
+    "benefitSecure": "Cargo seguro en tarjeta cada mes",
+    "paymentNote": "Tu tarjeta se carga cada mes durante 12 meses. Tras la 12.ª entrega, la suscripción finaliza automáticamente.",
+    "notSubscribable": "Este producto no tiene opción de suscripción."
   },
   "reset": {
     "subtitle": "Elige una nueva contraseña para tu cuenta.",
@@ -1389,7 +1440,9 @@
     "pendingHint": "En cuanto se complete el cobro, la sesión se confirma.",
     "failed": "El pago ha fallado",
     "failedHint": "Inténtalo de nuevo desde telemedicina.",
-    "sessionNumber": "Número de sesión"
+    "sessionNumber": "Número de sesión",
+    "join_call": "Unirse a la videollamada",
+    "err_open_call": "No se pudo abrir la videollamada."
   },
   "medical": {
     "title": "Centro de salud",
@@ -1397,7 +1450,8 @@
     "aiActive": "Las funciones de IA están activas",
     "aiInactive": "Las funciones de IA requieren un plan",
     "trialDaysLeft": "Quedan {{count}} días de prueba",
-    "needsPlan": "Requiere plan"
+    "needsPlan": "Requiere plan",
+    "trialDaysLeft_one": "Queda {{count}} día de prueba"
   },
   "privacy": {
     "title": "Mis datos",
