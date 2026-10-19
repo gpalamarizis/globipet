@@ -1,498 +1,428 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl, Platform, StatusBar } from 'react-native'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRouter, useLocalSearchParams } from 'expo-router'
+import { useRouter } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
 import {
-  ArrowLeft, Syringe, Stethoscope, Activity, FileText,
-  ShieldAlert, PawPrint,
+  BookOpen, Syringe, Stethoscope, Pill, FlaskConical, ScanLine, Scissors,
+  TriangleAlert, Heart, Smile, Scale, Dna, Activity, Award, Plane, Users,
+  PawPrint, Download, ChevronRight,
 } from 'lucide-react-native'
-import { api } from '../src/lib/api'
-import { useAuthStore } from '../src/store/auth'
-import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
-
-/** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
- *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
-const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
+import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
- * Ιατρικός φάκελος.
+ * Ιατρικός φάκελος — πλήρης, ίδιος με το web.
  *
- * ΤΙ ΑΛΛΑΞΕ
- *   Δώδεκα καρτέλες σε οριζόντια σειρά. Για να φτάσεις στο «Διαβατήριο»
- *   έπρεπε να κυλήσεις σχεδόν όλη τη λίστα, και καμία δεν έλεγε πόσο
- *   περιεχόμενο έχει μέσα — άνοιγες τυφλά και τις περισσότερες τις έβρισκες
- *   άδειες.
+ * ΓΙΑΤΙ ΞΑΝΑΓΡΑΦΤΗΚΕ
+ *   Το κινητό είχε τέσσερις καρτέλες, το web δεκαέξι. Ο κτηνίατρος που
+ *   ανοίγει τον φάκελο από τηλέφωνο δεν έβλεπε φάρμακα, εργαστηριακά,
+ *   χειρουργεία, αλλεργίες, χρόνιες παθήσεις — τα μισά που χρειάζεται.
  *
- *   Τέσσερις τώρα, ομαδοποιημένες κατά ερώτημα: ποιο είναι το ζώο, τι
- *   εμβόλια έχει, τι του έχει συμβεί, τι παρακολουθούμε. Κάθε καρτέλα
- *   δείχνει πόσες εγγραφές έχει.
+ * ΓΙΑΤΙ ΜΙΑ ΓΕΝΙΚΗ ΑΠΟΔΟΣΗ ΚΑΙ ΟΧΙ ΔΕΚΑΕΞΙ ΜΠΛΟΚ
+ *   Κάθε κατηγορία είναι λίστα εγγραφών με τίτλο, ημερομηνία και λίγα
+ *   πεδία. Μία περιγραφή ανά κατηγορία κρατά τη συμπεριφορά ίδια παντού
+ *   και κάνει την προσθήκη νέας κατηγορίας μία γραμμή.
  */
 
-const emojiFor = (s: string) =>
-  ({ dog: '🐶', cat: '🐱', bird: '🦜', rabbit: '🐰', fish: '🐠', reptile: '🦎' } as any)[s] ?? '🐾'
-
-const fmt = (d?: string | null) => {
-  if (!d) return '—'
-  const x = new Date(d)
-  return isNaN(x.getTime()) ? d
-    : x.toLocaleDateString('el-GR', { day: '2-digit', month: 'short', year: 'numeric' })
+type FieldSpec = { key: string; labelKey: string }
+type TabSpec = {
+  id: string
+  Icon: any
+  labelKey: string
+  /** Κλειδί στην απάντηση του server. */
+  data?: string
+  /** Πεδίο που γίνεται τίτλος της εγγραφής. */
+  title?: string
+  /** Πεδίο ημερομηνίας. */
+  date?: string
+  /** Πεδία που εμφανίζονται ως ζεύγη. */
+  fields?: FieldSpec[]
+  /** Πεδίο που γίνεται σήμα, με τόνο. */
+  badge?: { key: string; danger?: string[] }
 }
 
-/** Ένα εμβόλιο είναι ληξιπρόθεσμο όταν περάσει η επόμενη ημερομηνία. */
-const isOverdue = (next?: string | null) => {
-  if (!next) return false
-  const d = new Date(next)
-  return !isNaN(d.getTime()) && d < new Date()
-}
+const TABS: TabSpec[] = [
+  { id: 'identity', Icon: BookOpen, labelKey: 'passport.identity' },
 
-function Row({ title, subtitle, right, tone }: any) {
-  return (
-    <View style={s.row}>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[s.rowTitle, tone === 'warn' && { color: colors.warning }]} numberOfLines={2}>
-          {title}
-        </Text>
-        {!!subtitle && <Text style={s.rowSub} numberOfLines={2}>{subtitle}</Text>}
-      </View>
-      {!!right && <Text style={s.rowRight}>{right}</Text>}
-    </View>
-  )
-}
+  { id: 'vaccines', Icon: Syringe, labelKey: 'passport.vaccines',
+    data: 'vaccinations', title: 'vaccine_name', date: 'date_administered',
+    fields: [
+      { key: 'next_due_date', labelKey: 'passport.nextDue' },
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'batch_number', labelKey: 'passport.batch' },
+    ] },
 
-function Card({ icon: Icon, title, count, children }: any) {
-  return (
-    <View style={s.card}>
-      <View style={s.cardHeader}>
-        <Icon size={icon.md} color={colors.brand} />
-        <Text style={s.cardTitle}>{title}</Text>
-        {count != null && <Text style={s.count}>{count}</Text>}
-      </View>
-      {children}
-    </View>
-  )
-}
+  { id: 'health', Icon: Stethoscope, labelKey: 'passport.visits',
+    data: 'healthRecords', title: 'title', date: 'date',
+    fields: [
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'clinic_name', labelKey: 'passport.clinic' },
+      { key: 'diagnosis', labelKey: 'passport.diagnosis' },
+      { key: 'treatment', labelKey: 'passport.treatment' },
+    ] },
 
-const Empty = ({ text }: { text: string }) => (
-  <Text style={s.emptyLine}>{text}</Text>
-)
+  { id: 'meds', Icon: Pill, labelKey: 'passport.medications',
+    data: 'medications', title: 'name', date: 'start_date',
+    badge: { key: 'is_active' },
+    fields: [
+      { key: 'active_ingredient', labelKey: 'passport.ingredient' },
+      { key: 'dosage', labelKey: 'passport.dosage' },
+      { key: 'frequency', labelKey: 'passport.frequency' },
+      { key: 'route', labelKey: 'passport.route' },
+      { key: 'end_date', labelKey: 'passport.until' },
+    ] },
+
+  { id: 'lab', Icon: FlaskConical, labelKey: 'passport.lab',
+    data: 'labResults', title: 'title', date: 'date',
+    badge: { key: 'is_abnormal' },
+    fields: [
+      { key: 'result_type', labelKey: 'passport.resultType' },
+      { key: 'lab_name', labelKey: 'passport.labName' },
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'findings', labelKey: 'ai.findings' },
+    ] },
+
+  { id: 'imaging', Icon: ScanLine, labelKey: 'passport.imaging',
+    data: 'imaging', title: 'imaging_type', date: 'date',
+    fields: [
+      { key: 'body_region', labelKey: 'passport.bodyRegion' },
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'clinic_name', labelKey: 'passport.clinic' },
+      { key: 'findings', labelKey: 'ai.findings' },
+    ] },
+
+  { id: 'surgery', Icon: Scissors, labelKey: 'passport.surgeries',
+    data: 'surgeries', title: 'procedure', date: 'date',
+    fields: [
+      { key: 'category', labelKey: 'providerDash.category' },
+      { key: 'surgeon_name', labelKey: 'passport.surgeon' },
+      { key: 'clinic_name', labelKey: 'passport.clinic' },
+      { key: 'anesthesia', labelKey: 'passport.anesthesia' },
+      { key: 'complications', labelKey: 'passport.complications' },
+    ] },
+
+  { id: 'allergies', Icon: TriangleAlert, labelKey: 'passport.allergies',
+    data: 'allergies', title: 'allergen', date: 'diagnosed_date',
+    badge: { key: 'severity', danger: ['severe', 'high'] },
+    fields: [
+      { key: 'allergen_type', labelKey: 'passport.allergenType' },
+      { key: 'reaction', labelKey: 'passport.reaction' },
+      { key: 'treatment', labelKey: 'passport.treatment' },
+    ] },
+
+  { id: 'chronic', Icon: Heart, labelKey: 'passport.chronic',
+    data: 'chronicConditions', title: 'condition', date: 'diagnosed_date',
+    badge: { key: 'status' },
+    fields: [
+      { key: 'diagnosed_by', labelKey: 'passport.diagnosedBy' },
+      { key: 'clinic_name', labelKey: 'passport.clinic' },
+      { key: 'treatment_plan', labelKey: 'passport.treatmentPlan' },
+      { key: 'monitoring', labelKey: 'passport.monitoring' },
+    ] },
+
+  { id: 'dental', Icon: Smile, labelKey: 'passport.dental',
+    data: 'dentalRecords', title: 'procedure', date: 'date',
+    fields: [
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'teeth_treated', labelKey: 'passport.teeth' },
+      { key: 'grade', labelKey: 'passport.grade' },
+      { key: 'next_due', labelKey: 'passport.nextDue' },
+    ] },
+
+  { id: 'weight', Icon: Scale, labelKey: 'passport.weight',
+    data: 'weightRecords', title: 'weight_kg', date: 'date',
+    fields: [
+      { key: 'bcs', labelKey: 'passport.bcs' },
+      { key: 'vet_name', labelKey: 'passport.vet' },
+      { key: 'notes', labelKey: 'serviceDetail.note' },
+    ] },
+
+  { id: 'genetic', Icon: Dna, labelKey: 'passport.genetic',
+    data: 'geneticTests', title: 'test_name', date: 'date',
+    fields: [
+      { key: 'provider', labelKey: 'passport.provider' },
+      { key: 'results', labelKey: 'passport.results' },
+      { key: 'breeds_detected', labelKey: 'passport.breedsDetected' },
+      { key: 'conditions_found', labelKey: 'passport.conditionsFound' },
+    ] },
+
+  { id: 'vitals', Icon: Activity, labelKey: 'passport.vitals',
+    data: 'vitalSigns', title: 'date', date: 'date',
+    fields: [
+      { key: 'temperature', labelKey: 'passport.temperature' },
+      { key: 'heart_rate', labelKey: 'passport.heartRate' },
+      { key: 'respiratory_rate', labelKey: 'passport.respiratory' },
+      { key: 'vet_name', labelKey: 'passport.vet' },
+    ] },
+
+  { id: 'pedigree', Icon: Award, labelKey: 'passport.pedigree' },
+
+  { id: 'travel', Icon: Plane, labelKey: 'passport.travel',
+    data: 'travelDocs', title: 'destination_country', date: 'departure_date',
+    fields: [
+      { key: 'travel_type', labelKey: 'passport.travelType' },
+      { key: 'origin_city', labelKey: 'passport.from' },
+      { key: 'destination_city', labelKey: 'passport.to' },
+      { key: 'carrier', labelKey: 'passport.carrier' },
+      { key: 'booking_ref', labelKey: 'passport.bookingRef' },
+    ] },
+
+  { id: 'access', Icon: Users, labelKey: 'passport.access',
+    data: 'accessList', title: 'provider_email', date: 'granted_at',
+    badge: { key: 'status' } },
+]
 
 export default function PassportScreen() {
   const { t } = useTranslation()
   const router = useRouter()
-  const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
-  const { pet: petParam } = useLocalSearchParams<{ pet?: string }>()
-
-  const [selectedPetId, setSelectedPetId] = useState<string | null>(petParam ?? null)
-  const [tab, setTab] = useState<'identity' | 'vaccines' | 'medical' | 'watch'>('identity')
-  const [refreshing, setRefreshing] = useState(false)
+  const [petId, setPetId] = useState('')
+  const [tab, setTab] = useState('identity')
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
-    queryFn: () => api.get('/pets/my').then(r => r.data?.data ?? []),
+    queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
     enabled: isAuthenticated,
   })
 
-  const activePetId = selectedPetId || (pets.length === 1 ? pets[0]?.id : null)
-
-  const { data: passport, isLoading } = useQuery({
-    queryKey: ['passport', activePetId],
-    queryFn: () => api.get(`/passport/${activePetId}`).then(r => r.data),
-    enabled: !!activePetId,
+  const { data, isLoading } = useQuery({
+    queryKey: ['passport', petId],
+    queryFn: () => api.get(`/passport/${petId}`).then(r => r.data?.data ?? r.data),
+    enabled: !!petId,
   })
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true)
-    await qc.invalidateQueries({ queryKey: ['passport', activePetId] })
-    setRefreshing(false)
-  }, [qc, activePetId])
-
-  const p = passport ?? {}
-  const pet = p.pet
-  const vaccinations = p.vaccinations ?? []
-  const healthRecords = p.healthRecords ?? []
-  const medications = p.medications ?? []
-  const labResults = p.labResults ?? []
-  const imaging = p.imaging ?? []
-  const surgeries = p.surgeries ?? []
-  const dental = p.dentalRecords ?? []
-  const allergies = p.allergies ?? []
-  const chronic = p.chronicConditions ?? []
-  const weights = p.weightRecords ?? []
-  const travel = p.travelDocs ?? []
-
-  const medicalCount = healthRecords.length + medications.length + labResults.length
-    + imaging.length + surgeries.length + dental.length
-  const watchCount = allergies.length + chronic.length + weights.length
-  const overdue = vaccinations.filter((v: any) => isOverdue(v.next_due_date))
-
-  const TABS = [
-    { id: 'identity', label: t('passport.identity'), count: null },
-    { id: 'vaccines', label: t('passport.vaccines'),   count: vaccinations.length },
-    { id: 'medical',  label: t('passport.medical'),   count: medicalCount },
-    { id: 'watch',    label: t('passport.monitoring'), count: watchCount },
-  ] as const
+  const exportPdf = async () => {
+    try {
+      const { data: res } = await api.get(`/passport/${petId}/pdf`)
+      const url = res?.url ?? res?.data?.url
+      if (!url) return Alert.alert(t('common.error'), t('passport.pdfFailed'))
+      const ok = await Linking.canOpenURL(url)
+      if (ok) Linking.openURL(url)
+      else Alert.alert(t('common.error'), t('checkout.err_open_page'))
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('passport.pdfFailed'))
+    }
+  }
 
   if (!isAuthenticated) return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <ArrowLeft size={icon.lg} color={colors.textOnDark} />
-        </TouchableOpacity>
-        <Text style={s.title}>{t('discover.medical_record')}</Text>
-      </View>
-      <View style={s.empty}>
-        <FileText size={icon.hero} color={colors.border} />
-        <Text style={s.emptyTitle}>{t('pets.login_required')}</Text>
-        <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
-          onPress={() => router.push('/auth/login' as any)}>
-          <Text style={s.primaryBtnText}>{t('auth.sign_in')}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <Screen title={t('discover.medical_record')} back>
+      <EmptyState icon={BookOpen} title={t('pets.login_required')}
+        action={<Button label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} />} />
+    </Screen>
   )
 
+  // Χωρίς επιλεγμένο ζώο δεν υπάρχει φάκελος: ο φάκελος ανοίγει ανά ζώο.
+  if (!petId) return (
+    <Screen title={t('discover.medical_record')} back>
+      <Text style={s.intro}>{t('passport.record_per_pet')}</Text>
+      {pets.length === 0 ? (
+        <EmptyState icon={PawPrint} title={t('pets.none_yet')} />
+      ) : pets.map((p: any) => (
+        <Card key={p.id} onPress={() => setPetId(p.id)}>
+          <View style={s.row}>
+            <Text style={s.emoji}>{p.species === 'cat' ? '🐈' : '🐕'}</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.petName}>{p.name}</Text>
+              <Text style={s.petMeta}>{t(`pets.kind_${p.species}`, { defaultValue: p.species })}</Text>
+            </View>
+            <ChevronRight size={icon.sm} color={colors.textLight} />
+          </View>
+        </Card>
+      ))}
+    </Screen>
+  )
+
+  const pet = data?.pet
+  const spec = TABS.find(x => x.id === tab)!
+  const records: any[] = spec.data ? (data?.[spec.data] ?? []) : []
+
+  const fmt = (v: any) => {
+    if (v == null || v === '') return null
+    if (Array.isArray(v)) return v.join(', ')
+    if (typeof v === 'boolean') return v ? t('common.yes') : t('common.no')
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10)
+    return String(v)
+  }
+
+  const badgeFor = (r: any) => {
+    if (!spec.badge) return null
+    const v = r[spec.badge.key]
+    if (v == null || v === '') return null
+    if (typeof v === 'boolean') {
+      return <Badge label={v ? t('passport.active') : t('passport.inactive')}
+        tone={v ? 'success' : 'neutral'} />
+    }
+    const danger = spec.badge.danger?.includes(String(v).toLowerCase())
+    return <Badge label={t(`passport.st_${v}`, { defaultValue: String(v) })}
+      tone={danger ? 'danger' : 'neutral'} />
+  }
+
   return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <ArrowLeft size={icon.lg} color={colors.textOnDark} />
+    <Screen title={pet?.name ?? t('discover.medical_record')} back scroll={false}
+      action={
+        <TouchableOpacity onPress={exportPdf} hitSlop={10}>
+          <Download size={icon.md} color={colors.brand} />
         </TouchableOpacity>
-        <Text style={s.title}>{t('discover.medical_record')}</Text>
-      </View>
-
-      {/* Επιλογή κατοικιδίου */}
-      {pets.length > 1 && (
-        <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
-          {pets.map((x: any) => (
-            <TouchableOpacity key={x.id} activeOpacity={0.7}
-              style={[s.petChip, activePetId === x.id && s.petChipActive]}
-              onPress={() => setSelectedPetId(x.id)}>
-              <Text style={s.petEmoji}>{emojiFor(x.species)}</Text>
-              <Text style={[s.petName, activePetId === x.id && s.petNameActive]}>{x.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {!activePetId ? (
-        <View style={s.empty}>
-          <PawPrint size={icon.hero} color={colors.border} />
-          <Text style={s.emptyTitle}>{t('passport.choose_pet')}</Text>
-          <Text style={s.emptyText}>{t('passport.record_per_pet')}</Text>
-        </View>
-      ) : (
-        <>
-          <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
-            {TABS.map(tb => (
+      }>
+      <ScrollView contentContainerStyle={s.body}>
+        {/* Καρτέλες σε πλέγμα: δεκαέξι δεν χωρούν σε σειρά, και η οριζόντια
+            κύλιση έκρυβε τις μισές. */}
+        <View style={s.tabs}>
+          {TABS.map(tb => {
+            const on = tab === tb.id
+            const count = tb.data ? (data?.[tb.data] ?? []).length : 0
+            return (
               <TouchableOpacity key={tb.id} activeOpacity={0.7}
-                style={[s.tab, tab === tb.id && s.tabActive]}
-                onPress={() => setTab(tb.id as any)}>
-                <Text style={[s.tabText, tab === tb.id && s.tabTextActive]}>{tb.label}</Text>
-                {tb.count != null && tb.count > 0 && (
-                  <View style={[s.tabCount, tab === tb.id && s.tabCountActive]}>
-                    <Text style={[s.tabCountText, tab === tb.id && { color: '#fff' }]}>{tb.count}</Text>
+                style={[s.tab, on && s.tabOn]} onPress={() => setTab(tb.id)}>
+                <tb.Icon size={13} color={on ? colors.textOnDark : colors.textMuted} />
+                <Text style={[s.tabTxt, on && s.tabTxtOn]} numberOfLines={1}>{t(tb.labelKey)}</Text>
+                {count > 0 && (
+                  <View style={[s.count, on && s.countOn]}>
+                    <Text style={[s.countTxt, on && s.countTxtOn]}>{count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
-            ))}
-          </View>
+            )
+          })}
+        </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
-            }>
-
-            {/* Ό,τι χρειάζεται προσοχή, πριν από τις καρτέλες. */}
-            {(overdue.length > 0 || allergies.length > 0) && (
-              <View style={s.alerts}>
-                {overdue.length > 0 && (
-                  <TouchableOpacity style={s.alert} activeOpacity={0.7} onPress={() => setTab('vaccines')}>
-                    <Syringe size={icon.sm} color={colors.warning} />
-                    <Text style={s.alertText}>{t('passport.vaccines_due', { count: overdue.length })}</Text>
-                  </TouchableOpacity>
-                )}
-                {allergies.length > 0 && (
-                  <TouchableOpacity style={[s.alert, s.alertDanger]} activeOpacity={0.7}
-                    onPress={() => setTab('watch')}>
-                    <ShieldAlert size={icon.sm} color={colors.danger} />
-                    <Text style={[s.alertText, { color: colors.danger }]}>
-                      {t('passport.allergy_count', { count: allergies.length })}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {isLoading && <Text style={s.emptyLine}>{t('common.loading_dots')}</Text>}
-
+        {isLoading ? <SkeletonRows count={4} /> : (
+          <>
+            {/* Ταυτότητα */}
             {tab === 'identity' && pet && (
-              <>
-                <View style={s.identity}>
-                  <View style={s.avatar}>
-                    {pet.image_url
-                      ? <Image source={{ uri: pet.image_url }} style={s.avatarImg} />
-                      : <Text style={s.avatarEmoji}>{emojiFor(pet.species)}</Text>}
+              <Card>
+                <View style={s.petHead}>
+                  <Text style={s.emojiBig}>{pet.species === 'cat' ? '🐈' : '🐕'}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.petName}>{pet.name}</Text>
+                    <Text style={s.petMeta}>
+                      {t(`pets.kind_${pet.species}`, { defaultValue: pet.species })}
+                      {pet.breed ? ` · ${pet.breed}` : ''}
+                    </Text>
                   </View>
-                  <Text style={s.petTitle}>{pet.name}</Text>
-                  <Text style={s.petSub}>{pet.breed || pet.species}</Text>
                 </View>
-
-                <Card icon={FileText} title={t('passport.details')}>
-                  {[
-                    [t('pets.species'), pet.species],
-                    [t('pets.breed'), pet.breed],
-                    [t('pets.gender'), pet.gender === 'male' ? t('passport.male') : pet.gender === 'female' ? t('passport.female') : null],
-                    [t('passport.age'), pet.age ? t('pets.age_years', { count: pet.age }) : null],
-                    [t('passport.weight'), pet.weight ? `${pet.weight} kg` : null],
-                    [t('pets.color'), pet.color],
-                    ['Microchip', pet.microchip_number],
-                    // Τρεις καταστάσεις: το null σημαίνει «κανείς δεν το είπε»
-                    // και η γραμμή δεν εμφανίζεται καθόλου.
-                    [t('pets.neutered'), pet.is_sterilized === true ? t('common.yes')
-                      : pet.is_sterilized === false ? t('common.no') : null],
-                  ].filter(([, v]) => v).map(([k, v]) => (
-                    <Row key={String(k)} title={String(k)} right={String(v)} />
-                  ))}
-                </Card>
-
-                {travel.length > 0 && (
-                  <Card icon={FileText} title={t('passport.travel')} count={travel.length}>
-                    {travel.map((t: any) => (
-                      <Row key={t.id}
-                        title={`${t.origin_city || ''} → ${t.destination_city || t.destination_country || ''}`}
-                        subtitle={[t.travel_type, t.carrier].filter(Boolean).join(' · ')}
-                        right={fmt(t.departure_date)} />
-                    ))}
-                  </Card>
-                )}
-              </>
-            )}
-
-            {tab === 'vaccines' && (
-              <Card icon={Syringe} title={t('passport.vaccines')} count={vaccinations.length}>
-                {vaccinations.length === 0
-                  ? <Empty text={t('passport.no_vaccines')} />
-                  : vaccinations.map((v: any) => {
-                      const due = isOverdue(v.next_due_date)
-                      return (
-                        <Row key={v.id}
-                          title={v.vaccine_name}
-                          subtitle={[t('passport.administered', { date: fmt(v.date_administered) }), v.vet_name]
-                            .filter(Boolean).join(' · ')}
-                          right={v.next_due_date ? `${due ? '⚠ ' : ''}${fmt(v.next_due_date)}` : undefined}
-                          tone={due ? 'warn' : undefined} />
-                      )
-                    })}
+                {([
+                  ['passport.species', fmt(pet.species)],
+                  ['pets.gender', pet.gender === 'female' ? t('passport.female') : t('passport.male')],
+                  ['passport.age', pet.age != null ? t('passport.age_years', { count: pet.age }) : null],
+                  ['pets.weight', pet.weight ? `${pet.weight} kg` : null],
+                  ['pets.color', fmt(pet.color)],
+                  ['pets.microchip', fmt(pet.microchip_number)],
+                  ['passport.sterilised', pet.is_sterilized != null ? fmt(pet.is_sterilized) : null],
+                ] as const).filter(([, v]) => v).map(([k, v]) => (
+                  <View key={k} style={s.kv}>
+                    <Text style={s.k}>{t(k)}</Text>
+                    <Text style={s.v} numberOfLines={2}>{v}</Text>
+                  </View>
+                ))}
               </Card>
             )}
 
-            {tab === 'medical' && (
-              <>
-                {medications.filter((m: any) => m.is_active).length > 0 && (
-                  <Card icon={Activity} title={t('passport.active_treatment')}>
-                    {medications.filter((m: any) => m.is_active).map((m: any) => (
-                      <Row key={m.id} title={m.name}
-                        subtitle={[m.dosage, m.frequency].filter(Boolean).join(' · ')}
-                        right={fmt(m.start_date)} />
-                    ))}
-                  </Card>
-                )}
-
-                <Card icon={Stethoscope} title={t('passport.visits')} count={healthRecords.length}>
-                  {healthRecords.length === 0
-                    ? <Empty text={t('passport.no_entries')} />
-                    : healthRecords.map((h: any) => (
-                        <Row key={h.id} title={h.title}
-                          subtitle={[h.record_type, h.vet_name, h.clinic_name]
-                            .filter(Boolean).join(' · ')}
-                          right={fmt(h.date)} />
-                      ))}
+            {/* Pedigree: ένα αντικείμενο, όχι λίστα */}
+            {tab === 'pedigree' && (
+              data?.pedigree ? (
+                <Card>
+                  {([
+                    ['passport.regNumber', data.pedigree.registration_number],
+                    ['passport.kennelClub', data.pedigree.kennel_club],
+                    ['passport.father', data.pedigree.father_name],
+                    ['passport.mother', data.pedigree.mother_name],
+                    ['passport.breeder', data.pedigree.breeder_name],
+                    ['common.phone', data.pedigree.breeder_contact],
+                  ] as const).filter(([, v]) => v).map(([k, v]) => (
+                    <View key={k} style={s.kv}>
+                      <Text style={s.k}>{t(k)}</Text>
+                      <Text style={s.v} numberOfLines={2}>{String(v)}</Text>
+                    </View>
+                  ))}
                 </Card>
-
-                {labResults.length > 0 && (
-                  <Card icon={Activity} title={t('passport.lab')} count={labResults.length}>
-                    {labResults.map((l: any) => (
-                      <Row key={l.id} title={l.test_name}
-                        subtitle={l.result_summary} right={fmt(l.test_date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {imaging.length > 0 && (
-                  <Card icon={Activity} title={t('passport.imaging')} count={imaging.length}>
-                    {imaging.map((im: any) => (
-                      <Row key={im.id} title={im.imaging_type}
-                        subtitle={im.findings} right={fmt(im.date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {surgeries.length > 0 && (
-                  <Card icon={Activity} title={t('passport.surgeries')} count={surgeries.length}>
-                    {surgeries.map((sg: any) => (
-                      <Row key={sg.id} title={sg.procedure_name}
-                        subtitle={sg.surgeon_name} right={fmt(sg.date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {dental.length > 0 && (
-                  <Card icon={Activity} title={t('passport.dental')} count={dental.length}>
-                    {dental.map((d: any) => (
-                      <Row key={d.id} title={d.procedure}
-                        subtitle={d.notes} right={fmt(d.date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {medicalCount === 0 && <Empty text={t('passport.no_history')} />}
-              </>
+              ) : <EmptyState icon={Award} title={t('passport.no_entries')} />
             )}
 
-            {tab === 'watch' && (
-              <>
-                {allergies.length > 0 && (
-                  <Card icon={ShieldAlert} title={t('passport.allergies')} count={allergies.length}>
-                    {allergies.map((a: any) => (
-                      <Row key={a.id} title={a.allergen}
-                        subtitle={[a.reaction, a.treatment].filter(Boolean).join(' · ')}
-                        right={a.severity} tone="warn" />
-                    ))}
-                  </Card>
-                )}
-
-                {chronic.length > 0 && (
-                  <Card icon={Activity} title={t('passport.chronic')} count={chronic.length}>
-                    {chronic.map((c: any) => (
-                      <Row key={c.id} title={c.condition}
-                        subtitle={[c.status, c.treatment_plan].filter(Boolean).join(' · ')}
-                        right={fmt(c.diagnosed_date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {weights.length > 0 && (
-                  <Card icon={Activity} title={t('passport.weight')} count={weights.length}>
-                    {weights.slice(-10).reverse().map((w: any) => (
-                      <Row key={w.id} title={`${w.weight_kg} kg`}
-                        subtitle={w.notes} right={fmt(w.date)} />
-                    ))}
-                  </Card>
-                )}
-
-                {watchCount === 0 && <Empty text={t('passport.nothing_monitored')} />}
-              </>
+            {/* Κάθε άλλη κατηγορία: λίστα εγγραφών */}
+            {spec.data && (
+              records.length === 0
+                ? <EmptyState icon={spec.Icon} title={t('passport.no_entries')} />
+                : records.map((r: any, i: number) => (
+                    <Card key={r.id ?? i}>
+                      <View style={s.recHead}>
+                        <Text style={s.recTitle} numberOfLines={2}>
+                          {fmt(r[spec.title ?? 'title']) ?? t(spec.labelKey)}
+                        </Text>
+                        {badgeFor(r)}
+                      </View>
+                      {spec.date && fmt(r[spec.date]) && (
+                        <Text style={s.recDate}>{fmt(r[spec.date])}</Text>
+                      )}
+                      {spec.fields?.map(f => {
+                        const v = fmt(r[f.key])
+                        if (!v) return null
+                        return (
+                          <View key={f.key} style={s.kv}>
+                            <Text style={s.k}>{t(f.labelKey)}</Text>
+                            <Text style={s.v} numberOfLines={3}>{v}</Text>
+                          </View>
+                        )
+                      })}
+                      {!!r.notes && spec.id !== 'weight' && (
+                        <Text style={s.notes}>{r.notes}</Text>
+                      )}
+                    </Card>
+                  ))
             )}
-          </ScrollView>
-        </>
-      )}
-    </View>
+          </>
+        )}
+
+        <Button label={t('passport.exportPdf')}
+          icon={<Download size={18} color={colors.textOnDark} />}
+          onPress={exportPdf} full style={{ marginTop: space.lg }} />
+      </ScrollView>
+    </Screen>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: space.lg,
-    backgroundColor: colors.navy,
-    paddingTop: HEADER_TOP,
-    paddingHorizontal: space.lg,
-    paddingBottom: space.lg,
-    borderBottomLeftRadius: radius.xxl,
-    borderBottomRightRadius: radius.xxl,
-  },
-  title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
-
-  petRow: { paddingVertical: space.lg, maxHeight: 68, flexGrow: 0 },
-  petChip: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg, height: touch.min,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  petChipActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
-  petEmoji: { fontSize: 16 },
-  petName: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
-  petNameActive: { color: colors.brand, fontWeight: weight.bold },
-
-  tabRow: { paddingVertical: space.md, maxHeight: 62, flexGrow: 0 },
+  body: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
+  intro: { ...type.body, color: colors.textMuted, marginBottom: space.md },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginBottom: space.sm },
   tab: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg, height: touch.min,
-    borderRadius: radius.full,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: space.sm, paddingVertical: 6,
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
   },
-  tabActive: { backgroundColor: colors.brand, borderColor: colors.brand },
-  tabText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
-  tabTextActive: { color: '#fff', fontWeight: weight.bold },
-  tabCount: {
-    minWidth: 20, paddingHorizontal: 5, paddingVertical: 1,
-    borderRadius: radius.full, backgroundColor: colors.surfaceAlt,
-  },
-  tabCountActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  tabCountText: { ...type.caption, color: colors.textMuted, fontWeight: weight.bold, textAlign: 'center' },
-
-  alerts: { flexDirection: 'row', gap: space.sm, marginBottom: space.md, flexWrap: 'wrap' },
-  alert: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    backgroundColor: colors.warningBg,
-    paddingHorizontal: space.md, paddingVertical: space.sm,
-    borderRadius: radius.full,
-  },
-  alertDanger: { backgroundColor: colors.dangerBg },
-  alertText: { ...type.caption, color: colors.warning, fontWeight: weight.bold },
-
-  identity: { alignItems: 'center', marginBottom: space.lg },
-  avatar: {
-    width: 96, height: 96, borderRadius: radius.xxl,
-    backgroundColor: colors.surface,
-    alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden',
-    ...shadow.sm,
-  },
-  avatarImg: { width: 96, height: 96 },
-  avatarEmoji: { fontSize: 44 },
-  petTitle: { ...type.title, color: colors.text, fontWeight: weight.bold, marginTop: space.md },
-  petSub: { ...type.body, color: colors.textMuted },
-
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: space.lg,
-    marginBottom: space.md,
-    ...shadow.sm,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm },
-  cardTitle: { flex: 1, ...type.emphasis, color: colors.text, fontWeight: weight.bold },
+  tabOn: { backgroundColor: colors.brand, borderColor: colors.brand },
+  tabTxt: { fontSize: 11, color: colors.textMuted, fontWeight: weight.medium },
+  tabTxtOn: { color: colors.textOnDark, fontWeight: weight.bold },
   count: {
-    ...type.caption, color: colors.textMuted, fontWeight: weight.bold,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: space.sm, paddingVertical: 2,
-    borderRadius: radius.full,
+    minWidth: 16, paddingHorizontal: 4, borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt, alignItems: 'center',
   },
+  countOn: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  countTxt: { fontSize: 10, color: colors.textMuted, fontWeight: weight.bold },
+  countTxtOn: { color: colors.textOnDark },
 
-  row: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: space.md,
-    paddingVertical: space.md,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight,
-  },
-  rowTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
-  rowSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
-  rowRight: { ...type.caption, color: colors.textMuted },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  emoji: { fontSize: 26 },
+  emojiBig: { fontSize: 40 },
+  petHead: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.md },
+  petName: { ...type.section, color: colors.text },
+  petMeta: { ...type.caption, color: colors.textLight },
 
-  emptyLine: { ...type.body, color: colors.textLight, textAlign: 'center', paddingVertical: space.xl },
-  empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: space.xl, gap: space.sm },
-  emptyTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold, marginTop: space.md },
-  emptyText: { ...type.body, color: colors.textMuted, textAlign: 'center' },
-  primaryBtn: {
-    height: touch.comfortable, paddingHorizontal: space.xxxl,
-    borderRadius: radius.md, backgroundColor: colors.brand,
-    alignItems: 'center', justifyContent: 'center', marginTop: space.lg,
+  recHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  recTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold, flex: 1 },
+  recDate: { ...type.caption, color: colors.textLight, marginTop: 2 },
+  notes: { ...type.caption, color: colors.textMuted, marginTop: space.sm, fontStyle: 'italic' },
+
+  kv: {
+    flexDirection: 'row', justifyContent: 'space-between', gap: space.md,
+    paddingVertical: space.xs,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+    marginTop: space.xs,
   },
-  primaryBtnText: { ...type.emphasis, color: '#fff', fontWeight: weight.bold },
+  k: { ...type.caption, color: colors.textMuted, flexShrink: 0, maxWidth: '42%' },
+  v: { ...type.caption, color: colors.text, fontWeight: weight.semibold, flex: 1, textAlign: 'right' },
 })

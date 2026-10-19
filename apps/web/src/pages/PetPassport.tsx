@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
@@ -14,22 +15,22 @@ import toast from 'react-hot-toast'
 
 // ─── TAB DEFINITIONS ─────────────────────────────────────────────
 const TABS = [
-  { id: 'identity',   label: 'Ταυτότητα',      icon: BookOpen },
-  { id: 'vaccines',   label: 'Εμβόλια',         icon: Syringe },
-  { id: 'health',     label: 'Εξετάσεις',       icon: Stethoscope },
-  { id: 'meds',       label: 'Φάρμακα',         icon: Pill },
-  { id: 'lab',        label: 'Εργαστήριο',      icon: FlaskConical },
-  { id: 'imaging',    label: 'Απεικονιστικές',  icon: ScanLine },
-  { id: 'surgery',    label: 'Χειρουργεία',     icon: Scissors },
-  { id: 'allergies',  label: 'Αλλεργίες',       icon: AlertTriangle },
-  { id: 'chronic',    label: 'Χρόνιες Παθήσεις',icon: Heart },
-  { id: 'dental',     label: 'Οδοντιατρικά',    icon: Smile },
-  { id: 'weight',     label: 'Βάρος',           icon: Scale },
-  { id: 'genetic',    label: 'Γενετικές',       icon: Dna },
-  { id: 'vitals',     label: 'Ζωτικά',          icon: Activity },
-  { id: 'pedigree',   label: 'Pedigree',        icon: Award },
-  { id: 'travel',     label: 'Διαβατήριο',      icon: Plane },
-  { id: 'access',     label: 'Πρόσβαση',        icon: Users },
+  { id: 'identity',   labelKey: 'passport.identity',      icon: BookOpen },
+  { id: 'vaccines',   labelKey: 'passport.vaccines',         icon: Syringe },
+  { id: 'health',     labelKey: 'passport.visits',       icon: Stethoscope },
+  { id: 'meds',       labelKey: 'passport.medications',         icon: Pill },
+  { id: 'lab',        labelKey: 'passport.lab',      icon: FlaskConical },
+  { id: 'imaging',    labelKey: 'passport.imaging',  icon: ScanLine },
+  { id: 'surgery',    labelKey: 'passport.surgeries',     icon: Scissors },
+  { id: 'allergies',  labelKey: 'passport.allergies',       icon: AlertTriangle },
+  { id: 'chronic',    labelKey: 'passport.chronic',icon: Heart },
+  { id: 'dental',     labelKey: 'passport.dental',    icon: Smile },
+  { id: 'weight',     labelKey: 'passport.weight',           icon: Scale },
+  { id: 'genetic',    labelKey: 'passport.genetic',       icon: Dna },
+  { id: 'vitals',     labelKey: 'passport.vitals',          icon: Activity },
+  { id: 'pedigree',   labelKey: 'passport.pedigree',        icon: Award },
+  { id: 'travel',     labelKey: 'passport.travel',      icon: Plane },
+  { id: 'access',     labelKey: 'passport.access',        icon: Users },
 ]
 
 const speciesEmoji: Record<string, string> = { dog: '🐶', cat: '🐱', bird: '🐦', rabbit: '🐰', fish: '🐟', reptile: '🦎', horse: '🐴', other: '🐾' }
@@ -114,6 +115,7 @@ function F({ label, name, form, setForm, type = 'text', options }: any) {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────
 export default function PetPassport() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
@@ -244,7 +246,7 @@ export default function PetPassport() {
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all',
                     activeTab === tab.id ? 'bg-brand-900 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400')}>
-                  <tab.icon size={13} />{tab.label}
+                  <tab.icon size={13} />{t(tab.labelKey)}
                 </button>
               ))}
             </div>

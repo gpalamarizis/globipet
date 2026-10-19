@@ -4,6 +4,24 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { detectAndApplyGeoLanguage } from './geoLocale'
 
 const el = {
+  passport: {
+    access: 'Πρόσβαση',
+    travel: 'Διαβατήριο',
+    pedigree: 'Γενεαλογία',
+    vitals: 'Ζωτικά',
+    genetic: 'Γενετικές',
+    weight: 'Βάρος',
+    dental: 'Οδοντιατρικά',
+    chronic: 'Χρόνιες Παθήσεις',
+    allergies: 'Αλλεργίες',
+    surgeries: 'Χειρουργεία',
+    imaging: 'Απεικονιστικές',
+    lab: 'Εργαστήριο',
+    medications: 'Φάρμακα',
+    visits: 'Εξετάσεις',
+    vaccines: 'Εμβόλια',
+    identity: 'Ταυτότητα',
+  },
   productDetail: {
     brand: 'Μάρκα',
     category: 'Κατηγορία',
@@ -1221,6 +1239,24 @@ const el = {
 
 // English
 const en: typeof el = {
+  passport: {
+    access: 'Access',
+    travel: 'Travel',
+    pedigree: 'Pedigree',
+    vitals: 'Vital signs',
+    genetic: 'Genetic tests',
+    weight: 'Weight',
+    dental: 'Dental',
+    chronic: 'Chronic conditions',
+    allergies: 'Allergies',
+    surgeries: 'Surgeries',
+    imaging: 'Imaging',
+    lab: 'Laboratory',
+    medications: 'Medications',
+    visits: 'Examinations',
+    vaccines: 'Vaccinations',
+    identity: 'Identity',
+  },
   productDetail: {
     brand: 'Brand',
     category: 'Category',
@@ -2390,6 +2426,24 @@ const en: typeof el = {
 
 // Spanish
 const es: typeof el = {
+  passport: {
+    access: 'Acceso',
+    travel: 'Pasaporte',
+    pedigree: 'Pedigrí',
+    vitals: 'Signos vitales',
+    genetic: 'Pruebas genéticas',
+    weight: 'Peso',
+    dental: 'Dental',
+    chronic: 'Enfermedades crónicas',
+    allergies: 'Alergias',
+    surgeries: 'Cirugías',
+    imaging: 'Imagen',
+    lab: 'Laboratorio',
+    medications: 'Medicamentos',
+    visits: 'Consultas',
+    vaccines: 'Vacunas',
+    identity: 'Identidad',
+  },
   productDetail: {
     brand: 'Marca',
     category: 'Categoría',
@@ -3559,6 +3613,24 @@ const es: typeof el = {
 
 // French
 const fr: typeof el = {
+  passport: {
+    access: 'Accès',
+    travel: 'Passeport',
+    pedigree: 'Pedigree',
+    vitals: 'Signes vitaux',
+    genetic: 'Tests génétiques',
+    weight: 'Poids',
+    dental: 'Dentaire',
+    chronic: 'Maladies chroniques',
+    allergies: 'Allergies',
+    surgeries: 'Chirurgies',
+    imaging: 'Imagerie',
+    lab: 'Laboratoire',
+    medications: 'Médicaments',
+    visits: 'Consultations',
+    vaccines: 'Vaccins',
+    identity: 'Identité',
+  },
   productDetail: {
     brand: 'Marque',
     category: 'Catégorie',
@@ -4728,6 +4800,24 @@ const fr: typeof el = {
 
 // Chinese
 const zh: typeof el = {
+  passport: {
+    access: '访问权限',
+    travel: '旅行',
+    pedigree: '血统',
+    vitals: '生命体征',
+    genetic: '基因检测',
+    weight: '体重',
+    dental: '牙科',
+    chronic: '慢性病',
+    allergies: '过敏',
+    surgeries: '手术',
+    imaging: '影像',
+    lab: '化验',
+    medications: '用药',
+    visits: '检查',
+    vaccines: '疫苗',
+    identity: '身份',
+  },
   productDetail: {
     brand: '品牌',
     category: '类别',
