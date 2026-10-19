@@ -41,6 +41,7 @@ const PetTracker        = lazy(() => import('@/pages/PetTracker'))
 const MyBookings        = lazy(() => import('@/pages/MyBookings'))
 const Events            = lazy(() => import('@/pages/Events'))
 const EventDetail       = lazy(() => import('@/pages/EventDetail'))
+const EventConfirmation = lazy(() => import('@/pages/EventConfirmation'))
 const Community         = lazy(() => import('@/pages/Community'))
 const Forum             = lazy(() => import('@/pages/Forum'))
 const ForumTopic        = lazy(() => import('@/pages/ForumTopic'))
@@ -216,6 +217,9 @@ export default function App() {
                 <Route path="/services/:id"    element={<ServiceDetail />} />
                 <Route path="/events"          element={<Events />} />
                 <Route path="/events/:id"      element={<EventDetail />} />
+                {/* Επιστροφή από τη Viva μετά την πληρωμή εκδήλωσης (successUrl στο
+                    routes/events.ts). Χωρίς PrivateRoute — βλ. EventConfirmation. */}
+                <Route path="/events/:id/confirmation" element={<EventConfirmation />} />
                 <Route path="/breeds"          element={<BreedExplorer />} />
                 <Route path="/breeds/:id"      element={<BreedDetail />} />
                 <Route path="/forum"           element={<Forum />} />
@@ -236,7 +240,7 @@ export default function App() {
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"      element={<PrivateRoute><Telehealth /></PrivateRoute>} />
-                <Route path="/telehealth/:id/confirmation" element={<PrivateRoute><TelehealthConfirmation /></PrivateRoute>} />
+                <Route path="/telehealth/:id/confirmation" element={<TelehealthConfirmation />} />
                 <Route path="/my-pets"         element={<PrivateRoute><MyPets /></PrivateRoute>} />
                 <Route path="/my-pets/:id"     element={<PrivateRoute><PetDetail /></PrivateRoute>} />
                 <Route path="/medical-center"  element={<PrivateRoute><PetMedicalCenter /></PrivateRoute>} />

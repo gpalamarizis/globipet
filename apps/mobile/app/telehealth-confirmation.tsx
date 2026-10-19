@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, Linking, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock, XCircle, Stethoscope, Video } from 'lucide-react-native'
 import { api } from '@/lib/api'
+import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -18,18 +19,33 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *
  *   Τρέχει ΜΙΑ φορά: ένας δείκτης εμποδίζει δεύτερη κλήση αν η οθόνη
  *   ξαναποδοθεί, ώστε να μην υπάρξουν διπλές επιβεβαιώσεις.
+ *
+ *   Όπως η σελίδα /telehealth/:id/confirmation του web: επαλήθευση και χωρίς
+ *   transactionId (όταν ανοίγει αμέσως μετά το άνοιγμα της Viva ή από τη
+ *   λίστα «Οι συνεδρίες μου»), και παρακολούθηση κάθε 3" όσο εκκρεμεί.
+ *   Deep link: globipet://telehealth-confirmation?id=<συνεδρία>&transactionId=<t>
  */
 export default function TelehealthConfirmationScreen() {
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
-  const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
+  const params = useLocalSearchParams<{ id: string; transactionId?: string; t?: string }>()
+  const id = params.id
+  // Η Viva επιστρέφει το transaction ως ?t=· δεκτό και το transactionId.
+  const transactionId = params.transactionId || params.t
   const verified = useRef(false)
+  const [joining, setJoining] = useState(false)
 
   const { data: session, isLoading } = useQuery({
     queryKey: ['telehealth-session', id],
     queryFn: () => api.get(`/telehealth/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
+    // Όσο δεν έχει κριθεί η πληρωμή, το webhook μπορεί να την επιβεβαιώσει
+    // οποιαδήποτε στιγμή — όπως το web, ξαναδιαβάζουμε κάθε 3".
+    refetchInterval: (q) => {
+      const ps = (q.state.data as any)?.payment_status
+      return ps === 'paid' || ps === 'failed' ? false : 3000
+    },
   })
 
   const verify = useMutation({
@@ -37,11 +53,12 @@ export default function TelehealthConfirmationScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
       qc.invalidateQueries({ queryKey: ['telehealth'] })
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
     },
   })
 
   useEffect(() => {
-    if (!verified.current && id && transactionId) {
+    if (!verified.current && id) {
       verified.current = true
       verify.mutate()
     }
@@ -52,14 +69,18 @@ export default function TelehealthConfirmationScreen() {
   const paid = session?.payment_status === 'paid'
   const failed = session?.payment_status === 'failed'
 
-  // Ίδιο δωμάτιο Jitsi με το web (meet.jit.si/<meeting_url>). Ανοίγει στην
-  // εφαρμογή Jitsi Meet αν είναι εγκατεστημένη, αλλιώς στον browser.
+  // Ίδιο δωμάτιο με το web, από GET /telehealth/:id/call (JaaS 8x8.vc με JWT,
+  // ή meet.jit.si όταν το JaaS δεν είναι ρυθμισμένο). Ανοίγει στην εφαρμογή
+  // Jitsi Meet αν είναι εγκατεστημένη, αλλιώς στον browser.
   const joinCall = async () => {
-    if (!session?.meeting_url) return
+    if (!session?.meeting_url || joining) return
+    setJoining(true)
     try {
-      await Linking.openURL(`https://meet.jit.si/${encodeURIComponent(String(session.meeting_url))}`)
-    } catch {
-      Alert.alert(t('common.error'), t('teleConfirm.err_open_call'))
+      await Linking.openURL(await getTelehealthCallUrl(String(session.id)))
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('teleConfirm.err_open_call'))
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -100,7 +121,7 @@ export default function TelehealthConfirmationScreen() {
 
         {paid && !!session?.meeting_url && (
           <Button label={t('teleConfirm.join_call')} icon={<Video size={18} color={colors.textOnDark} />}
-            onPress={joinCall} full />
+            onPress={joinCall} loading={joining} disabled={joining} full />
         )}
         <Button label={t('profile.menu.telehealth')} icon={<Stethoscope size={18} color={colors.textOnDark} />}
           onPress={() => router.replace('/telehealth' as any)} full />

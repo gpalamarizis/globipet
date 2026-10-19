@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 import NotificationSettingsCard from '@/components/NotificationSettingsCard'
 import MyDataCard from '@/components/MyDataCard'
+import MySubscriptionsCard from '@/components/MySubscriptionsCard'
 
 const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
 const TIER_LABEL_KEYS: Record<string, string> = { bronze: 'loyalty.bronze', silver: 'loyalty.silver', gold: 'loyalty.gold', platinum: 'loyalty.platinum' }
@@ -292,6 +293,11 @@ export default function Profile() {
           }
         </div>
       )}
+
+      {/* Συνδρομές τροφής — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
+      <div className="mt-6 empty:hidden">
+        <MySubscriptionsCard />
+      </div>
 
       {/* Ειδοποιήσεις — η κάρτα κρύβεται μόνη της σε browser που δεν τις
           υποστηρίζει, οπότε δεν χρειάζεται έλεγχος εδώ. */}

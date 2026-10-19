@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users, Ticket,
-  Mail, PawPrint, Check, UserPlus,
+  Mail, PawPrint, Check, UserPlus, CreditCard, Hourglass,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -49,11 +49,16 @@ export default function EventDetail() {
     enabled: !!id && isAuthenticated,
   })
 
+  // Εκδήλωση με τιμή: ο server επιστρέφει checkoutUrl και ο χρήστης πάει
+  // στη Viva. Η θέση επιβεβαιώνεται μόνο μετά την πληρωμή (σελίδα
+  // /events/:id/confirmation). Ίδια ροή με το κινητό.
   const register = useMutation({
     mutationFn: () => api.post(`/events/${id}/register`, {}),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
       queryClient.invalidateQueries({ queryKey: ['event', id] })
+      const url = res?.data?.checkoutUrl
+      if (url) { window.location.href = url; return }
       toast.success(t('events.registered'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
@@ -61,13 +66,22 @@ export default function EventDetail() {
 
   const cancel = useMutation({
     mutationFn: () => api.delete(`/events/${id}/register`),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
       queryClient.invalidateQueries({ queryKey: ['event', id] })
-      toast.success(t('events.cancelled'))
+      toast.success(res?.data?.data?.status === 'refunded' ? t('events.cancelledRefunded') : t('events.cancelled'))
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
+
+  // Πληρωμένη θέση: η επιβεβαίωση λέει ρητά ότι επιστρέφονται τα χρήματα.
+  const onCancel = () => {
+    if (reg?.payment_status === 'paid') {
+      const amount = Number(reg.amount_paid ?? 0).toFixed(2)
+      if (!confirm(t('events.confirmCancelRefund', { amount }))) return
+    }
+    cancel.mutate()
+  }
 
   const fmt = (value?: string | null) => {
     if (!value) return null
@@ -96,6 +110,13 @@ export default function EventDetail() {
 
   const spotsLeft = event.capacity
     ? Math.max(0, event.capacity - (event.registered_count ?? 0))
+    : null
+  const isPaidEvent = Number(event.price) > 0
+  const pending = reg?.payment_status === 'pending'
+  const paidSeat = reg?.registered && reg?.payment_status === 'paid'
+  const refundHours = reg?.refund_hours ?? 48
+  const refundUntil = reg?.refund_deadline
+    ? new Date(reg.refund_deadline).toLocaleString(locale, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : null
   const mapsUrl = event.latitude && event.longitude
     ? `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`
@@ -188,8 +209,38 @@ export default function EventDetail() {
               <p className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 font-medium mb-3">
                 <Check size={16} /> {t('events.youAreGoing')}
               </p>
-              <button onClick={() => cancel.mutate()} disabled={cancel.isPending}
-                className="btn-secondary w-full justify-center text-sm">
+              {paidSeat && !reg?.refundable ? (
+                // Λιγότερο από 48 ώρες πριν: καμία ακύρωση — το λέμε αντί για κουμπί που αποτυγχάνει.
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {t('events.noRefundCancel', { hours: refundHours })}
+                </p>
+              ) : (
+                <button onClick={onCancel} disabled={cancel.isPending}
+                  className="btn-secondary w-full justify-center text-sm">
+                  {cancel.isPending ? t('common.loading') : t('events.cancelAttendance')}
+                </button>
+              )}
+              {paidSeat && reg?.refundable && refundUntil && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                  {t('events.refundUntil', { date: refundUntil })}
+                </p>
+              )}
+            </>
+          ) : pending ? (
+            <>
+              <p className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">
+                <Hourglass size={16} /> {t('events.pendingPayment')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {t('events.pendingPaymentHint')}
+              </p>
+              <button onClick={() => register.mutate()} disabled={register.isPending || spotsLeft === 0}
+                className="btn-primary w-full justify-center text-sm flex items-center gap-2">
+                <CreditCard size={15} />
+                {register.isPending ? t('common.loading') : t('events.continuePayment')}
+              </button>
+              <button onClick={onCancel} disabled={cancel.isPending}
+                className="btn-secondary w-full justify-center text-sm mt-2">
                 {cancel.isPending ? t('common.loading') : t('events.cancelAttendance')}
               </button>
             </>
@@ -200,9 +251,19 @@ export default function EventDetail() {
           ) : (
             <button onClick={() => register.mutate()} disabled={register.isPending}
               className="btn-primary w-full justify-center text-sm flex items-center gap-2">
-              <UserPlus size={15} />
-              {register.isPending ? t('common.loading') : t('events.join')}
+              {isPaidEvent ? <CreditCard size={15} /> : <UserPlus size={15} />}
+              {register.isPending
+                ? t('common.loading')
+                : isPaidEvent
+                  ? t('events.payAndJoin', { amount: Number(event.price).toFixed(2) })
+                  : t('events.join')}
             </button>
+          )}
+          {/* Πολιτική ακύρωσης κάτω από το κουμπί, για κάθε εκδήλωση με τιμή. */}
+          {isPaidEvent && !(reg?.registered && !paidSeat) && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+              {t('events.refundPolicy', { hours: refundHours })}
+            </p>
           )}
         </div>
 

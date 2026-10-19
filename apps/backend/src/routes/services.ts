@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
+import { coordsFromBody } from '../lib/geocode.js'
 
 /**
  * Πεδία που ορίζει ο ίδιος ο πάροχος.
@@ -113,6 +114,10 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     const { provider_email: bodyOwner, ...body } = req.body ?? {}
     const provider_email = (role === 'admin' && bodyOwner) || email
     const clean: any = pickService(body, role === 'admin')
+    // latitude/longitude ήταν ήδη επιτρεπτά αλλά χωρίς έλεγχο: επικύρωση εύρους.
+    const coords = coordsFromBody(body)
+    if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
+    Object.assign(clean, coords.data)
     return prisma.service.create({ data: { ...clean, provider_email, provider_name: clean.provider_name || full_name } })
   })
 
@@ -136,6 +141,9 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     if (!(await assertOwner(req, reply))) return
     const data: any = pickService(req.body, (req.user as any).role === 'admin')
     delete data.provider_email        // δεν αλλάζει ιδιοκτήτη
+    const coords = coordsFromBody(req.body)
+    if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
+    Object.assign(data, coords.data)
     return prisma.service.update({ where: { id: req.params.id }, data })
   })
 

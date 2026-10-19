@@ -83,7 +83,7 @@ export default function ProductSubscribe() {
             <ShieldCheck size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featSecure')}
           </li>
           <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <RotateCcw size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featCancel')}
+            <RotateCcw size={16} className="text-brand-900 dark:text-brand-400" /> {t('pgSubscribe.featCancelWhere')}
           </li>
         </ul>
 

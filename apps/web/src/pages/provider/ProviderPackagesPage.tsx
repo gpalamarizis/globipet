@@ -9,6 +9,7 @@ import {
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import ServiceLocationPicker from '@/components/features/services/ServiceLocationPicker'
 
 // Κρατάμε ΚΛΕΙΔΙ μετάφρασης, όχι έτοιμο κείμενο: η σταθερά αποτιμάται μία
 // φορά στη φόρτωση του αρχείου, οπότε έτοιμο κείμενο θα κλείδωνε στη γλώσσα
@@ -513,6 +514,8 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
         city: service.city || '',
         country: service.country || 'GR',
         location: service.location || '',
+        latitude: service.latitude ?? null,
+        longitude: service.longitude ?? null,
         home_visits: !!service.home_visits,
         emergency_available: !!service.emergency_available,
         years_experience: service.years_experience || 0,
@@ -566,6 +569,9 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fAddress')}</label>
               <input className="input" value={form.location || ''} onChange={e => setForm({...form, location: e.target.value})}/>
             </div>
+            <ServiceLocationPicker address={form.location} city={form.city} country={form.country}
+              latitude={form.latitude} longitude={form.longitude}
+              onChange={c => setForm((f: any) => ({ ...f, ...c }))} />
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fSpecializations')}</label>
               <input className="input" value={form.specializations || ''} onChange={e => setForm({...form, specializations: e.target.value})}/>
@@ -600,6 +606,7 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
   const [category, setCategory] = useState<string>('')
   const [form, setForm] = useState<any>({
     title: '', description: '', city: '', country: 'GR', location: '',
+    latitude: null, longitude: null,
     home_visits: false, emergency_available: false, years_experience: 0,
   })
 
@@ -607,7 +614,7 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
     if (!open) {
       setStep(1); setCategory('')
       setForm({ title: '', description: '', city: '', country: 'GR', location: '',
-        home_visits: false, emergency_available: false, years_experience: 0 })
+        latitude: null, longitude: null, home_visits: false, emergency_available: false, years_experience: 0 })
     }
   }, [open])
 
@@ -615,6 +622,7 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
     mutationFn: () => api.post('/packages/setup', {
       category, title: form.title, description: form.description,
       city: form.city, country: form.country, location: form.location,
+      latitude: form.latitude, longitude: form.longitude,
       home_visits: form.home_visits, emergency_available: form.emergency_available,
       years_experience: form.years_experience,
       packages_with_prices: [], // δεν δίνουμε τιμές εδώ - θα τις βάλει μετά από το catalog
@@ -690,6 +698,9 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
                   <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fAddress')}</label>
                   <input className="input" value={form.location} onChange={e => setForm({...form, location: e.target.value})}/>
                 </div>
+                <ServiceLocationPicker address={form.location} city={form.city} country={form.country}
+                  latitude={form.latitude} longitude={form.longitude}
+                  onChange={c => setForm((f: any) => ({ ...f, ...c }))} />
                 <div className="flex flex-wrap gap-4 pt-2">
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.home_visits} onChange={e => setForm({...form, home_visits: e.target.checked})}/>{t('providerPkg.fHomeVisits')}</label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.emergency_available} onChange={e => setForm({...form, emergency_available: e.target.checked})}/>{t('providerPkg.gEmergency')}</label>

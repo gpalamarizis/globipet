@@ -30,7 +30,7 @@ const STATUS: Record<string, { labelKey: string; bg: string; fg: string }> = {
 }
 
 export default function OrdersScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -52,7 +52,7 @@ export default function OrdersScreen() {
     if (!d) return ''
     const x = new Date(d)
     return isNaN(x.getTime()) ? ''
-      : x.toLocaleDateString('el-GR', { day: '2-digit', month: 'short', year: 'numeric' })
+      : x.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
   if (!isAuthenticated) return (

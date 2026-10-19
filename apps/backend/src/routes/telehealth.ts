@@ -7,6 +7,12 @@ import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '..
 import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
+import { getJaasConfig, signJaasJwt } from '../lib/jaas.js'
+import { bookingStart } from '../lib/cancellation.js'
+
+// Παράθυρο κλήσης: από 30 λεπτά πριν την ώρα της συνεδρίας έως 3 ώρες μετά.
+const CALL_OPENS_BEFORE_MS = 30 * 60_000
+const CALL_CLOSES_AFTER_MS = 3 * 3_600_000
 
 // Fires once when a consultation is confirmed paid: generates the meeting room,
 // sends customer + provider emails, and notifies the provider in-app.
@@ -177,6 +183,67 @@ const routes: FastifyPluginAsync = async (app) => {
     return { data: consultation }
   })
 
+  // GET /telehealth/:id/call — στοιχεία εισόδου στη βιντεοκλήση.
+  //
+  // Ίδιοι κανόνες με το meeting_url: μόνο ο πελάτης ή ο πάροχος της
+  // συνεδρίας, μόνο όταν έχει πληρωθεί (το meeting_url ορίζεται μόνο από το
+  // markTelehealthPaid), και όχι σε ακυρωμένη συνεδρία.
+  // Με JaaS ρυθμισμένο: 8x8.vc + JWT (ο πάροχος moderator). Χωρίς: meet.jit.si
+  // με το ίδιο δωμάτιο, όπως πριν.
+  app.get('/:id/call', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { id: userId, email } = req.user as any
+    const c = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
+    if (!c) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    const isClient = c.client_email === email
+    const isProvider = c.provider_email === email
+    if (!isClient && !isProvider) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    if (c.payment_status !== 'paid' || !c.meeting_url) {
+      return reply.code(409).send({ message: 'Η συνεδρία δεν έχει πληρωθεί ακόμα' })
+    }
+    if (c.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Η συνεδρία έχει ακυρωθεί' })
+    }
+
+    // Παράθυρο εισόδου (ώρα Ελλάδας). Άμεση κλήση = συνεδρία με ώρα τη
+    // στιγμή της κράτησης (ή νωρίτερα): το παράθυρο ανοίγει αμέσως και
+    // κλείνει 3 ώρες μετά την κράτηση. Αδιάβαστη ημερομηνία: δεν μπλοκάρει.
+    const start = bookingStart(c.scheduled_date, c.scheduled_time)
+    if (start) {
+      const opensAt = start.getTime() - CALL_OPENS_BEFORE_MS
+      const closesAt = Math.max(start.getTime(), c.created_at.getTime()) + CALL_CLOSES_AFTER_MS
+      const now = Date.now()
+      if (now < opensAt || now > closesAt) {
+        return reply.code(409).send({
+          message: 'Η κλήση είναι διαθέσιμη από 30 λεπτά πριν έως 3 ώρες μετά την ώρα της συνεδρίας',
+          opens_at: new Date(opensAt).toISOString(),
+          closes_at: new Date(closesAt).toISOString(),
+        })
+      }
+    }
+
+    const jaas = getJaasConfig()
+    if (!jaas) {
+      return { data: { domain: 'meet.jit.si', room: c.meeting_url, jwt: null, app_id: null } }
+    }
+
+    try {
+      const u = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, full_name: true, profile_photo: true },
+      })
+      const jwt = signJaasJwt(jaas, c.meeting_url, {
+        id: u?.id || userId || email,
+        name: u?.full_name || (isProvider ? c.provider_name : c.client_name) || email,
+        email,
+        avatar: u?.profile_photo || null,
+        moderator: isProvider,
+      })
+      return { data: { domain: '8x8.vc', room: `${jaas.appId}/${c.meeting_url}`, jwt, app_id: jaas.appId } }
+    } catch (err) {
+      return serverError(reply, err, 'telehealth-call')
+    }
+  })
+
   // Create a pending consultation and start Viva Smart Checkout. Payment MUST be confirmed
   // (via /:id/viva/verify or the shared orders.ts webhook fallback) before meeting_url is set.
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -265,6 +332,12 @@ const routes: FastifyPluginAsync = async (app) => {
     try {
       const consultation = await prisma.telehealthConsultation.findUnique({ where: { id } })
       if (!consultation) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+      // Μόνο ο πελάτης ή ο πάροχος της συνεδρίας: η απάντηση περιέχει το
+      // δωμάτιο της κλήσης (meeting_url) και τα στοιχεία της συνεδρίας.
+      const { email } = req.user as any
+      if (consultation.client_email !== email && consultation.provider_email !== email) {
+        return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      }
 
       if (consultation.payment_status === 'paid') {
         return { paid: true, data: consultation }

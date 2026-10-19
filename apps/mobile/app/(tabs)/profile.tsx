@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -34,6 +34,7 @@ const MENU = [
   { key: 'pets',       Icon: PawPrint,    labelKey: 'home.my_pets', route: '/(tabs)/pets' },
   { key: 'bookings',   Icon: Calendar,    labelKey: 'profile.menu.bookings',         route: '/bookings' },
   { key: 'orders',     Icon: Package,     labelKey: 'profile.menu.orders',       route: '/orders' },
+  { key: 'subscriptions', Icon: RotateCcw, labelKey: 'mySubs.title',            route: '/subscriptions' },
   { key: 'passport',   Icon: ShieldCheck, labelKey: 'discover.medical_record',  route: '/passport' },
   { key: 'tracker',    Icon: MapPin,      labelKey: 'discover.gps_tracking',    route: '/tracker' },
   { key: 'telehealth', Icon: Stethoscope, labelKey: 'profile.menu.telehealth',       route: '/telehealth' },

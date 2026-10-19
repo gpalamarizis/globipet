@@ -76,7 +76,11 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               where: { stripe_subscription_id: subId },
               include: { product: true, user: true },
             })
-            if (productSub) {
+            if (productSub && (productSub.status === 'cancelled' || productSub.status === 'completed')) {
+              // Τελειωμένη συνδρομή: δεν ξαναγίνεται active ούτε βγάζει
+              // παραγγελία παράδοσης, ό,τι κι αν στείλει το Stripe.
+              console.warn(`[stripe] invoice.payment_succeeded for ${productSub.status} product subscription ${productSub.id} (${subId}) — skipped`)
+            } else if (productSub) {
               const nextDelivery = new Date()
               nextDelivery.setMonth(nextDelivery.getMonth() + 1)
 
@@ -218,8 +222,10 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
 
         case 'customer.subscription.deleted': {
           const subscription = event.data.object as Stripe.Subscription
+          // Όχι πάνω σε 'completed': μετά τη 12η παράδοση ακυρώνουμε εμείς τη
+          // συνδρομή στο Stripe, και το γεγονός αυτό την έγραφε «ακυρωμένη».
           await prisma.productSubscription.updateMany({
-            where: { stripe_subscription_id: subscription.id },
+            where: { stripe_subscription_id: subscription.id, status: { notIn: ['completed', 'cancelled'] } },
             data: { status: 'cancelled', end_date: new Date() },
           })
           break

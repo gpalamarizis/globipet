@@ -76,7 +76,15 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
       include: { product: { select: { id: true, name: true, image_url: true, price: true } } },
       orderBy: { created_at: 'desc' },
     })
-    return reply.send({ data: subs })
+    // deliveries_total: το πλάνο είναι πάντα 12 παραδόσεις (webhooks.ts).
+    // can_cancel: ό,τι δεν έχει ήδη τερματιστεί (active, payment_failed, paused).
+    return reply.send({
+      data: subs.map(s => ({
+        ...s,
+        deliveries_total: 12,
+        can_cancel: s.status !== 'cancelled' && s.status !== 'completed',
+      })),
+    })
   })
 
   // POST /subscriptions/food/:id/cancel
@@ -84,11 +92,39 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const sub = await prisma.productSubscription.findUnique({ where: { id: req.params.id } })
     if (!sub || sub.user_id !== (req.user as any).id) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
 
+    // Ήδη τερματισμένη: τίποτα να γίνει. Χωρίς αυτό μια ολοκληρωμένη (12/12)
+    // συνδρομή γραφόταν «ακυρωμένη» και άλλαζε το end_date.
+    if (sub.status === 'cancelled' || sub.status === 'completed') {
+      return reply.send({ data: sub })
+    }
+
+    // Η ακύρωση στο Stripe είναι ΑΜΕΣΗ (όχι στο τέλος της περιόδου) και χωρίς
+    // επιστροφή: δεν γίνεται καμία νέα χρέωση· η παράδοση του μήνα που έχει
+    // ήδη πληρωθεί έχει γίνει παραγγελία (webhook) και αποστέλλεται κανονικά.
+    //
+    // Αν το Stripe αποτύχει, ΔΕΝ σημειώνουμε την ακύρωση: πριν, το σφάλμα
+    // αγνοούνταν, η εφαρμογή έδειχνε «ακυρώθηκε» και η κάρτα συνέχιζε να
+    // χρεώνεται κάθε μήνα. Εξαίρεση: συνδρομή που το Stripe έχει ήδη
+    // τερματίσει (resource_missing / ήδη canceled).
     if (sub.stripe_subscription_id) {
       try {
         await stripe.subscriptions.cancel(sub.stripe_subscription_id)
       } catch (err: any) {
-        console.error('Stripe cancel error:', err)
+        let gone = err?.code === 'resource_missing'
+        if (!gone) {
+          try {
+            const live = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+            gone = live.status === 'canceled'
+          } catch (e2: any) {
+            gone = e2?.code === 'resource_missing'
+          }
+        }
+        if (!gone) {
+          console.error('Stripe cancel error:', err)
+          return reply.code(502).send({
+            message: 'Η ακύρωση δεν ολοκληρώθηκε στον πάροχο πληρωμών. Δεν έγινε καμία αλλαγή — δοκίμασε ξανά σε λίγο.',
+          })
+        }
       }
     }
     const updated = await prisma.productSubscription.update({

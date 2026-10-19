@@ -1,8 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { CheckCircle, XCircle, Loader2, Video, Calendar, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Video, Calendar, Clock, Smartphone } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
 import { useTranslation } from 'react-i18next'
 
@@ -12,13 +13,16 @@ export default function TelehealthConfirmation() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [activeCall, setActiveCall] = useState(false)
+  const { isAuthenticated } = useAuthStore()
 
-  const transactionId = searchParams.get('t') || searchParams.get('transactionId') || searchParams.get('s')
+  // Η Viva επιστρέφει ?t=<transactionId>&s=<orderCode>. Το `s` είναι ο κωδικός
+  // παραγγελίας, ΟΧΙ συναλλαγή — δεν χρησιμοποιείται για επαλήθευση.
+  const transactionId = searchParams.get('t') || searchParams.get('transactionId')
 
   const { data: consultation, refetch } = useQuery({
     queryKey: ['telehealth', id],
     queryFn: () => api.get(`/telehealth/${id}`).then(r => r.data?.data),
-    enabled: !!id,
+    enabled: !!id && isAuthenticated,
   })
 
   const verify = useMutation({
@@ -27,24 +31,40 @@ export default function TelehealthConfirmation() {
   })
 
   useEffect(() => {
-    if (id && consultation?.payment_status !== 'paid') {
+    if (id && isAuthenticated && consultation?.payment_status !== 'paid') {
       verify.mutate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, isAuthenticated])
 
   // Poll every 3s while still unpaid (covers webhook-confirmed-before-redirect cases)
   useEffect(() => {
-    if (consultation?.payment_status === 'paid') return
+    if (!isAuthenticated || consultation?.payment_status === 'paid') return
     const interval = setInterval(() => refetch(), 3000)
     return () => clearInterval(interval)
-  }, [consultation?.payment_status, refetch])
+  }, [isAuthenticated, consultation?.payment_status, refetch])
 
   const isPaid = consultation?.payment_status === 'paid'
   const isPending = !consultation || consultation.payment_status === 'unpaid'
 
+  // Όποιος πλήρωσε από την εφαρμογή κινητού καταλήγει εδώ στον browser του
+  // τηλεφώνου, συνήθως χωρίς σύνδεση στο web: σύνδεσμος πίσω στην εφαρμογή
+  // (όπως στο EventConfirmation).
+  const appLink = `globipet://telehealth-confirmation?id=${encodeURIComponent(String(id ?? ''))}`
+    + (transactionId ? `&transactionId=${encodeURIComponent(transactionId)}` : '')
+
+  if (!isAuthenticated) return (
+    <div className="page-container py-16 max-w-md mx-auto text-center">
+      <Smartphone size={56} className="mx-auto text-brand-900 dark:text-yellow-400 mb-4" />
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.returnToAppTitle')}</h1>
+      <p className="text-sm text-gray-500 mb-6">{t('pgTeleConfirm.returnToAppDesc')}</p>
+      <a href={appLink} className="btn-primary w-full justify-center">{t('pgEventConfirm.openInApp')}</a>
+      <Link to="/login" className="btn-secondary w-full justify-center mt-3">{t('auth.login')}</Link>
+    </div>
+  )
+
   if (activeCall && consultation?.meeting_url) {
-    return <JitsiCall roomName={consultation.meeting_url} vetName={consultation.provider_name} onEnd={() => setActiveCall(false)} />
+    return <JitsiCall consultationId={consultation.id} vetName={consultation.provider_name} onEnd={() => setActiveCall(false)} />
   }
 
   return (

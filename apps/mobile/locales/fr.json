@@ -492,7 +492,14 @@
     "stressed": "Stressé",
     "observations": "Observations",
     "energy": "Énergie {{n}}/10",
-    "welfare": "Bien-être {{n}}/10"
+    "welfare": "Bien-être {{n}}/10",
+    "from_photo_video": "Analyse à partir d'une photo ou d'une vidéo",
+    "video": "Vidéo",
+    "video_hint": "Vidéo : jusqu'à 5 images des 30 premières secondes sont analysées.",
+    "video_too_large": "Les images de la vidéo sont trop lourdes pour être envoyées. Essayez une vidéo de résolution plus basse.",
+    "body_language": "Langage corporel",
+    "needs_attention": "Nécessite une attention",
+    "new_video": "Nouvelle vidéo"
   },
   "inbox": {
     "day_ago_one": "il y a 1 jour",
@@ -686,7 +693,8 @@
     "title": "Vétérinaire en visio",
     "try_scheduled": "Essayez de prendre un rendez-vous programmé plus tard.",
     "viva_note": "Vous serez redirigé vers la page de paiement Viva. Le lien de visio s'active dès le paiement effectué.",
-    "online": "En ligne"
+    "online": "En ligne",
+    "my_sessions": "Mes séances"
   },
   "tracker": {
     "add_pet_first": "Ajoutez d'abord un animal, puis connectez son traceur GPS.",
@@ -1359,7 +1367,18 @@
     "alreadyRegistered": "Vous êtes déjà inscrit",
     "notFound": "Événement introuvable",
     "cancelAttendance": "Annuler l'inscription",
-    "cancelled": "Inscription annulée"
+    "cancelled": "Inscription annulée",
+    "payAndJoin": "Payer et s'inscrire — €{{amount}}",
+    "pendingPayment": "Paiement en attente",
+    "pendingPaymentHint": "Votre place n'est pas encore réservée. Finalisez le paiement pour la confirmer.",
+    "continuePayment": "Poursuivre le paiement",
+    "refundPolicy": "Remboursement intégral si vous annulez jusqu'à {{hours}} heures avant le début.",
+    "refundUntil": "Annulation avec remboursement intégral jusqu'au {{date}}.",
+    "noRefundCancel": "Il reste moins de {{hours}} heures avant le début : l'inscription ne peut plus être annulée avec remboursement.",
+    "confirmCancelRefund": "Votre inscription sera annulée et €{{amount}} seront remboursés sur votre carte. L'annuler ?",
+    "cancelledRefunded": "Inscription annulée — le remboursement est en cours",
+    "refundPending": "Remboursement en attente",
+    "refundPendingHint": "L'événement est devenu complet pendant la finalisation de votre paiement et le remboursement est retardé. Contactez l'assistance pour qu'il soit finalisé."
   },
   "breeds": {
     "title": "Races",
@@ -1410,7 +1429,8 @@
     "benefitDelivery12": "Livraison mensuelle automatique, 12 fois",
     "benefitSecure": "Prélèvement sécurisé sur carte chaque mois",
     "paymentNote": "Votre carte est débitée chaque mois pendant 12 mois. Après la 12e livraison, l’abonnement prend fin automatiquement.",
-    "notSubscribable": "Ce produit ne propose pas d’abonnement."
+    "notSubscribable": "Ce produit ne propose pas d’abonnement.",
+    "benefitCancelWhere": "Résiliation à tout moment depuis Profil → Mes abonnements, sans autre prélèvement"
   },
   "reset": {
     "subtitle": "Choisissez un nouveau mot de passe.",
@@ -1891,5 +1911,56 @@
   "campaignDiscount": {
     "line": "Remise : {{title}}",
     "original": "Prix initial"
+  },
+  "eventConfirm": {
+    "confirmed": "Votre place est confirmée",
+    "confirmedHint": "Votre inscription à l’événement est payée et enregistrée.",
+    "pendingHint": "Dès que le paiement Viva aboutit, votre place est confirmée ici.",
+    "full": "L’événement est complet",
+    "fullRefundedHint": "Les dernières places ont été prises pendant votre paiement. Vous avez été remboursé automatiquement sur votre carte.",
+    "fullRefundDelayedHint": "Les dernières places ont été prises pendant votre paiement. Le remboursement automatique est retardé — nous allons le finaliser ; contactez-nous si besoin.",
+    "failedHint": "Votre place n’a pas été confirmée. Réessayez depuis l’événement ou contactez-nous si vous avez été débité.",
+    "refunded": "Le montant a été remboursé",
+    "refundedHint": "Le remboursement a été effectué sur la carte utilisée pour le paiement.",
+    "pendingLateHint": "Le paiement est toujours en attente. Si vous l'avez finalisé sur Viva, votre place sera confirmée automatiquement — consultez de nouveau l'événement dans un instant."
+  },
+  "mySubs": {
+    "title": "Mes abonnements",
+    "deliveries": "Livraisons {{done}}/{{total}}",
+    "nextCharge": "Prochain prélèvement : {{date}}",
+    "endedOn": "Terminé le : {{date}}",
+    "status_active": "Actif",
+    "status_payment_failed": "Échec du paiement",
+    "status_paused": "En pause",
+    "status_cancelled": "Résilié",
+    "status_completed": "Terminé",
+    "paymentFailedHint": "Le dernier prélèvement sur votre carte a échoué : la livraison de ce mois n'a donc pas été envoyée.",
+    "cancel": "Résilier l'abonnement",
+    "keep": "Conserver",
+    "confirmCancel": "Oui, résilier",
+    "confirmText": "L'abonnement est résilié immédiatement et votre carte ne sera plus débitée. Les livraisons déjà payées ({{done}} sur {{total}}) ne sont pas concernées : celle qui n'est pas encore arrivée sera envoyée normalement. Les montants déjà prélevés ne sont pas remboursés. Vous pouvez souscrire un nouvel abonnement quand vous le souhaitez.",
+    "cancelledToast": "Abonnement résilié. Vous ne serez plus débité.",
+    "none": "Vous n'avez aucun abonnement",
+    "noneHint": "Les abonnements mensuels de nourriture souscrits depuis la boutique apparaissent ici."
+  },
+  "providerTele": {
+    "todayTitle": "Téléconsultations du jour",
+    "minutes_one": "{{count}} minute",
+    "minutes": "{{count}} minutes",
+    "join": "Rejoindre l'appel"
+  },
+  "svcLocation": {
+    "title": "Emplacement sur la carte",
+    "hint": "Facultatif. Les services sans lieu physique (à domicile, téléconsultation) peuvent rester sans emplacement.",
+    "finding": "Recherche…",
+    "remove": "Retirer l'emplacement",
+    "coords": "Coordonnées : {{lat}}, {{lng}}",
+    "notSet": "Aucun emplacement défini — le service n'apparaîtra pas sur la carte.",
+    "needAddress": "Saisissez d'abord une adresse ou une ville.",
+    "notFound": "Adresse introuvable. Essayez d'être plus précis (rue, numéro, ville).",
+    "error": "La recherche de l'adresse a échoué. Veuillez réessayer.",
+    "findFromAddress": "Trouver à partir de l'adresse",
+    "openInMaps": "Ouvrir dans Plans",
+    "openMapsFailed": "Impossible d'ouvrir les cartes."
   }
 }

@@ -45,6 +45,7 @@ import aiRoutes from './routes/ai.js'
 import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
 import communitiesRoutes from './routes/communities.js'
+import geocodeRoutes from './routes/geocode.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
@@ -173,6 +174,10 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   '/api/tracker/ingest':       { max: 60, window: '1 minute' },
   // A public form with no limit is a spam relay.
   '/api/contact':              { max: 5,  window: '1 hour' },
+  // Κάθε κλήση καταναλώνει το κοινό όριο 1/δευτ. του Nominatim για όλη την
+  // εφαρμογή. Και οι δύο μορφές URL (με/χωρίς τελική κάθετο).
+  '/api/geocode':              { max: 20, window: '1 minute' },
+  '/api/geocode/':             { max: 20, window: '1 minute' },
 }
 
 app.addHook('onRoute', (route) => {
@@ -244,6 +249,7 @@ const routes = [
   { prefix: '/api/passport', handler: passportRoutes },
   { prefix: '/api/playdates', handler: playdatesRoutes },
   { prefix: '/api/communities', handler: communitiesRoutes },
+  { prefix: '/api/geocode', handler: geocodeRoutes },
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/registry', handler: registryRoutes },

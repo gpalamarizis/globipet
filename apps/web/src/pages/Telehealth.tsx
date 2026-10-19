@@ -9,11 +9,16 @@ import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { useWsStore } from '@/store/ws'
 import toast from 'react-hot-toast'
+import JitsiCall from '@/components/features/telehealth/JitsiCall'
+
+// Τοπικό 'YYYY-MM-DD' (όχι toISOString, που δίνει UTC → λάθος μέρα κοντά στα μεσάνυχτα).
+const localYmd = (d: Date = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 type Tab = 'now' | 'scheduled'
 
 export default function Telehealth() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
@@ -41,6 +46,27 @@ export default function Telehealth() {
     queryFn: () => api.get('/pets/my').then(r => r.data?.data ?? []).catch(() => []),
     enabled: isAuthenticated,
   })
+
+  // Οι συνεδρίες μου (GET /telehealth: όσες είμαι πελάτης ή πάροχος) — όπως στο κινητό,
+  // ώστε ο πελάτης να ξαναβρίσκει μια πληρωμένη συνεδρία και να μπαίνει στην κλήση.
+  const { data: mySessionsAll = [] } = useQuery({
+    queryKey: ['telehealth-mine'],
+    queryFn: () => api.get('/telehealth').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const today = localYmd()
+  const mySessions = (mySessionsAll as any[])
+    .filter(c => c.client_email === user?.email
+      && c.status !== 'cancelled' && c.status !== 'completed'
+      && String(c.scheduled_date) >= today)
+    .sort((a, b) => `${a.scheduled_date} ${a.scheduled_time}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time}`))
+  // 'YYYY-MM-DD' → τοπική ημερομηνία χωρίς new Date('YYYY-MM-DD') (UTC).
+  const fmtDay = (ymd: string) => {
+    const [y, m, d] = String(ymd).split('-').map(Number)
+    if (!y || !m || !d) return String(ymd)
+    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  const [activeCall, setActiveCall] = useState<any>(null)
 
   const wsLastMsg = useWsStore?.((s: any) => s.lastMessage)
   useEffect(() => {
@@ -70,7 +96,10 @@ export default function Telehealth() {
         service_id: selectedVet.id,
         pet_id: selectedPetId || undefined,
         pet_name: pet?.name,
-        scheduled_date: isNow ? now.toISOString().split('T')[0] : bookingDate,
+        // Τοπική ημερομηνία, όχι UTC (toISOString έδινε χθες/αύριο κοντά στα μεσάνυχτα).
+        scheduled_date: isNow
+          ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+          : bookingDate,
         scheduled_time: isNow ? now.toTimeString().slice(0, 5) : bookingTime,
         duration: 30,
       })
@@ -87,7 +116,7 @@ export default function Telehealth() {
     setSelectedVet(vet)
     if (tab === 'scheduled') {
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
-      setBookingDate(tomorrow.toISOString().split('T')[0])
+      setBookingDate(localYmd(tomorrow))
       setBookingTime('10:00')
     }
   }
@@ -133,6 +162,10 @@ export default function Telehealth() {
     </motion.div>
   )
 
+  if (activeCall) {
+    return <JitsiCall consultationId={activeCall.id} vetName={activeCall.provider_name} onEnd={() => setActiveCall(null)} />
+  }
+
   return (
     <>
       <div className="page-container py-8 pb-24 lg:pb-8">
@@ -147,6 +180,46 @@ export default function Telehealth() {
             </div>
           </div>
         </div>
+
+        {/* Οι συνεδρίες μου */}
+        {mySessions.length > 0 && (
+          <div className="card p-5 mb-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Video size={16} className="text-blue-600 dark:text-blue-400" />
+              {t('telehealth.mySessions')}
+            </h3>
+            <div className="space-y-2">
+              {mySessions.map((c: any) => {
+                const paid = c.payment_status === 'paid'
+                return (
+                  <div key={c.id} role="button" tabIndex={0}
+                    onClick={() => navigate(`/telehealth/${c.id}/confirmation`)}
+                    onKeyDown={e => { if (e.key === 'Enter') navigate(`/telehealth/${c.id}/confirmation`) }}
+                    className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{c.provider_name}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 min-w-0">
+                          <Calendar size={12} className="shrink-0" />
+                          <span className="truncate">{fmtDay(c.scheduled_date)} · {c.scheduled_time}{c.pet_name ? ` · ${c.pet_name}` : ''}</span>
+                        </p>
+                      </div>
+                      <span className={cn('shrink-0', paid ? 'badge-green' : 'badge-orange')}>
+                        {paid ? t('bookingPolicy.stConfirmed') : t('pgOrderConfirm.pendingTitle')}
+                      </span>
+                    </div>
+                    {paid && !!c.meeting_url && (
+                      <button onClick={e => { e.stopPropagation(); setActiveCall(c) }}
+                        className="btn-primary w-full mt-3 py-2 text-sm flex items-center justify-center gap-1.5">
+                        <Video size={14} /> {t('pgTeleConfirm.joinCall')}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -260,7 +333,7 @@ export default function Telehealth() {
                 <div className="space-y-3 mb-5">
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.date')}</label>
-                    <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="input w-full text-sm" min={new Date().toISOString().split('T')[0]} />
+                    <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="input w-full text-sm" min={localYmd()} />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.time')}</label>

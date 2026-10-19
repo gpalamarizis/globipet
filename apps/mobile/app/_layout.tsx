@@ -44,6 +44,7 @@ const CARD_ROUTES = [
   'orders',
   'passport',
   'playdates',
+  'subscriptions',
   'telehealth',
   'tracker',
   'verification',

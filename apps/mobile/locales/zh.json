@@ -492,7 +492,14 @@
     "stressed": "紧张",
     "observations": "观察",
     "energy": "精力 {{n}}/10",
-    "welfare": "健康福祉 {{n}}/10"
+    "welfare": "健康福祉 {{n}}/10",
+    "from_photo_video": "通过照片或视频分析",
+    "video": "视频",
+    "video_hint": "视频：最多分析前 30 秒中的 5 帧。",
+    "video_too_large": "视频帧太大，无法发送。请尝试分辨率较低的视频。",
+    "body_language": "肢体语言",
+    "needs_attention": "需要关注",
+    "new_video": "新视频"
   },
   "inbox": {
     "day_ago_one": "1 天前",
@@ -686,7 +693,8 @@
     "title": "视频问诊",
     "try_scheduled": "可预约稍后的时段。",
     "viva_note": "您将跳转至 Viva 支付页面。付款完成后视频链接即生效。",
-    "online": "在线"
+    "online": "在线",
+    "my_sessions": "我的问诊"
   },
   "tracker": {
     "add_pet_first": "请先添加宠物，然后连接其 GPS 设备。",
@@ -1359,7 +1367,18 @@
     "alreadyRegistered": "您已报名",
     "notFound": "未找到活动",
     "cancelAttendance": "取消报名",
-    "cancelled": "已取消报名"
+    "cancelled": "已取消报名",
+    "payAndJoin": "付款并报名 — €{{amount}}",
+    "pendingPayment": "待付款",
+    "pendingPaymentHint": "您的名额尚未保留。完成付款后即可确认。",
+    "continuePayment": "继续付款",
+    "refundPolicy": "在开始前至少 {{hours}} 小时取消可全额退款。",
+    "refundUntil": "{{date}} 之前取消可全额退款。",
+    "noRefundCancel": "距开始已不足 {{hours}} 小时：报名无法再取消退款。",
+    "confirmCancelRefund": "您的报名将被取消，€{{amount}} 将退回到您的银行卡。确定取消吗？",
+    "cancelledRefunded": "报名已取消，款项正在退回",
+    "refundPending": "退款处理中",
+    "refundPendingHint": "在您完成付款期间活动名额已满，退款出现延迟。请联系客服以完成退款。"
   },
   "breeds": {
     "title": "品种",
@@ -1410,7 +1429,8 @@
     "benefitDelivery12": "每月自动配送，共 12 次",
     "benefitSecure": "每月安全扣款",
     "paymentNote": "您的银行卡将每月扣款，共 12 个月。第 12 次配送后订阅自动结束。",
-    "notSubscribable": "该商品不提供订阅选项。"
+    "notSubscribable": "该商品不提供订阅选项。",
+    "benefitCancelWhere": "可随时在“个人资料 → 我的订阅”中取消，不再扣款"
   },
   "reset": {
     "subtitle": "为您的账号设置新密码。",
@@ -1891,5 +1911,56 @@
   "campaignDiscount": {
     "line": "折扣：{{title}}",
     "original": "原价"
+  },
+  "eventConfirm": {
+    "confirmed": "您的名额已确认",
+    "confirmedHint": "您的活动报名已付款并登记。",
+    "pendingHint": "Viva 付款完成后，您的名额将在此确认。",
+    "full": "活动名额已满",
+    "fullRefundedHint": "在您付款期间最后的名额已被占满。款项已自动退回到您的银行卡。",
+    "fullRefundDelayedHint": "在您付款期间最后的名额已被占满。自动退款有所延迟——我们会为您完成退款；如有需要请联系我们。",
+    "failedHint": "您的名额未确认。请从活动页面重试；如已扣款，请联系我们。",
+    "refunded": "款项已退还",
+    "refundedHint": "款项已退回至您付款时使用的银行卡。",
+    "pendingLateHint": "付款仍在处理中。如果您已在 Viva 完成付款，您的名额将自动确认——请稍后再查看活动状态。"
+  },
+  "mySubs": {
+    "title": "我的订阅",
+    "deliveries": "已配送 {{done}}/{{total}}",
+    "nextCharge": "下次扣款：{{date}}",
+    "endedOn": "结束于：{{date}}",
+    "status_active": "有效",
+    "status_payment_failed": "扣款失败",
+    "status_paused": "已暂停",
+    "status_cancelled": "已取消",
+    "status_completed": "已完成",
+    "paymentFailedHint": "上一次银行卡扣款失败，因此本月的配送尚未发出。",
+    "cancel": "取消订阅",
+    "keep": "保留",
+    "confirmCancel": "确认取消",
+    "confirmText": "订阅将立即取消，之后不会再从你的银行卡扣款。已付款的配送（{{total}} 次中的 {{done}} 次）不受影响——尚未送达的仍会照常发出。已扣除的款项不予退还。你可以随时重新订阅。",
+    "cancelledToast": "订阅已取消，不会再扣款。",
+    "none": "你还没有订阅",
+    "noneHint": "你在商店开通的每月食品订阅会显示在这里。"
+  },
+  "providerTele": {
+    "todayTitle": "今日远程问诊",
+    "minutes_one": "{{count}} 分钟",
+    "minutes": "{{count}} 分钟",
+    "join": "进入通话"
+  },
+  "svcLocation": {
+    "title": "地图位置",
+    "hint": "可选。没有实体场所的服务（上门服务、远程问诊）可以不设置位置。",
+    "finding": "正在搜索…",
+    "remove": "移除位置",
+    "coords": "坐标：{{lat}}, {{lng}}",
+    "notSet": "未设置位置——该服务不会显示在地图上。",
+    "needAddress": "请先填写地址或城市。",
+    "notFound": "未找到该地址。请尝试更详细的地址（街道、门牌号、城市）。",
+    "error": "地址搜索失败，请重试。",
+    "findFromAddress": "按地址查找",
+    "openInMaps": "在地图中打开",
+    "openMapsFailed": "无法打开地图。"
   }
 }

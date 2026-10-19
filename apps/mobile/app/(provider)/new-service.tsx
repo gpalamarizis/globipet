@@ -7,6 +7,7 @@ import { Check, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, Input, SkeletonRows } from '@/components/ui'
+import { ServiceLocationField, type Coords } from '@/components/ServiceLocationField'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -37,6 +38,9 @@ export default function NewServiceScreen() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [city, setCity] = useState((user as any)?.city ?? '')
+  // Διεύθυνση και προαιρετική τοποθεσία στον χάρτη — ίδια πεδία με το web.
+  const [location, setLocation] = useState('')
+  const [coords, setCoords] = useState<Coords>({ latitude: null, longitude: null })
   const [basePrice, setBasePrice] = useState('')
   // template_id -> τιμή σε κείμενο, ώστε το πεδίο να δέχεται κενό και κόμμα
   const [prices, setPrices] = useState<Record<string, string>>({})
@@ -69,6 +73,8 @@ export default function NewServiceScreen() {
       title: title.trim(),
       description: description.trim() || title.trim(),
       city: city.trim(),
+      location: location.trim(),
+      latitude: coords.latitude, longitude: coords.longitude,
       packages_with_prices: chosen,
     }),
     onSuccess: () => {
@@ -124,6 +130,10 @@ export default function NewServiceScreen() {
             <Input label={t('providerNew.description')} value={description} onChangeText={setDescription}
               placeholder={t('providerNew.descriptionPlaceholder')} multiline />
             <Input label={t('common.city')} value={city} onChangeText={setCity} />
+            <Input label={t('providerPkg.fAddress')} value={location} onChangeText={setLocation} />
+            {/* Το /packages/setup αποθηκεύει country 'GR' όταν δεν δίνεται — ίδια χώρα στην αναζήτηση. */}
+            <ServiceLocationField address={location} city={city} country="GR"
+              latitude={coords.latitude} longitude={coords.longitude} onChange={setCoords} />
             <Input label={t('providerNew.basePrice')} value={basePrice} onChangeText={setBasePrice}
               keyboardType="decimal-pad" placeholder="0.00" />
             <Text style={s.hint}>{t('providerNew.basePriceHint')}</Text>

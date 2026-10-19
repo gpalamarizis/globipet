@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
 import { SwitchRow } from '@/components/SwitchRow'
+import { ServiceLocationField } from '@/components/ServiceLocationField'
 import { space } from '@/theme'
 
 /**
@@ -29,6 +30,7 @@ export default function ServiceFormScreen() {
 
   const [form, setForm] = useState({
     title: '', description: '', city: '', location: '', years_experience: '',
+    latitude: null as number | null, longitude: null as number | null,
     specializations: '', home_visits: false, emergency_available: false, is_active: true,
   })
   const set = (k: keyof typeof form, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -38,6 +40,7 @@ export default function ServiceFormScreen() {
     setForm({
       title: service.title ?? '', description: service.description ?? '',
       city: service.city ?? '', location: service.location ?? '',
+      latitude: service.latitude ?? null, longitude: service.longitude ?? null,
       years_experience: service.years_experience ? String(service.years_experience) : '',
       specializations: (service.specializations ?? []).join(', '),
       home_visits: !!service.home_visits, emergency_available: !!service.emergency_available,
@@ -82,6 +85,9 @@ export default function ServiceFormScreen() {
         <Input label={t('providerPkg.fDescription')} value={form.description} onChangeText={v => set('description', v)} multiline />
         <Input label={t('providerPkg.fCity')} value={form.city} onChangeText={v => set('city', v)} />
         <Input label={t('providerPkg.fAddress')} value={form.location} onChangeText={v => set('location', v)} />
+        <ServiceLocationField address={form.location} city={form.city} country={service.country ?? undefined}
+          latitude={form.latitude} longitude={form.longitude}
+          onChange={c => setForm(f => ({ ...f, ...c }))} />
         <Input label={t('providerPkg.fYearsExp')} value={form.years_experience}
           onChangeText={v => set('years_experience', v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" />
         <Input label={t('providerPkg.fSpecializations')} value={form.specializations}

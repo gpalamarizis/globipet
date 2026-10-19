@@ -8,6 +8,7 @@ import { bestDiscount, countRedemptions } from '../lib/campaignDiscount.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
+import { confirmEventRegistrationPayment, handleEventPaymentWebhook } from './events.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 
@@ -481,7 +482,14 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
           const ref = String(merchantTrns)
           const txn = String(transactionId)
 
-          if (await vivaPaymentIsValid(ref, txn)) {
+          if (ref.startsWith('ev:')) {
+            // Εκδηλώσεις (merchantTrns `ev:<εγγραφή>:<nonce>`): εξετάζονται
+            // ΜΟΝΟ εδώ, και κανένας άλλος κλάδος δεν πιάνει `ev:`. Αν η
+            // εγγραφή δεν υπάρχει πια, η πληρωμή επιστρέφεται αυτόματα.
+            await handleEventPaymentWebhook(ref, txn).catch((err) => {
+              console.error('handleEventPaymentWebhook error:', err)
+            })
+          } else if (await vivaPaymentIsValid(ref, txn)) {
             const updated = await prisma.order.updateMany({
               where: { id: ref, payment_status: { not: 'paid' } },
               data: {
@@ -502,6 +510,13 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
             await markBookingPaid(ref, txn).catch((err) => {
               console.error('markBookingPaid error:', err)
             })
+          } else if (await confirmEventRegistrationPayment(ref, txn).catch((err) => {
+            console.error('confirmEventRegistrationPayment error:', err)
+            return null
+          })) {
+            // Εγγραφές εκδηλώσεων με την παλιά μορφή merchantTrns (σκέτο id
+            // εγγραφής, πληρωμές που ξεκίνησαν πριν το `ev:`). Επαλήθευση στη
+            // Viva (ίδια παραγγελία, ποσό) και καταχώριση σε ένα βήμα.
           } else {
             console.error(`[viva] webhook for ${ref} could not be verified — ignored`)
           }

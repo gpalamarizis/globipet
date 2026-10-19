@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { coordsFromBody } from '../lib/geocode.js'
 
 const packageRoutes: FastifyPluginAsync = async (app) => {
 
@@ -53,6 +54,10 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       if (!category || !title) {
         return reply.code(400).send({ message: 'Λείπει category ή title' })
       }
+      // Προαιρετική τοποθεσία στον χάρτη (latitude/longitude). Παλιοί πελάτες
+      // που δεν τη στέλνουν δεν επηρεάζονται.
+      const coords = coordsFromBody(req.body)
+      if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
 
       const requestingUser = await prisma.user.findUnique({ where: { email: userEmail } })
       if (!requestingUser) {
@@ -100,6 +105,7 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
             city: city || null,
             country: country || 'GR',
             location: location || null,
+            ...coords.data,
             home_visits: !!home_visits,
             emergency_available: !!emergency_available,
             years_experience: parseInt(years_experience) || 0,
@@ -195,6 +201,9 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       if (body.city !== undefined) data.city = body.city
       if (body.country !== undefined) data.country = body.country
       if (body.location !== undefined) data.location = body.location
+      const coords = coordsFromBody(body)
+      if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
+      Object.assign(data, coords.data)
       if (body.home_visits !== undefined) data.home_visits = !!body.home_visits
       if (body.emergency_available !== undefined) data.emergency_available = !!body.emergency_available
       if (body.years_experience !== undefined) data.years_experience = parseInt(body.years_experience) || 0

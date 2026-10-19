@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { langOf, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
 import { sendPushToUser } from '../lib/push.js'
+import { geocodeAddress } from '../lib/geocode.js'
 
 // Haversine formula για απόσταση σε km
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -31,16 +32,9 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
   }
 }
 
-// Geocoding με Nominatim
-async function geocode(address: string): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=gr`
-    const res = await fetch(url, { headers: { 'User-Agent': 'GlobiPet/1.0 (info@globipet.com)' } })
-    const data = await res.json() as any[]
-    if (data.length === 0) return null
-    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }
-  } catch { return null }
-}
+// Geocoding με Nominatim — κοινή συνάρτηση (ουρά 1 αίτημα/δευτ., cache) στο lib/geocode.
+// Οι κοινότητες μένουν, όπως πριν, περιορισμένες στην Ελλάδα.
+const geocode = (address: string) => geocodeAddress(address, 'gr')
 
 const routes: FastifyPluginAsync = async (app) => {
 

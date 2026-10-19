@@ -493,6 +493,10 @@ model EventRegistration {
   notes      String?
   status     String   @default("registered")
   created_at DateTime @default(now())
+  // Πληρωμή μέσω Viva για εκδηλώσεις με τιμή (null στις δωρεάν).
+  amount_paid         Float?
+  viva_order_code     String?
+  viva_transaction_id String?
 
   event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
 

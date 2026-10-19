@@ -492,7 +492,14 @@
     "stressed": "Stressed",
     "observations": "Observations",
     "energy": "Energy {{n}}/10",
-    "welfare": "Welfare {{n}}/10"
+    "welfare": "Welfare {{n}}/10",
+    "from_photo_video": "Analysis from a photo or video",
+    "video": "Video",
+    "video_hint": "Video: up to 5 frames from the first 30 seconds are analysed.",
+    "video_too_large": "The video frames are too large to send. Try a lower-resolution video.",
+    "body_language": "Body language",
+    "needs_attention": "Needs attention",
+    "new_video": "New video"
   },
   "inbox": {
     "day_ago_one": "1 day ago",
@@ -686,7 +693,8 @@
     "title": "Vet by video call",
     "try_scheduled": "Try booking a scheduled appointment for later.",
     "viva_note": "You will be taken to the Viva payment page. The video call link becomes active once payment is complete.",
-    "online": "Online"
+    "online": "Online",
+    "my_sessions": "My sessions"
   },
   "tracker": {
     "add_pet_first": "Add a pet first, then connect its GPS device.",
@@ -1359,7 +1367,18 @@
     "alreadyRegistered": "You are already registered",
     "notFound": "Event not found",
     "cancelAttendance": "Cancel registration",
-    "cancelled": "Registration cancelled"
+    "cancelled": "Registration cancelled",
+    "payAndJoin": "Pay and register — €{{amount}}",
+    "pendingPayment": "Payment pending",
+    "pendingPaymentHint": "Your spot is not held yet. Complete the payment to confirm it.",
+    "continuePayment": "Continue to payment",
+    "refundPolicy": "Full refund if you cancel up to {{hours}} hours before the start.",
+    "refundUntil": "Cancel with a full refund until {{date}}.",
+    "noRefundCancel": "Less than {{hours}} hours to go before the start: the registration can no longer be cancelled with a refund.",
+    "confirmCancelRefund": "Your registration will be cancelled and €{{amount}} will be refunded to your card. Cancel it?",
+    "cancelledRefunded": "Registration cancelled — your money is being refunded",
+    "refundPending": "Refund pending",
+    "refundPendingHint": "The event filled up while your payment was being completed, and the refund is delayed. Contact support to have it completed."
   },
   "breeds": {
     "title": "Breeds",
@@ -1410,7 +1429,8 @@
     "benefitDelivery12": "Automatic monthly delivery, 12 times",
     "benefitSecure": "Secure card charge every month",
     "paymentNote": "Your card is charged every month for 12 months. After the 12th delivery the subscription ends automatically.",
-    "notSubscribable": "This product has no subscription option."
+    "notSubscribable": "This product has no subscription option.",
+    "benefitCancelWhere": "Cancel at any time from Profile → My subscriptions, with no further charges"
   },
   "reset": {
     "subtitle": "Choose a new password for your account.",
@@ -1891,5 +1911,56 @@
   "campaignDiscount": {
     "line": "Discount: {{title}}",
     "original": "Original price"
+  },
+  "eventConfirm": {
+    "confirmed": "Your spot is confirmed",
+    "confirmedHint": "Your registration for the event is paid and recorded.",
+    "pendingHint": "As soon as the payment with Viva goes through, your spot is confirmed here.",
+    "full": "The event is full",
+    "fullRefundedHint": "The last spots were taken while your payment was going through. Your money has been refunded to your card automatically.",
+    "fullRefundDelayedHint": "The last spots were taken while your payment was going through. The automatic refund is delayed — we will complete it; contact us if you need anything.",
+    "failedHint": "Your spot was not confirmed. Try again from the event, or contact us if you were charged.",
+    "refunded": "Your money has been refunded",
+    "refundedHint": "The refund was made to the card you paid with.",
+    "pendingLateHint": "The payment is still pending. If you completed it on Viva, your spot will be confirmed automatically — check the event again shortly."
+  },
+  "mySubs": {
+    "title": "My subscriptions",
+    "deliveries": "Deliveries {{done}}/{{total}}",
+    "nextCharge": "Next charge: {{date}}",
+    "endedOn": "Ended: {{date}}",
+    "status_active": "Active",
+    "status_payment_failed": "Payment failed",
+    "status_paused": "Paused",
+    "status_cancelled": "Cancelled",
+    "status_completed": "Completed",
+    "paymentFailedHint": "The last charge to your card failed, so this month's delivery has not been sent.",
+    "cancel": "Cancel subscription",
+    "keep": "Keep it",
+    "confirmCancel": "Yes, cancel",
+    "confirmText": "The subscription is cancelled immediately and your card will not be charged again. Deliveries you have already paid for ({{done}} of {{total}}) are not affected — any that has not arrived yet will still be sent. Amounts already charged are not refunded. You can start a new subscription whenever you like.",
+    "cancelledToast": "Subscription cancelled. You will not be charged again.",
+    "none": "You have no subscriptions",
+    "noneHint": "Monthly food subscriptions you start from the shop appear here."
+  },
+  "providerTele": {
+    "todayTitle": "Telehealth today",
+    "minutes_one": "{{count}} minute",
+    "minutes": "{{count}} minutes",
+    "join": "Join the call"
+  },
+  "svcLocation": {
+    "title": "Location on the map",
+    "hint": "Optional. Services without a physical place (home visits, telehealth) can stay without a location.",
+    "finding": "Searching…",
+    "remove": "Remove location",
+    "coords": "Coordinates: {{lat}}, {{lng}}",
+    "notSet": "No location set — the service will not appear on the map.",
+    "needAddress": "Fill in an address or city first.",
+    "notFound": "The address was not found. Try being more specific (street, number, city).",
+    "error": "The address search failed. Please try again.",
+    "findFromAddress": "Find from address",
+    "openInMaps": "Open in maps",
+    "openMapsFailed": "Could not open maps."
   }
 }

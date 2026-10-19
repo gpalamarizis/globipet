@@ -83,7 +83,7 @@ export default function ProductSubscribeScreen() {
   const BENEFITS = [
     { Icon: Truck,       key: 'subscribe.benefitDelivery12' },
     { Icon: ShieldCheck, key: 'subscribe.benefitSecure' },
-    { Icon: RotateCcw,   key: 'subscribe.benefitCancel' },
+    { Icon: RotateCcw,   key: 'subscribe.benefitCancelWhere' },
   ]
 
   return (

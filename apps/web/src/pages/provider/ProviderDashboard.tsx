@@ -14,6 +14,7 @@ import MarketInsights from '@/pages/MarketInsights'
 import ProviderTranslationsPage from './ProviderTranslationsPage'
 import ProviderMarketingPage from './ProviderMarketingPage'
 import ProviderCustomersPage from './ProviderCustomersPage'
+import ProviderTelehealthToday from '@/components/features/telehealth/ProviderTelehealthToday'
 
 // Το 'insights' υπήρχε στον πίνακα των καρτελών και στην απεικόνιση,
 // αλλά έλειπε από τον τύπο — ο μεταγλωττιστής θεωρούσε τη σύγκριση αδύνατη.
@@ -975,6 +976,10 @@ export default function ProviderDashboard() {
       {/* Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Σημερινές πληρωμένες τηλεσυνεδρίες — εδώ καταλήγει και η
+              ειδοποίηση incoming_call (/provider/telehealth/:id → /provider/*). */}
+          <ProviderTelehealthToday />
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: t('providerDash.totalBookings'), value: stats?.bookings ?? '0', icon: Calendar, color: 'bg-blue-500' },

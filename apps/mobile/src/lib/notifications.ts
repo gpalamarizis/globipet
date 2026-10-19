@@ -149,6 +149,14 @@ export function routeFromNotification(
   const target = data?.url ?? data?.route
   if (typeof target !== 'string') return null
   if (!target.startsWith('/') || target.startsWith('//')) return null
+  // Αποτυχία χρέωσης συνδρομής: ο server στέλνει link '/profile' (σελίδα του
+  // web). Στο κινητό οι συνδρομές έχουν δική τους οθόνη. Αναγνωρίζεται μόνο
+  // από ρητό τύπο στα δεδομένα — το κείμενο είναι μεταφρασμένο, δεν ελέγχεται.
+  if (data?.type === 'subscription_payment_failed') return '/subscriptions'
+  // Οι σύνδεσμοι παρόχου του backend είναι του web (/provider, /provider/telehealth/:id).
+  // Στο κινητό ο χώρος παρόχου είναι η ομάδα (provider): εκεί η Επισκόπηση
+  // δείχνει τις σημερινές τηλεσυνεδρίες με κουμπί εισόδου στην κλήση.
+  if (target === '/provider' || target.startsWith('/provider/')) return '/(provider)'
   return target
 }
 

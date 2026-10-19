@@ -6,8 +6,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Stethoscope, Star, X, Video } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
+import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon, touch } from '@/theme'
+
+// Τοπική ημερομηνία YYYY-MM-DD. Το toISOString() δίνει UTC: στην Ελλάδα,
+// 00:00–03:00 η συνεδρία γραφόταν με την προηγούμενη μέρα.
+const localYmd = (d: Date = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /**
  * Τηλεϊατρική.
@@ -24,10 +30,10 @@ import { colors, space, radius, type, weight, icon, touch } from '@/theme'
  *   χρησιμοποιείται είναι παραπλανητική για όποιον διαβάσει τον κώδικα.
  */
 export default function TelehealthScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [tab, setTab] = useState<'now' | 'scheduled'>('now')
   const [selected, setSelected] = useState<any>(null)
   const [date, setDate] = useState('')
@@ -56,29 +62,67 @@ export default function TelehealthScreen() {
     }).then(r => r.data?.data ?? []),
   })
 
+  // Οι συνεδρίες μου (GET /telehealth: όσες είμαι πελάτης ή πάροχος). Χωρίς
+  // αυτή τη λίστα ο πελάτης δεν είχε τρόπο να ξαναβρεί μια πληρωμένη
+  // συνεδρία και να μπει στη βιντεοκλήση την ώρα του ραντεβού.
+  const { data: mySessionsAll = [] } = useQuery({
+    queryKey: ['telehealth-mine'],
+    queryFn: () => api.get('/telehealth').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const today = localYmd()
+  const mySessions = (mySessionsAll as any[])
+    .filter(c => c.client_email === user?.email
+      && c.status !== 'cancelled' && c.status !== 'completed'
+      && String(c.scheduled_date) >= today)
+    .sort((a, b) => `${a.scheduled_date} ${a.scheduled_time}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time}`))
+  // 'YYYY-MM-DD' → τοπική ημερομηνία χωρίς new Date('YYYY-MM-DD') (UTC).
+  const fmtDay = (ymd: string) => {
+    const [y, m, d] = String(ymd).split('-').map(Number)
+    if (!y || !m || !d) return String(ymd)
+    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  const [joiningId, setJoiningId] = useState<string | null>(null)
+  const joinCall = async (sessionId: string) => {
+    if (joiningId) return
+    setJoiningId(sessionId)
+    try {
+      await Linking.openURL(await getTelehealthCallUrl(sessionId))
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('teleConfirm.err_open_call'))
+    } finally {
+      setJoiningId(null)
+    }
+  }
+
   const book = useMutation({
     mutationFn: () => api.post('/telehealth', {
       pet_id: petId || undefined,
       provider_email: selected.provider_email,
       service_id: selected.id,
-      scheduled_date: tab === 'now' ? new Date().toISOString().split('T')[0] : date,
+      scheduled_date: tab === 'now' ? localYmd() : date,
       scheduled_time: tab === 'now' ? new Date().toTimeString().slice(0, 5) : time,
       duration: 30,
     }),
     onSuccess: async (res) => {
       const url = res.data?.checkoutUrl
+      const sessionId = res.data?.data?.id
       setSelected(null)
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
       if (!url) {
         Alert.alert(t('common.error'), t('tele.err_no_page'))
         return
       }
       // Άνοιγμα του πραγματικού checkout αντί για μήνυμα «σύντομα».
       const ok = await Linking.canOpenURL(url)
-      if (ok) Linking.openURL(url)
-      else Alert.alert(t('common.error'), t('checkout.err_open_page'))
+      if (!ok) { Alert.alert(t('common.error'), t('checkout.err_open_page')); return }
+      await Linking.openURL(url)
+      // Όπως στις εκδηλώσεις: επιστρέφοντας από τη Viva ο πελάτης βλέπει την
+      // επιβεβαίωση (παρακολουθεί την πληρωμή) με το κουμπί εισόδου στην κλήση.
+      if (sessionId) router.push({ pathname: '/telehealth-confirmation', params: { id: String(sessionId) } } as any)
     },
     onError: (e: any) =>
-      Alert.alert(t('common.error'), e?.message || t('tele.err_book')),
+      Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('tele.err_book')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -86,6 +130,7 @@ export default function TelehealthScreen() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ['vets-now'] }),
       qc.invalidateQueries({ queryKey: ['vets-all'] }),
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] }),
     ])
     setRefreshing(false)
   }, [qc])
@@ -96,12 +141,42 @@ export default function TelehealthScreen() {
   const openBooking = (vet: any) => {
     if (!isAuthenticated) { router.push('/auth/login' as any); return }
     setSelected(vet)
-    if (!date) setDate(new Date().toISOString().split('T')[0])
+    if (!date) setDate(localYmd())
   }
 
   return (
     <Screen title={t('profile.menu.telehealth')} subtitle={t('tele.title')}
       onRefresh={onRefresh} refreshing={refreshing}>
+
+      {mySessions.length > 0 && (
+        <View style={s.mine}>
+          <Text style={s.mineTitle}>{t('tele.my_sessions')}</Text>
+          {mySessions.map((c: any) => {
+            const paid = c.payment_status === 'paid'
+            return (
+              <Card key={c.id} onPress={() => router.push({ pathname: '/telehealth-confirmation', params: { id: String(c.id) } } as any)}>
+                <View style={s.row}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.name} numberOfLines={1}>{c.provider_name}</Text>
+                    <Text style={s.sub} numberOfLines={1}>
+                      {fmtDay(c.scheduled_date)} · {c.scheduled_time}{c.pet_name ? ` · ${c.pet_name}` : ''}
+                    </Text>
+                  </View>
+                  <Badge label={paid ? t('status.confirmed') : t('teleConfirm.pending')}
+                    tone={paid ? 'success' : 'warning'} />
+                </View>
+                {paid && !!c.meeting_url && (
+                  <Button label={t('providerTele.join')} full
+                    icon={<Video size={icon.sm} color={colors.textOnDark} />}
+                    loading={joiningId === c.id} disabled={!!joiningId}
+                    onPress={() => joinCall(String(c.id))}
+                    style={{ marginTop: space.md }} />
+                )}
+              </Card>
+            )
+          })}
+        </View>
+      )}
 
       <View style={s.tabs}>
         {[
@@ -249,6 +324,8 @@ const s = StyleSheet.create({
   petEmoji: { fontSize: 15 },
   petTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.medium },
   petTxtOn: { color: colors.brand, fontWeight: weight.bold },
+  mine: { gap: space.md, marginBottom: space.lg },
+  mineTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.bold },
   tabs: { flexDirection: 'row', gap: space.sm, marginBottom: space.lg },
   tab: {
     flex: 1, height: touch.min,

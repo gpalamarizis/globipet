@@ -492,7 +492,14 @@
     "stressed": "Estresado",
     "observations": "Observaciones",
     "energy": "Energía {{n}}/10",
-    "welfare": "Bienestar {{n}}/10"
+    "welfare": "Bienestar {{n}}/10",
+    "from_photo_video": "Análisis a partir de una foto o un vídeo",
+    "video": "Vídeo",
+    "video_hint": "Vídeo: se analizan hasta 5 fotogramas de los primeros 30 segundos.",
+    "video_too_large": "Los fotogramas del vídeo son demasiado grandes para enviarlos. Prueba con un vídeo de menor resolución.",
+    "body_language": "Lenguaje corporal",
+    "needs_attention": "Requiere atención",
+    "new_video": "Nuevo vídeo"
   },
   "inbox": {
     "day_ago_one": "hace 1 día",
@@ -686,7 +693,8 @@
     "title": "Veterinario por videollamada",
     "try_scheduled": "Prueba a reservar una cita programada para más tarde.",
     "viva_note": "Te llevaremos a la página de pago de Viva. El enlace de la videollamada se activa al completarse el pago.",
-    "online": "En línea"
+    "online": "En línea",
+    "my_sessions": "Mis sesiones"
   },
   "tracker": {
     "add_pet_first": "Añade primero una mascota y luego conecta su dispositivo GPS.",
@@ -1359,7 +1367,18 @@
     "alreadyRegistered": "Ya estás inscrito",
     "notFound": "Evento no encontrado",
     "cancelAttendance": "Cancelar inscripción",
-    "cancelled": "Inscripción cancelada"
+    "cancelled": "Inscripción cancelada",
+    "payAndJoin": "Pagar e inscribirse — €{{amount}}",
+    "pendingPayment": "Pago pendiente",
+    "pendingPaymentHint": "Tu plaza aún no está reservada. Completa el pago para confirmarla.",
+    "continuePayment": "Continuar con el pago",
+    "refundPolicy": "Reembolso completo si cancelas hasta {{hours}} horas antes del inicio.",
+    "refundUntil": "Cancelación con reembolso completo hasta el {{date}}.",
+    "noRefundCancel": "Faltan menos de {{hours}} horas para el inicio: la inscripción ya no se puede cancelar con reembolso.",
+    "confirmCancelRefund": "Se cancelará tu inscripción y se reembolsarán €{{amount}} en tu tarjeta. ¿Cancelarla?",
+    "cancelledRefunded": "Inscripción cancelada: se te está reembolsando el importe",
+    "refundPending": "Reembolso pendiente",
+    "refundPendingHint": "El evento se llenó mientras se completaba tu pago y el reembolso se está retrasando. Contacta con el servicio de asistencia para completarlo."
   },
   "breeds": {
     "title": "Razas",
@@ -1410,7 +1429,8 @@
     "benefitDelivery12": "Entrega mensual automática, 12 veces",
     "benefitSecure": "Cargo seguro en tarjeta cada mes",
     "paymentNote": "Tu tarjeta se carga cada mes durante 12 meses. Tras la 12.ª entrega, la suscripción finaliza automáticamente.",
-    "notSubscribable": "Este producto no tiene opción de suscripción."
+    "notSubscribable": "Este producto no tiene opción de suscripción.",
+    "benefitCancelWhere": "Cancela cuando quieras desde Perfil → Mis suscripciones, sin más cargos"
   },
   "reset": {
     "subtitle": "Elige una nueva contraseña para tu cuenta.",
@@ -1891,5 +1911,56 @@
   "campaignDiscount": {
     "line": "Descuento: {{title}}",
     "original": "Precio original"
+  },
+  "eventConfirm": {
+    "confirmed": "Tu plaza está confirmada",
+    "confirmedHint": "Tu inscripción en el evento está pagada y registrada.",
+    "pendingHint": "En cuanto se complete el pago con Viva, tu plaza se confirmará aquí.",
+    "full": "El evento está completo",
+    "fullRefundedHint": "Las últimas plazas se ocuparon mientras se completaba tu pago. El importe se ha reembolsado automáticamente en tu tarjeta.",
+    "fullRefundDelayedHint": "Las últimas plazas se ocuparon mientras se completaba tu pago. El reembolso automático se está retrasando: lo completaremos nosotros; contáctanos si necesitas algo.",
+    "failedHint": "Tu plaza no se ha confirmado. Inténtalo de nuevo desde el evento o contáctanos si se te ha cobrado.",
+    "refunded": "Se ha reembolsado el importe",
+    "refundedHint": "El reembolso se ha hecho en la tarjeta con la que pagaste.",
+    "pendingLateHint": "El pago sigue pendiente. Si lo completaste en Viva, tu plaza se confirmará automáticamente: vuelve a consultar el evento en un rato."
+  },
+  "mySubs": {
+    "title": "Mis suscripciones",
+    "deliveries": "Entregas {{done}}/{{total}}",
+    "nextCharge": "Próximo cargo: {{date}}",
+    "endedOn": "Finalizó: {{date}}",
+    "status_active": "Activa",
+    "status_payment_failed": "Pago fallido",
+    "status_paused": "En pausa",
+    "status_cancelled": "Cancelada",
+    "status_completed": "Completada",
+    "paymentFailedHint": "El último cargo a tu tarjeta falló, así que la entrega de este mes no se ha enviado.",
+    "cancel": "Cancelar suscripción",
+    "keep": "Mantener",
+    "confirmCancel": "Sí, cancelar",
+    "confirmText": "La suscripción se cancela de inmediato y no se volverá a cobrar en tu tarjeta. Las entregas que ya has pagado ({{done}} de {{total}}) no se ven afectadas: la que aún no haya llegado se enviará con normalidad. Lo ya cobrado no se reembolsa. Puedes empezar una nueva suscripción cuando quieras.",
+    "cancelledToast": "Suscripción cancelada. No se te volverá a cobrar.",
+    "none": "No tienes suscripciones",
+    "noneHint": "Aquí aparecen las suscripciones mensuales de comida que inicias desde la tienda."
+  },
+  "providerTele": {
+    "todayTitle": "Telemedicina hoy",
+    "minutes_one": "{{count}} minuto",
+    "minutes": "{{count}} minutos",
+    "join": "Entrar en la llamada"
+  },
+  "svcLocation": {
+    "title": "Ubicación en el mapa",
+    "hint": "Opcional. Los servicios sin espacio físico (a domicilio, teleconsulta) pueden quedarse sin ubicación.",
+    "finding": "Buscando…",
+    "remove": "Quitar ubicación",
+    "coords": "Coordenadas: {{lat}}, {{lng}}",
+    "notSet": "Sin ubicación: el servicio no aparecerá en el mapa.",
+    "needAddress": "Primero introduce una dirección o ciudad.",
+    "notFound": "No se encontró la dirección. Prueba con más detalle (calle, número, ciudad).",
+    "error": "La búsqueda de la dirección ha fallado. Inténtalo de nuevo.",
+    "findFromAddress": "Buscar por dirección",
+    "openInMaps": "Abrir en mapas",
+    "openMapsFailed": "No se pudieron abrir los mapas."
   }
 }

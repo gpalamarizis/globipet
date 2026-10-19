@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight, Video } from 'lucide-react-native'
+import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight, Video, Clock } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
-import { Screen, Card, EmptyState } from '@/components/ui'
+import { Screen, Card, EmptyState, Button } from '@/components/ui'
+import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -46,8 +47,43 @@ export default function ProviderOverview() {
     onError: () => Alert.alert(t('common.error'), t('providerDash.errAvailability')),
   })
 
+  // Σημερινές πληρωμένες τηλεσυνεδρίες με είσοδο στην κλήση — ίδιο με την
+  // Επισκόπηση του web. Ο server ειδοποιούσε τον πάροχο (incoming_call) αλλά
+  // η εφαρμογή δεν του έδινε κανέναν τρόπο να μπει στην κλήση.
+  // «Σήμερα»: τοπική ημερομηνία — η άμεση κλήση γράφει πλέον το
+  // scheduled_date με τοπική ημερομηνία (όχι toISOString/UTC).
+  const { data: teleSessions = [] } = useQuery({
+    queryKey: ['telehealth-mine'],
+    queryFn: () => api.get('/telehealth').then(r => r.data?.data ?? []),
+    refetchInterval: 60_000,
+  })
+  const ymd = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  const now = new Date()
+  const todayKey = ymd(now.getFullYear(), now.getMonth(), now.getDate())
+  const teleToday = (teleSessions as any[])
+    .filter(c => c.provider_email === user?.email
+      && c.payment_status === 'paid' && !!c.meeting_url
+      && c.status !== 'cancelled' && c.status !== 'completed'
+      && String(c.scheduled_date) === todayKey)
+    .sort((a, b) => String(a.scheduled_time).localeCompare(String(b.scheduled_time)))
+
+  const [joiningId, setJoiningId] = useState<string | null>(null)
+  const joinCall = async (id: string) => {
+    if (joiningId) return
+    setJoiningId(id)
+    try {
+      await Linking.openURL(await getTelehealthCallUrl(id))
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('teleConfirm.err_open_call'))
+    } finally {
+      setJoiningId(null)
+    }
+  }
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
+    await qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
     await qc.invalidateQueries({ queryKey: ['my-services-all'] })
     await qc.invalidateQueries({ queryKey: ['provider-stats'] })
     await qc.invalidateQueries({ queryKey: ['provider-bookings'] })
@@ -95,6 +131,34 @@ export default function ProviderOverview() {
           </Card>
         ))}
       </View>
+
+      {teleToday.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>{t('providerTele.todayTitle')}</Text>
+          {teleToday.map((c: any) => (
+            <Card key={c.id} style={s.teleCard}>
+              <View style={s.row}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.bookingTitle} numberOfLines={1}>
+                    {c.client_name}{c.pet_name ? ` · ${c.pet_name}` : ''}
+                  </Text>
+                  <View style={s.teleMeta}>
+                    <Clock size={icon.xs} color={colors.textLight} />
+                    <Text style={s.bookingMeta} numberOfLines={1}>
+                      {c.scheduled_time} · {t('providerTele.minutes', { count: c.duration })}
+                    </Text>
+                  </View>
+                </View>
+                <Button label={t('providerTele.join')} size="sm"
+                  icon={<Video size={icon.sm} color={colors.textOnDark} />}
+                  loading={joiningId === c.id} disabled={!!joiningId}
+                  onPress={() => joinCall(c.id)} />
+              </View>
+            </Card>
+          ))}
+          <View style={{ height: space.sm }} />
+        </>
+      )}
 
       <Text style={s.sectionTitle}>{t('providerDash.upcomingBookings')}</Text>
       {upcoming.length === 0 ? (
@@ -148,6 +212,8 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   bookingTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
   bookingMeta: { ...type.caption, color: colors.textLight },
+  teleCard: { marginBottom: space.sm },
+  teleMeta: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: 2 },
   footer: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
   footerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xs, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   footerTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },

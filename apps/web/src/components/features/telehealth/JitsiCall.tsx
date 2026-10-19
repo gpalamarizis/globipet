@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion'
 import { Mic, MicOff, Video, VideoOff, MessageSquare, PhoneOff, X } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
@@ -15,28 +16,33 @@ import { useTranslation } from 'react-i18next'
  *   το Jitsi δεν ξαναδιαβάζει. Το external_api.js φορτώνεται από τον ίδιο
  *   server (meet.jit.si) και δίνει executeCommand + γεγονότα, ώστε η
  *   κατάσταση των κουμπιών να ακολουθεί την πραγματική κατάσταση της κλήσης.
+ *
+ * ΠΟΙΟΣ SERVER
+ *   Τα στοιχεία της κλήσης έρχονται από GET /telehealth/:id/call (ίδιοι
+ *   κανόνες πρόσβασης με το meeting_url). Με JaaS: domain 8x8.vc, room
+ *   '<APP_ID>/<δωμάτιο>', jwt, και το script από https://8x8.vc/<APP_ID>/external_api.js.
+ *   Χωρίς JaaS: meet.jit.si όπως πριν (κόβει τις ενσωματωμένες κλήσεις στα ~5′).
  */
 
-const JITSI_DOMAIN = 'meet.jit.si'
+type CallInfo = { domain: string; room: string; jwt: string | null; app_id?: string | null }
 
-let apiScript: Promise<any> | null = null
-function loadJitsiApi(): Promise<any> {
+const apiScripts: Record<string, Promise<any>> = {}
+function loadJitsiApi(src: string): Promise<any> {
   const w = window as any
-  if (w.JitsiMeetExternalAPI) return Promise.resolve(w.JitsiMeetExternalAPI)
-  if (!apiScript) {
-    apiScript = new Promise((resolve, reject) => {
+  if (!apiScripts[src]) {
+    apiScripts[src] = new Promise((resolve, reject) => {
       const s = document.createElement('script')
-      s.src = `https://${JITSI_DOMAIN}/external_api.js`
+      s.src = src
       s.async = true
       s.onload = () => (w.JitsiMeetExternalAPI ? resolve(w.JitsiMeetExternalAPI) : reject(new Error('jitsi')))
-      s.onerror = () => { apiScript = null; s.remove(); reject(new Error('jitsi')) }
+      s.onerror = () => { delete apiScripts[src]; s.remove(); reject(new Error('jitsi')) }
       document.head.appendChild(s)
     })
   }
-  return apiScript
+  return apiScripts[src]
 }
 
-export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: string; vetName: string; onEnd: () => void }) {
+export default function JitsiCall({ consultationId, vetName, onEnd }: { consultationId: string; vetName: string; onEnd: () => void }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -47,6 +53,7 @@ export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: stri
 
   const [joined, setJoined] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [failedMsg, setFailedMsg] = useState<string | null>(null)
   const [muted, setMuted] = useState(false)
   const [videoOff, setVideoOff] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -63,11 +70,21 @@ export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: stri
 
   useEffect(() => {
     let cancelled = false
-    loadJitsiApi()
-      .then(JitsiMeetExternalAPI => {
+    api.get(`/telehealth/${consultationId}/call`)
+      .then(r => r.data?.data as CallInfo)
+      .catch((e: any) => { if (!cancelled) setFailedMsg(e?.message || null); throw e })
+      .then(info => {
+        if (!info?.domain || !info?.room) throw new Error('jitsi')
+        const src = info.app_id
+          ? `https://${info.domain}/${info.app_id}/external_api.js`
+          : `https://${info.domain}/external_api.js`
+        return loadJitsiApi(src).then(JitsiMeetExternalAPI => ({ JitsiMeetExternalAPI, info }))
+      })
+      .then(({ JitsiMeetExternalAPI, info }) => {
         if (cancelled || !containerRef.current) return
-        const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, {
-          roomName,
+        const api = new JitsiMeetExternalAPI(info.domain, {
+          roomName: info.room,
+          ...(info.jwt ? { jwt: info.jwt } : {}),
           parentNode: containerRef.current,
           width: '100%',
           height: '100%',
@@ -107,7 +124,7 @@ export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: stri
     }
     // Η κλήση στήνεται μία φορά ανά δωμάτιο· αλλαγή γλώσσας/ονόματος δεν την ξαναφορτώνει.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomName])
+  }, [consultationId])
 
   const command = (name: string) => { if (joined) apiRef.current?.executeCommand(name) }
 
@@ -140,7 +157,7 @@ export default function JitsiCall({ roomName, vetName, onEnd }: { roomName: stri
         <div ref={containerRef} className="absolute inset-0 [&>iframe]:border-0" />
         {failed && (
           <div className="absolute inset-0 flex items-center justify-center p-6">
-            <p className="text-gray-300 text-sm text-center max-w-sm">{t('cmpJitsi.loadError')}</p>
+            <p className="text-gray-300 text-sm text-center max-w-sm">{failedMsg || t('cmpJitsi.loadError')}</p>
           </div>
         )}
       </div>
