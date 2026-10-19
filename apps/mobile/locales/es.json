@@ -1605,7 +1605,7 @@
         },
         "services": {
           "title": "Servicios",
-          "desc": "Peluquería, entrenamiento, paseos, alojamiento, pet taxi: miles de proveedores verificados en toda Grecia."
+          "desc": "Peluquería, entrenamiento, paseos, alojamiento, pet taxi: proveedores verificados en toda Grecia."
         },
         "legal": {
           "title": "Asesoría Legal",
@@ -1625,7 +1625,7 @@
         },
         "community": {
           "title": "Comunidad",
-          "desc": "Playdates, comunidades de dueños, feed social y eventos. Conecta con miles de amantes de mascotas en toda Grecia."
+          "desc": "Playdates, comunidades de dueños, feed social y eventos. Conecta con amantes de mascotas en toda Grecia."
         }
       }
     },

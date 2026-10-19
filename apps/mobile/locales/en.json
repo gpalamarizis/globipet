@@ -1605,7 +1605,7 @@
         },
         "services": {
           "title": "Services",
-          "desc": "Grooming, training, walks, hosting, pet taxi — thousands of verified providers across Greece."
+          "desc": "Grooming, training, walks, hosting, pet taxi — verified providers across Greece."
         },
         "legal": {
           "title": "Legal Support",
@@ -1625,7 +1625,7 @@
         },
         "community": {
           "title": "Community",
-          "desc": "Playdates, owner communities, social feed and events. Connect with thousands of pet lovers across Greece."
+          "desc": "Playdates, owner communities, social feed and events. Connect with pet lovers across Greece."
         }
       }
     },

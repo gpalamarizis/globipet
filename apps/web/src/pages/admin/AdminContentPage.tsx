@@ -17,14 +17,6 @@ const SECTIONS = [
       { key: 'hero_title_2',       label: 'Τίτλος — γραμμή 2 (πορτοκαλί)', type: 'text', placeholder: 'καλύτερους φίλους' },
       { key: 'hero_subtitle',      label: 'Υπότιτλος', type: 'text', placeholder: 'Το all-in-one pet super-app...' },
       { key: 'hero_cta',           label: 'Κουμπί CTA', type: 'text', placeholder: 'Ξεκινήστε Τώρα' },
-      { key: 'stat_users',         label: 'Στατιστικό — Χρήστες', type: 'text', placeholder: '50K+' },
-      { key: 'stat_users_label',   label: 'Ετικέτα Χρηστών', type: 'text', placeholder: 'Χρήστες' },
-      { key: 'stat_providers',     label: 'Στατιστικό — Πάροχοι', type: 'text', placeholder: '2K+' },
-      { key: 'stat_providers_label', label: 'Ετικέτα Παρόχων', type: 'text', placeholder: 'Πάροχοι' },
-      { key: 'stat_pets',          label: 'Στατιστικό — Κατοικίδια', type: 'text', placeholder: '120K+' },
-      { key: 'stat_pets_label',    label: 'Ετικέτα Κατοικιδίων', type: 'text', placeholder: 'Κατοικίδια' },
-      { key: 'stat_rating',        label: 'Στατιστικό — Βαθμολογία', type: 'text', placeholder: '4.9★' },
-      { key: 'stat_rating_label',  label: 'Ετικέτα Βαθμολογίας', type: 'text', placeholder: 'Βαθμολογία' },
       { key: 'services_title',     label: 'Τίτλος Ενότητας Υπηρεσιών', type: 'text', placeholder: 'Υπηρεσίες' },
       { key: 'services_subtitle',  label: 'Υπότιτλος Ενότητας Υπηρεσιών', type: 'text', placeholder: 'Βρες τον καλύτερο πάροχο κοντά σου' },
       { key: 'marquee_text',       label: 'Κυλιόμενο Κείμενο (marquee)', type: 'text', placeholder: 'Η καλύτερη εφαρμογή κατοικιδίων στον κόσμο' },
@@ -220,19 +212,6 @@ export default function AdminContentPage() {
                       <span className="text-orange-600">{draft.hero_title_2 || 'καλύτερους φίλους'}</span> σου
                     </h1>
                     <p className="text-sm text-gray-500 mb-4">{draft.hero_subtitle || 'Το all-in-one pet super-app...'}</p>
-                    <div className="grid grid-cols-4 gap-2 mt-4">
-                      {[
-                        [draft.stat_users || '50K+', draft.stat_users_label || 'Χρήστες'],
-                        [draft.stat_providers || '2K+', draft.stat_providers_label || 'Πάροχοι'],
-                        [draft.stat_pets || '120K+', draft.stat_pets_label || 'Κατοικίδια'],
-                        [draft.stat_rating || '4.9★', draft.stat_rating_label || 'Βαθμολογία'],
-                      ].map(([val, label]) => (
-                        <div key={label} className="bg-white dark:bg-gray-700 rounded-xl p-2 text-center">
-                          <p className="text-sm font-black text-orange-600">{val}</p>
-                          <p className="text-[10px] text-gray-500">{label}</p>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
               )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint, Clock, Sparkles } from 'lucide-react'
@@ -9,39 +9,6 @@ import { api } from '@/lib/api'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
-
-function AnimatedStat({ value, suffix, label, color, decimals = 0 }: { value: number, suffix: string, label: string, color: string, decimals?: number }) {
-  const [current, setCurrent] = useState(0)
-  const ref = useRef<HTMLDivElement>(null)
-  const [started, setStarted] = useState(false)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && !started) {
-        setStarted(true)
-        const duration = 1500
-        const steps = 60
-        const stepValue = value / steps
-        let i = 0
-        const timer = setInterval(() => {
-          i++
-          setCurrent(Math.min(stepValue * i, value))
-          if (i >= steps) clearInterval(timer)
-        }, duration / steps)
-      }
-    }, { threshold: 0.3 })
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [value, started])
-
-  const displayValue = decimals > 0 ? current.toFixed(decimals) : Math.floor(current).toLocaleString('el-GR')
-  return (
-    <div ref={ref} className="text-center">
-      <p className={`text-2xl md:text-3xl font-black ${color}`}>{displayValue}{suffix}</p>
-      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
-    </div>
-  )
-}
 
 export default function Home() {
   const { t } = useTranslation()
@@ -84,13 +51,6 @@ export default function Home() {
     e.preventDefault()
     navigate(`/services?q=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(searchCity)}`)
   }
-
-  const stats = [
-    { value: c.stat_users || '50K+',     label: c.stat_users_label || 'Χρήστες' },
-    { value: c.stat_providers || '2K+',  label: c.stat_providers_label || 'Πάροχοι' },
-    { value: c.stat_pets || '120K+',     label: c.stat_pets_label || 'Κατοικίδια' },
-    { value: c.stat_rating || '4.9★',   label: c.stat_rating_label || 'Βαθμολογία' },
-  ]
 
   const categories = [
     { icon: Scissors,      label: 'Περιποίηση',    type: 'grooming',    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
@@ -325,20 +285,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── TRUST BAR (animated stats) ───────────────────── */}
-      <section className="bg-white dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800 py-6 px-4">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { value: 50000, suffix: '+', label: 'Ιδιοκτήτες', color: 'text-brand-900' },
-            { value: 2000,  suffix: '+', label: 'Πάροχοι',    color: 'text-purple-600' },
-            { value: 120000, suffix: '+', label: 'Κατοικίδια', color: 'text-orange-600' },
-            { value: 4.9,   suffix: '★', label: 'Βαθμολογία',  color: 'text-amber-500', decimals: 1 },
-          ].map(stat => (
-            <AnimatedStat key={stat.label} {...stat} />
-          ))}
-        </div>
-      </section>
-
       {/* Search bar */}
       <div className="bg-gray-50 dark:bg-gray-950 px-4 py-6">
         <motion.form onSubmit={handleSearch}
@@ -387,11 +333,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* ── STATS REMOVED ── */}
-
-
-
 
       {/* ── CATEGORIES ───────────────────────────────────── */}
       <section className="py-12 bg-white dark:bg-gray-900">

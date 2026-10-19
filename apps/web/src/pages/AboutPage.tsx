@@ -45,13 +45,6 @@ const MISSION = [
   { emoji: '🏥', key: 'providers' },
 ]
 
-const STATS = [
-  { value: '50K+',  key: 'users' },
-  { value: '2K+',   key: 'providers' },
-  { value: '120K+', key: 'pets' },
-  { value: '4.9★',  key: 'rating' },
-]
-
 function FounderCard({ founder }: { founder: typeof FOUNDERS[0] }) {
   const { t } = useTranslation()
   const [imgError, setImgError] = useState(false)
@@ -147,21 +140,6 @@ export default function AboutPage() {
                   <p className="text-sm text-gray-500 leading-relaxed">{t(`about.services.items.${service.key}.desc`)}</p>
                 </div>
               </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-16 px-4 bg-[#0F2A3F] text-white">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-10 text-center">{t('about.stats.title')}</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-            {STATS.map(s => (
-              <div key={s.key}>
-                <p className="text-4xl font-black text-brand-400 mb-1">{s.value}</p>
-                <p className="text-white/60 text-sm">{t(`about.stats.${s.key}`)}</p>
-              </div>
             ))}
           </div>
         </div>

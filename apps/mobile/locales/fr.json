@@ -1605,7 +1605,7 @@
         },
         "services": {
           "title": "Services",
-          "desc": "Toilettage, dressage, promenades, garde, pet taxi — des milliers de prestataires vérifiés dans toute la Grèce."
+          "desc": "Toilettage, dressage, promenades, garde, pet taxi — des prestataires vérifiés dans toute la Grèce."
         },
         "legal": {
           "title": "Support Juridique",
@@ -1625,7 +1625,7 @@
         },
         "community": {
           "title": "Communauté",
-          "desc": "Playdates, communautés de propriétaires, fil social et événements. Rejoignez des milliers d'amis des animaux dans toute la Grèce."
+          "desc": "Playdates, communautés de propriétaires, fil social et événements. Rejoignez des amis des animaux dans toute la Grèce."
         }
       }
     },
