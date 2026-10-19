@@ -5,6 +5,7 @@ import { sendPushToUser } from '../lib/push.js'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
+import { cancelBooking, cancellationTerms, CancelError } from '../lib/cancellation.js'
 import { serverError } from '../lib/errors.js'
 
 const bookingsRoutes: FastifyPluginAsync = async (app) => {
@@ -405,6 +406,23 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
    * Now: only the customer, the provider, or an admin may touch it, and only
    * a small set of fields is writable. Money and payment state are excluded.
    */
+  /**
+   * Τι θα γίνει αν ακυρωθεί τώρα: επιστροφή, κράτημα, αν επιτρέπεται.
+   * Το web και το κινητό το δείχνουν στον χρήστη ΠΡΙΝ επιβεβαιώσει.
+   */
+  app.get('/:id/cancellation', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const user = req.user as any
+    const b = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!b) return reply.code(404).send({ message: 'Η κράτηση δεν βρέθηκε' })
+    const isCustomer = b.customer_email === user.email
+    const isProvider = b.provider_email === user.email
+    if (!isCustomer && !isProvider && user.role !== 'admin') {
+      return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση σε αυτή την κράτηση' })
+    }
+    const by = user.role === 'admin' ? 'admin' : isCustomer ? 'customer' : 'provider'
+    return { data: cancellationTerms(b, by) }
+  })
+
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const user = req.user as any
     const existing = await prisma.booking.findUnique({ where: { id: req.params.id } })
@@ -418,6 +436,19 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const body = (req.body ?? {}) as any
+
+    // Ακύρωση: πολιτική 24 ωρών και επιστροφή μέσω Viva (lib/cancellation).
+    if (body.status === 'cancelled') {
+      const by = isAdmin ? 'admin' : isCustomer ? 'customer' : 'provider'
+      try {
+        const r = await cancelBooking(req, existing.id, by)
+        return { ...r.booking, refund: r.terms.refund, fee: r.terms.fee }
+      } catch (err: any) {
+        if (err instanceof CancelError) return reply.code(err.code).send({ message: err.message })
+        throw err
+      }
+    }
+
     const data: any = {}
 
     // Rescheduling and notes are open to both sides.

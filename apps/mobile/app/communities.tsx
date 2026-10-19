@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon } from '@/theme'
+import CampaignBanner from '@/components/CampaignBanner'
 
 const typo = theme.type
 
@@ -135,6 +136,7 @@ export default function CommunitiesScreen() {
     <Screen title={t('discover.communities')} subtitle={t('com.subtitle')} scroll={false}>
       <Button label={t('com.create')} icon={<Plus size={18} color={colors.textOnDark} />}
         onPress={() => setCreating(true)} full style={{ marginBottom: space.md }} />
+      <CampaignBanner page="communities" slot="banner" />
 
       {isLoading ? (
         <View style={{ padding: space.lg }}>

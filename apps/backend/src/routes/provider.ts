@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { cancelBooking, CancelError } from '../lib/cancellation.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 
 const providerRoutes: FastifyPluginAsync = async (app) => {
@@ -140,6 +141,24 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
     // Completing a booking implies it was paid for.
     if (status === 'completed' && existing.payment_status !== 'paid') {
       return reply.code(400).send({ message: 'Η κράτηση δεν έχει πληρωθεί' })
+    }
+
+    // Ακύρωση από τον πάροχο: πάντα πλήρης επιστροφή στον πελάτη.
+    if (status === 'cancelled') {
+      try {
+        const r = await cancelBooking(req, existing.id, user.role === 'admin' ? 'admin' : 'provider')
+        return { ...r.booking, refund: r.terms.refund }
+      } catch (err: any) {
+        if (err instanceof CancelError) return reply.code(err.code).send({ message: err.message })
+        throw err
+      }
+    }
+    // «Επιβεβαίωση» μόνο από αναμονή, «δεν προσήλθε» μόνο για επιβεβαιωμένη.
+    if (status === 'confirmed' && existing.status !== 'pending') {
+      return reply.code(400).send({ message: 'Μόνο κράτηση σε αναμονή επιβεβαιώνεται' })
+    }
+    if (status === 'no_show' && existing.status !== 'confirmed') {
+      return reply.code(400).send({ message: 'Μόνο επιβεβαιωμένη κράτηση σημειώνεται ως «δεν προσήλθε»' })
     }
 
     return prisma.booking.update({

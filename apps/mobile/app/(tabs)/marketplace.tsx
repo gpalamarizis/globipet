@@ -8,6 +8,7 @@ import { Search, X, ShoppingCart, Package, Star } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import CampaignBanner from '@/components/CampaignBanner'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -135,6 +136,7 @@ export default function MarketplaceScreen() {
 
       <FlatList
         data={products}
+        ListHeaderComponent={<CampaignBanner page="marketplace" slot="banner" />}
         keyExtractor={i => i.id}
         numColumns={2}
         columnWrapperStyle={{ gap: space.md }}

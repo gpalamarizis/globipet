@@ -33,10 +33,30 @@ export default function MyBookings() {
     enabled: isAuthenticated,
   })
 
+  /** Δείχνει τι θα επιστραφεί ΠΡΙΝ την ακύρωση (πολιτική 24 ωρών). */
+  const askCancel = async (booking: any) => {
+    let msg = t('bookingsExtra.cancelConfirm')
+    try {
+      const c = (await api.get(`/bookings/${booking.id}/cancellation`)).data?.data
+      if (c && !c.allowed) {
+        toast.error(c.reason === 'already_started' ? t('bookingPolicy.started') : t('bookingPolicy.notAllowed'))
+        return
+      }
+      if (c) msg = !c.paid ? t('bookingPolicy.unpaid')
+        : c.late ? t('bookingPolicy.late', { refund: Number(c.refund).toFixed(2), fee: Number(c.fee).toFixed(2) })
+        : t('bookingPolicy.free', { refund: Number(c.refund).toFixed(2) })
+    } catch { /* χωρίς όρους, η γενική ερώτηση */ }
+    if (confirm(msg)) cancelBooking.mutate(booking.id)
+  }
+
   const cancelBooking = useMutation({
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-bookings'] }); toast.success(t('bookings.cancelled')) },
-    onError: (err: any) => toast.error(err?.message || t('common.error')),
+    onSuccess: (r: any) => {
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+      toast.success(t('bookings.cancelled'))
+      if (r?.data?.refund > 0) toast.success(t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }))
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('common.error')),
   })
 
   const submitReview = useMutation({
@@ -156,7 +176,7 @@ export default function MyBookings() {
                     confirmed. Limiting this to pending left customers unable
                     to cancel anything the provider had accepted. */}
                 {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                  <button onClick={() => { if(confirm(t('bookingsExtra.cancelConfirm'))) cancelBooking.mutate(booking.id) }}
+                  <button onClick={() => askCancel(booking)}
                     className="flex-1 btn-secondary text-xs py-2 text-red-600 border-red-200 hover:bg-red-50">
                     {t('bookings.cancel')}
                   </button>

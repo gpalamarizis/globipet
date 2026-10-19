@@ -1,7 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy } from 'lucide-react-native'
+import { useQuery } from '@tanstack/react-query'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, Upload } from 'lucide-react-native'
+import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -15,8 +17,12 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   ετικέτες κόβονται. Οι τέσσερις καθημερινές μένουν στη μπάρα, οι
  *   υπόλοιπες ζουν εδώ.
  */
+/** Ίδια λίστα με το PRODUCT_TYPES του ProviderDashboard στο web. */
+const PRODUCT_TYPES = ['veterinary', 'grooming', 'boarding', 'training']
+
 const ITEMS = [
   { key: 'products',  Icon: Package,   labelKey: 'providerTabs.products',  route: '/(provider)/products' },
+  { key: 'import',    Icon: Upload,    labelKey: 'providerImport.menu',    route: '/(provider)/import' },
   { key: 'staff',     Icon: Users,     labelKey: 'providerTabs.staff',     route: '/(provider)/staff' },
   { key: 'campaigns', Icon: Megaphone, labelKey: 'providerTabs.campaigns', route: '/(provider)/campaigns' },
   { key: 'calendar',  Icon: CalendarDays, labelKey: 'providerTabs.calendar', route: '/(provider)/calendar' },
@@ -39,9 +45,19 @@ export default function ProviderMore() {
   const router = useRouter()
   const { user, logout } = useAuthStore()
 
+  // Ίδιος κανόνας με το web: Προϊόντα και Import μόνο για τύπους παρόχου
+  // που πουλάνε (κτηνιατρείο, κομμωτήριο, φιλοξενία, εκπαίδευση). Μέχρι να
+  // φορτώσει η λίστα δείχνονται, για να μη «χοροπηδάει» το μενού.
+  const { data: myServices, isSuccess } = useQuery({
+    queryKey: ['my-services-all'],
+    queryFn: () => api.get('/services/my').then(r => r.data?.data ?? []),
+  })
+  const sells = !isSuccess || PRODUCT_TYPES.includes(myServices?.[0]?.service_type ?? '')
+  const items = ITEMS.filter(i => sells || (i.key !== 'products' && i.key !== 'import'))
+
   return (
     <Screen title={t('providerTabs.more')} subtitle={user?.email}>
-      {ITEMS.map(({ key, Icon, labelKey, route }) => (
+      {items.map(({ key, Icon, labelKey, route }) => (
         <TouchableOpacity key={key} activeOpacity={0.7} style={s.row}
           onPress={() => router.push(route as any)}>
           <View style={s.rowIcon}><Icon size={icon.md} color={colors.brand} /></View>
@@ -69,7 +85,6 @@ export default function ProviderMore() {
         <Text style={[s.rowLabel, { color: colors.danger }]}>{t('auth.logout')}</Text>
       </TouchableOpacity>
 
-      <Text style={s.hint}>{t('providerMobile.manageOnWeb')}</Text>
     </Screen>
   )
 }

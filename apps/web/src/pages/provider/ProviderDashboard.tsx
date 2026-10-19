@@ -102,9 +102,13 @@ function ImportTab() {
         type: row[t('providerDash.type')] || row['type'] || row['Type'] || undefined,
         stock: row[t('providerDash.stock')] || row['stock'] || row['Stock'] || undefined,
       }))
-      const res = await api.post(endpoint, { items })
-      const failed = res.data?.failed?.length ?? 0
-      toast.success(t('providerDash.importedOk', { count: res.data?.count ?? items.length }))
+      let count = 0, failed = 0
+      for (let i = 0; i < items.length; i += 500) {
+        const res = await api.post(endpoint, { items: items.slice(i, i + 500) })
+        count += res.data?.count ?? 0
+        failed += res.data?.failed?.length ?? 0
+      }
+      toast.success(t('providerDash.importedOk', { count }))
       if (failed > 0) toast.error(t('providerEdit.importFailedRows', { count: failed }))
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
@@ -205,6 +209,140 @@ function ImportTab() {
 }
 
 // ─── Calendar Tab ─────────────────────────────────────────────────
+// ─── Bookings Tab ─────────────────────────────────────────────────
+/**
+ * Οι κρατήσεις του παρόχου με ενέργειες: επιβεβαίωση, ολοκλήρωση, «δεν
+ * προσήλθε», ακύρωση (πάντα με πλήρη επιστροφή στον πελάτη) και αλλαγή
+ * γιατρού.
+ *
+ * Πριν η καρτέλα έδειχνε μόνο «οι κρατήσεις θα εμφανιστούν εδώ» — ο πάροχος
+ * δεν μπορούσε από το web ούτε να επιβεβαιώσει ούτε να ολοκληρώσει ραντεβού,
+ * ενώ η λίστα υπήρχε στο κινητό.
+ */
+function BookingsTab() {
+  const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const queryClient = useQueryClient()
+  const [filter, setFilter] = useState<'active' | 'done' | 'cancelled' | 'all'>('active')
+
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ['provider-bookings'],
+    queryFn: () => api.get('/provider/bookings').then(r => r.data?.data ?? []),
+    enabled: !!user,
+  })
+  const { data: allStaff = [] } = useQuery({
+    queryKey: ['provider-staff-all'],
+    queryFn: () => api.get('/staff/mine').then(r => r.data?.data ?? r.data ?? []),
+  })
+
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/provider/bookings/${id}`, { status }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-bookings'] }); toast.success(t('bookingPolicy.updated')) },
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerDash.error')),
+  })
+  const changeStaff = useMutation({
+    mutationFn: ({ id, staff_id }: { id: string; staff_id: string }) =>
+      api.patch(`/bookings/${id}/staff`, { staff_id: staff_id || null }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-bookings'] }); toast.success(t('providerDash.staffChanged')) },
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerDash.error')),
+  })
+
+  const askCancel = (b: any) => {
+    const msg = b.payment_status === 'paid'
+      ? t('bookingPolicy.providerCancelPaid', { amount: Number(b.total_price ?? 0).toFixed(2) })
+      : t('bookingPolicy.providerCancel')
+    if (confirm(msg)) setStatus.mutate({ id: b.id, status: 'cancelled' })
+  }
+
+  const shown = bookings.filter((b: any) =>
+    filter === 'all' ? true
+      : filter === 'active' ? (b.status === 'pending' || b.status === 'confirmed')
+      : filter === 'done' ? (b.status === 'completed' || b.status === 'no_show')
+      : b.status === 'cancelled')
+
+  const payBadge = (b: any) => b.payment_status === 'paid' ? ['bg-green-50 text-green-700', t('bookingPolicy.paid')]
+    : b.payment_status === 'refunded' ? ['bg-gray-100 text-gray-600', t('bookingPolicy.refunded')]
+    : b.payment_status === 'partially_refunded' ? ['bg-amber-50 text-amber-700', t('bookingPolicy.partiallyRefunded')]
+    : ['bg-yellow-50 text-yellow-700', t('bookingPolicy.unpaidBadge')]
+
+  const FILTERS = [
+    { v: 'active', l: t('bookingPolicy.filterActive') }, { v: 'done', l: t('bookingPolicy.filterDone') },
+    { v: 'cancelled', l: t('bookingPolicy.filterCancelled') }, { v: 'all', l: t('bookingPolicy.filterAll') },
+  ] as const
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1.5 flex-wrap">
+        {FILTERS.map(f => (
+          <button key={f.v} onClick={() => setFilter(f.v)}
+            className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+              filter === f.v ? 'bg-brand-900 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 border border-gray-200 dark:border-gray-700')}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? [1, 2, 3].map(i => <div key={i} className="card p-4"><div className="skeleton h-16 w-full" /></div>)
+      : shown.length === 0 ? (
+        <div className="card p-10 text-center">
+          <Clock size={32} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500">{t('bookingPolicy.empty')}</p>
+        </div>
+      ) : shown.map((b: any) => {
+        const [payCls, payLabel] = payBadge(b)
+        const staffOpts = allStaff.filter((m: any) => m.service_id === b.service_id && m.is_active)
+        const open = b.status === 'pending' || b.status === 'confirmed'
+        return (
+          <div key={b.id} className="card p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{b.service?.title || t('providerDash.booking')}</p>
+                <p className="text-xs text-gray-500">{b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-bold text-sm text-gray-900 dark:text-white">€{Number(b.total_price ?? 0).toFixed(2)}</p>
+                <span className={cn('inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full font-medium', payCls)}>{payLabel}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                {String(t(`bookingPolicy.st${b.status.charAt(0).toUpperCase()}${b.status.slice(1)}`, b.status))}
+              </span>
+              {open && staffOpts.length > 0 && (
+                <select className="input text-xs py-1 px-2 max-w-[160px]" value={b.staff_id ?? ''}
+                  disabled={changeStaff.isPending}
+                  onChange={e => changeStaff.mutate({ id: b.id, staff_id: e.target.value })}>
+                  <option value="">{t('providerDash.noPractitioner')}</option>
+                  {staffOpts.map((m: any) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                </select>
+              )}
+              <div className="flex gap-1.5 ml-auto">
+                {b.status === 'pending' && (
+                  <button onClick={() => setStatus.mutate({ id: b.id, status: 'confirmed' })} disabled={setStatus.isPending}
+                    className="btn-primary text-xs px-3 py-1.5">{t('bookingPolicy.confirm')}</button>
+                )}
+                {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                  <button onClick={() => setStatus.mutate({ id: b.id, status: 'completed' })} disabled={setStatus.isPending}
+                    className="btn-primary text-xs px-3 py-1.5">{t('bookingPolicy.complete')}</button>
+                )}
+                {b.status === 'confirmed' && (
+                  <button onClick={() => setStatus.mutate({ id: b.id, status: 'no_show' })} disabled={setStatus.isPending}
+                    className="btn-secondary text-xs px-3 py-1.5">{t('bookingPolicy.noShow')}</button>
+                )}
+                {open && (
+                  <button onClick={() => askCancel(b)} disabled={setStatus.isPending}
+                    className="btn-secondary text-xs px-3 py-1.5 text-red-600 border-red-200 hover:bg-red-50">{t('bookingPolicy.cancel')}</button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function CalendarTab() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -712,6 +850,7 @@ function ProductsTab() {
 export default function ProviderDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
   const canAccess = user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin'
@@ -736,6 +875,8 @@ export default function ProviderDashboard() {
   const toggleAvailability = useMutation({
     mutationFn: (is_available: boolean) => api.patch('/telehealth/availability', { is_available }),
     onSuccess: (_, is_available) => {
+      // Χωρίς αυτό το κουμπί έμενε στην παλιά κατάσταση μέχρι ανανέωση σελίδας.
+      queryClient.invalidateQueries({ queryKey: ['my-services-all'] })
       toast.success(is_available ? t('providerDash.teleOn') : t('providerDash.teleOffMsg'))
     },
     onError: () => toast.error(t('providerDash.errAvailability')),
@@ -883,12 +1024,7 @@ export default function ProviderDashboard() {
       {activeTab === 'products' && <ProductsTab />}
       {activeTab === 'calendar' && <CalendarTab />}
       {activeTab === 'import'   && <ImportTab />}
-      {activeTab === 'bookings' && (
-        <div className="card p-5 text-center py-12">
-          <Clock size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">{t('providerDash.bookingsWillAppear')}</p>
-        </div>
-      )}
+      {activeTab === 'bookings' && <BookingsTab />}
     </div>
   )
 }

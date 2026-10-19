@@ -129,7 +129,7 @@ export default function ServiceDetail() {
       }
       // Χωρίς σελίδα πληρωμής δεν πανηγυρίζουμε: η κράτηση υπάρχει αλλά
       // είναι απλήρωτη, και ο χρήστης πρέπει να το ξέρει.
-      throw new Error(t('bookings.noPaymentPage', 'Δεν δημιουργήθηκε σελίδα πληρωμής. Δες τις κρατήσεις σου.'))
+      throw new Error(t('bookings.noPaymentPage'))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
@@ -536,6 +536,7 @@ export default function ServiceDetail() {
                     <Calendar size={18} />
                     {bookService.isPending ? t('bookingsExtra.sending') : t('services.bookNow')}
                   </button>
+                  <p className="text-xs text-gray-400 text-center mt-2">{t('bookingPolicy.note')}</p>
                 </>
               )}
             </motion.div>

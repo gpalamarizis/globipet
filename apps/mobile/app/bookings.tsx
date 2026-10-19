@@ -76,8 +76,12 @@ export default function BookingsScreen() {
 
   const cancel = useMutation({
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-bookings'] }),
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('bookings.cancel_failed')),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] })
+      Alert.alert(t('bookingPolicy.cancelled'), r?.data?.refund > 0
+        ? t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }) : undefined)
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('bookings.cancel_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -86,11 +90,24 @@ export default function BookingsScreen() {
     setRefreshing(false)
   }, [qc])
 
-  const confirmCancel = (id: string) =>
-    Alert.alert(t('bookings.cancel'), t('bookings.cancel_q'), [
+  /** Δείχνει τι θα επιστραφεί ΠΡΙΝ την ακύρωση (πολιτική 24 ωρών). */
+  const confirmCancel = async (id: string) => {
+    let msg = t('bookings.cancel_q')
+    try {
+      const c = (await api.get(`/bookings/${id}/cancellation`)).data?.data
+      if (c && !c.allowed) {
+        Alert.alert(t('bookings.cancel'), c.reason === 'already_started' ? t('bookingPolicy.started') : t('bookingPolicy.notAllowed'))
+        return
+      }
+      if (c) msg = !c.paid ? t('bookingPolicy.unpaid')
+        : c.late ? t('bookingPolicy.late', { refund: Number(c.refund).toFixed(2), fee: Number(c.fee).toFixed(2) })
+        : t('bookingPolicy.free', { refund: Number(c.refund).toFixed(2) })
+    } catch { /* χωρίς όρους, η γενική ερώτηση */ }
+    Alert.alert(t('bookings.cancel'), msg, [
       { text: t('common.no'), style: 'cancel' },
       { text: t('bookings.cancel'), style: 'destructive', onPress: () => cancel.mutate(id) },
     ])
+  }
 
   const fmtDate = (d?: string) => {
     if (!d) return '—'

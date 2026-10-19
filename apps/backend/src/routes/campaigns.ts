@@ -233,6 +233,16 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
            WHERE c.is_active
              AND now() BETWEEN c.starts_at AND c.ends_at
              AND c.discount_type IS NOT NULL
+             -- Ο πάροχος εκπτώνει ΜΟΝΟ τα δικά του. Χωρίς αυτό, καμπάνια
+             -- «όλα τα προϊόντα −100%» ενός παρόχου ίσχυε σε όλη την πλατφόρμα.
+             AND (c.owner_type = 'platform'
+                  OR (${type} = 'product' AND EXISTS (
+                        SELECT 1 FROM products p WHERE p.id = ${id} AND p.provider_email = c.owner_email))
+                  OR (${type} = 'service' AND EXISTS (
+                        SELECT 1 FROM services s WHERE s.id = ${id} AND s.provider_email = c.owner_email))
+                  OR (${type} = 'service_package' AND EXISTS (
+                        SELECT 1 FROM service_packages sp JOIN services s ON s.id = sp.service_id
+                         WHERE sp.id = ${id} AND s.provider_email = c.owner_email)))
              AND (t.target_type = ${allType}
                   OR (t.target_type = ${type} AND t.target_id = ${id}))
              AND (c.min_order IS NULL OR c.min_order <= ${line})
@@ -350,6 +360,19 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       if (!c) return
       const b = req.body || {}
       const id = req.params.id
+      // Έλεγχοι ΠΡΙΝ από οποιαδήποτε εγγραφή — αλλιώς ένα λάθος στην έκπτωση
+      // άφηνε τα προηγούμενα πεδία ήδη αλλαγμένα.
+      if ('discount_value' in b && b.discount_value !== '' && b.discount_value != null && !(Number(b.discount_value) > 0)) {
+        return reply.code(400).send({ message: 'Το ποσό πρέπει να είναι θετικό' })
+      }
+      if ('starts_at' in b || 'ends_at' in b) {
+        const [cur] = await prisma.$queryRaw<any[]>`SELECT starts_at, ends_at FROM campaigns WHERE id = ${id}`
+        const s = 'starts_at' in b ? new Date(b.starts_at) : new Date(cur.starts_at)
+        const e = 'ends_at' in b ? new Date(b.ends_at) : new Date(cur.ends_at)
+        if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e <= s) {
+          return reply.code(400).send({ message: 'Η λήξη πρέπει να είναι μετά την έναρξη' })
+        }
+      }
 
       // Ενημερώνουμε πεδίο-πεδίο, μόνο ό,τι στάλθηκε.
       if ('title' in b)       await prisma.$executeRaw`UPDATE campaigns SET title = ${String(b.title).trim()} WHERE id = ${id}`
@@ -412,6 +435,20 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Στόχοι μόνο από τα δικά σου (ο admin εξαιρείται).
+      if ((req.user as any).role !== 'admin') {
+        const me = (req.user as any).email
+        for (const t of list) {
+          if (String(t.target_type).startsWith('all_')) continue
+          const tid = String(t.target_id)
+          const rows = t.target_type === 'product'
+            ? await prisma.$queryRaw<any[]>`SELECT 1 FROM products WHERE id = ${tid} AND provider_email = ${me}`
+            : t.target_type === 'service'
+            ? await prisma.$queryRaw<any[]>`SELECT 1 FROM services WHERE id = ${tid} AND provider_email = ${me}`
+            : await prisma.$queryRaw<any[]>`SELECT 1 FROM service_packages sp JOIN services s ON s.id = sp.service_id WHERE sp.id = ${tid} AND s.provider_email = ${me}`
+          if (!rows.length) return reply.code(403).send({ message: 'Ο στόχος δεν σου ανήκει', target_id: tid })
+        }
+      }
       await prisma.$executeRaw`DELETE FROM campaign_targets WHERE campaign_id = ${req.params.id}`
       for (const t of list) {
         await prisma.$executeRaw`

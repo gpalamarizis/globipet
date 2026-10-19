@@ -66,7 +66,10 @@ export default function ProviderTabLayout() {
       <Tabs.Screen name="packages" options={{ href: null }} />
       <Tabs.Screen name="package-form" options={{ href: null }} />
       <Tabs.Screen name="package-catalog" options={{ href: null }} />
-      <Tabs.Screen name="new-campaign" options={{ href: null }} />
+      <Tabs.Screen name="campaign-form" options={{ href: null }} />
+      <Tabs.Screen name="campaign-settings" options={{ href: null }} />
+      <Tabs.Screen name="customer-detail" options={{ href: null }} />
+      <Tabs.Screen name="import" options={{ href: null }} />
       <Tabs.Screen name="products" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />
       <Tabs.Screen name="campaigns" options={{ href: null }} />

@@ -350,6 +350,7 @@ export default function ServiceDetailScreen() {
               full
             />
             <Text style={s.payNote}>{t('serviceDetail.vivaNote')}</Text>
+            <Text style={s.payNote}>{t('bookingPolicy.note')}</Text>
           </>
         )}
       </ScrollView>

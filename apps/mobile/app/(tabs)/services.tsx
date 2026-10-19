@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Search, X, Star, MapPin } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import CampaignBanner from '@/components/CampaignBanner'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -120,6 +121,7 @@ export default function ServicesScreen() {
 
       <FlatList
         data={services}
+        ListHeaderComponent={<CampaignBanner page="services" slot="banner" />}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}

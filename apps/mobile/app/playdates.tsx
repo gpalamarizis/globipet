@@ -8,6 +8,7 @@ import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import CampaignBanner from '@/components/CampaignBanner'
 
 /**
  * Βόλτες και συναντήσεις.
@@ -155,6 +156,7 @@ export default function PlaydatesScreen() {
     <Screen title={t('community.walks_meetups')}
       subtitle={data?.userCity ? t('play.near_city', { city: data.userCity }) : undefined}
       onRefresh={onRefresh} refreshing={refreshing}>
+      <CampaignBanner page="playdates" slot="banner" />
       {invitations.length > 0 && (
         <Card style={{ marginBottom: space.md }}>
           <Text style={s.sectionTitle}>{t('play.invitations')}</Text>

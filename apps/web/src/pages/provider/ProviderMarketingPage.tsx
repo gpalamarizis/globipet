@@ -471,7 +471,9 @@ function CampaignSettings({
   const [audience, setAudience] = useState<string[] | null>(null)
 
   const T = targets ?? detail?.targets ?? []
-  const P = placements ?? detail?.placements ?? []
+  // Παλιές προβολές με /products/:id εμφανίζονται με τη σωστή διαδρομή.
+  const P = placements ?? (detail?.placements ?? []).map((p: any) =>
+    p.link_url ? { ...p, link_url: String(p.link_url).replace(/^\/products\//, '/marketplace/') } : p)
   const A = audience ?? detail?.audience ?? []
 
   const hasTarget = (type: string, id?: string) =>
@@ -680,7 +682,7 @@ function CampaignSettings({
                     {products.length > 0 && (
                       <optgroup label={t('providerMkt.myProducts')}>
                         {products.map((pr: any) => (
-                          <option key={pr.id} value={`/products/${pr.id}`}>{pr.name}</option>
+                          <option key={pr.id} value={`/marketplace/${pr.id}`}>{pr.name}</option>
                         ))}
                       </optgroup>
                     )}

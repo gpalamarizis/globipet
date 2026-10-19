@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -18,6 +19,10 @@ import { cn } from '@/lib/utils'
  *   Η προβολή μετριέται μία φορά ανά συνεδρία, όχι σε κάθε render. Χωρίς
  *   αυτό, ένα scroll θα φούσκωνε τους αριθμούς και ο πάροχος δεν θα
  *   μπορούσε να κρίνει αν η καμπάνια αποδίδει.
+ *
+ * ΣΥΝΔΕΣΜΟΙ
+ *   Παλιές προβολές αποθήκευαν /products/:id, ενώ η σελίδα προϊόντος του
+ *   site είναι /marketplace/:id — μεταφράζονται εδώ, αλλιώς οδηγούσαν σε 404.
  *
  * ΤΙ ΔΕΝ ΕΜΦΑΝΙΖΕΤΑΙ
  *   Οι στοχευμένες καμπάνιες. Το backend τις αποκλείει από το δημόσιο
@@ -48,6 +53,9 @@ type Props = {
   slot?: string
   className?: string
 }
+
+/** /products/:id (παλιές προβολές) → /marketplace/:id (η πραγματική διαδρομή). */
+const siteLink = (link: string) => link.replace(/^\/products\//, '/marketplace/')
 
 /** Ποιες προβολές έχουν ήδη μετρηθεί σε αυτή τη συνεδρία. */
 const counted = new Set<string>()
@@ -106,6 +114,7 @@ export default function CampaignBanner({ page, slot = 'banner', className }: Pro
 // ═══════════════════════════════════════════════════════════════════════
 
 function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: any) {
+  const { t } = useTranslation()
   const it: Placement = item
 
   const inner = (
@@ -153,7 +162,7 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
             {daysLeft > 0 && daysLeft <= 7 && (
               <p className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 mt-2">
                 <Clock size={11} />
-                {daysLeft === 1 ? 'Τελευταία μέρα' : `${daysLeft} μέρες ακόμα`}
+                {daysLeft === 1 ? t('campaignUi.lastDay') : t('campaignUi.daysLeft', { count: daysLeft })}
               </p>
             )}
 
@@ -184,7 +193,7 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
 
       <div className="relative">
         {it.link_url ? (
-          <Link to={it.link_url} onClick={onClick} className={shell}>{inner}</Link>
+          <Link to={siteLink(it.link_url)} onClick={onClick} className={shell}>{inner}</Link>
         ) : (
           <div className={shell}>{inner}</div>
         )}
@@ -192,7 +201,7 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
         {/* Κλείσιμο — μόνο στα ενοχλητικά. Το hero και το banner μένουν. */}
         {(slot === 'popup' || slot === 'sidebar') && (
           <button onClick={(e) => { e.preventDefault(); onDismiss() }}
-            aria-label="Κλείσιμο"
+            aria-label={t('campaignUi.close')}
             className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors">
             <X size={14} />
           </button>

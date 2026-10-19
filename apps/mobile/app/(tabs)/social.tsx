@@ -8,6 +8,7 @@ import { Heart, MessageCircle, Users, PenLine, X, Trash2, Send } from 'lucide-re
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
+import CampaignBanner from '@/components/CampaignBanner'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -121,6 +122,7 @@ export default function SocialScreen() {
 
       <FlatList
         data={posts}
+        ListHeaderComponent={<CampaignBanner page="social" slot="sidebar" />}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}

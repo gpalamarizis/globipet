@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight } from 'lucide-react-native'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight, Video } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, EmptyState } from '@/components/ui'
@@ -29,8 +29,26 @@ export default function ProviderOverview() {
     queryFn: () => api.get('/provider/bookings').then(r => r.data?.data ?? []),
   })
 
+  // Τηλεϊατρική — ίδιο κουμπί με το web, μόνο για κτηνιάτρους.
+  const { data: myServices = [] } = useQuery({
+    queryKey: ['my-services-all'],
+    queryFn: () => api.get('/services/my').then(r => r.data?.data ?? []),
+  })
+  const vetServices = myServices.filter((sv: any) => sv.service_type === 'veterinary')
+  const isVet = vetServices.length > 0
+  const isAvailableNow = vetServices.some((sv: any) => sv.is_available_now)
+  const toggleAvailability = useMutation({
+    mutationFn: (is_available: boolean) => api.patch('/telehealth/availability', { is_available }),
+    onSuccess: (_r, is_available) => {
+      qc.invalidateQueries({ queryKey: ['my-services-all'] })
+      Alert.alert(is_available ? t('providerDash.teleOn') : t('providerDash.teleOffMsg'))
+    },
+    onError: () => Alert.alert(t('common.error'), t('providerDash.errAvailability')),
+  })
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
+    await qc.invalidateQueries({ queryKey: ['my-services-all'] })
     await qc.invalidateQueries({ queryKey: ['provider-stats'] })
     await qc.invalidateQueries({ queryKey: ['provider-bookings'] })
     setRefreshing(false)
@@ -52,6 +70,19 @@ export default function ProviderOverview() {
       title={t('providerDash.title')}
       subtitle={user?.full_name || user?.email}
       onRefresh={onRefresh} refreshing={refreshing}>
+
+      {isVet && (
+        <TouchableOpacity activeOpacity={0.8} disabled={toggleAvailability.isPending}
+          onPress={() => toggleAvailability.mutate(!isAvailableNow)}
+          style={[s.tele, isAvailableNow && s.teleOn]}
+          accessibilityRole="switch" accessibilityState={{ checked: isAvailableNow }}>
+          <Video size={icon.md} color={isAvailableNow ? colors.textOnDark : colors.textMuted} />
+          <View style={[s.dot, isAvailableNow && s.dotOn]} />
+          <Text style={[s.teleTxt, isAvailableNow && s.teleTxtOn]}>
+            {isAvailableNow ? t('providerDash.teleAvailable') : t('providerDash.teleOff')}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <View style={s.grid}>
         {STATS.map(({ Icon, value, labelKey, tint }) => (
@@ -98,6 +129,16 @@ export default function ProviderOverview() {
 }
 
 const s = StyleSheet.create({
+  tele: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
+    minHeight: 48, paddingHorizontal: space.lg, marginBottom: space.md, borderRadius: radius.lg,
+    borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  teleOn: { backgroundColor: colors.success, borderColor: colors.success },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textLight },
+  dotOn: { backgroundColor: colors.textOnDark },
+  teleTxt: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  teleTxtOn: { color: colors.textOnDark },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.lg },
   stat: { width: '48%', alignItems: 'flex-start' },
   statIcon: { width: 40, height: 40, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
