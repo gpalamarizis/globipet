@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal,
@@ -30,6 +31,7 @@ const TIERS: Record<string, { labelKey: string; bg: string; fg: string }> = {
 }
 
 export default function InsuranceScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [petType, setPetType] = useState('')
@@ -51,7 +53,7 @@ export default function InsuranceScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <Text style={s.title}>{t('cat.insurance')}</Text>
         <Text style={s.subtitle}>{t('insurance.subtitle')}</Text>
       </View>
@@ -73,7 +75,7 @@ export default function InsuranceScreen() {
       </ScrollView>
 
       <ScrollView showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }>
@@ -230,7 +232,6 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

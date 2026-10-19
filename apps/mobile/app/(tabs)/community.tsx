@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -15,6 +16,7 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  * δείχνει τα πάντα δεν είναι επισκόπηση.
  */
 export default function CommunityScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
@@ -61,12 +63,12 @@ export default function CommunityScreen() {
 
   return (
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: tabSpace.paddingBottom }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <Text style={s.title}>{t('tabs.community')}</Text>
         <Text style={s.subtitle}>{t('community.subtitle')}</Text>
       </View>
@@ -138,7 +140,6 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
     borderBottomLeftRadius: radius.xxl,

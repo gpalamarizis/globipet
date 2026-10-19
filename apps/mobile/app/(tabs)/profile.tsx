@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart } from 'lucide-react-native'
@@ -30,6 +31,7 @@ const MENU = [
 ]
 
 export default function ProfileScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
@@ -43,7 +45,7 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={s.header}><Text style={s.title}>{t('tabs.profile')}</Text></View>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}><Text style={s.title}>{t('tabs.profile')}</Text></View>
       <View style={s.empty}>
         <UserIcon size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('profile.not_logged_in')}</Text>
@@ -63,7 +65,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}>
+      contentContainerStyle={{ paddingBottom: tabSpace.paddingBottom }}>
 
       <View style={s.header}>
         <View style={s.headerRow}>
@@ -119,7 +121,6 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
     borderBottomLeftRadius: radius.xxl,

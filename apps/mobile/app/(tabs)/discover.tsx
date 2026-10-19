@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
@@ -39,6 +40,7 @@ const SECTIONS = [
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function DiscoverScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
@@ -58,12 +60,12 @@ export default function DiscoverScreen() {
 
   return (
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: tabSpace.paddingBottom }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <Text style={s.title}>{t('discover.title')}</Text>
         <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
       </View>
@@ -117,7 +119,6 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
     borderBottomLeftRadius: radius.xxl,

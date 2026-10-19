@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl,
@@ -22,6 +23,7 @@ import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
  *   όταν η δημοσίευση είναι ήδη αγαπημένη.
  */
 export default function SocialScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
@@ -57,7 +59,7 @@ export default function SocialScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <Text style={s.title}>{t('tabs.community')}</Text>
         <Text style={s.subtitle}>{t('social.what_others_share')}</Text>
       </View>
@@ -65,7 +67,7 @@ export default function SocialScreen() {
       <FlatList
         data={posts}
         keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
@@ -141,7 +143,6 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

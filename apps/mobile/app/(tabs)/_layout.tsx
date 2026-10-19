@@ -48,7 +48,9 @@ const TABS = [
 const HIDDEN = ['social', 'services', 'insurance', 'cart', 'community']
 
 /** Το ύψος της ίδιας της μπάρας, χωρίς την περιοχή του συστήματος. */
-const BAR_CONTENT = 68
+// Εξάγεται ώστε οι οθόνες να υπολογίζουν σωστό περιθώριο και να μην
+// μαντεύουν με σταθερούς αριθμούς.
+export const TAB_BAR_CONTENT = 68
 
 /** Η γραμμή τριών κουμπιών του Android είναι 48dp κατά προδιαγραφή. */
 const ANDROID_NAV_BAR = 48
@@ -114,7 +116,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textLight,
         tabBarStyle: [s.bar, {
-          height: BAR_CONTENT + bottom,
+          height: TAB_BAR_CONTENT + bottom,
           paddingBottom: bottom,
         }],
         tabBarLabelStyle: s.label,

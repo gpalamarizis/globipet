@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
@@ -42,6 +43,7 @@ const EMPTY_FORM = {
 }
 
 export default function PetsScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
@@ -85,7 +87,7 @@ export default function PetsScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={s.header}><Text style={s.title}>{t('tabs.pets')}</Text></View>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}><Text style={s.title}>{t('tabs.pets')}</Text></View>
       <View style={s.empty}>
         <PawPrint size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('pets.login_required')}</Text>
@@ -112,7 +114,7 @@ export default function PetsScreen() {
       <FlatList
         data={pets}
         keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
@@ -265,7 +267,6 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

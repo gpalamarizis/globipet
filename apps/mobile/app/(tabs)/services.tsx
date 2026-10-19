@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image,
@@ -38,6 +39,7 @@ const SERVICE_TYPES = [
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function ServicesScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -67,7 +69,7 @@ export default function ServicesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <Text style={s.title}>{t('services.title')}</Text>
         <View style={s.searchRow}>
           <Search size={icon.md} color={colors.textLight} />
@@ -114,7 +116,7 @@ export default function ServicesScreen() {
       <FlatList
         data={services}
         keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
@@ -182,7 +184,6 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

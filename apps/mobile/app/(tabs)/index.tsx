@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, RefreshControl,
@@ -78,6 +79,7 @@ function tint(key: string) {
 }
 
 export default function HomeScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -127,7 +129,7 @@ export default function HomeScreen() {
     <ScrollView
       style={s.container}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 140 }}
+      contentContainerStyle={{ paddingBottom: tabSpace.paddingBottom }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
@@ -135,7 +137,7 @@ export default function HomeScreen() {
       {/* ── Κεφαλίδα ─────────────────────────────────────────────────
           Σκούρο μπλε: είναι δομή, όχι ενέργεια. Το πορτοκαλί μένει για
           τα πράγματα που πατιούνται. */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.greeting} numberOfLines={1}>
@@ -333,7 +335,6 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
     borderBottomLeftRadius: radius.xxl,

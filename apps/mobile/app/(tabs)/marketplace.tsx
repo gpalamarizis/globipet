@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
@@ -34,6 +35,7 @@ const CATEGORIES = [
 ]
 
 export default function MarketplaceScreen() {
+  const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
@@ -79,7 +81,7 @@ export default function MarketplaceScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: tabSpace.insetTop + space.lg }]}>
         <View style={s.headerRow}>
           <Text style={s.title}>{t('marketplace.title')}</Text>
           <TouchableOpacity
@@ -133,7 +135,7 @@ export default function MarketplaceScreen() {
         keyExtractor={i => i.id}
         numColumns={2}
         columnWrapperStyle={{ gap: space.md }}
-        contentContainerStyle={{ padding: space.lg, paddingBottom: 100, gap: space.md }}
+        contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom, gap: space.md }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
@@ -219,7 +221,6 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

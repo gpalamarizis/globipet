@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
-  StyleSheet, ViewStyle, RefreshControl, Animated, KeyboardTypeOptions,
-} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { bottomSystemSpace, TAB_BAR_CONTENT } from '../../app/(tabs)/_layout'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, ViewStyle, RefreshControl, Animated, KeyboardTypeOptions, Dimensions, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft } from 'lucide-react-native'
-import { router } from 'expo-router'
+import { router, useSegments } from 'expo-router'
 import theme, { colors, space, radius, font, weight, shadow, icon, touch } from '@/theme'
 
 const typo = theme.type
@@ -64,10 +63,27 @@ export function Screen({
     </View>
   ) : null
 
+  // Το κάτω περιθώριο πρέπει να καθαρίζει τη μπάρα καρτελών όπου υπάρχει.
+  //
+  // Ήταν space.xxxl (32) — λιγότερο από το ένα τρίτο της μπάρας, οπότε το
+  // τελευταίο στοιχείο κάθε λίστας κρυβόταν. Το ύψος της μπάρας έρχεται
+  // από το ίδιο σημείο που τη χτίζει, ώστε τα δύο να μη ξεχωρίσουν ποτέ.
+  const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
+  const systemBottom = bottomSystemSpace(insets.bottom, windowHeight, Dimensions.get('screen').height)
+
+  // Μπάρα υπάρχει ΜΟΝΟ μέσα στις ομάδες καρτελών. Οι οθόνες που ανοίγουν
+  // από πάνω τους (παραγγελίες, διαβατήριο, κρατήσεις) καταλαμβάνουν όλη
+  // την οθόνη — εκεί ο ίδιος χώρος θα ήταν 136 pixel κενό στο τίποτα.
+  const segments = useSegments() as string[]
+  const inTabs = segments[0] === '(tabs)' || segments[0] === '(provider)'
+
+  const bottomSpace = (inTabs ? TAB_BAR_CONTENT + systemBottom : systemBottom) + space.xl
+
   const body = scroll ? (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={[{ padding: space.lg, paddingBottom: space.xxxl }, style]}
+      contentContainerStyle={[{ padding: space.lg, paddingBottom: bottomSpace }, style]}
       showsVerticalScrollIndicator={false}
       refreshControl={onRefresh
         ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
