@@ -139,6 +139,7 @@ export default function ProviderMarketingPage() {
   const toggle = useMutation({
     mutationFn: (c: Campaign) => api.patch(`/campaigns/${c.id}`, { is_active: !c.is_active }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-campaigns'] }),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('providerMkt.errSave')),
   })
 
   const saveTargets = useMutation({
@@ -198,6 +199,10 @@ export default function ProviderMarketingPage() {
     const hasType = !!form.discount_type
     const hasValue = form.discount_value !== ''
     if (hasType !== hasValue) {
+      return toast.error(t('providerMkt.errDiscountPair'))
+    }
+    // Ίδιος κανόνας με το κινητό και τον server: η έκπτωση πρέπει να είναι > 0.
+    if (hasType && !(Number(form.discount_value) > 0)) {
       return toast.error(t('providerMkt.errDiscountPair'))
     }
     if (hasType && form.discount_type === 'percent' && Number(form.discount_value) > 100) {

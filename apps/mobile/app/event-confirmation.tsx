@@ -85,6 +85,15 @@ export default function EventConfirmationScreen() {
   const refundReason: string | undefined = reg?.refund_reason ?? reg?.registration?.refund_reason
   const fullRefund = refundReason === 'full'
   const cancelRefund = refundReason === 'cancelled'
+  // Ο διοργανωτής ακύρωσε την εκδήλωση (επιστροφή έγινε ή εκκρεμεί).
+  // Το `event_cancelled` του /registration καλύπτει και τις καταστάσεις που
+  // αφήνει η ακύρωση χωρίς refund_reason: `cancelled` (δωρεάν/εκκρεμής
+  // πληρωμή) και `refunding` (επιστροφή σε εξέλιξη). Χωρίς αυτό έπεφταν στο
+  // «Η πληρωμή απέτυχε».
+  const refunding = status === 'refunding'
+  const eventCancelled = (refundReason === 'event_cancelled' && (refunded || refundFailed))
+    || (!!reg?.event_cancelled && (status === 'cancelled' || refunding
+      || ((refunded || refundFailed) && refundReason !== 'cancelled' && refundReason !== 'full')))
   const neutralRefund = refunded && !fullRefund
   const bad = !confirmed && !waiting && !stillPending && !neutralRefund
   // Σύνολο μόνο για επιβεβαιωμένη πληρωμή — όχι για εκκρεμή/επιστραμμένη.
@@ -110,6 +119,7 @@ export default function EventConfirmationScreen() {
           <Text style={s.heroTitle}>
             {confirmed ? t('eventConfirm.confirmed')
               : waiting || stillPending ? t('teleConfirm.pending')
+              : eventCancelled ? (refunded ? t('events.cancelledByOrganizerRefunded') : t('events.cancelledByOrganizer'))
               : cancelRefund ? t('events.cancelled')
               : neutralRefund ? t('eventConfirm.refunded')
               : refunded || refundFailed ? t('eventConfirm.full')
@@ -119,6 +129,10 @@ export default function EventConfirmationScreen() {
             {confirmed ? t('eventConfirm.confirmedHint')
               : waiting ? t('eventConfirm.pendingHint')
               : stillPending ? t('eventConfirm.pendingLateHint')
+              : eventCancelled ? (refunded ? t('eventConfirm.refundedHint')
+                : refunding ? t('eventConfirm.refundInProgressHint')
+                : status === 'cancelled' ? t('eventConfirm.eventCancelledHint')
+                : t('events.cancelledByOrganizerRefundDelayed'))
               : neutralRefund ? t('eventConfirm.refundedHint')
               : refunded ? t('eventConfirm.fullRefundedHint')
               : refundFailed ? t('eventConfirm.fullRefundDelayedHint')

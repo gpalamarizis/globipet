@@ -76,8 +76,10 @@ export default function ProviderStaffPage() {
     onSuccess: () => {
       toast.success(t('common.deleted'))
       qc.invalidateQueries({ queryKey: ['staff-mine'] })
+      qc.invalidateQueries({ queryKey: ['provider-staff-all'] })
     },
-    onError: () => toast.error(t('common.error')),
+    // Μήνυμα του server, όπως στο κινητό.
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('common.error')),
   })
 
   const serviceName = (id: string) =>
@@ -204,6 +206,8 @@ export default function ProviderStaffPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ['staff-mine'] })
+            // Η λίστα αλλαγής γιατρού στις κρατήσεις του πίνακα.
+            qc.invalidateQueries({ queryKey: ['provider-staff-all'] })
             setEditing(null)
           }}
         />
@@ -258,7 +262,7 @@ function StaffEditor({
       toast.success(t('common.saved'))
       onSaved()
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('common.error')),
   })
 
   const setField = (k: keyof typeof form, v: any) => setForm(f => ({ ...f, [k]: v }))

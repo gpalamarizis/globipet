@@ -34,14 +34,19 @@ export default function ProviderCalendar() {
 
   const disconnect = useMutation({
     mutationFn: (provider: string) => api.delete(`/calendar/${provider}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar-connections'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['calendar-connections'] })
+      Alert.alert(t('providerDash.connectionRemoved'))
+    },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerDash.errConnect')),
   })
 
   const connect = async (provider: string) => {
     try {
       const { data } = await api.get(`/calendar/${provider}/connect`)
-      const url = data?.url ?? data?.authUrl
+      // Ο server απαντά { data: { url } } (όπως διαβάζει και το web). Με
+      // data?.url η σύνδεση έβγαζε πάντα «δεν δόθηκε σύνδεσμος».
+      const url = data?.data?.url ?? data?.url ?? data?.authUrl
       if (!url) return Alert.alert(t('common.error'), t('providerDash.errNoAuthUrl'))
       const ok = await Linking.canOpenURL(url)
       if (ok) Linking.openURL(url)

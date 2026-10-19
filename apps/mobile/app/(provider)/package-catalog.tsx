@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BookOpen } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { GROUP_KEYS } from '@/components/packageOptions'
 import { colors, space, radius, type, weight } from '@/theme'
 
@@ -21,6 +21,8 @@ export default function PackageCatalogScreen() {
   const qc = useQueryClient()
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>()
   const [prices, setPrices] = useState<Record<string, string>>({})
+  // Αναζήτηση στον κατάλογο — όπως στο web.
+  const [search, setSearch] = useState('')
 
   const { data: services = [] } = useQuery({
     queryKey: ['provider-packages'],
@@ -40,10 +42,11 @@ export default function PackageCatalogScreen() {
     const by: Record<string, any[]> = {}
     for (const tpl of templates) {
       if (have.has(String(tpl.name).toLowerCase())) continue
+      if (search.trim() && !String(tpl.name).toLowerCase().includes(search.trim().toLowerCase())) continue
       ;(by[tpl.group || 'other'] ??= []).push(tpl)
     }
     return Object.entries(by)
-  }, [templates, service])
+  }, [templates, service, search])
 
   const chosen = Object.entries(prices)
     .map(([template_id, v]) => ({ template_id, price: parseFloat(v.replace(',', '.')) }))
@@ -62,6 +65,7 @@ export default function PackageCatalogScreen() {
   return (
     <Screen title={t('providerPkg.loadFromCatalog')} subtitle={service?.title} back>
       <Text style={s.intro}>{t('providerPkg.selectServices')}</Text>
+      <Input value={search} onChangeText={setSearch} placeholder={t('providerPkg.search')} />
 
       {isLoading ? <SkeletonRows count={4} /> :
        groups.length === 0 ? <EmptyState icon={BookOpen} title={t('providerPkg.noServicesFound')} /> :
@@ -89,7 +93,7 @@ export default function PackageCatalogScreen() {
         </View>
       ))}
 
-      {groups.length > 0 && (
+      {(groups.length > 0 || chosen.length > 0) && (
         <Button full style={{ marginTop: space.md }}
           label={importMut.isPending ? t('providerPkg.importing') : t('providerPkg.importCount', { count: chosen.length })}
           loading={importMut.isPending} disabled={chosen.length === 0 || importMut.isPending}

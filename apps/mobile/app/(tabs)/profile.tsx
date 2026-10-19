@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, StatusBar, Modal, TextInput } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, StatusBar, Modal, TextInput, Linking, ActivityIndicator } from 'react-native'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
+import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
 /**
@@ -28,7 +29,22 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   χρήστης πατούσε και δεν γινόταν τίποτα — ούτε σφάλμα, ούτε πλοήγηση.
  *
  *   Η γλώσσα (language.tsx) υπήρχε ως οθόνη χωρίς κανένα σημείο εισόδου.
+ *
+ * ΙΣΟΤΙΜΙΑ ΜΕ ΤΟ WEB (19/10)
+ *   - Επεξεργασία: και βιογραφικό και ιστοσελίδα (όπως το web)· τα κενά
+ *     στέλνονται ως '' ώστε να μπορεί κανείς να σβήσει ένα πεδίο.
+ *   - Αλλαγή φωτογραφίας προφίλ (πάτημα στο avatar).
+ *   - Τα στοιχεία (ρόλος, βιογραφικό, πόλη, τηλέφωνο, ιστοσελίδα) φαίνονται
+ *     στο προφίλ. Διαβάζονται από το /users/me, όχι μόνο από το αποθηκευμένο
+ *     user της σύνδεσης, που μπορεί να είναι παλιό.
+ *   - Πόντοι: ο server επιστρέφει `total_points` — το `points`/`balance`
+ *     που διαβαζόταν δεν υπάρχει, οπότε έδειχνε πάντα 0. Προστέθηκαν
+ *     επίπεδο, πρόοδος και επιτεύγματα, όπως στο web.
  */
+
+// Ίδια όρια επιπέδων με το web (Profile.tsx).
+const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
+const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
 
 const MENU = [
   { key: 'pets',       Icon: PawPrint,    labelKey: 'home.my_pets', route: '/(tabs)/pets' },
@@ -40,6 +56,7 @@ const MENU = [
   { key: 'telehealth', Icon: Stethoscope, labelKey: 'profile.menu.telehealth',       route: '/telehealth' },
   { key: 'wishlist',   Icon: Heart,       labelKey: 'wishlist.title',            route: '/wishlist' },
   { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
+  { key: 'notifCenter', Icon: Bell,       labelKey: 'notifCenter.title',         route: '/notifications' },
   { key: 'notifications', Icon: Bell,     labelKey: 'account.notifications',     route: '/notification-settings' },
   { key: 'password',   Icon: KeyRound,    labelKey: 'account.changePassword',    route: '/change-password' },
   { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
@@ -55,7 +72,7 @@ export default function ProfileScreen() {
   const tabSpace = useTabSpace()
   const { t } = useTranslation()
   const router = useRouter()
-  const { user, isAuthenticated, logout } = useAuthStore()
+  const { user, isAuthenticated, logout, updateUser } = useAuthStore()
 
   const qc = useQueryClient()
 
@@ -91,18 +108,33 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   })
 
+  // Τρέχοντα στοιχεία από τον server — το αποθηκευμένο user της σύνδεσης
+  // μπορεί να είναι παλιό (π.χ. αλλαγή από το web).
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get('/users/me').then(r => r.data),
+    enabled: isAuthenticated,
+  })
+  const profile: any = { ...(user ?? {}), ...(me ?? {}) }
+
   // Επεξεργασία προφίλ
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({})
 
   const saveProfile = useMutation({
+    // Όπως το web: όλα τα πεδία ως κείμενο· το '' σβήνει την τιμή.
     mutationFn: () => api.patch('/users/me', {
       full_name: form.full_name?.trim(),
-      phone: form.phone?.trim() || undefined,
-      city: form.city?.trim() || undefined,
+      bio: form.bio?.trim() ?? '',
+      phone: form.phone?.trim() ?? '',
+      city: form.city?.trim() ?? '',
+      website: form.website?.trim() ?? '',
     }),
-    onSuccess: (r: any) => {
-      useAuthStore.setState(st => ({ user: { ...(st.user as any), ...(r?.data?.data ?? r?.data ?? {}) } } as any))
+    onSuccess: async (r: any) => {
+      const u = r?.data?.data ?? r?.data ?? {}
+      await updateUser({
+        full_name: u.full_name, phone: u.phone, city: u.city, bio: u.bio, website: u.website,
+      })
       qc.invalidateQueries({ queryKey: ['me'] })
       setEditing(false)
     },
@@ -111,18 +143,53 @@ export default function ProfileScreen() {
 
   const openEdit = () => {
     setForm({
-      full_name: (user as any)?.full_name ?? '',
-      phone: (user as any)?.phone ?? '',
-      city: (user as any)?.city ?? '',
+      full_name: profile.full_name ?? '',
+      bio: profile.bio ?? '',
+      phone: profile.phone ?? '',
+      city: profile.city ?? '',
+      website: profile.website ?? '',
     })
     setEditing(true)
   }
+
+  // Φωτογραφία προφίλ — όπως το web: ανέβασμα στο «profiles» και PATCH.
+  const [uploading, setUploading] = useState(false)
+  const changePhoto = async () => {
+    setUploading(true)
+    try {
+      const url = await pickAndUploadImage('profiles')
+      if (!url) return
+      await api.patch('/users/me', { profile_photo: url })
+      await updateUser({ profile_photo: url })
+      qc.invalidateQueries({ queryKey: ['me'] })
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message === 'permission'
+        ? t('providerEdit.photoPermission')
+        : e?.response?.data?.message || t('providerEdit.errUpload'))
+    } finally { setUploading(false) }
+  }
+
+  // Επίπεδο και πρόοδος — ίδιος υπολογισμός με το web.
+  const tier: string = loyalty?.tier || 'bronze'
+  const totalPoints: number = loyalty?.total_points ?? 0
+  const nextTier = TIER_ORDER[TIER_ORDER.indexOf(tier) + 1]
+  const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
+  const tierLabel = (k: string) => t(`profile.${k}`, { defaultValue: k })
+
+  const ACHIEVEMENTS = [
+    { icon: '🐾', key: 'firstPet',   unlocked: pets.length >= 1 },
+    { icon: '🛒', key: 'firstOrder', unlocked: myOrders.length >= 1 },
+    { icon: '⭐', key: 'reviewer',   unlocked: myReviews.length >= 5 },
+    { icon: '📅', key: 'regular',    unlocked: myBookings.length >= 10 },
+    { icon: '🏆', key: 'gold',       unlocked: tier === 'gold' || tier === 'platinum' },
+    { icon: '❤️', key: 'petLover',   unlocked: pets.length >= 3 },
+  ]
 
   const STATS = [
     { key: 'pets', value: pets.length, labelKey: 'home.my_pets' },
     { key: 'bookings', value: myBookings.length, labelKey: 'profile.menu.bookings' },
     { key: 'orders', value: myOrders.length, labelKey: 'profile.menu.orders' },
-    { key: 'points', value: loyalty?.points ?? loyalty?.balance ?? 0, labelKey: 'profile.points' },
+    { key: 'points', value: totalPoints, labelKey: 'profile.points' },
     { key: 'reviews', value: myReviews.length, labelKey: 'productDetail.reviews' },
   ]
 
@@ -151,7 +218,7 @@ export default function ProfileScreen() {
     </View>
   )
 
-  const initials = user?.full_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const initials = profile.full_name?.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}
@@ -159,15 +226,74 @@ export default function ProfileScreen() {
 
       <View style={s.header}>
         <View style={s.headerRow}>
-          <View style={s.avatar}>
-            {user?.profile_photo
-              ? <Image source={{ uri: user.profile_photo }} style={s.avatarImg} />
-              : <Text style={s.initials}>{initials || '🐾'}</Text>}
-          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={changePhoto} disabled={uploading}>
+            <View style={s.avatar}>
+              {profile.profile_photo
+                ? <Image source={{ uri: profile.profile_photo }} style={s.avatarImg} />
+                : <Text style={s.initials}>{initials || '🐾'}</Text>}
+            </View>
+            <View style={s.avatarBadge}>
+              {uploading
+                ? <ActivityIndicator size="small" color={colors.textOnDark} />
+                : <Camera size={icon.xs} color={colors.textOnDark} />}
+            </View>
+          </TouchableOpacity>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.name} numberOfLines={1}>{user?.full_name}</Text>
-            <Text style={s.email} numberOfLines={1}>{user?.email}</Text>
+            <Text style={s.name} numberOfLines={1}>{profile.full_name}</Text>
+            <Text style={s.email} numberOfLines={1}>{profile.email}</Text>
+            <Text style={s.role} numberOfLines={1}>
+              {profile.role === 'admin' ? t('profile.admin')
+                : profile.role === 'service_provider' ? t('profile.provider') : t('profile.owner')}
+            </Text>
           </View>
+        </View>
+      </View>
+
+      {/* Στοιχεία προφίλ — όπως στο web. */}
+      {(profile.bio || profile.city || profile.phone || profile.website) ? (
+        <View style={s.info}>
+          {profile.bio ? <Text style={s.bio}>{profile.bio}</Text> : null}
+          <View style={s.infoRow}>
+            {profile.city ? (
+              <View style={s.infoItem}><MapPin size={icon.xs} color={colors.textMuted} /><Text style={s.infoTxt}>{profile.city}</Text></View>
+            ) : null}
+            {profile.phone ? (
+              <View style={s.infoItem}><Phone size={icon.xs} color={colors.textMuted} /><Text style={s.infoTxt}>{profile.phone}</Text></View>
+            ) : null}
+            {profile.website ? (
+              <TouchableOpacity style={s.infoItem} onPress={() => Linking.openURL(profile.website).catch(() => {})}>
+                <Globe size={icon.xs} color={colors.brand} /><Text style={[s.infoTxt, { color: colors.brand }]} numberOfLines={1}>{profile.website}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      <View style={s.loyaltyWrap}>
+        {/* Επίπεδο επιβράβευσης και πρόοδος — όπως στο web. */}
+        <View style={s.tierCard}>
+          <Text style={s.tierTitle}>{t('profile.tier')} — {tierLabel(tier)}</Text>
+          <View style={s.track}>
+            <View style={[s.fill, { width: `${nextThreshold ? Math.min(100, (totalPoints / nextThreshold) * 100) : 100}%` }]} />
+          </View>
+          <View style={s.tierMeta}>
+            <Text style={s.statLabel}>{totalPoints} {t('profile.points')}</Text>
+            <Text style={s.statLabel}>
+              {nextThreshold ? t('profile.pointsForTier', { points: nextThreshold, tier: tierLabel(nextTier) }) : t('profile.maxTier')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Επιτεύγματα — ίδιοι κανόνες με το web. */}
+        <Text style={s.achTitle}>{t('profile.achievements')}</Text>
+        <View style={s.statsGrid}>
+          {ACHIEVEMENTS.map(a => (
+            <View key={a.key} style={[s.ach, !a.unlocked && { opacity: 0.4 }]}>
+              <Text style={s.achIcon}>{a.icon}</Text>
+              <Text style={s.achName} numberOfLines={1}>{t(`profile.ach_${a.key}Title`)}</Text>
+              <Text style={[s.statLabel, { textAlign: 'center' }]} numberOfLines={2}>{t(`profile.ach_${a.key}Desc`)}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
@@ -223,19 +349,27 @@ export default function ProfileScreen() {
         <View style={s.backdrop}>
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>{t('profile.editProfile')}</Text>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.md }}>
             {([
               ['full_name', 'auth.full_name'],
+              ['bio', 'profile.bio'],
               ['phone', 'common.phone'],
               ['city', 'common.city'],
+              ['website', 'profile.website'],
             ] as const).map(([key, labelKey]) => (
               <View key={key}>
                 <Text style={s.inputLabel}>{t(labelKey)}</Text>
-                <TextInput style={s.input} value={form[key] ?? ''}
+                <TextInput style={[s.input, key === 'bio' && { minHeight: 72, textAlignVertical: 'top' }]}
+                  value={form[key] ?? ''}
                   onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
+                  multiline={key === 'bio'}
+                  placeholder={key === 'bio' ? t('profile.bioPlaceholder') : key === 'website' ? 'https://...' : undefined}
                   placeholderTextColor={colors.textLight}
-                  keyboardType={key === 'phone' ? 'phone-pad' : 'default'} />
+                  autoCapitalize={key === 'website' ? 'none' : 'sentences'}
+                  keyboardType={key === 'phone' ? 'phone-pad' : key === 'website' ? 'url' : 'default'} />
               </View>
             ))}
+            </ScrollView>
             <View style={s.sheetActions}>
               <TouchableOpacity style={s.cancelBtn} onPress={() => setEditing(false)}>
                 <Text style={s.cancelTxt}>{t('common.cancel')}</Text>
@@ -266,8 +400,41 @@ const s = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface, padding: space.lg, gap: space.md,
-    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '88%',
   },
+  avatarBadge: {
+    position: 'absolute', right: -2, bottom: -2,
+    width: 26, height: 26, borderRadius: radius.full,
+    backgroundColor: colors.brand, borderWidth: 2, borderColor: colors.navy,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  role: { ...type.caption, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  info: {
+    marginTop: space.lg, marginHorizontal: space.lg, padding: space.lg, gap: space.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, ...shadow.sm,
+  },
+  bio: { ...type.body, color: colors.text },
+  infoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  infoItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs, maxWidth: '100%' },
+  infoTxt: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  loyaltyWrap: { marginTop: space.xl, marginHorizontal: space.lg },
+  tierCard: {
+    padding: space.md, marginBottom: space.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderLight,
+  },
+  tierTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold, marginBottom: space.sm },
+  track: { height: 10, borderRadius: radius.full, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
+  fill: { height: 10, borderRadius: radius.full, backgroundColor: colors.brand },
+  tierMeta: { flexDirection: 'row', justifyContent: 'space-between', gap: space.sm, marginTop: space.xs },
+  achTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold, marginBottom: space.sm },
+  ach: {
+    width: '48%', alignItems: 'center', padding: space.md, gap: 2,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderLight,
+  },
+  achIcon: { fontSize: 28 },
+  achName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, textAlign: 'center' },
   sheetTitle: { ...type.section, color: colors.text },
   inputLabel: { ...type.caption, color: colors.textMuted, marginBottom: 4 },
   input: {

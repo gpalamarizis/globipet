@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Package, Truck, CreditCard, Check, Tag } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
+import { FREE_SHIPPING_OVER as FREE_OVER } from '../src/lib/shipping'
 import { Screen, Card, Button, EmptyState, Loading, Input, SectionHeader } from '@/components/ui'
 import { colors, space, radius, type, weight, icon, touch } from '@/theme'
 
@@ -31,7 +32,6 @@ const SHIPPING = [
   { id: 'acs',    label: 'ACS',     subKey: 'checkout.home_1_3', price: 3.99 },
   { id: 'elta',   labelKey: 'checkout.elta',    subKey: 'checkout.home_3_5', price: 4.50 },
 ]
-const FREE_OVER = 50
 
 export default function CheckoutScreen() {
   const { t } = useTranslation()
@@ -121,7 +121,9 @@ export default function CheckoutScreen() {
         Alert.alert(t('common.error'), t('checkout.err_open_page'))
       }
     },
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('checkout.err_order')),
+    // Μήνυμα του server πρώτα (π.χ. «Κάποια προϊόντα δεν είναι πλέον
+    // διαθέσιμα»), όπως στο web· το e.message του axios είναι τεχνικό.
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('checkout.err_order')),
   })
 
   const ready = addr.full_name.trim() && addr.phone.trim()
@@ -190,6 +192,21 @@ export default function CheckoutScreen() {
 
       <SectionHeader title={t('checkout.summary')} />
       <Card>
+        {/* Τα είδη της παραγγελίας, όπως στη σύνοψη του web. Το ποσό κάθε
+            γραμμής από το quote (ίδια σειρά με τα items που στείλαμε, τιμές
+            της βάσης), ώστε οι γραμμές να αθροίζουν στο «Προϊόντα» από πάνω·
+            αν δεν έχει έρθει ακόμη, η τιμή του καλαθιού. */}
+        {items.map((i: any, idx: number) => {
+          const q = quote?.items?.[idx]
+          const line = q && q.id === i.product_id ? Number(q.line) : Number(i.product_price ?? 0) * i.quantity
+          return (
+            <View key={i.id} style={[s.line, s.itemLine]}>
+              <Text style={s.itemName} numberOfLines={1}>{i.product_name}</Text>
+              <Text style={s.itemQty}>×{i.quantity}</Text>
+              <Text style={s.lineValue}>€{line.toFixed(2)}</Text>
+            </View>
+          )
+        })}
         <View style={s.line}>
           <Text style={s.lineLabel}>{t('checkout.products')}</Text>
           <Text style={s.lineValue}>€{subtotal.toFixed(2)}</Text>
@@ -257,6 +274,9 @@ const s = StyleSheet.create({
   lineLabel: { ...type.body, color: colors.textMuted },
   lineValue: { ...type.body, color: colors.text, fontWeight: weight.semibold },
   lineTop: { alignItems: 'flex-start' },
+  itemLine: { gap: space.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  itemName: { ...type.body, color: colors.text, flex: 1, minWidth: 0 },
+  itemQty: { ...type.caption, color: colors.textMuted },
   discLabel: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs, flex: 1, minWidth: 0, marginRight: space.md },
   discIcon: { marginTop: 4 },
   discText: { ...type.body, color: '#047857', flexShrink: 1 },

@@ -39,6 +39,8 @@ export default function TelehealthScreen() {
   const [date, setDate] = useState('')
   const [time, setTime] = useState('10:00')
   const [refreshing, setRefreshing] = useState(false)
+  // Αναζήτηση γιατρού/ειδικότητας — όπως στο web.
+  const [search, setSearch] = useState('')
 
   // Το κατοικίδιο που αφορά η συνεδρία: ο γιατρός πρέπει να ξέρει ποιο
   // ζώο θα δει πριν τη βιντεοκλήση, όχι την ώρα της.
@@ -95,9 +97,16 @@ export default function TelehealthScreen() {
     }
   }
 
+  // Ίδιος κανόνας με το web: έγκυρη ημερομηνία (όχι παρελθοντική) και ώρα.
+  const scheduleOk = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= localYmd()
+    && /^([01]\d|2[0-3]):[0-5]\d$/.test(time)
+
   const book = useMutation({
     mutationFn: () => api.post('/telehealth', {
       pet_id: petId || undefined,
+      // Το όνομα του κατοικιδίου, όπως στέλνει το web — αλλιώς ο γιατρός
+      // έβλεπε τη συνεδρία χωρίς όνομα ζώου.
+      pet_name: pets.find((p: any) => p.id === petId)?.name,
       provider_email: selected.provider_email,
       service_id: selected.id,
       scheduled_date: tab === 'now' ? localYmd() : date,
@@ -135,13 +144,20 @@ export default function TelehealthScreen() {
     setRefreshing(false)
   }, [qc])
 
-  const vets = tab === 'now' ? availableVets : allVets
+  const q = search.trim().toLowerCase()
+  const vets = (tab === 'now' ? availableVets : allVets).filter((v: any) => !q
+    || v.provider_name?.toLowerCase().includes(q)
+    || v.specializations?.some((sp: string) => sp.toLowerCase().includes(q)))
   const loading = tab === 'now' ? loadingNow : loadingAll
 
   const openBooking = (vet: any) => {
     if (!isAuthenticated) { router.push('/auth/login' as any); return }
     setSelected(vet)
-    if (!date) setDate(localYmd())
+    // Όπως το web: προγραμματισμένη → προεπιλογή αύριο 10:00.
+    if (tab === 'scheduled') {
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+      setDate(localYmd(tomorrow)); setTime('10:00')
+    }
   }
 
   return (
@@ -191,6 +207,8 @@ export default function TelehealthScreen() {
         ))}
       </View>
 
+      <Input value={search} onChangeText={setSearch} placeholder={t('parity.vetSearch')} />
+
       {loading ? (
         <SkeletonRows count={4} height={100} />
       ) : vets.length === 0 ? (
@@ -232,7 +250,7 @@ export default function TelehealthScreen() {
                   )}
                 </View>
 
-                <Text style={s.price}>€{vet.price}</Text>
+                <Text style={s.price}>€{Number(vet.price ?? 0).toFixed(2)}</Text>
               </View>
             </Card>
           ))}
@@ -262,7 +280,8 @@ export default function TelehealthScreen() {
                   <Input label={t('tele.date')} value={date} onChangeText={setDate}
                     placeholder="2026-09-15" />
                   <Input label={t('tele.time')} value={time} onChangeText={setTime}
-                    placeholder="10:00" keyboardType="numbers-and-punctuation" />
+                    placeholder="10:00" keyboardType="numbers-and-punctuation"
+                    error={date && !scheduleOk ? t('parity.invalidSchedule') : undefined} />
                 </>
               )}
 
@@ -287,7 +306,7 @@ export default function TelehealthScreen() {
             )}
 
                 <Text style={s.totalLabel}>{t('tele.session_cost')}</Text>
-                <Text style={s.total}>€{selected?.price}</Text>
+                <Text style={s.total}>€{Number(selected?.price ?? 0).toFixed(2)}</Text>
               </View>
 
               {/* Ο χρήστης πρέπει να ξέρει ότι φεύγει από την εφαρμογή. */}
@@ -299,7 +318,7 @@ export default function TelehealthScreen() {
                 label={book.isPending ? t('tele.creating') : t('tele.book_pay')}
                 full
                 loading={book.isPending}
-                disabled={tab === 'scheduled' && (!date || !time)}
+                disabled={(tab === 'scheduled' && !scheduleOk) || book.isPending}
                 icon={<Video size={icon.sm} color={colors.textOnDark} />}
                 onPress={() => book.mutate()}
                 style={{ marginTop: space.lg }}

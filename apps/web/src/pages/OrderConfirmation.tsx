@@ -81,6 +81,22 @@ export default function OrderConfirmation() {
   // webhook has not reported yet.
   const waiting = verifying || (cameFromViva && !isPaid)
 
+  // Αριθμός, σύνολο και κατάσταση — και στις δύο εκβάσεις, όπως στο κινητό
+  // (πριν, σε εκκρεμή πληρωμή δεν φαινόταν ούτε το σύνολο ούτε η κατάσταση).
+  const details = order && (
+    <div className="card p-4 mb-6 text-left">
+      <p className="text-sm text-gray-500">{t('orderConfirm.orderNumber')}</p>
+      <p className="font-mono font-bold text-gray-900 dark:text-white">#{id?.slice(0, 8)}</p>
+      <p className="text-sm text-gray-500 mt-2">{t('orderConfirm.total')}</p>
+      <p className="font-bold text-gray-900 dark:text-white">€{Number(order.total_amount ?? 0).toFixed(2)}</p>
+      <p className="text-sm text-gray-500 mt-2">{t('orderConfirm.status')}</p>
+      <p className="font-medium text-gray-900 dark:text-white">{String(t(`orders.status.${order.status}`, order.status))}</p>
+    </div>
+  )
+  const shopButton = (
+    <button onClick={() => navigate('/marketplace')} className="btn-ghost w-full mt-2">{t('orderConfirm.continueShopping')}</button>
+  )
+
   return (
     <div className="page-container py-16 max-w-lg mx-auto text-center">
       {waiting ? (
@@ -94,15 +110,11 @@ export default function OrderConfirmation() {
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.paidTitle')}</h1>
           <p className="text-gray-500 mb-6">{t('pgOrderConfirm.paidDesc')}</p>
-          <div className="card p-4 mb-6 text-left">
-            <p className="text-sm text-gray-500">{t('orderConfirm.orderNumber')}</p>
-            <p className="font-mono font-bold text-gray-900 dark:text-white">#{id?.slice(0, 8)}</p>
-            <p className="text-sm text-gray-500 mt-2">{t('orderConfirm.total')}</p>
-            <p className="font-bold text-gray-900 dark:text-white">€{order?.total_amount?.toFixed(2)}</p>
-          </div>
+          {details}
           <button onClick={() => navigate('/orders')} className="btn-primary w-full">
             <Package size={16} className="inline mr-2"/>{t('orderConfirm.myOrders')}
           </button>
+          {shopButton}
         </>
       ) : (
         <>
@@ -111,7 +123,9 @@ export default function OrderConfirmation() {
           <p className="text-gray-500 mb-6">
             {t('pgOrderConfirm.pendingDesc', { id: id?.slice(0, 8) })}
           </p>
+          {details}
           <button onClick={() => navigate('/orders')} className="btn-secondary w-full">{t('orderConfirm.myOrders')}</button>
+          {shopButton}
         </>
       )}
     </div>

@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router'
 import { Minus, Plus, Trash2, ShoppingCart, Package } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
+import { FREE_SHIPPING_OVER } from '../../src/lib/shipping'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
 /**
@@ -45,19 +46,34 @@ export default function CartScreen() {
 
   const items = data?.data ?? []
   const subtotal = data?.total ?? 0
-  const FREE_SHIPPING_OVER = 50
+
+  // Δωρεάν μεταφορικά: με το ποσό ΜΕΤΑ την έκπτωση καμπάνιας, όπως το ταμείο
+  // (checkout.tsx — ίδιο quote, ίδιο queryKey, κοινή μνήμη). Μέχρι να έρθει
+  // το quote δεν υποσχόμαστε δωρεάν αποστολή — ίδιο με το web.
+  const quoteItems = items.map((i: any) => ({ type: 'product', id: i.product_id, qty: i.quantity }))
+  const { data: quote } = useQuery({
+    queryKey: ['quote-cart', quoteItems],
+    queryFn: () => api.post('/campaigns/quote', { items: quoteItems }).then(r => r.data?.data),
+    enabled: isAuthenticated && quoteItems.length > 0,
+  })
+  const afterDiscount = quote
+    ? Math.round((Number(quote.subtotal) - Number(quote.discount)) * 100) / 100
+    : null
+  const freeShipping = afterDiscount != null && afterDiscount > FREE_SHIPPING_OVER
 
   const setQty = useMutation({
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
       api.patch(`/cart/${id}`, { quantity }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('cart.update_failed')),
+    // Το api του κινητού απορρίπτει με το σφάλμα του axios: το μήνυμα του
+    // server είναι στο response.data (το e.message είναι «Request failed…»).
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('cart.update_failed')),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/cart/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cart'] }),
-    onError: (e: any) => Alert.alert(t('common.error'), e?.message || t('cart.remove_failed')),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('cart.remove_failed')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -133,7 +149,7 @@ export default function CartScreen() {
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.name} numberOfLines={2}>{item.product_name}</Text>
-              <Text style={s.price}>€{item.product_price}</Text>
+              <Text style={s.price}>€{Number(item.product_price ?? 0).toFixed(2)}</Text>
 
               <View style={s.qtyRow}>
                 {/* Στο 1, το μείον αφαιρεί — αλλιώς ο χρήστης πρέπει να
@@ -174,7 +190,7 @@ export default function CartScreen() {
               <Text style={s.totalLabel}>{t('cart.subtotal')}</Text>
               {/* Λέγεται ρητά, ώστε το ποσό στο checkout να μην ξαφνιάζει. */}
               <Text style={s.shippingNote}>
-                {subtotal > FREE_SHIPPING_OVER
+                {freeShipping
                   ? t('cart.free_shipping')
                   : t('cart.shipping_note')}
               </Text>

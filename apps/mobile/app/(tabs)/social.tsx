@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl, Platform, StatusBar, Modal, TextInput, Alert, ScrollView, Share } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Heart, MessageCircle, Users, PenLine, X, Trash2, Send, Share2 } from 'lucide-react-native'
+import { Heart, MessageCircle, Users, PenLine, X, Trash2, Send, Share2, ImagePlus } from 'lucide-react-native'
+import { pickAndUploadImage } from '@/lib/uploadImage'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
@@ -30,6 +31,11 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   Και στελνόταν μόνο POST. Το endpoint είναι idempotent: δεύτερο πάτημα
  *   δεν κάνει τίποτα, άρα το un-like ήταν αδύνατο. Τώρα στέλνεται DELETE
  *   όταν η δημοσίευση είναι ήδη αγαπημένη.
+ *
+ * ΙΣΟΤΙΜΙΑ ΜΕ ΤΟ WEB (19/10)
+ *   - Φίλτρο «Όλα / Trending» (?filter=), όπως στο web.
+ *   - Η νέα δημοσίευση δέχεται φωτογραφία (φάκελος «posts») και hashtags·
+ *     τα hashtags φαίνονται κάτω από κάθε δημοσίευση.
  */
 export default function SocialScreen() {
   const tabSpace = useTabSpace()
@@ -44,14 +50,39 @@ export default function SocialScreen() {
    */
   const [composing, setComposing] = useState(false)
   const [postText, setPostText] = useState('')
+  const [postImage, setPostImage] = useState<string | null>(null)
+  const [uploadingImg, setUploadingImg] = useState(false)
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [filter, setFilter] = useState<'all' | 'trending'>('all')
+
+  const closeCompose = () => {
+    setComposing(false); setPostText(''); setPostImage(null); setTags([]); setTagInput('')
+  }
+  const addTag = () => {
+    const tag = tagInput.trim().replace(/^#+/, '')
+    if (tag && !tags.includes(tag)) setTags(p => [...p, tag])
+    setTagInput('')
+  }
+  const pickPostImage = async () => {
+    setUploadingImg(true)
+    try {
+      const url = await pickAndUploadImage('posts')
+      if (url) setPostImage(url)
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message === 'permission'
+        ? t('providerEdit.photoPermission')
+        : e?.response?.data?.message || t('providerEdit.errUpload'))
+    } finally { setUploadingImg(false) }
+  }
   const [commentsFor, setCommentsFor] = useState<any>(null)
   const [commentText, setCommentText] = useState('')
 
   const createPost = useMutation({
-    mutationFn: () => api.post('/posts', { content: postText.trim() }),
+    mutationFn: () => api.post('/posts', { content: postText.trim(), image_url: postImage, tags }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['posts'] })
-      setComposing(false); setPostText('')
+      closeCompose()
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -85,16 +116,16 @@ export default function SocialScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: posts = [], isLoading } = useQuery({
-    queryKey: ['posts'],
-    queryFn: () => api.get('/posts', { params: { limit: 20 } }).then(r => r.data?.data ?? []),
+    queryKey: ['posts', filter],
+    queryFn: () => api.get('/posts', { params: { limit: 20, filter } }).then(r => r.data?.data ?? []),
   })
 
   const toggleLike = useMutation({
     mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
       liked ? api.delete(`/posts/${id}/like`) : api.post(`/posts/${id}/like`),
     onMutate: async ({ id, liked }) => {
-      await qc.cancelQueries({ queryKey: ['posts'] })
-      qc.setQueryData(['posts'], (old: any) =>
+      await qc.cancelQueries({ queryKey: ['posts', filter] })
+      qc.setQueryData(['posts', filter], (old: any) =>
         old?.map((p: any) => p.id === id
           ? { ...p, likes_count: Math.max(0, p.likes_count + (liked ? -1 : 1)), liked_by_me: !liked }
           : p))
@@ -149,7 +180,19 @@ export default function SocialScreen() {
 
       <FlatList
         data={posts}
-        ListHeaderComponent={<CampaignBanner page="social" slot="sidebar" />}
+        ListHeaderComponent={
+          <>
+            <CampaignBanner page="social" slot="sidebar" />
+            <View style={s.filters}>
+              {([['all', t('common.all')], ['trending', t('social.trending')]] as const).map(([v, label]) => (
+                <TouchableOpacity key={v} activeOpacity={0.7} onPress={() => setFilter(v)}
+                  style={[s.filter, filter === v && s.filterOn]}>
+                  <Text style={[s.filterTxt, filter === v && s.filterTxtOn]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        }
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}
@@ -191,6 +234,12 @@ export default function SocialScreen() {
 
             {!!item.image_url && (
               <Image source={{ uri: item.image_url }} style={s.postImage} resizeMode="cover" />
+            )}
+
+            {Array.isArray(item.tags) && item.tags.length > 0 && (
+              <View style={s.tags}>
+                {item.tags.map((tag: string) => <Text key={tag} style={s.tag}>#{tag}</Text>)}
+              </View>
             )}
 
             <View style={s.actions}>
@@ -235,18 +284,48 @@ export default function SocialScreen() {
         )}
       />
       {/* Νέα δημοσίευση */}
-      <Modal visible={composing} transparent animationType="slide" onRequestClose={() => setComposing(false)}>
+      <Modal visible={composing} transparent animationType="slide" onRequestClose={closeCompose}>
         <View style={s.backdrop}>
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>{t('social.write')}</Text>
             <TextInput style={s.input} value={postText} onChangeText={setPostText}
               placeholder={t('social.writeHint')} placeholderTextColor={colors.textLight} multiline />
+
+            {postImage ? (
+              <View style={s.previewWrap}>
+                <Image source={{ uri: postImage }} style={s.preview} />
+                <TouchableOpacity style={s.previewRemove} hitSlop={8} onPress={() => setPostImage(null)}>
+                  <X size={14} color={colors.textOnDark} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {tags.length > 0 && (
+              <View style={s.tags}>
+                {tags.map(tag => (
+                  <TouchableOpacity key={tag} style={s.tagChip} onPress={() => setTags(p => p.filter(x => x !== tag))}>
+                    <Text style={s.tag}>#{tag}</Text>
+                    <X size={12} color={colors.brand} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View style={s.commentRow}>
+              <TextInput style={[s.input, { flex: 1, minHeight: 44 }]} value={tagInput} onChangeText={setTagInput}
+                placeholder={t('social.hashtagHint')} placeholderTextColor={colors.textLight}
+                autoCapitalize="none" returnKeyType="done" onSubmitEditing={addTag} blurOnSubmit={false} />
+              <TouchableOpacity style={s.imgBtn} disabled={uploadingImg} onPress={pickPostImage}
+                accessibilityLabel={t('providerEdit.addPhoto')}>
+                <ImagePlus size={18} color={uploadingImg ? colors.textLight : colors.brand} />
+              </TouchableOpacity>
+            </View>
+
             <View style={s.sheetActions}>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setComposing(false)}>
+              <TouchableOpacity style={s.cancelBtn} onPress={closeCompose}>
                 <Text style={s.cancelTxt}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.sendBtn}
-                disabled={!postText.trim() || createPost.isPending}
+                disabled={!postText.trim() || createPost.isPending || uploadingImg}
                 onPress={() => createPost.mutate()}>
                 <Text style={s.sendTxt}>{t('social.publish')}</Text>
               </TouchableOpacity>
@@ -326,6 +405,30 @@ const s = StyleSheet.create({
   commentTxt: { ...type.caption, color: colors.textMuted },
   commentRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
   sendSmall: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
+  filters: { flexDirection: 'row', gap: space.sm, marginBottom: space.md },
+  filter: {
+    paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.full,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
+  filterOn: { backgroundColor: colors.navy, borderColor: colors.navy },
+  filterTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  filterTxtOn: { color: colors.textOnDark },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
+  tag: { ...type.caption, color: colors.brand, fontWeight: weight.semibold },
+  tagChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.full, backgroundColor: colors.brandLight,
+  },
+  imgBtn: {
+    width: 44, height: 44, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  previewWrap: { alignSelf: 'flex-start' },
+  preview: { width: 128, height: 128, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt },
+  previewRemove: {
+    position: 'absolute', top: -8, right: -8, width: 24, height: 24, borderRadius: radius.full,
+    backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center',
+  },
   emptyTxt: { ...type.caption, color: colors.textLight, textAlign: 'center', paddingVertical: space.lg },
   container: { flex: 1, backgroundColor: colors.bg },
   header: {

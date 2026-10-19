@@ -298,6 +298,18 @@ export default function AiPetHealth() {
                       <p className="text-sm text-gray-600 dark:text-gray-400">{result.recommendation}</p>
                     </div>
 
+                    {/* Comparison sources — ο server τις επιστρέφει· το κινητό τις έδειχνε ήδη. */}
+                    {Array.isArray((result as any).comparison_sources) && (result as any).comparison_sources.length > 0 && (
+                      <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('pgAiHealth.sources')}</h3>
+                        <ul className="space-y-1">
+                          {(result as any).comparison_sources.map((src: any, i: number) => (
+                            <li key={i} className="text-xs text-gray-400">{renderItem(src)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     {/* CTA */}
                     <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-5 text-white">
                       <h3 className="font-semibold mb-1">{t('pgAiHealth.ctaTitle')}</h3>

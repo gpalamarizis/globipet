@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } 
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star, Tag } from 'lucide-react-native'
+import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star, Tag, Phone } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
-import { Screen, Card, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
+import { Screen, Card, Button, EmptyState, SkeletonRows, Input, Badge } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 // Τοπική ημερομηνία ⇄ YYYY-MM-DD. Το toISOString() δίνει τη μέρα σε UTC
@@ -117,7 +117,9 @@ export default function ServiceDetailScreen() {
       return pay?.checkoutUrl as string | undefined
     },
     onSuccess: async (url) => {
-      qc.invalidateQueries({ queryKey: ['bookings'] })
+      // Τα πραγματικά keys: η λίστα του app/bookings.tsx και η κάρτα της Αρχικής.
+      qc.invalidateQueries({ queryKey: ['my-bookings'] })
+      qc.invalidateQueries({ queryKey: ['my-next-booking'] })
       if (!url) {
         // Η κράτηση υπάρχει αλλά είναι απλήρωτη. Το λέμε, και τον στέλνουμε
         // στη λίστα όπου υπάρχει κουμπί πληρωμής — δεν χάνεται.
@@ -174,8 +176,47 @@ export default function ServiceDetailScreen() {
               </>
             )}
           </View>
+          {/* Ίδια στοιχεία με το web: επαληθευμένος, έκτακτα, κατ' οίκον, εμπειρία. */}
+          {(service.is_verified || service.emergency_available || service.home_visits || service.years_experience > 0) && (
+            <View style={s.badges}>
+              {service.is_verified && <Badge label={t('parity.verified')} tone="success" />}
+              {service.emergency_available && <Badge label={t('parity.emergency')} tone="danger" />}
+              {service.home_visits && <Badge label={t('providerPkg.fHomeVisits')} tone="info" />}
+              {service.years_experience > 0 && (
+                <Badge label={t('parity.yearsExp', { count: service.years_experience })} tone="neutral" />
+              )}
+            </View>
+          )}
           {!!service.description && <Text style={s.desc}>{service.description}</Text>}
+          {!!service.contact_phone && (
+            <Button label={t('common.phone')} variant="secondary" size="sm"
+              icon={<Phone size={icon.sm} color={colors.brand} />}
+              onPress={() => Linking.openURL(`tel:${service.contact_phone}`).catch(() => {})}
+              style={{ marginTop: space.md }} />
+          )}
         </Card>
+
+        {/* Κριτικές — φαίνονται και χωρίς σύνδεση, όλες, όπως στο web. */}
+        {reviews.length > 0 && (
+          <Card>
+            <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
+            {reviews.map((r: any) => (
+              <View key={r.id} style={s.review}>
+                <View style={s.reviewTop}>
+                  <Text style={s.reviewName} numberOfLines={1}>
+                    {/* Το Review έχει customer_name — user_name/user_email δεν υπάρχουν. */}
+                    {r.customer_name}
+                  </Text>
+                  <View style={s.ratingRow}>
+                    <Star size={12} color={colors.warning} fill={colors.warning} />
+                    <Text style={s.ratingTxt}>{r.rating}</Text>
+                  </View>
+                </View>
+                {!!r.comment && <Text style={s.reviewTxt}>{r.comment}</Text>}
+              </View>
+            ))}
+          </Card>
+        )}
 
         {!isAuthenticated ? (
           <Card>
@@ -335,27 +376,6 @@ export default function ServiceDetailScreen() {
               />
             </View>
 
-            {/* Κριτικές */}
-            {reviews.length > 0 && (
-              <Card>
-                <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
-                {reviews.slice(0, 5).map((r: any) => (
-                  <View key={r.id} style={s.review}>
-                    <View style={s.reviewTop}>
-                      <Text style={s.reviewName} numberOfLines={1}>
-                        {r.user_name ?? r.user_email}
-                      </Text>
-                      <View style={s.ratingRow}>
-                        <Star size={12} color={colors.warning} fill={colors.warning} />
-                        <Text style={s.ratingTxt}>{r.rating}</Text>
-                      </View>
-                    </View>
-                    {!!r.comment && <Text style={s.reviewTxt}>{r.comment}</Text>}
-                  </View>
-                ))}
-              </Card>
-            )}
-
             {/* Σύνολο και κράτηση */}
             {quote?.discount > 0 && (
               <View style={s.discRow}>
@@ -400,6 +420,7 @@ const s = StyleSheet.create({
   body: { padding: space.lg, gap: space.lg, paddingBottom: space.xxxl },
 
   title: { ...type.section, color: colors.text },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginTop: space.sm },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs, flexWrap: 'wrap' },
   meta: { ...type.caption, color: colors.textLight, marginRight: space.sm },
   desc: { ...type.body, color: colors.textMuted, marginTop: space.sm },

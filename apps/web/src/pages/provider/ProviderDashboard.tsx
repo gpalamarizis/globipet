@@ -114,8 +114,9 @@ function ImportTab() {
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
       setFile(null); setPreview([]); setRows([]); setColumns([])
-    } catch {
-      toast.error(t('providerDash.errImport'))
+    } catch (e: any) {
+      // Μήνυμα του server, όπως στο κινητό.
+      toast.error(e?.response?.data?.message || t('providerDash.errImport'))
     } finally {
       setImporting(false)
     }
@@ -568,45 +569,25 @@ function CalendarTab() {
 }
 
 // ─── Services Tab ─────────────────────────────────────────────────
+/**
+ * «Νέα υπηρεσία» ανοίγει τον ΙΔΙΟ οδηγό με το κινητό (/provider/packages,
+ * κατηγορία → στοιχεία με πόλη, διεύθυνση, τοποθεσία στον χάρτη, βασική
+ * τιμή, έτη εμπειρίας, κατ' οίκον/έκτακτα).
+ *
+ * Πριν υπήρχε εδώ μια γρήγορη φόρμα (όνομα/τύπος/τιμή/διάρκεια/περιγραφή)
+ * που δεν είχε διεύθυνση ούτε τοποθεσία, έγραφε σταθερή πόλη όταν ο
+ * χρήστης δεν είχε, και η «διάρκεια» δεν αποθηκευόταν πουθενά — άρα η
+ * υπηρεσία από το web διέφερε από την ίδια υπηρεσία από το κινητό.
+ */
 function ServicesTab() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const [showForm, setShowForm] = useState(false)
-  // Ο τύπος κληρονομείται από τις υπάρχουσες υπηρεσίες του παρόχου.
-  // Πριν ήταν σταθερά 'grooming', που εμφανιζόταν λάθος σε κτηνιατρεία.
-  const [form, setForm] = useState({ name: '', description: '', price: '', service_type: '', duration_minutes: '60' })
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['provider-services'],
     queryFn: () => api.get('/services/my').then(r => r.data?.data ?? []),
     enabled: !!user,
-  })
-
-  // Ο τύπος του παρόχου: από την πρώτη υπηρεσία που έχει ήδη καταχωρήσει.
-  const providerType = services[0]?.service_type || ''
-  useEffect(() => {
-    if (providerType && !form.service_type) setForm(f => ({ ...f, service_type: providerType }))
-  }, [providerType])
-
-  const addService = useMutation({
-    mutationFn: () => api.post('/services', {
-      // ΠΡΟΣΟΧΗ: το πεδίο λέγεται service_type, όχι type. Με 'type' το Prisma
-      // απέρριπτε το αίτημα και η προσθήκη υπηρεσίας αποτύγχανε σιωπηλά.
-      provider_name: user?.full_name,
-      title: form.name,
-      description: form.description || form.name,
-      service_type: form.service_type,
-      city: (user as any)?.city || t('providerDash.sampleCity'),
-      price: parseFloat(form.price) || 0,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['provider-services'] })
-      toast.success(t('providerDash.serviceAdded'))
-      setShowForm(false)
-      setForm({ name: '', description: '', price: '', service_type: providerType, duration_minutes: '60' })
-    },
-    onError: () => toast.error(t('providerDash.errAddService')),
   })
 
   const deleteService = useMutation({
@@ -623,39 +604,10 @@ function ServicesTab() {
         <p className="text-sm text-gray-500">{services.length} {t('providerDash.tabServices')}</p>
         <div className="flex gap-2">
         <Link to="/provider/packages" className="btn-secondary flex items-center gap-2 text-sm">{t('providerPkg.title')}</Link>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={16} />{t('providerDash.newService')}</button>
+        <Link to="/provider/packages?new=1" className="btn-primary flex items-center gap-2 text-sm">
+          <Plus size={16} />{t('providerDash.newService')}</Link>
         </div>
       </div>
-
-      <AnimatePresence>
-        {showForm && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="card p-5">
-            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('providerDash.newService')}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.name')}</label><input className="input" placeholder={t('providerDash.phService')} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.type')}</label>
-                {/* Οι τιμές ΠΡΕΠΕΙ να ταιριάζουν με το services.service_type της βάσης.
-                    Πριν υπήρχαν 'pet_sitting' και 'pet_taxi' που δεν υπάρχουν πουθενά. */}
-                <select className="input" value={form.service_type}
-                        onChange={e => setForm(f => ({...f, service_type: e.target.value}))}>
-                  <option value="">{t('providerDash.choose')}</option>
-                  {SERVICE_TYPES.map(st => <option key={st.value} value={st.value}>{t(st.labelKey)}</option>)}
-                </select>
-              </div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.priceEur')}</label><input className="input" type="number" placeholder="25" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.durationMin')}</label><input className="input" type="number" placeholder="60" value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.description')}</label><textarea className="input resize-none" rows={2} placeholder={t('providerDash.phServiceDesc')} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">{t('providerDash.cancel')}</button>
-              <button onClick={() => addService.mutate()} disabled={!form.name || !form.price || addService.isPending} className="btn-primary flex-1">
-                {addService.isPending ? t('providerDash.saving') : t('providerDash.save')}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="grid gap-3">
         {isLoading ? [1,2,3].map(i => <div key={i} className="card p-4"><div className="skeleton h-16 w-full"/></div>)
@@ -663,7 +615,7 @@ function ServicesTab() {
           <div className="card p-10 text-center">
             <Scissors size={32} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">{t('providerDash.noServices')}</p>
-            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">{t('providerDash.addFirstService')}</button>
+            <Link to="/provider/packages?new=1" className="btn-primary mt-4 text-sm inline-block">{t('providerDash.addFirstService')}</Link>
           </div>
         ) : services.map((s: any) => (
           <div key={s.id} className="card p-4 flex items-center gap-4">

@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, RefreshControl, Platform, StatusBar } from 'react-native'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, RefreshControl, Platform, StatusBar, Alert, ActivityIndicator } from 'react-native'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Search, X, ShoppingCart, Package, Star } from 'lucide-react-native'
+import { Search, X, ShoppingCart, Package, Star, Heart } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -33,14 +33,28 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   Ο μη συνδεδεμένος πήγαινε σιωπηλά πουθενά· τώρα οδηγείται στη σύνδεση.
  */
 
+/**
+ * Οι κατηγορίες είναι ΟΙ ΤΙΜΕΣ που αποθηκεύει η φόρμα προϊόντος
+ * ((provider)/product-form.tsx και web ProviderDashboard). Υπήρχε φίλτρο
+ * «hygiene» που δεν αντιστοιχεί σε καμία κατηγορία προϊόντος — έδινε
+ * πάντα άδεια λίστα — ενώ grooming/training/housing/other έλειπαν. Ίδια
+ * λίστα με το web.
+ */
 const CATEGORIES = [
-  { id: 'all',         labelKey: 'marketplace.categories.all',       emoji: '🛍️' },
-  { id: 'food',        labelKey: 'marketplace.categories.food',    emoji: '🦴' },
-  { id: 'toys',        labelKey: 'marketplace.categories.toys', emoji: '🎾' },
-  { id: 'accessories', labelKey: 'marketplace.categories.accessories',  emoji: '🎀' },
-  { id: 'health',      labelKey: 'marketplace.categories.health',     emoji: '💊' },
-  { id: 'hygiene',     labelKey: 'cat.hygiene',   emoji: '🛁' },
+  { id: 'all',         labelKey: 'marketplace.categories.all',         emoji: '🛍️' },
+  { id: 'food',        labelKey: 'marketplace.categories.food',        emoji: '🦴' },
+  { id: 'toys',        labelKey: 'marketplace.categories.toys',        emoji: '🎾' },
+  { id: 'accessories', labelKey: 'marketplace.categories.accessories', emoji: '🎀' },
+  { id: 'health',      labelKey: 'marketplace.categories.health',      emoji: '💊' },
+  { id: 'grooming',    labelKey: 'marketplace.categories.grooming',    emoji: '✂️' },
+  { id: 'training',    labelKey: 'marketplace.categories.training',    emoji: '🎓' },
+  { id: 'housing',     labelKey: 'marketplace.categories.housing',     emoji: '🏠' },
+  { id: 'other',       labelKey: 'marketplace.categories.other',       emoji: '📦' },
 ]
+
+/** Ίδιες τιμές ταξινόμησης με το web — τις καταλαβαίνει το GET /products. */
+const SORTS = ['featured', 'price_asc', 'price_desc', 'rating', 'newest'] as const
+const PAGE_SIZE = 24
 
 export default function MarketplaceScreen() {
   const tabSpace = useTabSpace()
@@ -50,18 +64,61 @@ export default function MarketplaceScreen() {
   const { isAuthenticated } = useAuthStore()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
+  const [sort, setSort] = useState<typeof SORTS[number]>('featured')
   const [refreshing, setRefreshing] = useState(false)
   const [added, setAdded] = useState<string | null>(null)
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', category, search],
-    queryFn: () => api.get('/products', {
+  // Σελιδοποίηση όπως στο web (24 ανά σελίδα): πριν φόρτωνε μόνο τα πρώτα
+  // 30 και τα υπόλοιπα προϊόντα δεν εμφανίζονταν ποτέ στο κινητό.
+  const productsQuery = useInfiniteQuery({
+    queryKey: ['products', category, search, sort],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.get('/products', {
       params: {
         ...(category !== 'all' ? { category } : {}),
         ...(search ? { q: search } : {}),
-        limit: 30,
+        sort,
+        page: pageParam,
+        limit: PAGE_SIZE,
       },
-    }).then(r => r.data?.data ?? []),
+    }).then(r => r.data),
+    getNextPageParam: (last: any) =>
+      last && Number(last.page) < Number(last.totalPages) ? Number(last.page) + 1 : undefined,
+  })
+  const { isLoading } = productsQuery
+  // Χωρίς διπλά κατά id: αν μπει νέο προϊόν ανάμεσα σε δύο σελίδες, το
+  // offset μετακινείται και το ίδιο προϊόν ξαναέρχεται στην επόμενη (διπλό
+  // key στη FlatList).
+  const products: any[] = (() => {
+    const seen = new Set<string>()
+    return (productsQuery.data?.pages.flatMap((p: any) => p?.data ?? []) ?? []).filter((x: any) => {
+      if (x?.id == null) return true
+      if (seen.has(x.id)) return false
+      seen.add(x.id); return true
+    })
+  })()
+  const total: number | undefined = productsQuery.data?.pages[0]?.total
+
+  // Η καρδιά στην κάρτα, όπως στο web (ProductCard).
+  const { data: wishlist = [] } = useQuery({
+    queryKey: ['wishlist'],
+    queryFn: () => api.get('/wishlist').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const isWished = (id: string) => wishlist.some((w: any) => w.product_id === id)
+
+  const toggleWish = useMutation({
+    // action: ο server κάνει ό,τι ζητήθηκε, οπότε δεύτερο ίδιο αίτημα δεν αναιρεί το πρώτο.
+    mutationFn: (id: string) => api.post('/wishlist', { product_id: id, action: isWished(id) ? 'remove' : 'add' }),
+    onSuccess: (r: any, id) => {
+      qc.setQueriesData({ queryKey: ['wishlist'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        const rest = old.filter((w: any) => w.product_id !== id)
+        return r?.data?.added && r.data.data ? [r.data.data, ...rest] : rest
+      })
+      qc.invalidateQueries({ queryKey: ['wishlist'] })
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
   const addToCart = useMutation({
@@ -74,6 +131,8 @@ export default function MarketplaceScreen() {
       setAdded(productId)
       setTimeout(() => setAdded(null), 1500)
     },
+    // Το web δείχνει το σφάλμα· εδώ αποτυχία περνούσε σιωπηλά.
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
   const onRefresh = useCallback(async () => {
@@ -118,7 +177,8 @@ export default function MarketplaceScreen() {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow}
+        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm, alignItems: 'center' }}>
         {CATEGORIES.map(c => {
           const active = category === c.id
           return (
@@ -132,11 +192,44 @@ export default function MarketplaceScreen() {
             </TouchableOpacity>
           )
         })}
-      </View>
+      </ScrollView>
+
+      {/* Ταξινόμηση — ίδιες επιλογές με το web. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.sortRow}
+        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm, alignItems: 'center' }}>
+        {SORTS.map(k => {
+          const active = sort === k
+          return (
+            <TouchableOpacity key={k} activeOpacity={0.7}
+              style={[s.sortChip, active && s.chipActive]}
+              onPress={() => setSort(k)}>
+              <Text style={[s.sortText, active && s.chipTextActive]}>{t(`marketplace.sort.${k}`)}</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
 
       <FlatList
         data={products}
-        ListHeaderComponent={<CampaignBanner page="marketplace" slot="banner" />}
+        ListHeaderComponent={
+          <>
+            <CampaignBanner page="marketplace" slot="banner" />
+            {/* Πλήθος αποτελεσμάτων, όπως στο web. */}
+            {!isLoading && total != null && (
+              <Text style={s.count}>
+                {t('marketplace.results_count', { count: total })}
+                {category !== 'all' && ` · ${t(CATEGORIES.find(c => c.id === category)?.labelKey ?? '')}`}
+              </Text>
+            )}
+          </>
+        }
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage) productsQuery.fetchNextPage()
+        }}
+        ListFooterComponent={productsQuery.isFetchingNextPage
+          ? <ActivityIndicator color={colors.brand} style={{ marginTop: space.md }} />
+          : null}
         keyExtractor={i => i.id}
         numColumns={2}
         columnWrapperStyle={{ gap: space.md }}
@@ -178,6 +271,15 @@ export default function MarketplaceScreen() {
                 {item.image_url
                   ? <Image source={{ uri: item.image_url }} style={s.img} />
                   : <Package size={icon.xl} color={colors.border} />}
+                {isAuthenticated && (
+                  <TouchableOpacity style={s.heartBtn} hitSlop={8}
+                    accessibilityLabel={t('wishlist.title')}
+                    disabled={toggleWish.isPending && toggleWish.variables === item.id}
+                    onPress={() => toggleWish.mutate(item.id)}>
+                    <Heart size={icon.sm} color={isWished(item.id) ? colors.danger : colors.textLight}
+                      fill={isWished(item.id) ? colors.danger : 'transparent'} />
+                  </TouchableOpacity>
+                )}
                 {onSale && (
                   <View style={s.saleTag}>
                     <Text style={s.saleText}>
@@ -197,8 +299,8 @@ export default function MarketplaceScreen() {
               )}
 
               <View style={s.priceRow}>
-                <Text style={s.price}>€{price}</Text>
-                {onSale && <Text style={s.oldPrice}>€{item.price}</Text>}
+                <Text style={s.price}>€{Number(price ?? 0).toFixed(2)}</Text>
+                {onSale && <Text style={s.oldPrice}>€{Number(item.price ?? 0).toFixed(2)}</Text>}
               </View>
 
               <TouchableOpacity
@@ -254,7 +356,20 @@ const s = StyleSheet.create({
   },
   search: { flex: 1, ...type.body, color: colors.text, padding: 0 },
 
-  filterRow: { paddingVertical: space.lg, maxHeight: 68, flexGrow: 0 },
+  filterRow: { paddingTop: space.lg, maxHeight: 68, flexGrow: 0 },
+  sortRow: { paddingTop: space.sm, maxHeight: 52, flexGrow: 0 },
+  sortChip: {
+    paddingHorizontal: space.md, height: 36, justifyContent: 'center',
+    borderRadius: radius.full, backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  sortText: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  count: { ...type.caption, color: colors.textMuted, marginBottom: space.sm },
+  heartBtn: {
+    position: 'absolute', top: space.sm, right: space.sm,
+    width: 30, height: 30, borderRadius: radius.full,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+  },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: space.xs,
     paddingHorizontal: space.lg,

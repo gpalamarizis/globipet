@@ -87,7 +87,9 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       take: 200,
     })
-    return { data }
+    // Δημόσιο endpoint: το email του πελάτη δεν επιστρέφεται (το όνομα αρκεί
+    // για την εμφάνιση· καμία οθόνη δεν το χρησιμοποιεί).
+    return { data: data.map(({ customer_email: _omit, ...r }) => r) }
   })
 
   /**

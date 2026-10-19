@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useMutation } from '@tanstack/react-query'
-import { Camera, Images, AlertTriangle, X } from 'lucide-react-native'
+import { router } from 'expo-router'
+import { Camera, Images, AlertTriangle, X, FlaskConical, ChevronRight, Video } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import AiGate from '@/components/AiGate'
 import { Screen, Card, Button, Badge, Skeleton } from '@/components/ui'
@@ -27,7 +28,26 @@ const typo = theme.type
  * Η πύλη (σύνδεση, συνδρομή/δοκιμή, admin, σφάλμα με επανάληψη) ζει πλέον
  * στο κοινό src/components/AiGate.tsx, ώστε να ισχύει ίδια και στις άλλες
  * δύο οθόνες AI — όπως το AiFeatureGuard του web.
+ *
+ * ΙΣΟΤΙΜΙΑ ΜΕ ΤΟ WEB (19/10)
+ *   - Τρίτη επιλογή «Ανάλυση δείγματος» → /ai-stool-urine, όπως η κάρτα
+ *     ούρων/περιττωμάτων του web.
+ *   - Μετά το αποτέλεσμα, πρόταση για κτηνίατρο με βιντεοκλήση (/telehealth).
+ *   - Ευρήματα/παθήσεις περνούν από itemText, όπως το renderItem του web:
+ *     αν το μοντέλο επιστρέψει αντικείμενο ({name, probability}), το RN
+ *     έριχνε σφάλμα «Objects are not valid as a React child».
  */
+
+// Ίδιο με το renderItem του web (AiPetHealth.tsx).
+function itemText(item: any): string {
+  if (item == null) return ''
+  if (typeof item === 'string' || typeof item === 'number') return String(item)
+  if (typeof item === 'object') {
+    if (item.name) return `${item.name}${item.probability ? ` (${item.probability})` : ''}`
+    return Object.values(item).filter(v => typeof v === 'string' || typeof v === 'number').join(' — ')
+  }
+  return String(item)
+}
 
 type AnalysisType = 'skin' | 'eye'
 
@@ -111,6 +131,14 @@ export default function AiHealthScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      <TouchableOpacity style={s.sampleLink} activeOpacity={0.7} onPress={() => router.push('/ai-stool-urine' as any)}>
+        <FlaskConical size={icon.md} color={colors.brand} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.sampleTitle}>{t('stool.title')}</Text>
+          <Text style={s.sampleSub}>{t('stool.subtitle')}</Text>
+        </View>
+        <ChevronRight size={icon.md} color={colors.textLight} />
+      </TouchableOpacity>
 
       {/* ── Εικόνα ─────────────────────────────────────────────── */}
       {imageUri ? (
@@ -170,10 +198,10 @@ export default function AiHealthScreen() {
           {result.findings?.length > 0 ? (
             <Card>
               <Text style={s.label}>{t('ai.findings')}</Text>
-              {result.findings.map((f: string, i: number) => (
+              {result.findings.map((f: any, i: number) => (
                 <View key={i} style={s.bullet}>
                   <View style={s.dot} />
-                  <Text style={s.bulletText}>{f}</Text>
+                  <Text style={s.bulletText}>{itemText(f)}</Text>
                 </View>
               ))}
             </Card>
@@ -182,10 +210,10 @@ export default function AiHealthScreen() {
           {result.conditions?.length > 0 ? (
             <Card>
               <Text style={s.label}>{t('ai.possible')}</Text>
-              {result.conditions.map((c: string, i: number) => (
+              {result.conditions.map((c: any, i: number) => (
                 <View key={i} style={s.bullet}>
                   <View style={s.dot} />
-                  <Text style={s.bulletText}>{c}</Text>
+                  <Text style={s.bulletText}>{itemText(c)}</Text>
                 </View>
               ))}
             </Card>
@@ -208,11 +236,19 @@ export default function AiHealthScreen() {
           {result.comparison_sources?.length > 0 ? (
             <Card>
               <Text style={s.label}>{t('ai.sources')}</Text>
-              {result.comparison_sources.map((src: string, i: number) => (
-                <Text key={i} style={s.source}>{src}</Text>
+              {result.comparison_sources.map((src: any, i: number) => (
+                <Text key={i} style={s.source}>{itemText(src)}</Text>
               ))}
             </Card>
           ) : null}
+
+          {/* Πρόταση για κτηνίατρο — όπως το CTA τηλεϊατρικής του web. */}
+          <Card>
+            <Text style={s.label}>{t('ai.ctaTitle')}</Text>
+            <Text style={[s.body, { marginBottom: space.md }]}>{t('ai.ctaDesc')}</Text>
+            <Button label={t('tele.title')} full icon={<Video size={icon.sm} color={colors.textOnDark} />}
+              onPress={() => router.push('/telehealth' as any)} />
+          </Card>
 
           {result.disclaimer ? (
             <Text style={s.disclaimer}>{result.disclaimer}</Text>
@@ -238,6 +274,15 @@ const s = StyleSheet.create({
   typeActive: { backgroundColor: colors.navy, borderColor: colors.navy },
   typeLabel: { ...typo.body, fontWeight: weight.semibold, color: colors.textMuted },
   typeLabelActive: { color: colors.textOnDark },
+
+  sampleLink: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    minHeight: touch.min, padding: space.md, marginBottom: space.lg,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  sampleTitle: { ...typo.body, fontWeight: weight.semibold, color: colors.text },
+  sampleSub: { ...typo.caption, color: colors.textMuted },
 
   dropzone: {
     backgroundColor: colors.surface,

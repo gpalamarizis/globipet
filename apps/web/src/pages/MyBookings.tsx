@@ -53,6 +53,8 @@ export default function MyBookings() {
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
     onSuccess: (r: any) => {
       queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+      // Το «Επόμενο ραντεβού» της αρχικής να μη δείχνει την ακυρωμένη.
+      queryClient.invalidateQueries({ queryKey: ['my-next-booking'] })
       toast.success(t('bookings.cancelled'))
       if (r?.data?.refund > 0) toast.success(t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }))
     },
@@ -62,7 +64,8 @@ export default function MyBookings() {
   const submitReview = useMutation({
     mutationFn: () => api.post('/reviews', { service_id: reviewBooking.service_id, rating, comment }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-bookings'] }); setReviewBooking(null); toast.success(t('bookings.reviewSubmitted')) },
-    onError: (err: any) => toast.error(err?.message || t('common.error')),
+    // Το μήνυμα του server (π.χ. «Έχεις ήδη αξιολογήσει») — όπως στο κινητό.
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('common.error')),
   })
 
   /**
@@ -164,6 +167,10 @@ export default function MyBookings() {
                 {booking.pet_name && (
                   <div className="flex items-center gap-1.5"><span>🐾</span>{booking.pet_name}</div>
                 )}
+                {/* Ποσό — το κινητό το έδειχνε, το web όχι. */}
+                <div className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300">
+                  €{Number(booking.total_price ?? 0).toFixed(2)}
+                </div>
                 {(booking.service?.location || booking.service?.city) && (
                   <div className="flex items-center gap-1.5 col-span-2">
                     <MapPin size={12}/>{booking.service.location || booking.service.city}

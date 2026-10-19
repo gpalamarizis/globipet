@@ -52,16 +52,22 @@ export default function ProviderTranslations() {
   })
   const missingIds = new Set(missing.map((m: any) => m.id ?? m))
 
+  // Μόνο τα πεδία της οντότητας, όπως στο web: υπηρεσία → title, πακέτο/
+  // προϊόν → name. Πριν στέλνονταν ΚΑΙ τα δύο, και ο server απαντούσε 400
+  // («Μη μεταφράσιμο πεδίο») σε κάθε αποθήκευση με τίτλο.
+  // Κενό πεδίο = αφαίρεση της μετάφρασης (ό,τι λέει το emptyHint, όπως στο
+  // web). Με undefined δεν έφευγε τίποτα και η μετάφραση δεν σβηνόταν ποτέ.
   const save = useMutation({
     mutationFn: () => api.put(`/translations/${tab}/${editing.id}`, {
       en: {
-        title: enTitle.trim() || undefined,
-        name: enTitle.trim() || undefined,
-        description: enDesc.trim() || undefined,
+        [tab === 'service' ? 'title' : 'name']: enTitle.trim(),
+        description: enDesc.trim(),
       },
     }),
-    onSuccess: () => {
+    onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ['trn-missing', tab] })
+      const { saved = 0, removed = 0 } = r?.data ?? {}
+      Alert.alert(removed && !saved ? t('providerTrn.removed') : t('providerTrn.savedFields', { count: saved }))
       setEditing(null)
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerTrn.errSave')),
@@ -73,7 +79,7 @@ export default function ProviderTranslations() {
     try {
       const { data } = await api.get(`/translations/${tab}/${row.id}`)
       const en = data?.data?.en ?? data?.en ?? {}
-      setEnTitle(en.title ?? en.name ?? '')
+      setEnTitle((tab === 'service' ? en.title : en.name) ?? '')
       setEnDesc(en.description ?? '')
     } catch { /* νέα μετάφραση — κενά πεδία */ }
   }

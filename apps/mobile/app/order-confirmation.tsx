@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -7,6 +7,13 @@ import { CheckCircle2, Clock, XCircle, Package } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+
+/**
+ * Αποτυχημένη πληρωμή: `payment_status: 'failed'` ή `status: 'payment_failed'`.
+ * Σημ.: ο σημερινός server δεν γράφει καμία από τις δύο σε παραγγελίες· ο
+ * έλεγχος υπάρχει ώστε, αν γραφτεί, να μη μείνει ανανέωση/αμετάφραστο κείμενο.
+ */
+const paymentFailed = (o: any) => o?.payment_status === 'failed' || o?.status === 'payment_failed'
 
 /**
  * Επιβεβαίωση παραγγελίας μετά την πληρωμή.
@@ -25,18 +32,26 @@ export default function OrderConfirmationScreen() {
   const qc = useQueryClient()
   const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
   const verified = useRef(false)
+  // Όπως στο web: αν ήρθαμε από την πληρωμή, ξαναρωτάμε κάθε 3″ για έως ένα
+  // λεπτό, γιατί το webhook του Viva μπορεί να επιβεβαιώσει μετά την επιστροφή.
+  const [pollUntil] = useState(() => transactionId ? Date.now() + 60_000 : 0)
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/orders/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
+    // Σταματά και όταν η πληρωμή απέτυχε: τελική κατάσταση, δεν θα αλλάξει.
+    refetchInterval: (q: any) =>
+      q.state.data?.payment_status !== 'paid' && !paymentFailed(q.state.data) && Date.now() < pollUntil ? 3000 : false,
   })
 
   const verify = useMutation({
     mutationFn: () => api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['order', id] })
-      qc.invalidateQueries({ queryKey: ['orders'] })
+      // Το κλειδί της λίστας είναι 'my-orders' (orders.tsx)· το 'orders' δεν
+      // ανανέωνε τίποτα.
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
     },
   })
 
@@ -50,7 +65,7 @@ export default function OrderConfirmationScreen() {
   if (isLoading) return <Screen title={t('orderConfirm.title')}><SkeletonRows count={3} /></Screen>
 
   const paid = order?.payment_status === 'paid'
-  const failed = order?.payment_status === 'failed'
+  const failed = paymentFailed(order)
 
   return (
     <Screen title={t('orderConfirm.title')} scroll={false}>
@@ -80,9 +95,12 @@ export default function OrderConfirmationScreen() {
               <Text style={s.v}>€{Number(order.total_amount ?? 0).toFixed(2)}</Text>
             </View>
             <View style={s.kv}>
-              <Text style={s.k}>{t('providerDash.booking')}</Text>
-              <Badge label={t(`orders.${order.status}`, { defaultValue: order.status })}
-                tone={paid ? 'success' : 'warning'} />
+              {/* Ετικέτα «Κατάσταση» (ήταν «Κράτηση»)· pending/cancelled έχουν
+                  τα κείμενά τους στο status.*, όπως στη λίστα παραγγελιών. */}
+              <Text style={s.k}>{t('orderConfirm.status')}</Text>
+              <Badge label={order.status === 'payment_failed' ? t('mySubs.status_payment_failed')
+                  : t(['pending', 'cancelled'].includes(order.status) ? `status.${order.status}` : `orders.${order.status}`, { defaultValue: order.status })}
+                tone={paid ? 'success' : failed ? 'danger' : 'warning'} />
             </View>
           </Card>
         )}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Search, Users, Ticket, Sparkles } from 'lucide-react'
+import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -144,9 +144,15 @@ export default function Events() {
                         ? <img src={ev.image_url} alt={ev.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         : <div className="w-full h-full flex items-center justify-center text-4xl">🎪</div>}
-                      {ev.is_featured && (
+                      {ev.is_featured && !ev.cancelled && (
                         <div className="absolute top-2 right-2 badge bg-brand-900 text-white text-[10px] flex items-center gap-1">
                           <Sparkles size={9} /> {t('events.featured')}
+                        </div>
+                      )}
+                      {/* Ακυρωμένη από τον διοργανωτή (πεδίο `cancelled` του GET /events). */}
+                      {ev.cancelled && (
+                        <div className="absolute top-2 right-2 badge bg-red-600 text-white text-[10px] flex items-center gap-1">
+                          <Ban size={9} /> {t('bookings.status.cancelled')}
                         </div>
                       )}
                       {ev.price > 0 && (
@@ -174,7 +180,7 @@ export default function Events() {
                         <span className="truncate">{ev.location || ev.city}</span>
                       </div>
 
-                      {left != null && (
+                      {left != null && !ev.cancelled && (
                         <div className={cn('flex items-center gap-1 text-xs mt-2',
                           left === 0 ? 'text-red-500' : left <= 5 ? 'text-amber-600' : 'text-gray-500')}>
                           {left === 0

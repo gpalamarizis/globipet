@@ -141,8 +141,12 @@ export default function ServiceDetail() {
       // είναι απλήρωτη, και ο χρήστης πρέπει να το ξέρει.
       throw new Error(t('bookings.noPaymentPage'))
     },
-    onSuccess: () => {
+    // onSettled: η κράτηση δημιουργείται πριν το checkout, οπότε υπάρχει και
+    // όταν η πληρωμή δεν ξεκινήσει — οι λίστες ανανεώνονται και τότε.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['my-next-booking'] })
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
@@ -350,9 +354,10 @@ export default function ServiceDetail() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-xs font-bold text-brand-900">
-                            {r.user_name?.[0]?.toUpperCase() || 'U'}
+                            {/* Review έχει customer_name (όχι user_name) — schema.prisma. */}
+                            {r.customer_name?.[0]?.toUpperCase() || 'U'}
                           </div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{r.user_name}</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{r.customer_name}</span>
                         </div>
                         <div className="flex gap-0.5">
                           {[1,2,3,4,5].map(s => (

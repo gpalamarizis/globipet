@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, Modal, Alert, RefreshControl, KeyboardAvoidingView, Platform, StatusBar } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, FlatList, Image, Modal, Alert, RefreshControl, KeyboardAvoidingView, Platform, StatusBar } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Plus, X, AlertTriangle, ChevronRight, PawPrint } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { PetFormFields, EMPTY_PET_FORM, petPayload, petEmoji } from '@/components/PetForm'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -33,21 +34,10 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   σε ένα διαβατήριο που μπορεί να διαβάσει κτηνίατρος.
  */
 
-const SPECIES = [
-  { id: 'dog',     labelKey: 'pets.kind_dog',  emoji: '🐶' },
-  { id: 'cat',     labelKey: 'pets.kind_cat',    emoji: '🐱' },
-  { id: 'bird',    labelKey: 'pets.kind_bird',   emoji: '🦜' },
-  { id: 'rabbit',  labelKey: 'pets.kind_rabbit', emoji: '🐰' },
-  { id: 'fish',    labelKey: 'pets.kind_fish',    emoji: '🐠' },
-  { id: 'reptile', labelKey: 'pets.kind_reptile',  emoji: '🦎' },
-]
-
-const emojiFor = (s: string) => SPECIES.find(x => x.id === s)?.emoji ?? '🐾'
-
-const EMPTY_FORM = {
-  name: '', species: 'dog', breed: '', age: '',
-  gender: 'male', is_sterilized: '' as '' | 'yes' | 'no',
-}
+// Είδη, πεδία και σώμα αιτήματος: κοινά με την επεξεργασία, στο
+// src/components/PetForm.tsx — ίδια με τη φόρμα του web (AddPetModal).
+const emojiFor = petEmoji
+const EMPTY_FORM = EMPTY_PET_FORM
 
 export default function PetsScreen() {
   const tabSpace = useTabSpace()
@@ -66,17 +56,9 @@ export default function PetsScreen() {
   })
 
   const addPet = useMutation({
-    mutationFn: () => api.post('/pets', {
-      name: form.name.trim(),
-      species: form.species,
-      breed: form.breed.trim() || undefined,
-      // `age` είναι η πραγματική στήλη· το `birthday` που στελνόταν πριν
-      // δεν υπάρχει και απορριπτόταν χωρίς να το μάθει κανείς.
-      age: form.age ? parseFloat(form.age) : undefined,
-      gender: form.gender,
-      is_sterilized: form.is_sterilized === 'yes' ? true
-        : form.is_sterilized === 'no' ? false : null,
-    }),
+    // `age` είναι η πραγματική στήλη· το `birthday` που στελνόταν πριν
+    // δεν υπάρχει και απορριπτόταν χωρίς να το μάθει κανείς.
+    mutationFn: () => api.post('/pets', petPayload(form)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-pets'] })
       setShowAdd(false)
@@ -195,61 +177,7 @@ export default function PetsScreen() {
             <ScrollView showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: space.xl }}>
 
-              <Text style={s.label}>{t('pets.name_label')}</Text>
-              <TextInput style={s.input} value={form.name}
-                onChangeText={v => setForm(f => ({ ...f, name: v }))}
-                placeholder={t('pets.name_placeholder')} placeholderTextColor={colors.textLight} />
-
-              <Text style={s.label}>{t('pets.species')}</Text>
-              <View style={s.optionGrid}>
-                {SPECIES.map(sp => {
-                  const active = form.species === sp.id
-                  return (
-                    <TouchableOpacity key={sp.id} activeOpacity={0.7}
-                      style={[s.option, active && s.optionActive]}
-                      onPress={() => setForm(f => ({ ...f, species: sp.id }))}>
-                      <Text style={s.optionEmoji}>{sp.emoji}</Text>
-                      <Text style={[s.optionText, active && s.optionTextActive]}>{t(sp.labelKey)}</Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
-
-              <Text style={s.label}>{t('pets.breed')}</Text>
-              <TextInput style={s.input} value={form.breed}
-                onChangeText={v => setForm(f => ({ ...f, breed: v }))}
-                placeholder={t('pets.optional')} placeholderTextColor={colors.textLight} />
-
-              <Text style={s.label}>{t('pets.age')}</Text>
-              <TextInput style={s.input} value={form.age} keyboardType="decimal-pad"
-                onChangeText={v => setForm(f => ({ ...f, age: v.replace(',', '.') }))}
-                placeholder={t('pets.age_placeholder')} placeholderTextColor={colors.textLight} />
-
-              <Text style={s.label}>{t('pets.gender')}</Text>
-              <View style={s.row}>
-                {[{ id: 'male', l: t('pets.male') }, { id: 'female', l: t('pets.female') }].map(g => (
-                  <TouchableOpacity key={g.id} activeOpacity={0.7}
-                    style={[s.pill, form.gender === g.id && s.pillActive]}
-                    onPress={() => setForm(f => ({ ...f, gender: g.id }))}>
-                    <Text style={[s.pillText, form.gender === g.id && s.pillTextActive]}>{g.l}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Τρεις επιλογές, όχι checkbox: «δεν γνωρίζω» είναι πραγματική
-                  απάντηση, και το κενό δεν πρέπει να καταγράφεται ως «όχι». */}
-              <Text style={s.label}>{t('pets.neutered')}</Text>
-              <View style={s.row}>
-                {[{ v: 'yes', l: t('common.yes') }, { v: 'no', l: t('common.no') }, { v: '', l: t('pets.unknown') }].map(o => (
-                  <TouchableOpacity key={o.v || 'unknown'} activeOpacity={0.7}
-                    style={[s.pill, form.is_sterilized === o.v && s.pillActive]}
-                    onPress={() => setForm(f => ({ ...f, is_sterilized: o.v as any }))}>
-                    <Text style={[s.pillText, form.is_sterilized === o.v && s.pillTextActive]}>
-                      {o.l}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <PetFormFields form={form} onChange={setForm} />
 
               <TouchableOpacity
                 style={[s.primaryBtn, { marginTop: space.xl },
@@ -348,41 +276,4 @@ const s = StyleSheet.create({
     marginBottom: space.lg,
   },
   sheetTitle: { ...type.section, color: colors.text, fontWeight: weight.bold },
-
-  label: {
-    ...type.caption, color: colors.textMuted, fontWeight: weight.semibold,
-    marginTop: space.lg, marginBottom: space.sm,
-  },
-  input: {
-    height: touch.comfortable,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    paddingHorizontal: space.lg,
-    ...type.body, color: colors.text,
-  },
-
-  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  option: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg, height: touch.min,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1, borderColor: 'transparent',
-  },
-  optionActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
-  optionEmoji: { fontSize: 16 },
-  optionText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
-  optionTextActive: { color: colors.brand, fontWeight: weight.bold },
-
-  row: { flexDirection: 'row', gap: space.sm },
-  pill: {
-    flex: 1, height: touch.min,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1, borderColor: 'transparent',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  pillActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
-  pillText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
-  pillTextActive: { color: colors.brand, fontWeight: weight.bold },
 })

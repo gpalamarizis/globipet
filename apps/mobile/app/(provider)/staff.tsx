@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 import { Users, Plus } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
+import { Chips } from '@/components/Chips'
 import { STAFF_TITLE_KEYS } from '@/components/staffOptions'
 import { colors, space, type, weight } from '@/theme'
 
@@ -21,6 +22,8 @@ export default function ProviderStaff() {
   const qc = useQueryClient()
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
+  // Φίλτρο ανά υπηρεσία όταν υπάρχουν πολλές — όπως στο web.
+  const [serviceFilter, setServiceFilter] = useState('all')
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['provider-staff-all'],
@@ -34,6 +37,8 @@ export default function ProviderStaff() {
     const sv = services.find((x: any) => x.id === id)
     return sv ? (sv.title || sv.provider_name) : null
   }
+
+  const shown = serviceFilter === 'all' ? staff : staff.filter((m: any) => m.service_id === serviceFilter)
 
   const toggle = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => api.patch(`/staff/${id}`, { is_active }),
@@ -50,9 +55,15 @@ export default function ProviderStaff() {
       <Button label={t('providerStaff.addTitle')} icon={<Plus size={18} color={colors.textOnDark} />}
         onPress={() => router.push('/(provider)/staff-form' as any)} full style={{ marginBottom: space.md }} />
 
+      {services.length > 1 && (
+        <Chips value={serviceFilter} onChange={setServiceFilter}
+          options={[{ value: 'all', label: t('providerStaff.allServices') },
+            ...services.map((sv: any) => ({ value: sv.id, label: sv.title || sv.provider_name }))]} />
+      )}
+
       {isLoading ? <SkeletonRows count={3} /> :
-       staff.length === 0 ? <EmptyState icon={Users} title={t('providerStaff.empty')} /> :
-       staff.map((m: any) => (
+       shown.length === 0 ? <EmptyState icon={Users} title={t('providerStaff.empty')} /> :
+       shown.map((m: any) => (
         <Card key={m.id} onPress={() => router.push({ pathname: '/(provider)/staff-form', params: { id: m.id } } as any)}>
           <View style={s.row}>
             <View style={{ flex: 1, minWidth: 0 }}>

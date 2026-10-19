@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users, Ticket,
-  Mail, PawPrint, Check, UserPlus, CreditCard, Hourglass,
+  Mail, PawPrint, Check, UserPlus, CreditCard, Hourglass, Ban,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -24,7 +24,7 @@ export default function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
 
   const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
@@ -83,6 +83,51 @@ export default function EventDetail() {
     cancel.mutate()
   }
 
+  // ── Διοργανωτής/διαχειριστής: ακύρωση εκδήλωσης με επιστροφές ──
+  const isOrganizer = isAuthenticated && !!event
+    && (user?.email === event.organizer_email || user?.role === 'admin')
+  const { data: cancelPreview, refetch: refetchCancelPreview } = useQuery({
+    queryKey: ['event-cancel-preview', id],
+    queryFn: () => api.get(`/events/${id}/cancel-preview`).then(r => r.data?.data),
+    enabled: !!id && isOrganizer,
+  })
+
+  const cancelEvent = useMutation({
+    mutationFn: () => api.post(`/events/${id}/cancel`, {}),
+    onSuccess: (res: any) => {
+      const report = res?.data?.data
+      const amount = Number(report?.refunded_amount ?? 0).toFixed(2)
+      if (res?.data?.deleted) {
+        toast.success(t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
+        queryClient.invalidateQueries({ queryKey: ['events'] })
+        navigate('/events')
+        return
+      }
+      // 207: η εκδήλωση έμεινε ακυρωμένη, κάποιες επιστροφές απέτυχαν.
+      const failed = (report?.failed?.length ?? 0) + (report?.in_progress?.length ?? 0)
+      toast.error(t('events.cancelEventPartial', { count: failed }))
+      queryClient.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
+      queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+      queryClient.invalidateQueries({ queryKey: ['event', id] })
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  // Η επιβεβαίωση λέει πόσοι ειδοποιούνται και πόσα χρήματα επιστρέφονται —
+  // με φρέσκα νούμερα τη στιγμή του κλικ.
+  const onCancelEvent = async () => {
+    const fresh = (await refetchCancelPreview()).data ?? cancelPreview
+    const lines = [
+      t('events.cancelEventParticipants', { count: fresh?.participants ?? 0 }),
+      ...(fresh?.refunds
+        ? [t('events.cancelEventRefunds', { count: fresh.refunds, amount: Number(fresh.refund_total ?? 0).toFixed(2) })]
+        : []),
+      t('events.cancelEventQuestion'),
+    ]
+    if (!confirm(lines.join('\n'))) return
+    cancelEvent.mutate()
+  }
+
   const fmt = (value?: string | null) => {
     if (!value) return null
     // 'YYYY-MM-DD' ως τοπική ημερομηνία· το new Date('YYYY-MM-DD') είναι UTC
@@ -112,6 +157,11 @@ export default function EventDetail() {
     ? Math.max(0, event.capacity - (event.registered_count ?? 0))
     : null
   const isPaidEvent = Number(event.price) > 0
+  // Ακυρωμένη από τον διοργανωτή: το `cancelled` του GET /events/:id φτάνει
+  // και σε μη συνδεδεμένους· το event_cancelled του /registration μόνο σε συνδεδεμένους.
+  const eventCancelled = !!event.cancelled || !!reg?.event_cancelled
+  // Ο διοργανωτής δεν ακυρώνει με επιστροφές εκδήλωση που ξεκίνησε (μόνο admin).
+  const cancelBlocked = cancelPreview?.can_cancel === false
   const pending = reg?.payment_status === 'pending'
   const paidSeat = reg?.registered && reg?.payment_status === 'paid'
   const refundHours = reg?.refund_hours ?? 48
@@ -141,10 +191,17 @@ export default function EventDetail() {
               <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
                 {event.title}
               </h1>
-              <span className={cn('badge text-xs shrink-0',
-                event.price > 0 ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700')}>
-                {event.price > 0 ? `€${event.price}` : t('common.free')}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {eventCancelled && (
+                  <span className="badge text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1">
+                    <Ban size={11} /> {t('bookings.status.cancelled')}
+                  </span>
+                )}
+                <span className={cn('badge text-xs shrink-0',
+                  event.price > 0 ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700')}>
+                  {event.price > 0 ? `€${event.price}` : t('common.free')}
+                </span>
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
@@ -201,9 +258,31 @@ export default function EventDetail() {
         {/* Attend */}
         <div className="card p-5 mb-5">
           {!isAuthenticated ? (
-            <Link to="/login" className="btn-primary w-full justify-center text-sm">
-              {t('events.loginToJoin')}
-            </Link>
+            eventCancelled ? (
+              // Ακυρωμένη: καμία πρόσκληση για δήλωση.
+              <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-medium">
+                <Ban size={16} className="shrink-0" /> {t('events.cancelledByOrganizer')}
+              </p>
+            ) : (
+              <Link to="/login" className="btn-primary w-full justify-center text-sm">
+                {t('events.loginToJoin')}
+              </Link>
+            )
+          ) : eventCancelled ? (
+            // Ο διοργανωτής ακύρωσε: καμία νέα δήλωση· τι έγινε με τα χρήματα.
+            <>
+              <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-medium">
+                <Ban size={16} className="shrink-0" />
+                {reg?.refund_reason === 'event_cancelled' && reg?.payment_status === 'refunded'
+                  ? t('events.cancelledByOrganizerRefunded')
+                  : t('events.cancelledByOrganizer')}
+              </p>
+              {reg?.refund_reason === 'event_cancelled' && reg?.payment_status !== 'refunded' && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {t('events.cancelledByOrganizerRefundDelayed')}
+                </p>
+              )}
+            </>
           ) : reg?.registered ? (
             <>
               <p className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 font-medium mb-3">
@@ -260,7 +339,7 @@ export default function EventDetail() {
             </button>
           )}
           {/* Πολιτική ακύρωσης κάτω από το κουμπί, για κάθε εκδήλωση με τιμή. */}
-          {isPaidEvent && !(reg?.registered && !paidSeat) && (
+          {isPaidEvent && !(reg?.registered && !paidSeat) && !eventCancelled && (
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
               {t('events.refundPolicy', { hours: refundHours })}
             </p>
@@ -281,6 +360,32 @@ export default function EventDetail() {
             )}
           </div>
         </div>
+
+        {isOrganizer && (
+          <div className="card p-5 mt-5">
+            <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
+              {t('events.manageEvent')}
+            </h2>
+            {cancelBlocked ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('events.cancelEventStarted')}
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHint')}
+                </p>
+                <button onClick={onCancelEvent} disabled={cancelEvent.isPending}
+                  className="btn-secondary w-full justify-center text-sm flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <Ban size={15} />
+                  {cancelEvent.isPending
+                    ? t('common.loading')
+                    : cancelPreview?.already_cancelled ? t('events.cancelEventRetry') : t('events.cancelEvent')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   )

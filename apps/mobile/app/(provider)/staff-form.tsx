@@ -114,7 +114,7 @@ export default function StaffFormScreen() {
 
         <Button full label={save.isPending ? t('providerDash.saving') : t('providerDash.save')}
           loading={save.isPending}
-          disabled={save.isPending || form.full_name.trim().length < 2 || (isNew && !form.service_id)}
+          disabled={save.isPending || !form.full_name.trim() || (isNew && !form.service_id)}
           onPress={() => save.mutate()} />
         {!isNew && (
           <Button full variant="danger" label={t('providerPkg.delete')} loading={remove.isPending}

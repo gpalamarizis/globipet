@@ -29,7 +29,7 @@ export default function ServiceFormScreen() {
   const service = services.find((s: any) => s.id === id)
 
   const [form, setForm] = useState({
-    title: '', description: '', city: '', location: '', years_experience: '',
+    title: '', description: '', city: '', location: '', years_experience: '', price: '',
     latitude: null as number | null, longitude: null as number | null,
     specializations: '', home_visits: false, emergency_available: false, is_active: true,
   })
@@ -42,6 +42,7 @@ export default function ServiceFormScreen() {
       city: service.city ?? '', location: service.location ?? '',
       latitude: service.latitude ?? null, longitude: service.longitude ?? null,
       years_experience: service.years_experience ? String(service.years_experience) : '',
+      price: service.price != null ? String(service.price) : '',
       specializations: (service.specializations ?? []).join(', '),
       home_visits: !!service.home_visits, emergency_available: !!service.emergency_available,
       is_active: !!service.is_active,
@@ -53,11 +54,16 @@ export default function ServiceFormScreen() {
     qc.invalidateQueries({ queryKey: ['provider-services'] })
   }
 
+  // Βασική τιμή — ίδιο πεδίο με το web (κενό = αμετάβλητη).
+  const priceNum = form.price.trim() ? parseFloat(form.price.replace(',', '.')) : null
+  const priceOk = priceNum === null || (Number.isFinite(priceNum) && priceNum >= 0)
+
   const save = useMutation({
     mutationFn: () => api.patch(`/packages/services/${id}`, {
       ...form,
       title: form.title.trim(),
       years_experience: parseInt(form.years_experience, 10) || 0,
+      price: priceNum ?? undefined,
     }),
     onSuccess: () => { refresh(); Alert.alert(t('providerPkg.serviceUpdated')); router.back() },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerPkg.error')),
@@ -90,6 +96,9 @@ export default function ServiceFormScreen() {
           onChange={c => setForm(f => ({ ...f, ...c }))} />
         <Input label={t('providerPkg.fYearsExp')} value={form.years_experience}
           onChangeText={v => set('years_experience', v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" />
+        <Input label={t('providerNew.basePrice')} value={form.price} onChangeText={v => set('price', v)}
+          keyboardType="decimal-pad" placeholder="0.00"
+          error={priceOk ? undefined : t('parity.invalidPrice')} hint={t('providerNew.basePriceHint')} />
         <Input label={t('providerPkg.fSpecializations')} value={form.specializations}
           onChangeText={v => set('specializations', v)} />
         <SwitchRow label={t('providerPkg.fHomeVisits')} value={form.home_visits} onChange={v => set('home_visits', v)} />
@@ -97,7 +106,7 @@ export default function ServiceFormScreen() {
         <SwitchRow label={t('providerPkg.fActive')} value={form.is_active} onChange={v => set('is_active', v)} />
 
         <Button full label={save.isPending ? t('providerPkg.saving') : t('providerPkg.save')}
-          loading={save.isPending} disabled={!form.title.trim() || save.isPending}
+          loading={save.isPending} disabled={!form.title.trim() || !priceOk || save.isPending}
           onPress={() => save.mutate()} />
         <Button full variant="danger" label={t('providerPkg.delete')} loading={remove.isPending}
           onPress={confirmDelete} style={{ marginTop: space.sm }} />

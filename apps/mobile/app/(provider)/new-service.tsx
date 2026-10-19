@@ -7,6 +7,7 @@ import { Check, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, Input, SkeletonRows } from '@/components/ui'
+import { SwitchRow } from '@/components/SwitchRow'
 import { ServiceLocationField, type Coords } from '@/components/ServiceLocationField'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -27,6 +28,26 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   Η υπηρεσία και τα πακέτα δημιουργούνται με ΜΙΑ κλήση (/packages/setup),
  *   ώστε να μην υπάρξει υπηρεσία χωρίς πακέτα αν κοπεί το δίκτυο στη μέση.
  */
+/**
+ * Οι ΙΔΙΕΣ κατηγορίες με τον οδηγό «Νέα υπηρεσία» του web
+ * (ProviderPackagesPage → CATEGORY_LABELS). Πριν το κινητό έδειχνε μόνο όσες
+ * είχαν πρότυπα στον κατάλογο, οπότε π.χ. «Daycare» ή «Άλλο» δεν
+ * δημιουργούνταν από εδώ.
+ */
+const CATEGORIES: { key: string; labelKey: string }[] = [
+  { key: 'grooming',    labelKey: 'providerPkg.cGrooming' },
+  { key: 'veterinary',  labelKey: 'providerPkg.cVeterinary' },
+  { key: 'clinic',      labelKey: 'providerPkg.cClinic' },
+  { key: 'walking',     labelKey: 'providerPkg.cWalking' },
+  { key: 'sitting',     labelKey: 'providerPkg.cSitting' },
+  { key: 'boarding',    labelKey: 'providerPkg.cBoarding' },
+  { key: 'daycare',     labelKey: 'providerPkg.cDaycare' },
+  { key: 'training',    labelKey: 'providerPkg.cTraining' },
+  { key: 'transport',   labelKey: 'providerPkg.cTransport' },
+  { key: 'photography', labelKey: 'providerPkg.cPhotography' },
+  { key: 'other',       labelKey: 'providerPkg.cOther' },
+]
+
 export default function NewServiceScreen() {
   const { t } = useTranslation()
   const router = useRouter()
@@ -42,13 +63,15 @@ export default function NewServiceScreen() {
   const [location, setLocation] = useState('')
   const [coords, setCoords] = useState<Coords>({ latitude: null, longitude: null })
   const [basePrice, setBasePrice] = useState('')
+  // Ίδια πεδία με το web: έτη εμπειρίας, κατ' οίκον, έκτακτα.
+  const [yearsExp, setYearsExp] = useState('')
+  const [homeVisits, setHomeVisits] = useState(false)
+  const [emergency, setEmergency] = useState(false)
+  // Η βασική τιμή ΣΤΕΛΝΕΤΑΙ πλέον (πριν συμπληρωνόταν και χανόταν). Κενό = 0.
+  const priceNum = basePrice.trim() ? parseFloat(basePrice.replace(',', '.')) : 0
+  const priceOk = Number.isFinite(priceNum) && priceNum >= 0
   // template_id -> τιμή σε κείμενο, ώστε το πεδίο να δέχεται κενό και κόμμα
   const [prices, setPrices] = useState<Record<string, string>>({})
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['catalog-categories'],
-    queryFn: () => api.get('/catalog/categories').then(r => r.data?.data ?? []),
-  })
 
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
     queryKey: ['catalog-preset', category],
@@ -75,18 +98,27 @@ export default function NewServiceScreen() {
       city: city.trim(),
       location: location.trim(),
       latitude: coords.latitude, longitude: coords.longitude,
+      years_experience: parseInt(yearsExp, 10) || 0,
+      home_visits: homeVisits, emergency_available: emergency,
+      price: priceNum,
       packages_with_prices: chosen,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['provider-services'] })
       qc.invalidateQueries({ queryKey: ['provider-stats'] })
+      // Η λίστα «Υπηρεσίες» διαβάζει το /packages/my με αυτό το κλειδί.
+      qc.invalidateQueries({ queryKey: ['provider-packages'] })
+      qc.invalidateQueries({ queryKey: ['my-services-all'] })
       router.replace('/(provider)/services' as any)
     },
     onError: (e: any) =>
       Alert.alert(t('common.error'), e?.response?.data?.message || t('providerNew.errCreate')),
   })
 
-  const canNext = step === 1 ? !!category : step === 2 ? title.trim().length > 1 : chosen.length > 0
+  // Ίδιοι κανόνες με το web: κατηγορία, όνομα, έγκυρη (ή κενή) τιμή. Τα
+  // πακέτα είναι προαιρετικά — όπως στο web προστίθενται και αργότερα από
+  // τον κατάλογο (Πακέτα → Κατάλογος).
+  const canNext = step === 1 ? !!category : step === 2 ? title.trim().length > 0 && priceOk : true
 
   return (
     <Screen title={t('providerNew.title')} back scroll={false}>
@@ -106,16 +138,14 @@ export default function NewServiceScreen() {
         {step === 1 && (
           <>
             <Text style={s.heading}>{t('providerNew.chooseCategory')}</Text>
-            {categories.map((c: any) => {
+            {CATEGORIES.map(c => {
               const on = category === c.key
               return (
                 <TouchableOpacity key={c.key} activeOpacity={0.7}
                   style={[s.option, on && s.optionOn]}
                   onPress={() => setCategory(c.key)}>
-                  <Text style={[s.optionTxt, on && s.optionTxtOn]}>
-                    {t(`services.categories.${c.key}`, { defaultValue: c.key })}
-                  </Text>
-                  <Text style={s.optionCount}>{c.count}</Text>
+                  <Text style={[s.optionTxt, on && s.optionTxtOn]}>{t(c.labelKey)}</Text>
+                  {on && <Check size={16} color={colors.brand} />}
                 </TouchableOpacity>
               )
             })}
@@ -134,9 +164,14 @@ export default function NewServiceScreen() {
             {/* Το /packages/setup αποθηκεύει country 'GR' όταν δεν δίνεται — ίδια χώρα στην αναζήτηση. */}
             <ServiceLocationField address={location} city={city} country="GR"
               latitude={coords.latitude} longitude={coords.longitude} onChange={setCoords} />
+            <Input label={t('providerPkg.fYearsExp')} value={yearsExp}
+              onChangeText={v => setYearsExp(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" />
             <Input label={t('providerNew.basePrice')} value={basePrice} onChangeText={setBasePrice}
-              keyboardType="decimal-pad" placeholder="0.00" />
+              keyboardType="decimal-pad" placeholder="0.00"
+              error={priceOk ? undefined : t('parity.invalidPrice')} />
             <Text style={s.hint}>{t('providerNew.basePriceHint')}</Text>
+            <SwitchRow label={t('providerPkg.fHomeVisits')} value={homeVisits} onChange={setHomeVisits} />
+            <SwitchRow label={t('providerPkg.gEmergency')} value={emergency} onChange={setEmergency} />
           </>
         )}
 
@@ -144,6 +179,9 @@ export default function NewServiceScreen() {
           <>
             <Text style={s.heading}>{t('providerNew.setPrices')}</Text>
             <Text style={s.hint}>{t('providerNew.setPricesHint')}</Text>
+            {!loadingTemplates && groups.length === 0 && (
+              <Text style={s.hint}>{t('providerPkg.createHint')}</Text>
+            )}
             {loadingTemplates ? <SkeletonRows count={4} /> : groups.map(([group, items]) => (
               <View key={group} style={s.group}>
                 <Text style={s.groupTitle}>

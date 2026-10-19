@@ -54,7 +54,8 @@ export default function ProductFormScreen() {
   const num = (v: string) => parseFloat(v.replace(',', '.'))
   const price = num(form.price)
   const sale = form.sale_price.trim() ? num(form.sale_price) : null
-  const valid = form.name.trim().length > 1 && Number.isFinite(price) && price > 0
+  // Ίδιος κανόνας με το web: μη κενό όνομα, τιμή > 0, προσφορά < τιμής.
+  const valid = form.name.trim().length > 0 && Number.isFinite(price) && price > 0
     && (sale === null || (Number.isFinite(sale) && sale > 0 && sale < price))
 
   const payload = () => ({

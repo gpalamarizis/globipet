@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, Platform, StatusBar, Modal, TextInput } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X } from 'lucide-react-native'
+import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X, Stethoscope, ChevronRight } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -32,10 +32,26 @@ const STATUS: Record<string, { labelKey: string; bg: string; fg: string }> = {
   no_show:   { labelKey: 'status.no_show', bg: colors.surfaceAlt, fg: colors.textMuted },
 }
 
+// Ίδιες τρεις καρτέλες και ίδιοι κανόνες με το web (MyBookings):
+//   Επερχόμενες — ημερομηνία/ώρα ≥ τώρα και όχι ακυρωμένη
+//   Ιστορικό    — ημερομηνία/ώρα < τώρα ή ολοκληρωμένη
+//   Όλες
+// Πριν το φίλτρο γινόταν στον server μόνο με την ημερομηνία (σε UTC), οπότε
+// οι ακυρωμένες εμφανίζονταν στις επερχόμενες και δεν υπήρχε «Όλες».
 const TABS = [
   { id: 'upcoming', labelKey: 'bookings.upcoming' },
   { id: 'past',     labelKey: 'bookings.history' },
+  { id: 'all',      labelKey: 'bookingPolicy.filterAll' },
 ]
+
+/** booking_date + booking_time ως ΤΟΠΙΚΗ ώρα (όχι new Date('YYYY-MM-DD') = UTC). */
+const bookingDate = (b: any): Date | null => {
+  const [y, m, d] = String(b?.booking_date ?? '').split('-').map(Number)
+  if (!y || !m || !d) return null
+  const [hh, mm] = String(b?.booking_time || '00:00').split(':').map(Number)
+  const x = new Date(y, m - 1, d, hh || 0, mm || 0)
+  return isNaN(x.getTime()) ? null : x
+}
 
 export default function BookingsScreen() {
 
@@ -56,7 +72,8 @@ export default function BookingsScreen() {
       comment: comment.trim() || undefined,
     }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['bookings'] })
+      // Το query της λίστας είναι ['my-bookings'] — το ['bookings'] δεν ταίριαζε με τίποτα.
+      qc.invalidateQueries({ queryKey: ['my-bookings'] })
       setReviewing(null); setComment(''); setRating(5)
       Alert.alert(t('reviews.thanks'), t('reviews.thanksHint'))
     },
@@ -66,18 +83,25 @@ export default function BookingsScreen() {
   const [tab, setTab] = useState('upcoming')
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['my-bookings', tab],
-    queryFn: () => api.get('/bookings/my', {
-      params: tab === 'upcoming' ? { upcoming: 'true' } : { past: 'true' },
-    }).then(r => r.data?.data ?? []),
+  const { data: allBookings = [], isLoading } = useQuery({
+    queryKey: ['my-bookings'],
+    queryFn: () => api.get('/bookings/my').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
+  })
+  const now = new Date()
+  const bookings = (allBookings as any[]).filter(b => {
+    const d = bookingDate(b)
+    if (tab === 'upcoming') return !!d && d >= now && b.status !== 'cancelled'
+    if (tab === 'past') return (!!d && d < now) || b.status === 'completed'
+    return true
   })
 
   const cancel = useMutation({
     mutationFn: (id: string) => api.patch(`/bookings/${id}`, { status: 'cancelled' }),
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] })
+      // Η κάρτα «Επόμενο ραντεβού» της Αρχικής έχει δικό της query.
+      qc.invalidateQueries({ queryKey: ['my-next-booking'] })
       Alert.alert(t('bookingPolicy.cancelled'), r?.data?.refund > 0
         ? t('bookingPolicy.refundStarted', { refund: Number(r.data.refund).toFixed(2) }) : undefined)
     },
@@ -109,11 +133,10 @@ export default function BookingsScreen() {
     ])
   }
 
-  const fmtDate = (d?: string) => {
-    if (!d) return '—'
-    const x = new Date(d)
-    return isNaN(x.getTime()) ? d
-      : x.toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })
+  const fmtDate = (b: any) => {
+    const x = bookingDate(b)
+    return x ? x.toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })
+      : (b?.booking_date || '—')
   }
 
   if (!isAuthenticated) return (
@@ -173,7 +196,7 @@ export default function BookingsScreen() {
             : <View style={s.empty}>
                 <Calendar size={icon.hero} color={colors.border} />
                 <Text style={s.emptyTitle}>
-                  {tab === 'upcoming' ? t('bookings.none_upcoming') : t('bookings.none_history')}
+                  {tab === 'upcoming' ? t('bookings.none_upcoming') : tab === 'past' ? t('bookings.none_history') : t('bookingPolicy.empty')}
                 </Text>
                 {tab === 'upcoming' && (
                   <>
@@ -206,12 +229,21 @@ export default function BookingsScreen() {
 
               <View style={s.metaRow}>
                 <Calendar size={icon.xs} color={colors.textLight} />
-                <Text style={s.meta}>{fmtDate(item.booking_date)}</Text>
+                <Text style={s.meta}>{fmtDate(item)}</Text>
                 <Clock size={icon.xs} color={colors.textLight} />
-                <Text style={s.meta}>{item.booking_time}</Text>
+                <Text style={s.meta}>
+                  {item.booking_time}{item.duration ? ` · ${item.duration} ${t('services.minutes')}` : ''}
+                </Text>
               </View>
 
-              {(item.pet_name || item.service?.city) && (
+              {/* Γιατρός, κατοικίδιο, διεύθυνση (ή πόλη) — όπως στο web. */}
+              {!!item.staff_name && (
+                <View style={s.metaRow}>
+                  <Stethoscope size={icon.xs} color={colors.textLight} />
+                  <Text style={s.meta}>{item.staff_name}</Text>
+                </View>
+              )}
+              {(item.pet_name || item.service?.location || item.service?.city) && (
                 <View style={s.metaRow}>
                   {!!item.pet_name && (
                     <>
@@ -219,17 +251,17 @@ export default function BookingsScreen() {
                       <Text style={s.meta}>{item.pet_name}</Text>
                     </>
                   )}
-                  {!!item.service?.city && (
+                  {!!(item.service?.location || item.service?.city) && (
                     <>
                       <MapPin size={icon.xs} color={colors.textLight} />
-                      <Text style={s.meta}>{item.service.city}</Text>
+                      <Text style={[s.meta, { flexShrink: 1 }]} numberOfLines={1}>{item.service.location || item.service.city}</Text>
                     </>
                   )}
                 </View>
               )}
 
               <View style={s.cardFooter}>
-                <Text style={s.price}>€{item.total_price}</Text>
+                <Text style={s.price}>€{Number(item.total_price ?? 0).toFixed(2)}</Text>
                 {canCancel && (
                   <TouchableOpacity style={s.cancelBtn} activeOpacity={0.7}
                     disabled={cancel.isPending}
@@ -247,6 +279,12 @@ export default function BookingsScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              {/* «Λεπτομέρειες» → η σελίδα της υπηρεσίας, όπως στο web. */}
+              <TouchableOpacity style={s.details} activeOpacity={0.7}
+                onPress={() => router.push(`/services/${item.service_id}` as any)}>
+                <Text style={s.detailsText}>{t('parity.details')}</Text>
+                <ChevronRight size={icon.xs} color={colors.brand} />
+              </TouchableOpacity>
             </View>
           )
         }}
@@ -380,6 +418,8 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cancelText: { ...type.caption, color: colors.danger, fontWeight: weight.bold },
+  details: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: space.sm },
+  detailsText: { ...type.caption, color: colors.brand, fontWeight: weight.semibold },
 
   skeleton: { backgroundColor: colors.surfaceAlt },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: space.xl, gap: space.sm },

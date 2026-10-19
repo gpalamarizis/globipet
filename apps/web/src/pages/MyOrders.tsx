@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Package, ChevronRight, ShoppingBag } from 'lucide-react'
+import { Package, ChevronRight, ShoppingBag, Truck } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -53,32 +53,59 @@ export default function MyOrders() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order: any, i: number) => (
+          {orders.map((order: any, i: number) => {
+            // Τα είδη και ο αριθμός αποστολής, όπως στη λίστα του κινητού.
+            const lines: any[] = Array.isArray(order.items) ? order.items : []
+            return (
             <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Link to={`/orders/${order.id}`} className="card p-5 flex items-center gap-4 hover:shadow-md transition-shadow block">
-                <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center shrink-0">
-                  <Package size={20} className="text-brand-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                      {t('orders.orderNumber')} #{order.id?.slice(0, 8).toUpperCase()}
-                    </p>
-                    <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[order.status] || 'bg-gray-100 text-gray-700')}>
-                      {String(t(`orders.status.${order.status}`, order.status))}
-                    </span>
+              <Link to={`/orders/${order.id}`} className="card p-5 hover:shadow-md transition-shadow block">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center shrink-0">
+                    <Package size={20} className="text-brand-900" />
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString(localeMap[i18n.language] || 'el-GR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                        {t('orders.orderNumber')} #{order.id?.slice(0, 8).toUpperCase()}
+                      </p>
+                      <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', statusColors[order.status] || 'bg-gray-100 text-gray-700')}>
+                        {String(t(`orders.status.${order.status}`, order.status))}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.created_at).toLocaleDateString(localeMap[i18n.language] || 'el-GR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-gray-900 dark:text-white">€{order.total_amount?.toFixed(2)}</p>
+                    <ChevronRight size={16} className="text-gray-400 ml-auto mt-1" />
+                  </div>
+                </div>
+                {lines.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1.5">
+                    {lines.slice(0, 3).map((it: any, j: number) => (
+                      <div key={j} className="flex items-center gap-3 text-xs">
+                        <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
+                          {it.image ? <img src={it.image} alt="" className="w-full h-full object-cover" /> : <Package size={12} className="text-gray-300" />}
+                        </div>
+                        <span className="flex-1 min-w-0 truncate text-gray-700 dark:text-gray-300">{it.name || it.product_name}</span>
+                        <span className="text-gray-500 font-medium shrink-0">×{it.quantity}</span>
+                      </div>
+                    ))}
+                    {lines.length > 3 && (
+                      <p className="text-xs text-gray-400 pl-10">{t('orders.andMore', { count: lines.length - 3 })}</p>
+                    )}
+                  </div>
+                )}
+                {!!order.tracking_number && (
+                  <p className="mt-3 flex items-center gap-2 text-xs font-medium text-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+                    <Truck size={13} /> {t('orders.tracking', { code: order.tracking_number })}
                   </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-gray-900 dark:text-white">€{order.total_amount?.toFixed(2)}</p>
-                  <ChevronRight size={16} className="text-gray-400 ml-auto mt-1" />
-                </div>
+                )}
               </Link>
             </motion.div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

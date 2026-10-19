@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Modal } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Syringe, Stethoscope, Pill, FlaskConical, ScanLine, Scissors, TriangleAlert, Heart, Smile, Scale, Dna, Activity, Award, Plane, Users, PawPrint, Download, ChevronRight, Plus, Trash2, X, Pencil } from 'lucide-react-native'
 import { api } from '@/lib/api'
@@ -169,9 +169,17 @@ const TABS: TabSpec[] = [
       { key: 'booking_ref', labelKey: 'passport.bookingRef' },
     ] },
 
-  { id: 'access', Icon: Users, labelKey: 'passport.access',
+  // Πρόσβαση κτηνιάτρων: χορήγηση (POST /passport/access/:petId) και
+  // ανάκληση (DELETE /passport/access/:id), όπως στο web. Πριν ήταν μόνο
+  // ανάγνωση στο κινητό.
+  { id: 'access', api: 'access', Icon: Users, labelKey: 'passport.access',
     data: 'accessList', title: 'provider_email', date: 'granted_at',
-    badge: { key: 'status' } },
+    badge: { key: 'status' },
+    fields: [
+      { key: 'provider_name', labelKey: 'passport.acc_vetName' },
+      { key: 'reason', labelKey: 'passport.acc_reasonComment' },
+      { key: 'expires_at', labelKey: 'passport.acc_accessExpiry' },
+    ] },
 ]
 
 // Τύπος εμβολίου — ίδιες τιμές με το web. Χωρίς επιλογή δεν στέλνεται και
@@ -185,6 +193,25 @@ const VACCINE_TYPES = [
   { value: 'other', labelKey: 'passport.vt_other' },
 ]
 
+// Πεδία ημερομηνίας της φόρμας — τα ίδια που στο web είναι <input type="date">,
+// και το expires_at της πρόσβασης. Στο κινητό γράφονται ως κείμενο, οπότε
+// ελέγχονται πριν φύγουν: το expires_at είναι DateTime στη βάση (ελεύθερο
+// κείμενο → Invalid Date → 500) και τα υπόλοιπα, αν και String, συγκρίνονται
+// και ταξινομούνται ως YYYY-MM-DD (π.χ. λύσσα σε ισχύ, ταξινόμηση λίστας).
+const DATE_KEYS = new Set([
+  'date', 'date_administered', 'next_due_date', 'next_appointment', 'start_date', 'end_date',
+  'diagnosed_date', 'next_due', 'departure_date', 'return_date', 'expires_at',
+])
+
+/** YYYY-MM-DD και υπαρκτή ημερομηνία (όχι 2026-02-30), χωρίς new Date('YYYY-MM-DD'). */
+function isValidYmd(v: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  if (!m) return false
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const x = new Date(y, mo - 1, d)
+  return x.getFullYear() === y && x.getMonth() === mo - 1 && x.getDate() === d
+}
+
 // Σημερινή τοπική ημερομηνία ως YYYY-MM-DD· σύγκριση με το next_due_date
 // χωρίς new Date('YYYY-MM-DD'), που διαβάζεται ως UTC.
 function localToday() {
@@ -197,7 +224,10 @@ export default function PassportScreen() {
   const { t } = useTranslation()
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
-  const [petId, setPetId] = useState('')
+  // Από την καρτέλα κατοικιδίου ο φάκελος ανοίγει κατευθείαν στο ζώο
+  // (όπως στο web, όπου η σελίδα του ζώου δείχνει τον φάκελό του).
+  const params = useLocalSearchParams<{ petId?: string }>()
+  const [petId, setPetId] = useState(typeof params.petId === 'string' ? params.petId : '')
   const [tab, setTab] = useState('identity')
 
   const { data: pets = [] } = useQuery({
@@ -228,6 +258,9 @@ export default function PassportScreen() {
       ...Object.fromEntries(
         Object.entries(form)
           .filter(([, v]) => v !== '' && v != null)
+          // Το email του κτηνιάτρου όπως το αποθηκεύει ο λογαριασμός του:
+          // με κενά ή κεφαλαία η πρόσβαση δεν θα ταίριαζε ποτέ με το login του.
+          .map(([k, v]) => [k, k === 'provider_email' ? v.trim().toLowerCase() : DATE_KEYS.has(k) ? v.trim() : v])
           .map(([k, v]) => [k, /^\d+([.,]\d+)?$/.test(v) && (k.includes('weight') || k.includes('rate') || k.includes('temp'))
             ? parseFloat(v.replace(',', '.')) : v]),
       ),
@@ -256,12 +289,23 @@ export default function PassportScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
-  const confirmDelete = (r: any) =>
-    Alert.alert(t('passport.deleteTitle'), t('passport.deleteQ'), [
+  // Στην πρόσβαση το DELETE δεν σβήνει: κάνει την εγγραφή «Ανακλήθηκε».
+  // Το Alert το λέει έτσι, όχι «Διαγραφή».
+  const confirmDelete = (r: any) => {
+    const revoke = spec.id === 'access'
+    Alert.alert(t(revoke ? 'passport.revokeTitle' : 'passport.deleteTitle'), t(revoke ? 'passport.revokeQ' : 'passport.deleteQ'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive',
+      { text: t(revoke ? 'passport.revoke' : 'common.delete'), style: 'destructive',
         onPress: () => deleteRecord.mutate({ api: spec.api!, id: r.id }) },
     ])
+  }
+
+  // Έλεγχος ημερομηνιών πριν την αποστολή (βλ. DATE_KEYS).
+  const submitRecord = () => {
+    const bad = Object.entries(form).some(([k, v]) => DATE_KEYS.has(k) && !!v?.trim() && !isValidYmd(v.trim()))
+    if (bad) return Alert.alert(t('common.error'), t('passport.invalidDate'))
+    addRecord.mutate()
+  }
 
   const exportPdf = async () => {
     try {
@@ -377,8 +421,9 @@ export default function PassportScreen() {
             }} full />
         )}
 
+        {tab === 'access' && <Text style={s.intro}>{t('passport.acc_accessInfo')}</Text>}
         {!!spec.api && (
-          <Button label={t('passport.addRecord')}
+          <Button label={tab === 'access' ? t('passport.acc_grantAccess') : t('passport.addRecord')}
             icon={<Plus size={18} color={colors.textOnDark} />}
             onPress={() => { setForm({}); setAdding(true) }} full />
         )}
@@ -466,7 +511,7 @@ export default function PassportScreen() {
                           {fmt(r[spec.title ?? 'title']) ?? t(spec.labelKey)}
                         </Text>
                         {badgeFor(r)}
-                        {!!spec.api && !!r.id && (
+                        {!!spec.api && !!r.id && (spec.id !== 'access' || r.status === 'approved') && (
                           <TouchableOpacity onPress={() => confirmDelete(r)} hitSlop={8}>
                             <Trash2 size={15} color={colors.danger} />
                           </TouchableOpacity>
@@ -524,7 +569,19 @@ export default function PassportScreen() {
                 ))
               ) : null}
 
-              {tab !== 'pedigree' && (<>
+              {tab === 'access' ? (<>
+                <Input label={t('passport.acc_vetEmailReq')} value={form.provider_email ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, provider_email: v }))}
+                  keyboardType="email-address" autoCapitalize="none" />
+                <Input label={t('passport.acc_vetName')} value={form.provider_name ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, provider_name: v }))} />
+                <Input label={t('passport.acc_reasonComment')} value={form.reason ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, reason: v }))} />
+                <Input label={t('passport.acc_accessExpiry')} value={form.expires_at ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, expires_at: v }))} placeholder="YYYY-MM-DD" />
+              </>) : null}
+
+              {tab !== 'pedigree' && tab !== 'access' && (<>
               {/* Ο τίτλος και η ημερομηνία πρώτα: είναι τα πεδία που
                   ταυτοποιούν την εγγραφή σε κάθε κατηγορία. */}
               {!!spec.title && (
@@ -555,7 +612,8 @@ export default function PassportScreen() {
               )}
               {spec.fields?.map(f => (
                 <Input key={f.key} label={t(f.labelKey)} value={form[f.key] ?? ''}
-                  onChangeText={v => setForm(x => ({ ...x, [f.key]: v }))} />
+                  onChangeText={v => setForm(x => ({ ...x, [f.key]: v }))}
+                  placeholder={DATE_KEYS.has(f.key) ? 'YYYY-MM-DD' : undefined} />
               ))}
               <Input label={t('serviceDetail.note')} value={form.notes ?? ''}
                 onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline />
@@ -566,7 +624,7 @@ export default function PassportScreen() {
                 ? savePedigree.isPending
                 : (addRecord.isPending || !(spec.title && form[spec.title]?.trim()))}
               loading={addRecord.isPending || savePedigree.isPending}
-              onPress={() => (tab === 'pedigree' ? savePedigree : addRecord).mutate()} full />
+              onPress={() => (tab === 'pedigree' ? savePedigree.mutate() : submitRecord())} full />
           </View>
         </View>
       </Modal>

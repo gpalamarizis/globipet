@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Search, ChevronRight, Plus,
   Stethoscope, Scissors, Footprints, House, GraduationCap, Car,
-  Brain, FileText, Video, MapPin, ShieldCheck, Pill, Sparkles,
+  Brain, FileText, Video, MapPin, ShieldCheck, Pill, Sparkles, Calendar,
 } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { api } from '../../src/lib/api'
@@ -88,7 +88,7 @@ function tint(key: string) {
 
 export default function HomeScreen() {
   const tabSpace = useTabSpace()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const queryClient = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
@@ -128,6 +128,40 @@ export default function HomeScreen() {
     ? Math.max(0, Number(aiStatus.trial_days_left ?? 0)) : 0
   const trialExpired = trialLeft === 0
 
+  // Επόμενο ραντεβού — όπως η κάρτα της αρχικής του web.
+  const { data: nextBooking } = useQuery({
+    // Ίδια κριτήρια με την καρτέλα «Επερχόμενες» του app/bookings.tsx: όχι
+    // ακυρωμένες και όχι όσες πέρασε ήδη η ώρα τους. Ο server ταξινομεί μόνο
+    // κατά ημερομηνία (και με limit=1 θα έφερνε και ακυρωμένη), οπότε
+    // φιλτράρουμε και ταξινομούμε κατά ημερομηνία+ώρα εδώ.
+    queryKey: ['my-next-booking'],
+    queryFn: () => api.get('/bookings/my?upcoming=true').then(r => {
+      const at = (b: any): number | null => {
+        const [y, m, d] = String(b?.booking_date ?? '').split('-').map(Number)
+        if (!y || !m || !d) return null
+        const [hh, mm] = String(b?.booking_time || '00:00').split(':').map(Number)
+        const x = new Date(y, m - 1, d, hh || 0, mm || 0).getTime()
+        return isNaN(x) ? null : x
+      }
+      const now = Date.now()
+      return ((r.data?.data ?? []) as any[])
+        .map(b => ({ b, ts: at(b) }))
+        .filter(x => x.ts !== null && x.ts >= now && x.b.status !== 'cancelled')
+        .sort((a, c) => (a.ts as number) - (c.ts as number))[0]?.b ?? null
+    }),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  // booking_date είναι «YYYY-MM-DD»: τοπική ημερομηνία από τα μέρη της,
+  // όχι new Date('YYYY-MM-DD') (UTC → λάθος μέρα σε άλλες ζώνες).
+  const bookingWhen = (() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(nextBooking?.booking_date ?? '')
+    if (!m) return ''
+    const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      .toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })
+    return [day, nextBooking?.booking_time].filter(Boolean).join(' · ')
+  })()
+
   /**
    * Τράβηγμα προς τα κάτω για ανανέωση.
    *
@@ -142,6 +176,7 @@ export default function HomeScreen() {
       queryClient.invalidateQueries({ queryKey: ['featured-services'] }),
       queryClient.invalidateQueries({ queryKey: ['featured-products'] }),
       queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
+      queryClient.invalidateQueries({ queryKey: ['my-next-booking'] }),
     ])
     setRefreshing(false)
   }, [queryClient])
@@ -202,6 +237,32 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* ── Επόμενο ραντεβού (όπως στο web) ──────────────────────── */}
+      {isAuthenticated && (
+        <View style={[s.section, { paddingTop: space.lg }]}>
+          <TouchableOpacity activeOpacity={0.8} style={s.booking}
+            onPress={() => router.push((nextBooking ? '/bookings' : '/(tabs)/services') as any)}>
+            <View style={s.bookingIcon}>
+              <Calendar size={icon.sm} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.trialLabel} numberOfLines={1}>{t('home.nextBooking')}</Text>
+              {nextBooking ? (
+                <>
+                  <Text style={s.trialValue} numberOfLines={1}>
+                    {nextBooking.service?.title || t('home.appointment')}
+                  </Text>
+                  {bookingWhen ? <Text style={s.bookingWhen} numberOfLines={1}>{bookingWhen}</Text> : null}
+                </>
+              ) : (
+                <Text style={s.bookingWhen} numberOfLines={2}>{t('home.noBooking')}</Text>
+              )}
+            </View>
+            <ChevronRight size={icon.sm} color={colors.textLight} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ── Τα κατοικίδιά μου ────────────────────────────────────────
           Πρώτα, γιατί είναι ο λόγος που ανοίγει κανείς την εφαρμογή. */}
       {isAuthenticated && (
@@ -219,7 +280,7 @@ export default function HomeScreen() {
           <View style={{ gap: space.md, paddingRight: space.lg, flexDirection: 'row', flexWrap: 'wrap' }}>
             {pets.slice(0, 6).map((p: any) => (
               <TouchableOpacity key={p.id} style={s.petCard} activeOpacity={0.8}
-                onPress={() => router.push('/(tabs)/pets' as any)}>
+                onPress={() => router.push(`/pets/${p.id}` as any)}>
                 <View style={s.petAvatar}>
                   {p.image_url
                     ? <Image source={{ uri: p.image_url }} style={s.petImg} />
@@ -323,7 +384,7 @@ export default function HomeScreen() {
                     ⭐ {sv.rating?.toFixed(1) ?? '—'} · {t('home.reviews_count', { count: sv.reviews_count ?? 0 })}
                   </Text>
                 </View>
-                <Text style={s.providerPrice}>€{sv.price}</Text>
+                <Text style={s.providerPrice}>€{Number(sv.price ?? 0).toFixed(2)}</Text>
               </TouchableOpacity>
             ))}
       </View>
@@ -349,7 +410,7 @@ export default function HomeScreen() {
                     : <Text style={{ fontSize: 32 }}>🛍️</Text>}
                 </View>
                 <Text style={s.productName} numberOfLines={2}>{p.name}</Text>
-                <Text style={s.productPrice}>€{p.sale_price ?? p.price}</Text>
+                <Text style={s.productPrice}>€{Number(p.sale_price ?? p.price ?? 0).toFixed(2)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -412,6 +473,16 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   trialActive: { borderColor: colors.warning },
+  booking: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    padding: space.md, borderRadius: radius.lg, borderWidth: 1,
+    borderColor: colors.borderLight, backgroundColor: colors.surface,
+  },
+  bookingIcon: {
+    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.brandTint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bookingWhen: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, marginTop: 2 },
   trialExpired: { borderColor: colors.danger },
   trialIcon: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   trialLabel: { ...type.caption, color: colors.textMuted },

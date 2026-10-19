@@ -1,20 +1,26 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MessagesSquare, CheckCircle2, Pin } from 'lucide-react-native'
+import { MessagesSquare, CheckCircle2, Pin, Check, Trash2 } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
-/** Θέμα φόρουμ με απαντήσεις. */
+/**
+ * Θέμα φόρουμ με απαντήσεις.
+ *
+ * Όπως το web (ForumTopic.tsx): ο δημιουργός του θέματος (ή admin) σημειώνει
+ * την αποδεκτή απάντηση, και ο συντάκτης μιας απάντησης (ή admin) τη
+ * διαγράφει. Ίδιοι έλεγχοι με τον server.
+ */
 export default function ForumTopicScreen() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [reply, setReply] = useState('')
 
   const { data: topic, isLoading } = useQuery({
@@ -32,6 +38,24 @@ export default function ForumTopicScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
+  const markAnswer = useMutation({
+    mutationFn: (replyId: string) => api.post(`/forum/replies/${replyId}/answer`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['forum-topic', id] }),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const deleteReply = useMutation({
+    mutationFn: (replyId: string) => api.delete(`/forum/replies/${replyId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['forum-topic', id] }),
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const confirmDelete = (replyId: string) =>
+    Alert.alert(t('forum.confirmDelete'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => deleteReply.mutate(replyId) },
+    ])
+
   if (isLoading) return <Screen title={t('forum.title')} back><SkeletonRows count={3} /></Screen>
   if (!topic) return (
     <Screen title={t('forum.title')} back>
@@ -40,6 +64,8 @@ export default function ForumTopicScreen() {
   )
 
   const replies = topic.replies ?? []
+  const isAdmin = user?.role === 'admin'
+  const isTopicAuthor = !!user?.email && user.email === topic.author_email
 
   return (
     <Screen title={t('forum.title')} back scroll={false}>
@@ -64,9 +90,22 @@ export default function ForumTopicScreen() {
           <Text style={s.hint}>{t('forum.noReplies')}</Text>
         ) : replies.map((r: any) => (
           <Card key={r.id} style={r.is_answer ? s.answer : undefined}>
+            {r.is_answer && <Text style={s.answerLabel}>{t('forum.acceptedAnswer')}</Text>}
             <View style={s.topRow}>
               {r.is_answer && <CheckCircle2 size={14} color={colors.success} />}
-              <Text style={s.author}>{r.author_name ?? r.author_email}</Text>
+              <Text style={[s.author, { flex: 1 }]}>{r.author_name ?? r.author_email}</Text>
+              {(isTopicAuthor || isAdmin) && !r.is_answer && (
+                <TouchableOpacity hitSlop={10} accessibilityLabel={t('forum.markAnswer')}
+                  disabled={markAnswer.isPending} onPress={() => markAnswer.mutate(r.id)}>
+                  <Check size={icon.sm} color={colors.success} />
+                </TouchableOpacity>
+              )}
+              {(isAdmin || (!!user?.email && r.author_email === user.email)) && (
+                <TouchableOpacity hitSlop={10} accessibilityLabel={t('common.delete')}
+                  disabled={deleteReply.isPending} onPress={() => confirmDelete(r.id)}>
+                  <Trash2 size={icon.sm} color={colors.danger} />
+                </TouchableOpacity>
+              )}
             </View>
             <Text style={s.content}>{r.content}</Text>
           </Card>
@@ -96,4 +135,5 @@ const s = StyleSheet.create({
   sectionTitle: { ...type.emphasis, color: colors.text },
   hint: { ...type.caption, color: colors.textLight },
   answer: { borderColor: colors.success, borderWidth: 2 },
+  answerLabel: { ...type.caption, color: colors.success, fontWeight: weight.semibold, marginBottom: space.xs },
 })

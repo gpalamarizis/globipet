@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { FREE_SHIPPING_OVER } from '@/lib/shipping'
 import toast from 'react-hot-toast'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 /**
  * Ολοκλήρωση αγοράς — ίδια ροή και ίδια πεδία με το κινητό.
@@ -46,7 +47,7 @@ export default function Checkout() {
   })
   const [shippingMethod, setShippingMethod] = useState<string>('boxnow')
 
-  const { data: cartItems = [] } = useQuery({
+  const { data: cartItems = [], isLoading: cartLoading } = useQuery({
     queryKey: ['cart'],
     queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
   })
@@ -106,6 +107,15 @@ export default function Checkout() {
 
   const addressOk = !!(address.full_name.trim() && address.phone.trim() && address.street.trim()
     && address.city.trim() && address.postal_code.trim())
+
+  // Όσο φορτώνει το καλάθι, η κενή λίστα δεν σημαίνει «άδειο καλάθι» — αλλιώς
+  // εμφανιζόταν στιγμιαία «Το καλάθι είναι άδειο». Το κινητό δείχνει φόρτωση.
+  if (cartLoading) return (
+    <div className="page-container py-24 flex flex-col items-center gap-3">
+      <LoadingSpinner />
+      <p className="text-sm text-gray-500">{t('checkout.loading_cart')}</p>
+    </div>
+  )
 
   if (cartItems.length === 0) return (
     <div className="page-container py-16 text-center">

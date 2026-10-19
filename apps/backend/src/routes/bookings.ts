@@ -95,15 +95,27 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
    */
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
-    const { upcoming, past, limit } = req.query
-    const now = new Date().toISOString().split('T')[0]
+    const { upcoming, past, limit, exclude_cancelled } = req.query
+    // «Σήμερα» στην Ελλάδα, όχι σε UTC (00:00–03:00 ώρα Ελλάδας η UTC
+    // ημερομηνία είναι ακόμη η χθεσινή).
+    const now = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Athens', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date())
     const where: any = { customer_email: email }
-    if (upcoming === 'true' || upcoming === '1') where.booking_date = { gte: now }
+    const isUpcoming = upcoming === 'true' || upcoming === '1'
+    if (isUpcoming) where.booking_date = { gte: now }
     else if (past === 'true' || past === '1')     where.booking_date = { lt: now }
+    // Προσθετική παράμετρος (π.χ. «Επόμενο ραντεβού» της αρχικής): χωρίς
+    // ακυρωμένες. Χωρίς αυτήν η απάντηση μένει όπως πριν για τους παλιούς πελάτες.
+    const excludeCancelled = exclude_cancelled === 'true' || exclude_cancelled === '1'
+    if (excludeCancelled) where.status = { not: 'cancelled' }
     const take = Math.min(parseInt(limit) || 50, 100)
     const data = await prisma.booking.findMany({
       where,
-      orderBy: (upcoming === 'true' || upcoming === '1') ? { booking_date: 'asc' } : { created_at: 'desc' },
+      orderBy: isUpcoming
+        // Με τη νέα παράμετρο, και η ώρα: δύο ραντεβού την ίδια μέρα → το νωρίτερο πρώτο.
+        ? (excludeCancelled ? [{ booking_date: 'asc' }, { booking_time: 'asc' }] : { booking_date: 'asc' })
+        : { created_at: 'desc' },
       take,
       // The list needs to say what was booked. Without this the UI has only a
       // service_id and falls back to a generic label on every row.

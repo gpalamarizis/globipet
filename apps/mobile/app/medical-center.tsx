@@ -86,6 +86,11 @@ export default function MedicalCenterScreen() {
           )}
         </Card>
       )}
+      {/* Όπως το web: χωρίς σύνδεση, πρόσκληση σύνδεσης για τη δωρεάν δοκιμή. */}
+      {!isAuthenticated && (
+        <Button label={t('medical.loginForTrial')} onPress={() => router.push('/auth/login' as any)}
+          full style={{ marginBottom: space.md }} />
+      )}
 
       {TOOLS.map(({ key, Icon, titleKey, subKey, route, ai }) => (
         <TouchableOpacity key={key} activeOpacity={0.7} style={s.tool}

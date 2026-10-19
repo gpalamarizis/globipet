@@ -103,6 +103,8 @@ export default function AiStoolUrine() {
       breed: pet.breed || '',
       age_years: pet.age != null ? String(pet.age) : '',
       weight_kg: pet.weight != null ? String(pet.weight) : '',
+      // Ίδια συμπλήρωση με το κινητό: και η στείρωση, αν είναι γνωστή.
+      is_sterilized: pet.is_sterilized == null ? f.is_sterilized : pet.is_sterilized ? 'true' : 'false',
     }))
   }
 

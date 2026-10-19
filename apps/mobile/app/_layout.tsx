@@ -3,18 +3,16 @@ import { Stack, useSegments, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import * as SplashScreen from 'expo-splash-screen'
 import { useAppFonts } from '@/fonts'
 import { useAuthStore } from '../src/store/auth'
 import { registerPushToken, usePushRouting } from '../src/lib/notifications'
 import { initI18n } from '../lib/i18n'
+// Σε δικό του module ώστε να τον καθαρίζει και το store σε αποσύνδεση/αλλαγή χρήστη.
+import { queryClient } from '../src/lib/queryClient'
 
 SplashScreen.preventAutoHideAsync()
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 2, staleTime: 1000 * 60 * 5 } }
-})
 
 /**
  * Οι οθόνες που ανοίγουν πάνω από τα tabs, αλφαβητικά.
@@ -41,6 +39,7 @@ const CARD_ROUTES = [
   'inbox',
   'insurance',
   'language',
+  'notifications',
   'orders',
   'passport',
   'playdates',

@@ -250,7 +250,8 @@ export default function MarketInsights() {
               className={cn('px-2.5 py-1.5 rounded-full text-xs font-medium transition-all',
                 category === c.category ? 'bg-brand-900 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700')}>
-              {c.category} <span className="opacity-60">{c.count}</span>
+              {/* Μεταφρασμένη κατηγορία, όπως στο κινητό — όχι η τιμή της βάσης. */}
+              {t(`marketplace.categories.${c.category}`, { defaultValue: c.category })} <span className="opacity-60">{c.count}</span>
             </button>
           ))}
         </div>
@@ -326,7 +327,7 @@ export default function MarketInsights() {
                           <p className="font-medium text-gray-900 dark:text-white truncate max-w-[220px] group-hover:text-brand-900">
                             {r.name}
                           </p>
-                          <p className="text-[11px] text-gray-400">{r.category}</p>
+                          <p className="text-[11px] text-gray-400">{r.category ? t(`marketplace.categories.${r.category}`, { defaultValue: r.category }) : ''}</p>
                         </div>
                       </Link>
                     </td>

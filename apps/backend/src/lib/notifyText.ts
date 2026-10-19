@@ -100,6 +100,10 @@ const TITLES: Record<string, Row> = {
     es: 'Tu prueba gratuita de IA ha terminado', fr: 'Votre essai IA gratuit est terminé',
     zh: '您的 AI 免费试用已结束',
   },
+  event_cancelled: {
+    el: 'Η εκδήλωση ακυρώθηκε', en: 'Event cancelled', es: 'Evento cancelado',
+    fr: 'Événement annulé', zh: '活动已取消',
+  },
 }
 
 // ─── Μηνύματα ────────────────────────────────────────────────────────
@@ -205,4 +209,32 @@ export const notifyMsg = {
     fr: 'Vos 30 jours gratuits de GlobiPet AI sont terminés. Choisissez une formule pour continuer à utiliser les fonctions IA.',
     zh: '您的 GlobiPet AI 30 天免费期已结束。请选择方案以继续使用 AI 功能。',
   }),
+
+  /**
+   * Ακύρωση εκδήλωσης από τον διοργανωτή.
+   *   refunded — επιστράφηκαν τα χρήματα · delayed — η επιστροφή απέτυχε, εκκρεμεί
+   *   plain    — δωρεάν συμμετοχή ή πληρωμή που δεν είχε ολοκληρωθεί
+   */
+  eventCancelled: (lang: Lang, title: string, kind: 'refunded' | 'delayed' | 'plain', amount: string) =>
+    kind === 'refunded' ? p(lang, {
+        el: `Η εκδήλωση "${title}" ακυρώθηκε από τον διοργανωτή. Τα χρήματα (${amount}€) επιστράφηκαν στον τρόπο πληρωμής σου.`,
+        en: `The event "${title}" was cancelled by the organizer. Your payment (${amount}€) has been refunded to your payment method.`,
+        es: `El evento "${title}" ha sido cancelado por el organizador. Tu pago (${amount}€) se ha reembolsado a tu método de pago.`,
+        fr: `L’événement « ${title} » a été annulé par l’organisateur. Votre paiement (${amount}€) a été remboursé sur votre moyen de paiement.`,
+        zh: `活动“${title}”已被组织者取消。您支付的 ${amount}€ 已退回原支付方式。`,
+      })
+    : kind === 'delayed' ? p(lang, {
+        el: `Η εκδήλωση "${title}" ακυρώθηκε από τον διοργανωτή. Η επιστροφή των χρημάτων σου (${amount}€) καθυστερεί — θα ολοκληρωθεί σύντομα.`,
+        en: `The event "${title}" was cancelled by the organizer. Your refund (${amount}€) is delayed and will be completed shortly.`,
+        es: `El evento "${title}" ha sido cancelado por el organizador. Tu reembolso (${amount}€) se está retrasando y se completará en breve.`,
+        fr: `L’événement « ${title} » a été annulé par l’organisateur. Votre remboursement (${amount}€) est retardé et sera effectué prochainement.`,
+        zh: `活动“${title}”已被组织者取消。您的退款（${amount}€）有所延迟，将很快完成。`,
+      })
+    : p(lang, {
+        el: `Η εκδήλωση "${title}" ακυρώθηκε από τον διοργανωτή.`,
+        en: `The event "${title}" was cancelled by the organizer.`,
+        es: `El evento "${title}" ha sido cancelado por el organizador.`,
+        fr: `L’événement « ${title} » a été annulé par l’organisateur.`,
+        zh: `活动“${title}”已被组织者取消。`,
+      }),
 }

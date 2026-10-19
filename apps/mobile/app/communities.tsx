@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
+import { Chips } from '@/components/Chips'
 
 const typo = theme.type
 
@@ -38,16 +39,23 @@ export default function CommunitiesScreen() {
   const [cName, setCName] = useState('')
   const [cDesc, setCDesc] = useState('')
   const [cCity, setCCity] = useState('')
+  // Όπως το web: διεύθυνση (ο server βρίσκει από αυτή τις συντεταγμένες —
+  // χωρίς αυτή, μόνο από την πόλη, όλες οι κοινότητες έπεφταν στο κέντρο
+  // της) και ακτίνα 0.5–5 km.
+  const [cAddress, setCAddress] = useState('')
+  const [cRadius, setCRadius] = useState('1')
 
   const createCommunity = useMutation({
     mutationFn: () => api.post('/communities', {
       name: cName.trim(),
       description: cDesc.trim() || undefined,
       city: cCity.trim(),
+      address: cAddress.trim() || undefined,
+      radius_km: parseFloat(cRadius),
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['communities'] })
-      setCreating(false); setCName(''); setCDesc(''); setCCity('')
+      setCreating(false); setCName(''); setCDesc(''); setCCity(''); setCAddress(''); setCRadius('1')
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -173,7 +181,11 @@ export default function CommunitiesScreen() {
             <Text style={s.sheetTitle}>{t('com.create')}</Text>
             <Input label={t('com.nameLabel')} value={cName} onChangeText={setCName} />
             <Input label={t('providerNew.description')} value={cDesc} onChangeText={setCDesc} multiline />
+            <Input label={t('com.address')} value={cAddress} onChangeText={setCAddress}
+              placeholder={t('com.addressPlaceholder')} />
             <Input label={t('common.city')} value={cCity} onChangeText={setCCity} />
+            <Chips label={t('com.radius', { km: cRadius })} value={cRadius} onChange={setCRadius}
+              options={['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map(v => ({ value: v, label: `${v} km` }))} />
             <View style={s.sheetActions}>
               <Button label={t('common.cancel')} variant="secondary"
                 onPress={() => setCreating(false)} style={{ flex: 1 }} />

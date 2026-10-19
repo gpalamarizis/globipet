@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
@@ -24,6 +24,25 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [tab, setTab] = useState<'description' | 'reviews' | 'shipping'>('description')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Επιστροφή από το Stripe μετά τη συνδρομή (routes/subscriptions.ts:
+  // success_url / cancel_url = /marketplace/:id?subscription=…). Η σελίδα
+  // αγνοούσε την παράμετρο: ο πελάτης δεν μάθαινε αν η συνδρομή ξεκίνησε.
+  useEffect(() => {
+    const result = searchParams.get('subscription')
+    if (!result) return
+    if (result === 'success') {
+      toast.success(t('pgSubscribe.successToast'))
+      queryClient.invalidateQueries({ queryKey: ['my-food-subscriptions'] })
+    } else if (result === 'cancelled') {
+      toast(t('pgSubscribe.cancelledToast'))
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete('subscription')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ['product', id],
@@ -101,6 +120,21 @@ export default function ProductDetail() {
     },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
+
+  // Το κουμπί κοινοποίησης δεν είχε onClick — δεν έκανε τίποτα. Web Share
+  // όπου υπάρχει, αλλιώς αντιγραφή συνδέσμου (ίδιο με τη ροή κοινότητας).
+  const shareProduct = async () => {
+    const url = `${window.location.origin}/marketplace/${id}`
+    const title = product?.name ?? ''
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); return }
+      catch (e: any) { if (e?.name === 'AbortError') return }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success(t('socialExtra.linkCopied'))
+    } catch { toast.error(t('common.error')) }
+  }
 
   if (isLoading) return (
     <div className="page-container py-24 flex justify-center">
@@ -252,7 +286,8 @@ export default function ProductDetail() {
                   <Heart size={20} fill={inWishlist ? 'currentColor' : 'none'} />
                 </button>
               )}
-              <button className="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300 transition-all">
+              <button onClick={shareProduct} aria-label={t('serviceDetailExtra.share')}
+                className="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300 transition-all">
                 <Share2 size={20} />
               </button>
             </div>
@@ -310,7 +345,8 @@ export default function ProductDetail() {
             {product.category && (
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {[
-                  { label: t('productDetail.category'), value: product.category },
+                  // Μεταφρασμένη κατηγορία (όπως στο κινητό), όχι η τιμή της βάσης.
+                  { label: t('productDetail.category'), value: t(`marketplace.categories.${product.category}`, { defaultValue: product.category }) },
                   product.brand && { label: t('productDetail.brand'), value: product.brand },
                 ].filter(Boolean).map((attr: any, i) => (
                   <div key={i} className="flex justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm">

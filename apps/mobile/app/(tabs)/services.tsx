@@ -1,10 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, ScrollView, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { Search, X, Star, MapPin } from 'lucide-react-native'
+import { Search, X, Star, MapPin, CheckCircle } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
@@ -44,6 +44,15 @@ const SERVICE_TYPES = [
   { id: 'pharmacy',    labelKey: 'cat.pharmacy',   emoji: '💊', tint: 'pharmacy' },
 ]
 
+// «Φιλοξενία» δεν είναι τύπος της βάσης: όπως στο web ανοίγει δύο
+// υποεπιλογές (ιδιώτης / ξενοδοχείο). Πριν το κινητό έστελνε
+// service_type=hosting και δεν έβρισκε ποτέ τίποτα.
+const HOSTING = ['pet_sitting', 'boarding']
+const HOSTING_SUB = [
+  { id: 'pet_sitting', labelKey: 'services.types.pet_sitting', emoji: '🏡' },
+  { id: 'boarding',    labelKey: 'services.types.boarding',    emoji: '🏨' },
+]
+
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function ServicesScreen() {
@@ -55,15 +64,30 @@ export default function ServicesScreen() {
   const { type: initialType } = useLocalSearchParams<{ type?: string }>()
 
   const [search, setSearch] = useState('')
-  const [serviceType, setServiceType] = useState(initialType || 'all')
+  const [serviceType, setServiceType] = useState(initialType === 'hosting' ? 'pet_sitting' : (initialType || 'all'))
+  // Το useState διαβάζει το `?type=` μόνο στο πρώτο mount. Η καρτέλα μένει
+  // ανοιχτή στο παρασκήνιο, οπότε ένα δεύτερο πλακίδιο της Αρχικής άλλαζε
+  // την παράμετρο χωρίς να αλλάξει το φίλτρο.
+  useEffect(() => {
+    if (initialType) setServiceType(initialType === 'hosting' ? 'pet_sitting' : initialType)
+  }, [initialType])
   const [refreshing, setRefreshing] = useState(false)
+  // Ίδια φίλτρα με το web: πόλη, επαληθευμένοι, έκτακτα, ελάχιστη βαθμολογία.
+  const [city, setCity] = useState('')
+  const [onlyVerified, setOnlyVerified] = useState(false)
+  const [onlyEmergency, setOnlyEmergency] = useState(false)
+  const [minRating, setMinRating] = useState(0)
 
   const { data: services = [], isLoading } = useQuery({
-    queryKey: ['services', serviceType, search],
+    queryKey: ['services', serviceType, search, city, onlyVerified, onlyEmergency, minRating],
     queryFn: () => api.get('/services', {
       params: {
         ...(serviceType !== 'all' ? { service_type: serviceType } : {}),
         ...(search ? { q: search } : {}),
+        ...(city.trim() ? { city: city.trim() } : {}),
+        ...(onlyVerified ? { verified: true } : {}),
+        ...(onlyEmergency ? { emergency: true } : {}),
+        ...(minRating > 0 ? { min_rating: minRating } : {}),
         limit: 30,
       },
     }).then(r => r.data?.data ?? []),
@@ -95,6 +119,22 @@ export default function ServicesScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <View style={[s.searchRow, { marginTop: space.sm }]}>
+          <MapPin size={icon.md} color={colors.textLight} />
+          <TextInput
+            style={s.search}
+            placeholder={t('parity.cityPlaceholder')}
+            value={city}
+            onChangeText={setCity}
+            placeholderTextColor={colors.textLight}
+            returnKeyType="search"
+          />
+          {city.length > 0 && (
+            <TouchableOpacity onPress={() => setCity('')} hitSlop={8}>
+              <X size={icon.sm} color={colors.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Πλέγμα που αναδιπλώνεται: όλα τα φίλτρα ορατά με μια ματιά.
@@ -102,18 +142,59 @@ export default function ServicesScreen() {
           ότι υπάρχει κι άλλο δεξιά. */}
       <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
         {SERVICE_TYPES.map(sv => {
-          const active = serviceType === sv.id
+          const isHosting = sv.id === 'hosting'
+          const active = isHosting ? HOSTING.includes(serviceType) : serviceType === sv.id
           const c = tint(sv.tint)
           return (
             <TouchableOpacity
               key={sv.id}
               activeOpacity={0.7}
               style={[s.chip, active && { backgroundColor: c.bg, borderColor: c.fg }]}
-              onPress={() => setServiceType(sv.id)}>
+              onPress={() => setServiceType(isHosting ? (HOSTING.includes(serviceType) ? serviceType : 'pet_sitting') : sv.id)}>
               <Text style={s.chipEmoji}>{sv.emoji}</Text>
               <Text style={[s.chipText, active && { color: c.fg, fontWeight: weight.bold }]}>
                 {t(sv.labelKey)}
               </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {/* Υποεπιλογές φιλοξενίας: ιδιώτης ή ξενοδοχείο — όπως στο web. */}
+      {HOSTING.includes(serviceType) && (
+        <View style={s.filterWrap}>
+          {HOSTING_SUB.map(sub => {
+            const on = serviceType === sub.id
+            return (
+              <TouchableOpacity key={sub.id} activeOpacity={0.7}
+                style={[s.miniChip, on && s.miniChipOn]} onPress={() => setServiceType(sub.id)}>
+                <Text style={s.chipEmoji}>{sub.emoji}</Text>
+                <Text style={[s.miniTxt, on && s.miniTxtOn]}>{t(sub.labelKey)}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      )}
+
+      {/* Γρήγορα φίλτρα — ίδια με το web. */}
+      <View style={s.filterWrap}>
+        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, onlyVerified && s.miniChipOn]}
+          onPress={() => setOnlyVerified(v => !v)}>
+          <CheckCircle size={icon.xs} color={onlyVerified ? colors.brand : colors.textMuted} />
+          <Text style={[s.miniTxt, onlyVerified && s.miniTxtOn]}>{t('parity.verified')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, onlyEmergency && s.miniChipOn]}
+          onPress={() => setOnlyEmergency(v => !v)}>
+          <Text style={s.chipEmoji}>🚨</Text>
+          <Text style={[s.miniTxt, onlyEmergency && s.miniTxtOn]}>{t('parity.emergency')}</Text>
+        </TouchableOpacity>
+        {[4, 4.5].map(r => {
+          const on = minRating === r
+          return (
+            <TouchableOpacity key={r} activeOpacity={0.7} style={[s.miniChip, on && s.miniChipOn]}
+              onPress={() => setMinRating(on ? 0 : r)}>
+              <Star size={icon.xs} color={on ? colors.brand : colors.accent} fill={on ? colors.brand : colors.accent} />
+              <Text style={[s.miniTxt, on && s.miniTxtOn]}>{r}+</Text>
             </TouchableOpacity>
           )
         })}
@@ -176,7 +257,7 @@ export default function ServicesScreen() {
             </View>
 
             <View style={s.priceBox}>
-              <Text style={s.price}>€{item.price}</Text>
+              <Text style={s.price}>€{Number(item.price ?? 0).toFixed(2)}</Text>
               {item.is_verified && <Text style={s.verified}>✓</Text>}
             </View>
           </TouchableOpacity>
@@ -220,6 +301,15 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   chipEmoji: { fontSize: 16 },
+  filterWrap: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' },
+  miniChip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    paddingHorizontal: space.md, height: 32, borderRadius: radius.full,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
+  miniChipOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
+  miniTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  miniTxtOn: { color: colors.brand, fontWeight: weight.bold },
   chipText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
 
   card: {

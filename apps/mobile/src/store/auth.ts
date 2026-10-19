@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
+import i18n from 'i18next'
 import { api, setAuthToken } from '../lib/api'
 import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
+import { queryClient } from '../lib/queryClient'
 
 interface User {
   id: string
@@ -11,6 +13,15 @@ interface User {
   full_name: string
   role: string
   profile_photo?: string
+  // Πεδία προφίλ που επιστρέφει ήδη ο server (/auth/login, /users/me) και
+  // επεξεργάζεται το web: χωρίς αυτά το κινητό δεν μπορούσε να δείξει ή να
+  // αλλάξει πόλη, τηλέφωνο, βιογραφικό και ιστοσελίδα.
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
+  website?: string | null
+  google_id?: string | null
+  preferred_language?: string | null
 }
 
 interface AuthState {
@@ -24,6 +35,8 @@ interface AuthState {
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
   loadToken: () => Promise<void>
+  /** Συγχώνευση στοιχείων μετά από επεξεργασία προφίλ — και στη μνήμη και στο SecureStore, όπως το updateUser του web. */
+  updateUser: (patch: Partial<User>) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -57,6 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
       void registerPushToken()
+      // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
+      queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
@@ -87,6 +102,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
       void registerPushToken()
+      // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
+      queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -116,6 +133,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('user', JSON.stringify(data.user))
       setAuthToken(data.token)
       void registerPushToken()
+      // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
+      queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
       return true
     } catch (err) {
@@ -127,16 +146,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (data) => {
     set({ isLoading: true })
     try {
-      const { data: res } = await api.post('/auth/register', data)
+      // Όπως το web: η τρέχουσα γλώσσα γίνεται preferred_language του
+      // λογαριασμού. Χωρίς αυτήν ο server έβαζε 'el' και τα email (π.χ.
+      // επαναφορά κωδικού) έφταναν στα ελληνικά σε όποιον γράφτηκε αλλιώς.
+      const lang = (i18n.language || 'el').slice(0, 2)
+      const { data: res } = await api.post('/auth/register', {
+        ...data,
+        preferred_language: data?.preferred_language
+          || (['el', 'en', 'es', 'fr', 'zh'].includes(lang) ? lang : 'el'),
+      })
       await SecureStore.setItemAsync('token', res.token)
       await SecureStore.setItemAsync('user', JSON.stringify(res.user))
       setAuthToken(res.token)
       void registerPushToken()
+      queryClient.clear()
       set({ user: res.user, token: res.token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({ isLoading: false })
       throw err
     }
+  },
+
+  updateUser: async (patch) => {
+    const current = get().user
+    if (!current) return
+    const user = { ...current, ...patch }
+    set({ user })
+    try { await SecureStore.setItemAsync('user', JSON.stringify(user)) } catch {}
   },
 
   logout: async () => {
@@ -148,6 +184,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync('token')
     await SecureStore.deleteItemAsync('user')
     setAuthToken(null)
+    // Τα δεδομένα του χρήστη φεύγουν μαζί του: αλλιώς ο επόμενος στην ίδια
+    // συσκευή τα βλέπει από την cache (βλ. lib/queryClient.ts).
+    queryClient.clear()
     set({ user: null, token: null, isAuthenticated: false })
     // Best-effort sign-out from Facebook so the next login prompts again
     signOutFacebook().catch(() => {})

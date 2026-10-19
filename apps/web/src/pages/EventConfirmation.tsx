@@ -43,7 +43,7 @@ export default function EventConfirmation() {
 
   const status: string | undefined = reg?.registration?.status
   const regId: string | undefined = reg?.registration?.id
-  // 'full' | 'cancelled' | null — γιατί επιστράφηκαν τα χρήματα.
+  // 'full' | 'cancelled' | 'event_cancelled' | null — γιατί επιστράφηκαν τα χρήματα.
   const refundReason: string | null | undefined = reg?.refund_reason
 
   // Μία επαλήθευση με το transaction id της Viva.
@@ -93,6 +93,8 @@ export default function EventConfirmation() {
   // Πέρασε ο χρόνος αναμονής με πληρωμή που ξεκίνησε (υπάρχει transaction
   // id): εκκρεμότητα, όχι αποτυχία — το webhook μπορεί να έρθει αργότερα.
   const stillPending = status === 'pending_payment' && timedOut && !!transactionId
+  // Ο διοργανωτής ακύρωσε την εκδήλωση (επιστροφή έγινε ή εκκρεμεί).
+  const eventCancelled = refundReason === 'event_cancelled' && (refunded || status === 'refund_failed')
 
   return (
     <div className="page-container py-16 max-w-md mx-auto text-center">
@@ -115,6 +117,18 @@ export default function EventConfirmation() {
           <Clock size={56} className="mx-auto text-amber-500 mb-4" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.pendingTitle')}</h1>
           <p className="text-sm text-gray-500 mb-6">{t('pgEventConfirm.pendingDesc')}</p>
+        </>
+      ) : eventCancelled ? (
+        <>
+          {refunded
+            ? <CheckCircle size={56} className="mx-auto text-gray-400 mb-4" />
+            : <XCircle size={56} className="mx-auto text-red-500 mb-4" />}
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            {refunded ? t('events.cancelledByOrganizerRefunded') : t('events.cancelledByOrganizer')}
+          </h1>
+          <p className="text-sm text-gray-500 mb-6">
+            {refunded ? t('pgEventConfirm.refundedDesc') : t('events.cancelledByOrganizerRefundDelayed')}
+          </p>
         </>
       ) : refundFailed || (refunded && refundReason === 'full') ? (
         <>

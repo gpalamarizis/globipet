@@ -53,7 +53,8 @@ export default function ProviderMore() {
     queryFn: () => api.get('/services/my').then(r => r.data?.data ?? []),
   })
   const sells = !isSuccess || PRODUCT_TYPES.includes(myServices?.[0]?.service_type ?? '')
-  const items = ITEMS.filter(i => sells || (i.key !== 'products' && i.key !== 'import'))
+  // Ίδιο με το web: και τα Στατιστικά (καταστήματος) μόνο σε όσους πουλάνε.
+  const items = ITEMS.filter(i => sells || (i.key !== 'products' && i.key !== 'import' && i.key !== 'insights'))
 
   return (
     <Screen title={t('providerTabs.more')} subtitle={user?.email}>

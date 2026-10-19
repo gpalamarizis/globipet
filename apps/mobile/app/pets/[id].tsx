@@ -5,7 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PawPrint, ShieldCheck, MapPin, AlertTriangle, ChevronRight, Pencil, Trash2, X } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { PetFormFields, EMPTY_PET_FORM, petToForm, petPayload, petEmoji, type PetFormState } from '@/components/PetForm'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -33,19 +34,13 @@ export default function PetDetailScreen() {
   })
   const device = devices.find((d: any) => d.pet_id === id)
 
-  // Επεξεργασία: τα πεδία που δέχεται ο server. Το είδος δεν αλλάζει —
-  // ένα ζώο δεν γίνεται άλλο είδος, και η αλλαγή θα χαλούσε τα ιστορικά.
+  // Επεξεργασία: ίδια πεδία με την προσθήκη και με το web (AddPetModal,
+  // που επιτρέπει και αλλαγή είδους για διόρθωση λάθους καταχώρισης).
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState<Record<string, string>>({})
+  const [form, setForm] = useState<PetFormState>(EMPTY_PET_FORM)
 
   const save = useMutation({
-    mutationFn: () => api.patch(`/pets/${id}`, {
-      name: form.name?.trim(),
-      breed: form.breed?.trim() || undefined,
-      color: form.color?.trim() || undefined,
-      weight: form.weight ? parseFloat(form.weight.replace(',', '.')) : undefined,
-      microchip_number: form.microchip_number?.trim() || undefined,
-    }),
+    mutationFn: () => api.patch(`/pets/${id}`, petPayload(form)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-pets'] })
       setEditing(false)
@@ -69,13 +64,7 @@ export default function PetDetailScreen() {
     ])
 
   const openEdit = () => {
-    setForm({
-      name: pet?.name ?? '',
-      breed: pet?.breed ?? '',
-      color: pet?.color ?? '',
-      weight: pet?.weight != null ? String(pet.weight) : '',
-      microchip_number: pet?.microchip_number ?? '',
-    })
+    setForm(petToForm(pet))
     setEditing(true)
   }
 
@@ -93,7 +82,7 @@ export default function PetDetailScreen() {
   )
 
   const LINKS = [
-    { key: 'passport', Icon: ShieldCheck, labelKey: 'discover.medical_record', route: '/passport' },
+    { key: 'passport', Icon: ShieldCheck, labelKey: 'discover.medical_record', route: `/passport?petId=${encodeURIComponent(pet.id)}` },
     { key: 'tracker',  Icon: MapPin,      labelKey: 'discover.gps_tracking',   route: '/tracker' },
   ]
 
@@ -114,7 +103,7 @@ export default function PetDetailScreen() {
             {pet.image_url
               ? <Image source={{ uri: pet.image_url }} style={s.avatar} />
               : <View style={[s.avatar, s.avatarEmpty]}>
-                  <Text style={s.emoji}>{pet.species === 'cat' ? '🐈' : '🐕'}</Text>
+                  <Text style={s.emoji}>{petEmoji(pet.species)}</Text>
                 </View>}
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.name}>{pet.name}</Text>
@@ -135,7 +124,10 @@ export default function PetDetailScreen() {
           {([['pets.gender', pet.gender === 'female' ? t('passport.female') : t('passport.male')],
              ['pets.weight', pet.weight ? `${pet.weight} kg` : '—'],
              ['pets.color', pet.color || '—'],
-             ['pets.microchip', pet.microchip_number || t('pets.no_chip')]] as const).map(([k, v]) => (
+             ['pets.microchip', pet.microchip_number || t('pets.no_chip')],
+             // Όπως το web: ναι / όχι / άγνωστο (—).
+             ['pets.neutered', pet.is_sterilized === true ? t('common.yes')
+               : pet.is_sterilized === false ? t('common.no') : '—']] as const).map(([k, v]) => (
             <View key={k} style={s.kv}>
               <Text style={s.k}>{t(k)}</Text>
               <Text style={s.v}>{v}</Text>
@@ -189,21 +181,11 @@ export default function PetDetailScreen() {
                 <X size={icon.md} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={{ gap: space.sm }} keyboardShouldPersistTaps="handled">
-              {([
-                ['name', 'pets.name'],
-                ['breed', 'pets.breed'],
-                ['color', 'pets.color'],
-                ['weight', 'pets.weight'],
-                ['microchip_number', 'pets.microchip'],
-              ] as const).map(([key, labelKey]) => (
-                <Input key={key} label={t(labelKey)} value={form[key] ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
-                  keyboardType={key === 'weight' ? 'decimal-pad' : 'default'} />
-              ))}
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <PetFormFields form={form} onChange={setForm} />
             </ScrollView>
             <Button label={t('common.save')}
-              disabled={!form.name?.trim() || save.isPending}
+              disabled={!form.name.trim() || save.isPending}
               loading={save.isPending}
               onPress={() => save.mutate()} full />
           </View>

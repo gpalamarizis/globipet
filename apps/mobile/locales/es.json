@@ -143,7 +143,10 @@
     "trialLabel": "Prueba gratuita de IA",
     "trialDays": "{{count}} días",
     "trialDays_one": "{{count}} día",
-    "trialExpired": "Caducada — Ver planes"
+    "trialExpired": "Caducada — Ver planes",
+    "nextBooking": "Próxima reserva",
+    "appointment": "Cita",
+    "noBooking": "Sin reservas próximas. ¡Reserva ya!"
   },
   "services": {
     "title": "Servicios",
@@ -181,12 +184,25 @@
       "toys": "Juguetes",
       "accessories": "Accesorios",
       "health": "Salud",
-      "grooming": "Aseo"
+      "grooming": "Aseo",
+      "training": "Entrenamiento",
+      "housing": "Vivienda",
+      "other": "Otros"
     },
     "added": "✓ Añadido",
     "in_cart": "En el carrito",
     "out_of_stock": "Agotado",
-    "search_product": "Buscar producto"
+    "search_product": "Buscar producto",
+    "sort": {
+      "featured": "Destacados",
+      "price_asc": "Precio: Bajo → Alto",
+      "price_desc": "Precio: Alto → Bajo",
+      "rating": "Valoración",
+      "newest": "Más nuevos"
+    },
+    "results_count_one": "{{count}} resultado",
+    "results_count": "{{count}} resultados",
+    "featured": "Destacado"
   },
   "pets": {
     "title": "Mis Mascotas",
@@ -242,7 +258,9 @@
     "editTitle": "Editar mascota",
     "deleteTitle": "Eliminar mascota",
     "deleteQ": "¿Eliminar definitivamente a {{name}} y su historial?",
-    "deleteFailed": "No se pudo eliminar"
+    "deleteFailed": "No se pudo eliminar",
+    "kind_horse": "Caballo",
+    "kind_other": "Otro"
   },
   "social": {
     "title": "Social Feed",
@@ -257,7 +275,9 @@
     "noComments": "Aún no hay comentarios",
     "commentHint": "Escribe un comentario",
     "share": "Compartir",
-    "deleteQ": "¿Eliminar esta publicación definitivamente?"
+    "deleteQ": "¿Eliminar esta publicación definitivamente?",
+    "trending": "Tendencias",
+    "hashtagHint": "Añadir hashtag"
   },
   "profile": {
     "guest_title": "Inicia sesión para acceder",
@@ -278,7 +298,30 @@
     "no_account": "¿Sin cuenta? Regístrate",
     "not_logged_in": "No has iniciado sesión",
     "editProfile": "Editar perfil",
-    "points": "Puntos"
+    "points": "Puntos",
+    "bio": "Sobre mí",
+    "bioPlaceholder": "Unas palabras sobre ti...",
+    "website": "Sitio web",
+    "tier": "Nivel",
+    "bronze": "Bronce",
+    "silver": "Plata",
+    "gold": "Oro",
+    "platinum": "Platino",
+    "pointsForTier": "{{points}} para {{tier}}",
+    "maxTier": "Nivel máximo",
+    "achievements": "Logros",
+    "ach_firstPetTitle": "Primera mascota",
+    "ach_firstPetDesc": "Añadiste tu primera mascota",
+    "ach_firstOrderTitle": "Primera compra",
+    "ach_firstOrderDesc": "Completaste tu primer pedido",
+    "ach_reviewerTitle": "Super Reviewer",
+    "ach_reviewerDesc": "Escribiste 5 reseñas",
+    "ach_regularTitle": "Cliente habitual",
+    "ach_regularDesc": "10 reservas de servicios",
+    "ach_goldTitle": "Loyalty Gold",
+    "ach_goldDesc": "Alcanzaste el nivel Oro",
+    "ach_petLoverTitle": "Pet Lover",
+    "ach_petLoverDesc": "Añadiste 3 mascotas"
   },
   "language": {
     "title": "Idioma",
@@ -355,7 +398,28 @@
     "subtitle": "Compara planes de cobertura para tu mascota",
     "try_other_species": "Prueba con otro tipo de mascota.",
     "waiting_period": "Período de carencia: {{count}} días",
-    "what_covered": "Qué cubre"
+    "what_covered": "Qué cubre",
+    "comprehensive": "Completo",
+    "rabbits": "Conejos",
+    "birds": "Aves",
+    "filter_pet": "Tipo de mascota",
+    "filter_tier": "Nivel",
+    "all_tiers": "Todos",
+    "max_price": "Precio máx. mensual (€)",
+    "max_price_hint": "ej. 30",
+    "covers_surgery": "Cobertura de cirugía",
+    "covers_dental": "Cobertura dental",
+    "cov_accidents": "Accidentes",
+    "cov_illness": "Enfermedad",
+    "cov_surgery": "Cirugía",
+    "cov_dental": "Dental",
+    "cov_preventive": "Preventivo",
+    "cov_liability": "Responsabilidad civil",
+    "cov_death": "Muerte",
+    "per_year": "/año",
+    "plans_count_one": "{{count}} plan disponible",
+    "plans_count": "{{count}} planes disponibles",
+    "try_other_filters": "Prueba con filtros diferentes."
   },
   "ai": {
     "analyse": "Analizar con IA",
@@ -392,7 +456,9 @@
     "trial_over": "Tu prueba ha terminado",
     "trial_sub": "Con una suscripción sigues usando todas las herramientas de salud con IA.",
     "try_free": "Pruébalo gratis",
-    "analysing": "Analizando…"
+    "analysing": "Analizando…",
+    "ctaTitle": "¿Quiere una opinión profesional?",
+    "ctaDesc": "Contacte ahora con un veterinario especializado"
   },
   "bookings": {
     "cancel": "Cancelar reserva",
@@ -469,7 +535,10 @@
     "discussion": "Discusión",
     "noMessages": "Aún no hay mensajes",
     "messageHint": "Escribe un mensaje",
-    "membersOnly": "La conversación es solo para miembros. Únete para verla y participar."
+    "membersOnly": "La conversación es solo para miembros. Únete para verla y participar.",
+    "address": "Dirección / Zona",
+    "addressPlaceholder": "p. ej. Plaza Kolonaki, Atenas",
+    "radius": "Radio: {{km}} km"
   },
   "emo": {
     "angry": "Enfadado",
@@ -499,7 +568,18 @@
     "video_too_large": "Los fotogramas del vídeo son demasiado grandes para enviarlos. Prueba con un vídeo de menor resolución.",
     "body_language": "Lenguaje corporal",
     "needs_attention": "Requiere atención",
-    "new_video": "Nuevo vídeo"
+    "new_video": "Nuevo vídeo",
+    "speciesLabel": "Especie de la mascota",
+    "speciesDog": "🐶 Perro",
+    "speciesCat": "🐱 Gato",
+    "speciesRabbit": "🐰 Conejo",
+    "speciesBird": "🐦 Ave",
+    "speciesOther": "🐾 Otro",
+    "bl_posture": "Postura",
+    "bl_ears": "Orejas",
+    "bl_tail": "Cola",
+    "bl_eyes": "Ojos",
+    "bl_mouth": "Boca"
   },
   "inbox": {
     "day_ago_one": "hace 1 día",
@@ -635,7 +715,17 @@
     "vt_core": "Esencial",
     "vt_non_core": "No esencial",
     "vt_rabies": "Rabia",
-    "vt_other": "Otro"
+    "vt_other": "Otro",
+    "acc_vetEmailReq": "Email del veterinario *",
+    "acc_vetName": "Nombre del veterinario",
+    "acc_reasonComment": "Motivo / comentario",
+    "acc_accessExpiry": "Caducidad del acceso",
+    "acc_accessInfo": "Concede acceso a veterinarios concretos para que vean el historial de tu mascota. Puedes revocar el acceso en cualquier momento.",
+    "acc_grantAccess": "Conceder acceso",
+    "revokeTitle": "Revocar acceso",
+    "revokeQ": "El veterinario ya no podrá ver el historial de tu mascota. ¿Revocar el acceso?",
+    "revoke": "Revocar",
+    "invalidDate": "Fecha no válida. Escríbela con el formato YYYY-MM-DD (p. ej., 2026-03-15)."
   },
   "play": {
     "create_first": "Crea la primera e invita a otros propietarios.",
@@ -1283,7 +1373,10 @@
     "fDescription": "Descripción en inglés",
     "save": "Guardar",
     "saving": "Guardando…",
-    "errSave": "No se pudo guardar"
+    "errSave": "No se pudo guardar",
+    "savedFields_one": "{{count}} campo guardado",
+    "savedFields": "{{count}} campos guardados",
+    "removed": "Traducción eliminada"
   },
   "providerCal": {
     "connected": "Conectado",
@@ -1332,13 +1425,42 @@
     "likelyCauses": "Causas probables",
     "contextFactors": "Influencia del historial",
     "homeCare": "Qué hacer en casa",
-    "warningSigns": "Ve al veterinario de inmediato si…"
+    "warningSigns": "Ve al veterinario de inmediato si…",
+    "species": "Especie",
+    "dog": "Perro",
+    "cat": "Gato",
+    "historyTitle": "Historial del animal",
+    "historyHint": "Opcional, pero mejora mucho el análisis",
+    "prefillFromPet": "Rellenar a partir de una mascota existente",
+    "breed": "Raza",
+    "breedPh": "p. ej. Labrador",
+    "age": "Edad (años)",
+    "agePh": "p. ej. 4",
+    "weight": "Peso (kg)",
+    "weightPh": "p. ej. 12",
+    "sterilized": "Esterilización",
+    "unknown": "Desconocido",
+    "yesSterilized": "Sí, esterilizado",
+    "no": "No",
+    "ateFromStreet": "Comió recientemente algo de la calle o comida desconocida",
+    "recentMeds": "Medicamentos / antiparasitarios recientes",
+    "recentMedsPh": "p. ej. Nexgard hace 3 días",
+    "dietChange": "Cambio reciente de alimentación",
+    "dietChangePh": "p. ej. cambié a Royal Canin hace 5 días",
+    "lastNormal": "¿Cuándo fueron las últimas heces normales?",
+    "lastNormalPh": "p. ej. ayer por la mañana",
+    "symptoms": "Otros síntomas que hayas observado",
+    "symptomsPh": "p. ej. letargo, vómitos, rechaza la comida, polidipsia...",
+    "additional": "Información adicional",
+    "additionalPh": "p. ej. viaje reciente, contacto con otros animales, estrés..."
   },
   "wishlist": {
     "title": "Lista de deseos",
     "empty": "Tu lista está vacía",
     "emptyHint": "Pulsa el corazón en un producto para guardarlo aquí.",
-    "loginPrompt": "Inicia sesión para ver tu lista"
+    "loginPrompt": "Inicia sesión para ver tu lista",
+    "savedCount_one": "{{count}} producto guardado",
+    "savedCount": "{{count}} productos guardados"
   },
   "forum": {
     "title": "Foro",
@@ -1356,7 +1478,10 @@
     "catHealth": "Salud",
     "catNutrition": "Nutrición",
     "catBehaviour": "Comportamiento",
-    "catGeneral": "General"
+    "catGeneral": "General",
+    "acceptedAnswer": "Respuesta aceptada",
+    "markAnswer": "Marcar como respuesta",
+    "confirmDelete": "¿Eliminar esta respuesta?"
   },
   "events": {
     "title": "Eventos",
@@ -1378,7 +1503,24 @@
     "confirmCancelRefund": "Se cancelará tu inscripción y se reembolsarán €{{amount}} en tu tarjeta. ¿Cancelarla?",
     "cancelledRefunded": "Inscripción cancelada: se te está reembolsando el importe",
     "refundPending": "Reembolso pendiente",
-    "refundPendingHint": "El evento se llenó mientras se completaba tu pago y el reembolso se está retrasando. Contacta con el servicio de asistencia para completarlo."
+    "refundPendingHint": "El evento se llenó mientras se completaba tu pago y el reembolso se está retrasando. Contacta con el servicio de asistencia para completarlo.",
+    "cancelledByOrganizer": "El organizador ha cancelado este evento",
+    "cancelledByOrganizerRefunded": "El organizador ha cancelado este evento — te hemos devuelto el dinero",
+    "cancelledByOrganizerRefundDelayed": "El organizador ha cancelado este evento. El reembolso se está retrasando — lo completaremos nosotros; si necesitas algo, contáctanos.",
+    "manageEvent": "Gestionar evento",
+    "cancelEvent": "Cancelar evento",
+    "cancelEventHint": "Se cancelan todas las inscripciones, quienes pagaron reciben el reembolso completo y se avisa a todos. Después el evento se elimina.",
+    "cancelEventRetry": "Completar cancelación",
+    "cancelEventPendingHint": "El evento se ha cancelado, pero algunos reembolsos no se completaron. Inténtalo de nuevo.",
+    "cancelEventParticipants_one": "Se avisará a {{count}} participante.",
+    "cancelEventParticipants": "Se avisará a {{count}} participantes.",
+    "cancelEventRefunds_one": "Se reembolsará {{count}} pago — €{{amount}} en total.",
+    "cancelEventRefunds": "Se reembolsarán {{count}} pagos — €{{amount}} en total.",
+    "cancelEventQuestion": "Esta acción no se puede deshacer. ¿Cancelar el evento?",
+    "cancelEventDone_one": "El evento se ha cancelado. Se reembolsó {{count}} pago (€{{amount}}) y se avisó a los participantes.",
+    "cancelEventDone": "El evento se ha cancelado. Se reembolsaron {{count}} pagos (€{{amount}}) y se avisó a los participantes.",
+    "cancelEventPartial_one": "El evento se ha cancelado, pero {{count}} reembolso no se completó. Inténtalo de nuevo en un momento.",
+    "cancelEventPartial": "El evento se ha cancelado, pero {{count}} reembolsos no se completaron. Inténtalo de nuevo en un momento."
   },
   "breeds": {
     "title": "Razas",
@@ -1450,7 +1592,8 @@
     "pendingHint": "En cuanto se complete el cobro, el pedido se confirma.",
     "failed": "El pago ha fallado",
     "failedHint": "Inténtalo de nuevo desde tus pedidos.",
-    "orderNumber": "Número de pedido"
+    "orderNumber": "Número de pedido",
+    "status": "Estado"
   },
   "teleConfirm": {
     "title": "Telemedicina",
@@ -1471,7 +1614,8 @@
     "aiInactive": "Las funciones de IA requieren un plan",
     "trialDaysLeft": "Quedan {{count}} días de prueba",
     "needsPlan": "Requiere plan",
-    "trialDaysLeft_one": "Queda {{count}} día de prueba"
+    "trialDaysLeft_one": "Queda {{count}} día de prueba",
+    "loginForTrial": "Inicia sesión para la prueba gratuita"
   },
   "privacy": {
     "title": "Mis datos",
@@ -1502,7 +1646,10 @@
     "submit": "Enviar reseña",
     "commentHint": "Cuéntanos qué tal fue — opcional",
     "thanks": "Gracias",
-    "thanksHint": "Tu reseña ayuda a otros propietarios a elegir."
+    "thanksHint": "Tu reseña ayuda a otros propietarios a elegir.",
+    "none": "Aún no hay reseñas.",
+    "onlyBuyers": "Solo quienes compraron el producto pueden valorarlo.",
+    "sellerReply": "Respuesta del vendedor"
   },
   "shelters": {
     "title": "Refugios",
@@ -1922,7 +2069,9 @@
     "failedHint": "Tu plaza no se ha confirmado. Inténtalo de nuevo desde el evento o contáctanos si se te ha cobrado.",
     "refunded": "Se ha reembolsado el importe",
     "refundedHint": "El reembolso se ha hecho en la tarjeta con la que pagaste.",
-    "pendingLateHint": "El pago sigue pendiente. Si lo completaste en Viva, tu plaza se confirmará automáticamente: vuelve a consultar el evento en un rato."
+    "pendingLateHint": "El pago sigue pendiente. Si lo completaste en Viva, tu plaza se confirmará automáticamente: vuelve a consultar el evento en un rato.",
+    "refundInProgressHint": "El reembolso a la tarjeta con la que pagaste está en curso.",
+    "eventCancelledHint": "Tu inscripción se ha cancelado. Si se completa un pago que habías iniciado, se te reembolsará automáticamente."
   },
   "mySubs": {
     "title": "Mis suscripciones",
@@ -1962,5 +2111,21 @@
     "findFromAddress": "Buscar por dirección",
     "openInMaps": "Abrir en mapas",
     "openMapsFailed": "No se pudieron abrir los mapas."
+  },
+  "parity": {
+    "invalidPrice": "Precio no válido",
+    "cityPlaceholder": "Ciudad...",
+    "verified": "Verificados",
+    "emergency": "Emergencias",
+    "yearsExp_one": "{{count}} año de experiencia",
+    "yearsExp": "{{count}} años de experiencia",
+    "details": "Detalles",
+    "vetSearch": "Buscar veterinario o especialidad...",
+    "invalidSchedule": "Elige una fecha válida (hoy o posterior) y una hora HH:MM."
+  },
+  "notifCenter": {
+    "title": "Centro de notificaciones",
+    "empty": "No hay notificaciones",
+    "markAll": "Marcar todas como leídas"
   }
 }

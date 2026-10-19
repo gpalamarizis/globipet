@@ -82,7 +82,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="shrink-0 flex flex-col items-end gap-2">
           <p className="font-bold text-brand-900">{formatCurrency(product.sale_price || product.price)}</p>
           {product.sale_price && <p className="text-xs text-gray-400 line-through">{formatCurrency(product.price)}</p>}
-          <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>{t('marketplace.addToCart')}</button>
+          <button onClick={() => requireAuth(() => addToCart.mutate())} disabled={addToCart.isPending || product.stock === 0} className="btn-primary py-1.5 text-xs flex items-center gap-1"><ShoppingCart size={13}/>{t('marketplace.addToCart')}</button>
         </div>
       </div>
     )

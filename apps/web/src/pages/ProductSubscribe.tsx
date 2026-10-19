@@ -94,6 +94,8 @@ export default function ProductSubscribe() {
         >
           {checkout.isPending ? t('pgSubscribe.redirecting') : t('pgSubscribe.start')}
         </button>
+        {/* Διάρκεια και χρέωση, όπως η σημείωση του κινητού. */}
+        <p className="text-xs text-gray-400 text-center mt-3">{t('pgSubscribe.paymentNote')}</p>
       </div>
     </div>
   )

@@ -108,8 +108,14 @@ export default function Telehealth() {
     onSuccess: (data) => {
       if (data.checkoutUrl) window.location.href = data.checkoutUrl
     },
-    onError: (err: any) => toast.error(err?.message || t('telehealth.errors.bookingFailed')),
+    // Το μήνυμα του server (π.χ. «Δεν μπορείς να κλείσεις ραντεβού με τον εαυτό σου») — όπως στο κινητό.
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('telehealth.errors.bookingFailed')),
   })
+
+  // Ίδιος κανόνας με το κινητό: έγκυρη ημερομηνία/ώρα, όχι παρελθοντική μέρα.
+  // (Το min του <input type=date> δεν εμποδίζει πληκτρολόγηση παλιάς μέρας.)
+  const scheduleOk = /^\d{4}-\d{2}-\d{2}$/.test(bookingDate) && bookingDate >= localYmd()
+    && /^([01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)
 
   const openBooking = (vet: any) => {
     if (!isAuthenticated) { toast.error(t('telehealth.errors.loginRequired')); return }
@@ -339,6 +345,9 @@ export default function Telehealth() {
                     <label className="text-xs font-medium text-gray-500 mb-1 block">{t('telehealth.modal.time')}</label>
                     <input type="time" value={bookingTime} onChange={e => setBookingTime(e.target.value)} className="input w-full text-sm" />
                   </div>
+                  {!!bookingDate && !scheduleOk && (
+                    <p className="text-xs text-red-500">{t('telehealth.errors.invalidSchedule')}</p>
+                  )}
                 </div>
               )}
 
@@ -365,7 +374,7 @@ export default function Telehealth() {
               <div className="flex gap-3">
                 <button onClick={() => setSelectedVet(null)} className="btn-secondary flex-1">{t('telehealth.modal.cancel')}</button>
                 <button onClick={() => bookConsultation.mutate()}
-                  disabled={(tab === 'scheduled' && (!bookingDate || !bookingTime)) || bookConsultation.isPending}
+                  disabled={(tab === 'scheduled' && !scheduleOk) || bookConsultation.isPending}
                   className={cn('flex-1 flex items-center justify-center gap-2 rounded-xl font-semibold text-sm py-2.5 text-white transition-all disabled:opacity-50',
                     tab === 'now' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700')}>
                   {tab === 'now' ? <Zap size={14}/> : <Lock size={14}/>}

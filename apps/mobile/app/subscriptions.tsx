@@ -100,7 +100,11 @@ export default function SubscriptionsScreen() {
                     ? <Image source={{ uri: sub.product.image_url }} style={s.thumb} />
                     : <View style={[s.thumb, s.thumbEmpty]}><Package size={icon.md} color={colors.textLight} /></View>}
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.name} numberOfLines={2}>{sub.product?.name}</Text>
+                    {/* Το όνομα ανοίγει το προϊόν, όπως ο σύνδεσμος στο web. */}
+                    <Text style={s.name} numberOfLines={2}
+                      onPress={sub.product?.id ? () => router.push(`/products/${sub.product.id}` as any) : undefined}>
+                      {sub.product?.name}
+                    </Text>
                     <Text style={s.meta}>
                       €{Number(sub.monthly_price ?? 0).toFixed(2)}{t('pricing.perMonth')} · {t('mySubs.deliveries', { done: sub.deliveries_completed ?? 0, total })}
                     </Text>

@@ -70,6 +70,38 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const }
 
   /**
+   * Εικόνα σε base64 (data: URI του /upload ή image_base64): μόνο οι τύποι
+   * που δέχεται το μοντέλο, και όριο μεγέθους. Πριν, οποιοσδήποτε τύπος
+   * `image/*` και οποιοδήποτε μέγεθος περνούσε κατευθείαν στο Anthropic
+   * (σφάλμα 500 από εκεί και χρέωση για ένα αίτημα που δεν θα πετύχαινε).
+   */
+  const AI_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+  type AiImageType = typeof AI_IMAGE_TYPES[number]
+  // ~7MB base64 ≈ 5MB εικόνα — το όριο του μοντέλου ανά εικόνα.
+  const AI_IMAGE_MAX_BASE64 = 7_000_000
+  const MSG_IMAGE_TYPE = 'Μη επιτρεπόμενος τύπος αρχείου'
+  const MSG_IMAGE_SIZE = 'Η εικόνα είναι πολύ μεγάλη (έως 5MB)'
+
+  function base64ImageBlock(mime: string, data: string): { error: string } | { block: any } {
+    const m = String(mime || '').toLowerCase()
+    if (!(AI_IMAGE_TYPES as readonly string[]).includes(m)) return { error: MSG_IMAGE_TYPE }
+    if (typeof data !== 'string' || data.length === 0) return { error: MSG_IMAGE_TYPE }
+    if (data.length > AI_IMAGE_MAX_BASE64) return { error: MSG_IMAGE_SIZE }
+    return { block: { type: 'image' as const, source: { type: 'base64' as const, media_type: m as AiImageType, data } } }
+  }
+
+  /** image_url → μπλοκ εικόνας: data: URI → base64 (με έλεγχο), αλλιώς url. */
+  function imageBlockFromUrl(imageUrl: unknown): { error: string } | { block: any } {
+    if (typeof imageUrl !== 'string') return { error: MSG_IMAGE_TYPE }
+    if (/^data:/i.test(imageUrl)) {
+      const m = imageUrl.match(/^data:([^;,]+);base64,(.+)$/)
+      if (!m) return { error: MSG_IMAGE_TYPE }
+      return base64ImageBlock(m[1], m[2])
+    }
+    return { block: { type: 'image' as const, source: { type: 'url' as const, url: imageUrl } } }
+  }
+
+  /**
    * Γλώσσα των ελεύθερων κειμένων της απάντησης.
    *
    * Τα prompts είναι στα ελληνικά, οπότε το μοντέλο απαντούσε πάντα ελληνικά
@@ -96,10 +128,9 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 
     // The /upload endpoint falls back to a base64 data: URI when no storage (R2) is configured.
     // Claude's "url" image source can't fetch data: URIs — convert those to a base64 image block instead.
-    const dataUrlMatch = image_url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/)
-    const imageContent = dataUrlMatch
-      ? { type: 'image' as const, source: { type: 'base64' as const, media_type: dataUrlMatch[1] as any, data: dataUrlMatch[2] } }
-      : { type: 'image' as const, source: { type: 'url' as const, url: image_url } }
+    const img = imageBlockFromUrl(image_url)
+    if ('error' in img) return reply.code(400).send({ message: img.error })
+    const imageContent = img.block
 
     const systemPrompt = analysis_type === 'skin'
       ? `Είσαι κτηνιατρικός βοηθός AI εξειδικευμένος στη δερματολογία ζώων συντροφιάς. Όταν χρειάζεται, αναζητάς στο διαδίκτυο αξιόπιστες κτηνιατρικές πηγές (π.χ. veterinary partner, merck vet manual, pet health sites) για να συγκρίνεις τα ευρήματα με γνωστές παθήσεις/φυσιολογικά πρότυπα της ράτσας. Πάντα απαντάς σε JSON και ΜΟΝΟ JSON στο τελικό σου μήνυμα, χωρίς markdown.`
@@ -131,6 +162,13 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     const { image_url, image_base64, media_type, species, context } = req.body as any
 
     if (!image_url && !image_base64) return reply.code(400).send({ message: 'Απαιτείται εικόνα' })
+    // Το κινητό στέλνει image_url από το /upload, που χωρίς R2 επιστρέφει
+    // data: URI — η πηγή "url" του Claude δεν το διαβάζει. Μετατροπή σε
+    // base64 (με έλεγχο τύπου/μεγέθους), όπως στο /pet-health και στο /stool-urine.
+    const img = image_base64
+      ? base64ImageBlock(media_type || 'image/jpeg', image_base64)
+      : imageBlockFromUrl(image_url)
+    if ('error' in img) return reply.code(400).send({ message: img.error })
 
     const systemPrompt = `Είσαι ειδικός AI στη συναισθηματική νοημοσύνη ζώων συντροφιάς.
 Αναλύεις εικόνες/frames βίντεο κατοικίδιων ζώων και αξιολογείς:
@@ -163,9 +201,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
 }`
 
     try {
-      const imageContent = image_base64
-        ? { type: 'image' as const, source: { type: 'base64' as const, media_type: media_type || 'image/jpeg', data: image_base64 } }
-        : { type: 'image' as const, source: { type: 'url' as const, url: image_url } }
+      const imageContent = img.block
 
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
@@ -253,10 +289,9 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       return reply.code(400).send({ message: 'Απαιτούνται image_url, sample_type, species' })
     }
 
-    const dataUrlMatch = image_url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/)
-    const imageContent = dataUrlMatch
-      ? { type: 'image' as const, source: { type: 'base64' as const, media_type: dataUrlMatch[1] as any, data: dataUrlMatch[2] } }
-      : { type: 'image' as const, source: { type: 'url' as const, url: image_url } }
+    const img = imageBlockFromUrl(image_url)
+    if ('error' in img) return reply.code(400).send({ message: img.error })
+    const imageContent = img.block
 
     const sampleEl = sample_type === 'stool' ? 'περιττώματα' : 'ούρα'
     const speciesEl = species === 'dog' ? 'σκύλου' : 'γάτας'

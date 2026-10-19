@@ -113,10 +113,12 @@ export default function OrdersScreen() {
           const st = STATUS[item.status] ?? STATUS.pending
           const items = Array.isArray(item.items) ? item.items : []
           return (
-            <View style={s.card}>
+            // Η κάρτα ανοίγει τη λεπτομέρεια, όπως στο web (/orders/:id).
+            <TouchableOpacity style={s.card} activeOpacity={0.85}
+              onPress={() => router.push(`/order-confirmation?id=${item.id}` as any)}>
               <View style={s.cardTop}>
                 <View>
-                  <Text style={s.orderId}>#{item.id?.slice(0, 8)}</Text>
+                  <Text style={s.orderId}>#{item.id?.slice(0, 8).toUpperCase()}</Text>
                   <Text style={s.date}>{fmtDate(item.created_at)}</Text>
                 </View>
                 <View style={[s.statusTag, { backgroundColor: st.bg }]}>
@@ -154,7 +156,7 @@ export default function OrdersScreen() {
                 <Text style={s.totalLabel}>{t('common.total')}</Text>
                 <Text style={s.total}>€{item.total_amount?.toFixed(2)}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           )
         }}
       />

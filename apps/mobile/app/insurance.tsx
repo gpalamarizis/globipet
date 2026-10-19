@@ -1,11 +1,14 @@
 ﻿import { useState, useCallback } from 'react'
 import { View, Text, StyleSheet, Linking, Modal, ScrollView, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { Shield, Check, Phone, Globe, X, Star } from 'lucide-react-native'
-import { api } from '../src/lib/api'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import {
+  InsuranceFilters, CoverageChips, useInsurancePlans, hasInsuranceFilters,
+  EMPTY_INSURANCE_FILTERS, type InsuranceFilterState,
+} from '@/components/InsuranceParts'
 
 /**
  * Ασφάλιση κατοικιδίου.
@@ -28,6 +31,8 @@ const TIERS: Record<string, { labelKey: string; tone: any }> = {
   basic:    { labelKey: 'insurance.basic',   tone: 'neutral' },
   standard: { labelKey: 'insurance.standard', tone: 'info' },
   premium:  { labelKey: 'insurance.premium',  tone: 'brand' },
+  // Υπήρχε στο web αλλά όχι εδώ: τέτοια πλάνα έδειχναν «Βασικό».
+  comprehensive: { labelKey: 'insurance.comprehensive', tone: 'success' },
 }
 
 export default function InsuranceScreen() {
@@ -37,12 +42,10 @@ export default function InsuranceScreen() {
   const qc = useQueryClient()
   const [selected, setSelected] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [filters, setFilters] = useState<InsuranceFilterState>(EMPTY_INSURANCE_FILTERS)
 
-  const { data: plans = [], isLoading } = useQuery({
-    queryKey: ['insurance-plans'],
-    // Το endpoint είναι /insurance/plans· το σκέτο /insurance δεν υπάρχει.
-    queryFn: () => api.get('/insurance/plans').then(r => r.data?.data ?? []),
-  })
+  // Το endpoint είναι /insurance/plans· ίδια φίλτρα με το web.
+  const { data: plans = [], isLoading } = useInsurancePlans(filters)
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -54,16 +57,19 @@ export default function InsuranceScreen() {
     <Screen title={t('cat.insurance')} subtitle={t('ins.compare')}
       onRefresh={onRefresh} refreshing={refreshing}>
 
+      <InsuranceFilters value={filters} onChange={setFilters} />
+
       {isLoading ? (
         <SkeletonRows count={3} height={140} />
       ) : plans.length === 0 ? (
         <EmptyState
           icon={Shield}
           title={t('ins.no_plans')}
-          message={t('ins.none_active')}
+          message={hasInsuranceFilters(filters) ? t('insurance.try_other_filters') : t('ins.none_active')}
         />
       ) : (
         <View style={{ gap: space.md }}>
+          <Text style={s.count}>{t('insurance.plans_count', { count: plans.length })}</Text>
           {plans.map((plan: any) => {
             const tier = TIERS[plan.tier] ?? TIERS.basic
             return (
@@ -88,15 +94,20 @@ export default function InsuranceScreen() {
                 </View>
 
                 <View style={s.priceRow}>
-                  <Text style={s.price}>€{plan.price_monthly}</Text>
+                  <Text style={s.price}>€{Number(plan.price_monthly ?? 0).toFixed(2)}</Text>
                   <Text style={s.unit}>{t('insurance.per_month')}</Text>
+                  {plan.price_annual != null && (
+                    <Text style={s.annual}>· €{Number(plan.price_annual ?? 0).toFixed(2)}{t('insurance.per_year')}</Text>
+                  )}
                 </View>
+
+                <CoverageChips plan={plan} />
 
                 <View style={s.specs}>
                   {plan.annual_limit != null && (
                     <View style={s.spec}>
                       <Text style={s.specLabel}>{t('insurance.annual_limit')}</Text>
-                      <Text style={s.specValue}>€{plan.annual_limit}</Text>
+                      <Text style={s.specValue}>€{Number(plan.annual_limit ?? 0).toFixed(2)}</Text>
                     </View>
                   )}
                   {plan.reimbursement_percent != null && (
@@ -108,7 +119,7 @@ export default function InsuranceScreen() {
                   {plan.deductible != null && (
                     <View style={s.spec}>
                       <Text style={s.specLabel}>{t('insurance.deductible')}</Text>
-                      <Text style={s.specValue}>€{plan.deductible}</Text>
+                      <Text style={s.specValue}>€{Number(plan.deductible ?? 0).toFixed(2)}</Text>
                     </View>
                   )}
                 </View>
@@ -141,7 +152,7 @@ export default function InsuranceScreen() {
             <ScrollView showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: space.xl }}>
               <View style={s.priceRow}>
-                <Text style={s.price}>€{selected?.price_monthly}</Text>
+                <Text style={s.price}>€{Number(selected?.price_monthly ?? 0).toFixed(2)}</Text>
                 <Text style={s.unit}>{t('insurance.per_month')}</Text>
               </View>
 
@@ -226,6 +237,8 @@ const s = StyleSheet.create({
   specValue: { ...type.body, color: colors.text, fontWeight: weight.bold, marginTop: 2 },
 
   more: { ...type.body, color: colors.brand, fontWeight: weight.semibold, marginTop: space.md },
+  annual: { ...type.caption, color: colors.textMuted },
+  count: { ...type.caption, color: colors.textMuted },
 
   modalWrap: { flex: 1, backgroundColor: 'rgba(15,42,63,0.5)', justifyContent: 'flex-end' },
   sheet: {

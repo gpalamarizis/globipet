@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal, Share, Platform } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShoppingBag, Star, Heart, Minus, Plus, Truck, ShieldCheck, RotateCcw } from 'lucide-react-native'
+import { ShoppingBag, Star, Heart, Minus, Plus, Truck, ShieldCheck, RotateCcw, Share2 } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '../../src/lib/shipping'
 import { useAuthStore } from '../../src/store/auth'
@@ -72,6 +72,8 @@ export default function ProductDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['product-reviews', id] })
       qc.invalidateQueries({ queryKey: ['can-review', id] })
+      // Ο server ξαναϋπολογίζει βαθμολογία και πλήθος κριτικών του προϊόντος.
+      qc.invalidateQueries({ queryKey: ['product', id] })
       setReviewing(false); setComment(''); setRating(5)
       Alert.alert(t('reviews.thanks'), t('reviews.thanksHint'))
     },
@@ -92,6 +94,14 @@ export default function ProductDetailScreen() {
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
+
+  // Κοινοποίηση με το σύστημα — ίδιος σύνδεσμος με το web (/marketplace/:id).
+  const shareProduct = () => {
+    const url = `https://globipet.com/marketplace/${id}`
+    const text = String(product?.name ?? '')
+    // iOS: το url πάει ξεχωριστά· Android: αγνοεί το url, οπότε μπαίνει στο μήνυμα.
+    Share.share(Platform.OS === 'ios' ? { message: text, url } : { message: `${text}\n${url}` }).catch(() => {})
+  }
 
   if (isLoading) return <Screen title={t('marketplace.title')} back><SkeletonRows count={3} /></Screen>
   if (!product) return (
@@ -121,8 +131,15 @@ export default function ProductDetailScreen() {
                   fill={wished ? colors.danger : 'transparent'} />
               </TouchableOpacity>
             )}
+            <TouchableOpacity onPress={shareProduct} hitSlop={8} accessibilityLabel={t('social.share')}>
+              <Share2 size={icon.md} color={colors.textLight} />
+            </TouchableOpacity>
           </View>
           {!!product.brand && <Text style={s.brand}>{product.brand}</Text>}
+          {/* Σήμα «Προτεινόμενο», όπως στο web. */}
+          {!!product.is_featured && (
+            <View style={s.badgeRow}><Badge label={`⭐ ${t('marketplace.featured')}`} tone="brand" /></View>
+          )}
 
           <View style={s.priceRow}>
             <Text style={s.price}>€{Number(price).toFixed(2)}</Text>
@@ -199,30 +216,43 @@ export default function ProductDetailScreen() {
           </View>
         </Card>
 
-        {reviews.length > 0 && (
-          <Card>
-            <View style={s.reviewHead}>
-              <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
-              {(canReview?.can_review ?? canReview?.allowed) && (
-                <TouchableOpacity onPress={() => setReviewing(true)}>
-                  <Text style={s.writeReview}>{t('reviews.write')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {reviews.slice(0, 5).map((r: any) => (
+        {/* Κριτικές — όπως η καρτέλα του web: όλες οι κριτικές, η απάντηση του
+            πωλητή, μήνυμα όταν δεν υπάρχουν, και εξήγηση γιατί δεν μπορεί να
+            γράψει όποιος δεν το αγόρασε. Το όνομα είναι στη στήλη
+            customer_name· το user_name/user_email δεν υπάρχει στο Review. */}
+        <Card>
+          <View style={s.reviewHead}>
+            <Text style={s.sectionTitle}>{t('productDetail.reviews')}</Text>
+            {(canReview?.can_review ?? canReview?.allowed) && (
+              <TouchableOpacity onPress={() => setReviewing(true)}>
+                <Text style={s.writeReview}>{t('reviews.write')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {isAuthenticated && canReview && !canReview.can_review && canReview.reason === 'not_purchased' && (
+            <Text style={s.reviewHint}>{t('reviews.onlyBuyers')}</Text>
+          )}
+          {reviews.length === 0
+            ? <Text style={s.reviewHint}>{t('reviews.none')}</Text>
+            : reviews.map((r: any) => (
               <View key={r.id} style={s.review}>
                 <View style={s.reviewTop}>
-                  <Text style={s.reviewName}>{r.user_name ?? r.user_email}</Text>
+                  <Text style={s.reviewName}>{r.customer_name}</Text>
                   <View style={s.ratingRow}>
                     <Star size={12} color={colors.warning} fill={colors.warning} />
                     <Text style={s.rating}>{r.rating}</Text>
                   </View>
                 </View>
                 {!!r.comment && <Text style={s.reviewText}>{r.comment}</Text>}
+                {!!r.response && (
+                  <View style={s.reply}>
+                    <Text style={s.replyTitle}>{t('reviews.sellerReply')}</Text>
+                    <Text style={s.reviewText}>{r.response}</Text>
+                  </View>
+                )}
               </View>
             ))}
-          </Card>
-        )}
+        </Card>
 
         {/* Συνδρομή: μόνο όπου το προϊόν τη δέχεται. Ο server έχει το
             is_subscribable· χωρίς αυτό το κουμπί θα οδηγούσε σε
@@ -230,13 +260,6 @@ export default function ProductDetailScreen() {
         {product.is_subscribable && (
           <Button label={t('subscribe.title')} variant="secondary"
             onPress={() => router.push(`/product-subscribe?id=${id}` as any)} full />
-        )}
-
-        {/* Κουμπί κριτικής και χωρίς υπάρχουσες κριτικές */}
-        {reviews.length === 0 && (canReview?.can_review ?? canReview?.allowed) && (
-          <Button label={t('reviews.write')} variant="secondary"
-            icon={<Star size={18} color={colors.text} />}
-            onPress={() => setReviewing(true)} full />
         )}
 
         {!isAuthenticated ? (
@@ -314,4 +337,8 @@ const s = StyleSheet.create({
   reviewTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   reviewName: { ...type.caption, color: colors.text, fontWeight: weight.semibold },
   reviewText: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  reviewHint: { ...type.caption, color: colors.textLight, paddingVertical: space.xs },
+  reply: { marginTop: space.sm, paddingLeft: space.sm, borderLeftWidth: 2, borderLeftColor: colors.brandLight },
+  replyTitle: { ...type.caption, color: colors.brand, fontWeight: weight.semibold },
+  badgeRow: { flexDirection: 'row', marginTop: space.sm },
 })

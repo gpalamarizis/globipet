@@ -43,7 +43,8 @@ export default function Home() {
   })
   const { data: nextBooking } = useQuery({
     queryKey: ['my-next-booking'],
-    queryFn: () => api.get('/bookings/my?upcoming=true&limit=1').then(r => r.data?.data?.[0] ?? null),
+    // exclude_cancelled: μια ακυρωμένη κράτηση δεν είναι «επόμενο ραντεβού».
+    queryFn: () => api.get('/bookings/my?upcoming=true&exclude_cancelled=true&limit=1').then(r => r.data?.data?.[0] ?? null),
     enabled: isAuthenticated,
     staleTime: 60_000,
   })
@@ -221,7 +222,9 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                 {/* Next booking card */}
-                <Link to={nextBooking ? `/bookings/${nextBooking.id}` : '/services'}
+                {/* /bookings/:id δεν υπάρχει ως σελίδα (έβγαζε «δεν βρέθηκε»)·
+                    οι κρατήσεις είναι στο /bookings, όπως και στο κινητό. */}
+                <Link to={nextBooking ? '/bookings' : '/services'}
                   className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
                   <div className="flex items-center justify-between mb-3">
                     <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
@@ -234,7 +237,15 @@ export default function Home() {
                     <>
                       <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || t('home.cards.appointment')}</p>
                       <p className="text-xs text-brand-900 dark:text-yellow-400 font-semibold mt-1">
-                        {new Date(nextBooking.start_time).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {/* Η κράτηση έχει booking_date «YYYY-MM-DD» + booking_time
+                            — το start_time δεν υπάρχει (έβγαινε «Invalid Date»).
+                            Τοπική ημερομηνία από τα μέρη της, όχι new Date(string). */}
+                        {(() => {
+                          const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(nextBooking.booking_date ?? '')
+                          const day = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+                            .toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' }) : ''
+                          return [day, nextBooking.booking_time].filter(Boolean).join(' · ')
+                        })()}
                       </p>
                     </>
                   ) : (

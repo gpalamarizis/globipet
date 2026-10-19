@@ -2,10 +2,13 @@ import { useState, useCallback } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Linking, RefreshControl, Platform, StatusBar } from 'react-native'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { Shield, X, Check, Phone, Globe, Star } from 'lucide-react-native'
-import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import {
+  InsuranceFilters, CoverageChips, useInsurancePlans, hasInsuranceFilters,
+  EMPTY_INSURANCE_FILTERS, type InsuranceFilterState,
+} from '@/components/InsuranceParts'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -25,16 +28,12 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  * κύριο κουμπί λέει «Δες λεπτομέρειες», όχι «Αγορά».
  */
 
-const PET_TYPES = [
-  { id: '',    labelKey: 'marketplace.categories.all',    emoji: '🐾' },
-  { id: 'dog', labelKey: 'insurance.dogs', emoji: '🐶' },
-  { id: 'cat', labelKey: 'insurance.cats',  emoji: '🐱' },
-]
-
 const TIERS: Record<string, { labelKey: string; bg: string; fg: string }> = {
   basic:    { labelKey: 'insurance.basic',  bg: colors.surfaceAlt, fg: colors.textMuted },
   standard: { labelKey: 'insurance.standard', bg: colors.infoBg,    fg: colors.info },
   premium:  { labelKey: 'insurance.premium',  bg: colors.brandLight, fg: colors.brand },
+  // Υπήρχε στο web αλλά όχι εδώ: τέτοια πλάνα έδειχναν «Βασικό».
+  comprehensive: { labelKey: 'insurance.comprehensive', bg: colors.successBg, fg: colors.success },
 }
 
 export default function InsuranceScreen() {
@@ -43,16 +42,13 @@ export default function InsuranceScreen() {
   // Το `name_el` είναι μόνο ελληνικά· στις άλλες γλώσσες το `name`.
   const nm = (r: any) => (i18n.language === 'el' && r?.name_el) ? r.name_el : (r?.name || r?.name_el)
   const qc = useQueryClient()
-  const [petType, setPetType] = useState('')
+  // Όλα τα φίλτρα του web (είδος, κατηγορία, τιμή, χειρουργείο, οδοντιατρείο)
+  // — εδώ υπήρχε μόνο σκύλος/γάτα.
+  const [filters, setFilters] = useState<InsuranceFilterState>(EMPTY_INSURANCE_FILTERS)
   const [selected, setSelected] = useState<any>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: plans = [], isLoading } = useQuery({
-    queryKey: ['insurance-plans', petType],
-    queryFn: () => api.get('/insurance/plans', {
-      params: { pet_type: petType || undefined },
-    }).then(r => r.data?.data ?? []),
-  })
+  const { data: plans = [], isLoading } = useInsurancePlans(filters)
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -67,25 +63,16 @@ export default function InsuranceScreen() {
         <Text style={s.subtitle}>{t('insurance.subtitle')}</Text>
       </View>
 
-      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
-        {PET_TYPES.map(pt => {
-          const active = petType === pt.id
-          return (
-            <TouchableOpacity key={pt.id || 'all'} activeOpacity={0.7}
-              style={[s.chip, active && s.chipActive]}
-              onPress={() => setPetType(pt.id)}>
-              <Text style={s.chipEmoji}>{pt.emoji}</Text>
-              <Text style={[s.chipText, active && s.chipTextActive]}>{t(pt.labelKey)}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </View>
-
       <ScrollView showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }>
+        <InsuranceFilters value={filters} onChange={setFilters} />
+        {!isLoading && plans.length > 0 && (
+          <Text style={s.count}>{t('insurance.plans_count', { count: plans.length })}</Text>
+        )}
         {isLoading
           ? [0, 1, 2].map(i => (
               <View key={i} style={s.card}>
@@ -97,7 +84,9 @@ export default function InsuranceScreen() {
             ? <View style={s.empty}>
                 <Shield size={icon.hero} color={colors.border} />
                 <Text style={s.emptyTitle}>{t('insurance.no_plans')}</Text>
-                <Text style={s.emptyText}>{t('insurance.try_other_species')}</Text>
+                <Text style={s.emptyText}>
+                  {hasInsuranceFilters(filters) ? t('insurance.try_other_filters') : t('ins.none_active')}
+                </Text>
               </View>
             : plans.map((plan: any) => {
                 const tier = TIERS[plan.tier] ?? TIERS.basic
@@ -127,15 +116,20 @@ export default function InsuranceScreen() {
                     </View>
 
                     <View style={s.priceRow}>
-                      <Text style={s.price}>€{plan.price_monthly}</Text>
+                      <Text style={s.price}>€{Number(plan.price_monthly ?? 0).toFixed(2)}</Text>
                       <Text style={s.priceUnit}>{t('insurance.per_month')}</Text>
+                      {plan.price_annual != null && (
+                        <Text style={s.annual}>· €{Number(plan.price_annual ?? 0).toFixed(2)}{t('insurance.per_year')}</Text>
+                      )}
                     </View>
+
+                    <CoverageChips plan={plan} />
 
                     <View style={s.specs}>
                       {plan.annual_limit != null && (
                         <View style={s.spec}>
                           <Text style={s.specLabel}>{t('insurance.annual_limit')}</Text>
-                          <Text style={s.specValue}>€{plan.annual_limit}</Text>
+                          <Text style={s.specValue}>€{Number(plan.annual_limit ?? 0).toFixed(2)}</Text>
                         </View>
                       )}
                       {plan.reimbursement_percent != null && (
@@ -147,7 +141,7 @@ export default function InsuranceScreen() {
                       {plan.deductible != null && (
                         <View style={s.spec}>
                           <Text style={s.specLabel}>{t('insurance.deductible')}</Text>
-                          <Text style={s.specValue}>€{plan.deductible}</Text>
+                          <Text style={s.specValue}>€{Number(plan.deductible ?? 0).toFixed(2)}</Text>
                         </View>
                       )}
                     </View>
@@ -180,7 +174,7 @@ export default function InsuranceScreen() {
             <ScrollView showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: space.xl }}>
               <View style={s.priceRow}>
-                <Text style={s.price}>€{selected?.price_monthly}</Text>
+                <Text style={s.price}>€{Number(selected?.price_monthly ?? 0).toFixed(2)}</Text>
                 <Text style={s.priceUnit}>{t('insurance.per_month')}</Text>
               </View>
 
@@ -301,6 +295,8 @@ const s = StyleSheet.create({
   specValue: { ...type.body, color: colors.text, fontWeight: weight.bold, marginTop: 2 },
 
   moreLink: { ...type.body, color: colors.brand, fontWeight: weight.semibold, marginTop: space.md },
+  annual: { ...type.caption, color: colors.textMuted },
+  count: { ...type.caption, color: colors.textMuted, marginBottom: space.sm },
 
   skeleton: { backgroundColor: colors.surfaceAlt },
   empty: { alignItems: 'center', paddingTop: 60, gap: space.sm },

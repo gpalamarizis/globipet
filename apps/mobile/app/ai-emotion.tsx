@@ -6,6 +6,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Camera, Images, Sparkles, X, Video, Play, AlertTriangle } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import AiGate from '@/components/AiGate'
+import { Chips } from '@/components/Chips'
 import { Screen, Card, Button, Skeleton } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon, touch } from '@/theme'
 
@@ -113,6 +114,16 @@ const EMOTIONS: Record<string, { emoji: string; labelKey: string }> = {
   playful:  { emoji: '🎾', labelKey: 'emo.playful' },
 }
 
+// Ίδια είδη με το web (AiEmotion.tsx → speciesOptions)· στέλνεται ο κωδικός.
+type Species = 'dog' | 'cat' | 'rabbit' | 'bird' | 'other'
+const SPECIES: { value: Species; labelKey: string }[] = [
+  { value: 'dog', labelKey: 'emo.speciesDog' },
+  { value: 'cat', labelKey: 'emo.speciesCat' },
+  { value: 'rabbit', labelKey: 'emo.speciesRabbit' },
+  { value: 'bird', labelKey: 'emo.speciesBird' },
+  { value: 'other', labelKey: 'emo.speciesOther' },
+]
+
 export default function AiEmotionScreen() {
   const { t, i18n } = useTranslation()
   const [imageUri, setImageUri] = useState<string | null>(null)
@@ -120,6 +131,7 @@ export default function AiEmotionScreen() {
   const [video, setVideo] = useState<{ uri: string; durationMs: number | null } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [species, setSpecies] = useState<Species>('dog')
 
   const pick = async (fromCamera: boolean) => {
     const permission = fromCamera
@@ -184,6 +196,7 @@ export default function AiEmotionScreen() {
       }
       const res = await api.post('/ai/emotion/video', {
         frames,
+        species,
         duration_seconds: seconds > 0 ? Math.round(seconds) : undefined,
         lang: i18n.language,
       }, { timeout: 120000 })
@@ -215,7 +228,7 @@ export default function AiEmotionScreen() {
       })
       const mediaUrl = uploadRes.data?.url || uploadRes.data?.file_url
 
-      const res = await api.post('/ai/emotion', { image_url: mediaUrl, lang: i18n.language })
+      const res = await api.post('/ai/emotion', { image_url: mediaUrl, species, lang: i18n.language })
       setResult(res.data)
     } catch (err: any) {
       Alert.alert(t('ai.analysis_failed'), err?.response?.data?.message || t('common.try_again_later'))
@@ -236,10 +249,23 @@ export default function AiEmotionScreen() {
     : (i18n.language === 'el' && emotionEl) || emotionCode || ''
   const obsSource = result?.observations || result?.key_observations
   const observations: string[] = Array.isArray(obsSource) ? obsSource : []
+  // Φωτογραφία: body_language { posture, ears, tail, eyes, mouth } — όπως το web.
+  const bodyLanguage: [string, string][] =
+    result?.body_language && typeof result.body_language === 'object'
+      ? Object.entries(result.body_language)
+          .filter(([, v]) => typeof v === 'string' && v)
+          .map(([k, v]) => [k, v as string])
+      : []
 
   return (
     <AiGate title={t('emo.emotion')}>
     <Screen title={t('emo.emotion')} subtitle={t('emo.from_photo_video')}>
+
+      {/* ── Είδος ζώου (όπως στο web) ──────────────────────────── */}
+      {!result && !analyzing ? (
+        <Chips<Species> label={t('emo.speciesLabel')} value={species} onChange={setSpecies}
+          options={SPECIES.map(o => ({ value: o.value, label: t(o.labelKey) }))} />
+      ) : null}
 
       {/* ── Εικόνα ─────────────────────────────────────────────── */}
       {imageUri ? (
@@ -316,10 +342,16 @@ export default function AiEmotionScreen() {
             ) : null}
           </Card>
 
-          {result.body_language_summary ? (
+          {result.body_language_summary || bodyLanguage.length > 0 ? (
             <Card>
               <Text style={s.cardTitle}>{t('emo.body_language')}</Text>
-              <Text style={s.body}>{result.body_language_summary}</Text>
+              {result.body_language_summary ? <Text style={s.body}>{result.body_language_summary}</Text> : null}
+              {bodyLanguage.map(([key, val]) => (
+                <View key={key} style={s.blRow}>
+                  <Text style={s.blKey}>{t(`emo.bl_${key}`, { defaultValue: key })}</Text>
+                  <Text style={s.body}>{val}</Text>
+                </View>
+              ))}
             </Card>
           ) : null}
 
@@ -416,6 +448,9 @@ const s = StyleSheet.create({
   body: { ...typo.body, color: colors.text },
   attention: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, borderWidth: 1, borderColor: colors.danger },
   attentionTitle: { ...typo.emphasis, fontWeight: weight.bold, color: colors.danger, marginBottom: space.xs },
+
+  blRow: { marginTop: space.md },
+  blKey: { ...typo.caption, fontWeight: weight.semibold, color: colors.textMuted, marginBottom: space.xs },
 
   bullet: { flexDirection: 'row', gap: space.md, marginBottom: space.md },
   dot: {

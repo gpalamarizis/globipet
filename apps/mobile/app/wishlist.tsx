@@ -62,7 +62,9 @@ export default function WishlistScreen() {
   )
 
   return (
-    <Screen title={t('wishlist.title')} back onRefresh={onRefresh} refreshing={refreshing}>
+    // Πλήθος αποθηκευμένων, όπως στην κεφαλίδα του web.
+    <Screen title={t('wishlist.title')} back onRefresh={onRefresh} refreshing={refreshing}
+      subtitle={isLoading ? undefined : t('wishlist.savedCount', { count: items.length })}>
       {isLoading ? <SkeletonRows count={3} /> :
        items.length === 0 ? (
         <EmptyState icon={Heart} title={t('wishlist.empty')} message={t('wishlist.emptyHint')}
@@ -89,7 +91,7 @@ export default function WishlistScreen() {
                 <TouchableOpacity onPress={() => remove.mutate(w.id)} disabled={remove.isPending} hitSlop={8} style={s.iconBtn}>
                   <Heart size={icon.sm} color={colors.danger} fill={colors.danger} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => addToCart.mutate(id)} hitSlop={8} style={s.iconBtn}>
+                <TouchableOpacity onPress={() => addToCart.mutate(id)} disabled={addToCart.isPending} hitSlop={8} style={s.iconBtn}>
                   <ShoppingBag size={icon.sm} color={colors.brand} />
                 </TouchableOpacity>
               </View>

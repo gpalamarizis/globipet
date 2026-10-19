@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { StickyNote, PawPrint, Star, MessageSquare, X, Send, Tag } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, Button, Input, Loading, EmptyState } from '@/components/ui'
+import { Chips } from '@/components/Chips'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -21,7 +22,14 @@ export default function CustomerDetailScreen() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [composing, setComposing] = useState(false)
-  const [msg, setMsg] = useState({ subject: '', body: '' })
+  const [msg, setMsg] = useState({ subject: '', body: '', campaign_id: '' })
+  // Συνοδευτική προσφορά — το web την προσφέρει και από την καρτέλα πελάτη.
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ['my-campaigns'],
+    queryFn: () => api.get('/campaigns/mine').then(r => r.data?.data ?? []),
+    enabled: composing,
+  })
+  const offers = (campaigns as any[]).filter(c => c.discount_type)
 
   const { data: detail, isLoading, isError } = useQuery({
     queryKey: ['customer', email],
@@ -54,10 +62,11 @@ export default function CustomerDetailScreen() {
   const send = useMutation({
     mutationFn: () => api.post('/customers/message', {
       emails: [String(email)], subject: msg.subject.trim() || null, body: msg.body.trim(),
+      campaign_id: msg.campaign_id || null,
     }),
     onSuccess: (r: any) => {
       Alert.alert(t('providerCus.sentTitle'), t('providerCus.sentTo', { count: r?.data?.sent ?? 1 }))
-      setComposing(false); setMsg({ subject: '', body: '' })
+      setComposing(false); setMsg({ subject: '', body: '', campaign_id: '' })
       qc.invalidateQueries({ queryKey: ['customer', email] })
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerCus.errSend')),
@@ -196,6 +205,16 @@ export default function CustomerDetailScreen() {
               <Input label={t('providerCus.subject')} value={msg.subject} onChangeText={v => setMsg(m => ({ ...m, subject: v }))}
                 placeholder={t('providerCus.phSubject')} />
               <Input label={t('providerCus.messageReq')} value={msg.body} onChangeText={v => setMsg(m => ({ ...m, body: v }))} multiline />
+              {offers.length > 0 && (
+                <Chips label={t('providerCus.attachedOffer')} value={msg.campaign_id}
+                  onChange={v => setMsg(m => ({ ...m, campaign_id: v }))}
+                  options={[{ value: '', label: t('providerCus.none') },
+                    ...offers.map((c: any) => ({
+                      value: c.id,
+                      label: `${c.title} (${c.discount_type === 'percent' ? `-${c.discount_value}%` : `-${c.discount_value}€`})`,
+                    }))]} />
+              )}
+              {offers.length > 0 && <Text style={s.meta}>{t('providerCus.offerHint')}</Text>}
             </ScrollView>
             <Button full label={send.isPending ? t('providerCus.sending') : t('providerCus.send', { count: 1 })}
               disabled={!msg.body.trim() || send.isPending} loading={send.isPending} onPress={() => send.mutate()} />

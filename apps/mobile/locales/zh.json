@@ -143,7 +143,10 @@
     "trialLabel": "AI 免费试用",
     "trialDays": "{{count}} 天",
     "trialDays_one": "{{count}} 天",
-    "trialExpired": "已过期 — 查看方案"
+    "trialExpired": "已过期 — 查看方案",
+    "nextBooking": "下次预约",
+    "appointment": "预约",
+    "noBooking": "暂无预约。立即预订！"
   },
   "services": {
     "title": "服务",
@@ -181,12 +184,25 @@
       "toys": "玩具",
       "accessories": "配件",
       "health": "健康",
-      "grooming": "美容"
+      "grooming": "美容",
+      "training": "培训",
+      "housing": "住所",
+      "other": "其他"
     },
     "added": "✓ 已添加",
     "in_cart": "已在购物车",
     "out_of_stock": "已售罄",
-    "search_product": "搜索商品"
+    "search_product": "搜索商品",
+    "sort": {
+      "featured": "推荐",
+      "price_asc": "价格：低 → 高",
+      "price_desc": "价格：高 → 低",
+      "rating": "评分",
+      "newest": "最新"
+    },
+    "results_count_one": "{{count}} 个结果",
+    "results_count": "{{count}} 个结果",
+    "featured": "精选"
   },
   "pets": {
     "title": "我的宠物",
@@ -242,7 +258,9 @@
     "editTitle": "编辑宠物",
     "deleteTitle": "删除宠物",
     "deleteQ": "确定永久删除 {{name}} 及其记录吗？",
-    "deleteFailed": "删除失败"
+    "deleteFailed": "删除失败",
+    "kind_horse": "马",
+    "kind_other": "其他"
   },
   "social": {
     "title": "社区动态",
@@ -257,7 +275,9 @@
     "noComments": "还没有评论",
     "commentHint": "写评论",
     "share": "分享",
-    "deleteQ": "确定永久删除这条动态吗？"
+    "deleteQ": "确定永久删除这条动态吗？",
+    "trending": "热门",
+    "hashtagHint": "添加标签"
   },
   "profile": {
     "guest_title": "登录后使用",
@@ -278,7 +298,30 @@
     "no_account": "没有账号？注册",
     "not_logged_in": "您尚未登录",
     "editProfile": "编辑资料",
-    "points": "积分"
+    "points": "积分",
+    "bio": "关于我",
+    "bioPlaceholder": "简单介绍一下自己...",
+    "website": "网站",
+    "tier": "等级",
+    "bronze": "铜牌",
+    "silver": "银牌",
+    "gold": "金牌",
+    "platinum": "铂金",
+    "pointsForTier": "{{points}} 即可升至{{tier}}",
+    "maxTier": "最高等级",
+    "achievements": "成就",
+    "ach_firstPetTitle": "第一只宠物",
+    "ach_firstPetDesc": "您添加了第一只宠物",
+    "ach_firstOrderTitle": "首次购买",
+    "ach_firstOrderDesc": "您完成了第一笔订单",
+    "ach_reviewerTitle": "评价达人",
+    "ach_reviewerDesc": "您写了 5 条评价",
+    "ach_regularTitle": "常客",
+    "ach_regularDesc": "10 次服务预约",
+    "ach_goldTitle": "金牌会员",
+    "ach_goldDesc": "您已达到金牌等级",
+    "ach_petLoverTitle": "爱宠达人",
+    "ach_petLoverDesc": "您添加了 3 只宠物"
   },
   "language": {
     "title": "语言",
@@ -355,7 +398,28 @@
     "subtitle": "为您的宠物比较保障方案",
     "try_other_species": "请尝试其他宠物类型。",
     "waiting_period": "等待期：{{count}} 天",
-    "what_covered": "保障范围"
+    "what_covered": "保障范围",
+    "comprehensive": "全面",
+    "rabbits": "兔子",
+    "birds": "鸟",
+    "filter_pet": "宠物类型",
+    "filter_tier": "等级",
+    "all_tiers": "全部",
+    "max_price": "最高月价格 (€)",
+    "max_price_hint": "如 30",
+    "covers_surgery": "手术保障",
+    "covers_dental": "牙科保障",
+    "cov_accidents": "意外",
+    "cov_illness": "疾病",
+    "cov_surgery": "手术",
+    "cov_dental": "牙科",
+    "cov_preventive": "预防",
+    "cov_liability": "责任险",
+    "cov_death": "死亡",
+    "per_year": "/年",
+    "plans_count_one": "{{count}} 个可用方案",
+    "plans_count": "{{count}} 个可用方案",
+    "try_other_filters": "请尝试其他筛选条件。"
   },
   "ai": {
     "analyse": "用 AI 分析",
@@ -392,7 +456,9 @@
     "trial_over": "试用已结束",
     "trial_sub": "订阅后可继续使用所有 AI 健康工具。",
     "try_free": "免费试用",
-    "analysing": "分析中…"
+    "analysing": "分析中…",
+    "ctaTitle": "需要专业意见吗？",
+    "ctaDesc": "立即联系专业兽医"
   },
   "bookings": {
     "cancel": "取消预约",
@@ -469,7 +535,10 @@
     "discussion": "讨论",
     "noMessages": "还没有消息",
     "messageHint": "写消息",
-    "membersOnly": "讨论仅限成员。加入后即可查看并参与。"
+    "membersOnly": "讨论仅限成员。加入后即可查看并参与。",
+    "address": "地址 / 区域",
+    "addressPlaceholder": "例如：Kolonaki 广场，雅典",
+    "radius": "半径：{{km}} km"
   },
   "emo": {
     "angry": "生气",
@@ -499,7 +568,18 @@
     "video_too_large": "视频帧太大，无法发送。请尝试分辨率较低的视频。",
     "body_language": "肢体语言",
     "needs_attention": "需要关注",
-    "new_video": "新视频"
+    "new_video": "新视频",
+    "speciesLabel": "宠物种类",
+    "speciesDog": "🐶 狗",
+    "speciesCat": "🐱 猫",
+    "speciesRabbit": "🐰 兔子",
+    "speciesBird": "🐦 鸟类",
+    "speciesOther": "🐾 其他",
+    "bl_posture": "姿势",
+    "bl_ears": "耳朵",
+    "bl_tail": "尾巴",
+    "bl_eyes": "眼睛",
+    "bl_mouth": "嘴巴"
   },
   "inbox": {
     "day_ago_one": "1 天前",
@@ -635,7 +715,17 @@
     "vt_core": "核心疫苗",
     "vt_non_core": "非核心疫苗",
     "vt_rabies": "狂犬病",
-    "vt_other": "其他"
+    "vt_other": "其他",
+    "acc_vetEmailReq": "兽医邮箱 *",
+    "acc_vetName": "兽医姓名",
+    "acc_reasonComment": "原因 / 备注",
+    "acc_accessExpiry": "访问到期日",
+    "acc_accessInfo": "授权指定的兽医查看你宠物的档案。你可以随时撤销访问权限。",
+    "acc_grantAccess": "授予访问权限",
+    "revokeTitle": "撤销访问权限",
+    "revokeQ": "该兽医将无法再查看你宠物的档案。确定撤销访问权限吗？",
+    "revoke": "撤销",
+    "invalidDate": "日期无效。请按 YYYY-MM-DD 格式填写（例如 2026-03-15）。"
   },
   "play": {
     "create_first": "创建第一个并邀请其他主人。",
@@ -1283,7 +1373,10 @@
     "fDescription": "英文描述",
     "save": "保存",
     "saving": "保存中…",
-    "errSave": "保存失败"
+    "errSave": "保存失败",
+    "savedFields_one": "已保存 {{count}} 个字段",
+    "savedFields": "已保存 {{count}} 个字段",
+    "removed": "翻译已删除"
   },
   "providerCal": {
     "connected": "已连接",
@@ -1332,13 +1425,42 @@
     "likelyCauses": "可能原因",
     "contextFactors": "病史影响",
     "homeCare": "居家护理",
-    "warningSigns": "出现以下情况请立即就医…"
+    "warningSigns": "出现以下情况请立即就医…",
+    "species": "物种",
+    "dog": "狗",
+    "cat": "猫",
+    "historyTitle": "宠物病史",
+    "historyHint": "可选，但能显著提升分析效果",
+    "prefillFromPet": "从已有宠物填写",
+    "breed": "品种",
+    "breedPh": "例如：拉布拉多",
+    "age": "年龄（岁）",
+    "agePh": "例如：4",
+    "weight": "体重（kg）",
+    "weightPh": "例如：12",
+    "sterilized": "绝育",
+    "unknown": "未知",
+    "yesSterilized": "是，已绝育",
+    "no": "否",
+    "ateFromStreet": "最近在路边吃过东西或吃了来历不明的食物",
+    "recentMeds": "近期用药 / 驱虫药",
+    "recentMedsPh": "例如：3 天前用过 Nexgard",
+    "dietChange": "近期饮食变化",
+    "dietChangePh": "例如：5 天前改喂皇家（Royal Canin）",
+    "lastNormal": "最后一次正常排便是什么时候？",
+    "lastNormalPh": "例如：昨天早上",
+    "symptoms": "您观察到的其他症状",
+    "symptomsPh": "例如：嗜睡、呕吐、拒食、多饮...",
+    "additional": "其他信息",
+    "additionalPh": "例如：近期旅行、接触其他动物、应激..."
   },
   "wishlist": {
     "title": "心愿单",
     "empty": "心愿单是空的",
     "emptyHint": "点击商品上的爱心即可收藏。",
-    "loginPrompt": "登录后查看心愿单"
+    "loginPrompt": "登录后查看心愿单",
+    "savedCount_one": "{{count}} 件已收藏商品",
+    "savedCount": "{{count}} 件已收藏商品"
   },
   "forum": {
     "title": "论坛",
@@ -1356,7 +1478,10 @@
     "catHealth": "健康",
     "catNutrition": "营养",
     "catBehaviour": "行为",
-    "catGeneral": "综合"
+    "catGeneral": "综合",
+    "acceptedAnswer": "已采纳的答案",
+    "markAnswer": "标记为答案",
+    "confirmDelete": "确定删除此回复？"
   },
   "events": {
     "title": "活动",
@@ -1378,7 +1503,24 @@
     "confirmCancelRefund": "您的报名将被取消，€{{amount}} 将退回到您的银行卡。确定取消吗？",
     "cancelledRefunded": "报名已取消，款项正在退回",
     "refundPending": "退款处理中",
-    "refundPendingHint": "在您完成付款期间活动名额已满，退款出现延迟。请联系客服以完成退款。"
+    "refundPendingHint": "在您完成付款期间活动名额已满，退款出现延迟。请联系客服以完成退款。",
+    "cancelledByOrganizer": "该活动已被主办方取消",
+    "cancelledByOrganizerRefunded": "该活动已被主办方取消 — 款项已退还",
+    "cancelledByOrganizerRefundDelayed": "该活动已被主办方取消。您的退款有所延迟 — 我们会完成退款；如有需要，请联系我们。",
+    "manageEvent": "管理活动",
+    "cancelEvent": "取消活动",
+    "cancelEventHint": "所有报名都将被取消，已付款者将获得全额退款，所有参与者都会收到通知。随后活动将被删除。",
+    "cancelEventRetry": "完成取消",
+    "cancelEventPendingHint": "活动已取消，但部分退款未完成。请重试。",
+    "cancelEventParticipants_one": "将通知 {{count}} 位参与者。",
+    "cancelEventParticipants": "将通知 {{count}} 位参与者。",
+    "cancelEventRefunds_one": "将退还 {{count}} 笔付款，共 €{{amount}}。",
+    "cancelEventRefunds": "将退还 {{count}} 笔付款，共 €{{amount}}。",
+    "cancelEventQuestion": "此操作无法撤销。确定取消活动吗？",
+    "cancelEventDone_one": "活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。",
+    "cancelEventDone": "活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。",
+    "cancelEventPartial_one": "活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。",
+    "cancelEventPartial": "活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。"
   },
   "breeds": {
     "title": "品种",
@@ -1450,7 +1592,8 @@
     "pendingHint": "付款完成后订单即确认。",
     "failed": "付款失败",
     "failedHint": "请从订单页重试。",
-    "orderNumber": "订单号"
+    "orderNumber": "订单号",
+    "status": "状态"
   },
   "teleConfirm": {
     "title": "远程问诊",
@@ -1471,7 +1614,8 @@
     "aiInactive": "AI 功能需要订阅",
     "trialDaysLeft": "试用还剩 {{count}} 天",
     "needsPlan": "需要订阅",
-    "trialDaysLeft_one": "试用还剩 {{count}} 天"
+    "trialDaysLeft_one": "试用还剩 {{count}} 天",
+    "loginForTrial": "登录即可免费试用"
   },
   "privacy": {
     "title": "我的数据",
@@ -1502,7 +1646,10 @@
     "submit": "提交评价",
     "commentHint": "说说体验如何 — 可选",
     "thanks": "谢谢",
-    "thanksHint": "您的评价能帮助其他主人做出选择。"
+    "thanksHint": "您的评价能帮助其他主人做出选择。",
+    "none": "暂无评价。",
+    "onlyBuyers": "只有购买过该商品的用户才能评价。",
+    "sellerReply": "卖家回复"
   },
   "shelters": {
     "title": "收容所",
@@ -1922,7 +2069,9 @@
     "failedHint": "您的名额未确认。请从活动页面重试；如已扣款，请联系我们。",
     "refunded": "款项已退还",
     "refundedHint": "款项已退回至您付款时使用的银行卡。",
-    "pendingLateHint": "付款仍在处理中。如果您已在 Viva 完成付款，您的名额将自动确认——请稍后再查看活动状态。"
+    "pendingLateHint": "付款仍在处理中。如果您已在 Viva 完成付款，您的名额将自动确认——请稍后再查看活动状态。",
+    "refundInProgressHint": "退款至您付款时使用的银行卡正在处理中。",
+    "eventCancelledHint": "您的报名已取消。如果您之前发起的付款最终完成，款项将自动退还。"
   },
   "mySubs": {
     "title": "我的订阅",
@@ -1962,5 +2111,21 @@
     "findFromAddress": "按地址查找",
     "openInMaps": "在地图中打开",
     "openMapsFailed": "无法打开地图。"
+  },
+  "parity": {
+    "invalidPrice": "价格无效",
+    "cityPlaceholder": "城市...",
+    "verified": "已认证",
+    "emergency": "紧急服务",
+    "yearsExp_one": "{{count}} 年经验",
+    "yearsExp": "{{count}} 年经验",
+    "details": "详情",
+    "vetSearch": "搜索兽医或专业...",
+    "invalidSchedule": "请选择有效日期（今天或以后）和时间（时:分）。"
+  },
+  "notifCenter": {
+    "title": "通知中心",
+    "empty": "暂无通知",
+    "markAll": "全部标为已读"
   }
 }

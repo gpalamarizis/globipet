@@ -2,6 +2,22 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { coordsFromBody } from '../lib/geocode.js'
 
+/** Ανώτατη τιμή (€) υπηρεσίας/πακέτου. */
+const MAX_PRICE = 100_000
+
+/**
+ * Αυστηρή ανάγνωση τιμής: αριθμός ή αριθμητικό κείμενο (δεκαδικό με «.» ή
+ * «,»), πεπερασμένος, 0..MAX_PRICE. Το parseFloat δεχόταν «12abc» ως 12 και
+ * δεν είχε άνω όριο. null = μη έγκυρη.
+ */
+function parsePrice(x: unknown): number | null {
+  let n: number
+  if (typeof x === 'number') n = x
+  else if (typeof x === 'string' && x.trim() !== '') n = Number(x.trim().replace(',', '.'))
+  else return null
+  return Number.isFinite(n) && n >= 0 && n <= MAX_PRICE ? n : null
+}
+
 const packageRoutes: FastifyPluginAsync = async (app) => {
 
   // ===== PUBLIC =====
@@ -51,8 +67,18 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         packages_with_prices, // [{ template_id, price, duration_minutes? }]
       } = req.body as any
 
-      if (!category || !title) {
+      const cleanTitle = String(title ?? '').trim()
+      if (!category || !cleanTitle) {
         return reply.code(400).send({ message: 'Λείπει category ή title' })
+      }
+      // Βασική τιμή (Service.price): προαιρετική. Ισχύει σε κρατήσεις χωρίς
+      // πακέτα και είναι η τιμή συνεδρίας τηλεϊατρικής. Παλιοί πελάτες που
+      // δεν τη στέλνουν παίρνουν 0, όπως πριν.
+      let basePrice = 0
+      if (req.body?.price !== undefined && req.body?.price !== null && req.body?.price !== '') {
+        const p = parsePrice(req.body.price)
+        if (p === null) return reply.code(400).send({ message: 'Μη έγκυρη τιμή', field: 'price' })
+        basePrice = p
       }
       // Προαιρετική τοποθεσία στον χάρτη (latitude/longitude). Παλιοί πελάτες
       // που δεν τη στέλνουν δεν επηρεάζονται.
@@ -100,9 +126,13 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
             provider_name: requestingUser.full_name,
             service_type: category,
             category,
-            title,
-            description: description || null,
-            city: city || null,
+            title: cleanTitle,
+            // description και city είναι ΥΠΟΧΡΕΩΤΙΚΑ (non-null) στο schema: με
+            // κενό πεδίο το `|| null` έριχνε σφάλμα Prisma (500). Κενή
+            // περιγραφή → ο τίτλος (όπως το /services/bulk), κενή πόλη → ''.
+            description: String(description ?? '').trim() || cleanTitle,
+            city: String(city ?? '').trim(),
+            price: basePrice,
             country: country || 'GR',
             location: location || null,
             ...coords.data,
@@ -197,8 +227,15 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       const body = req.body as any
       const data: any = {}
       if (body.title !== undefined) data.title = body.title
-      if (body.description !== undefined) data.description = body.description
-      if (body.city !== undefined) data.city = body.city
+      // description/city είναι non-null στο schema: null → '' αντί για 500.
+      if (body.description !== undefined) data.description = body.description ?? ''
+      if (body.city !== undefined) data.city = body.city ?? ''
+      // Βασική τιμή (προαιρετική) — ίδιος έλεγχος με το /setup.
+      if (body.price !== undefined && body.price !== null && body.price !== '') {
+        const p = parsePrice(body.price)
+        if (p === null) return reply.code(400).send({ message: 'Μη έγκυρη τιμή', field: 'price' })
+        data.price = p
+      }
       if (body.country !== undefined) data.country = body.country
       if (body.location !== undefined) data.location = body.location
       const coords = coordsFromBody(body)
@@ -259,11 +296,11 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       if (!body?.name) {
         return reply.code(400).send({ message: 'Το όνομα είναι υποχρεωτικό' })
       }
-      const price = parseFloat(body.price)
+      const price = parsePrice(body?.price)
       // parseFloat(undefined) is NaN, which Prisma rejects with an opaque
       // error at write time. Catch it here with a message the UI can show.
-      if (!Number.isFinite(price) || price < 0) {
-        return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
+      if (price === null) {
+        return reply.code(400).send({ message: 'Μη έγκυρη τιμή', field: 'price' })
       }
       const service = await prisma.service.findUnique({ where: { id: body.service_id } })
       if (!service || service.provider_email !== userEmail) {
@@ -293,10 +330,8 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       }
       const body = req.body as any
       // Αρνητική ή μη αριθμητική τιμή θα περνούσε σε κρατήσεις και προμήθειες.
-      if (body.price !== undefined) {
-        const p = parseFloat(body.price)
-        if (!Number.isFinite(p) || p < 0) return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
-      }
+      const newPrice = body.price !== undefined ? parsePrice(body.price) : undefined
+      if (newPrice === null) return reply.code(400).send({ message: 'Μη έγκυρη τιμή', field: 'price' })
       const updated = await prisma.servicePackage.update({
         where: { id: req.params.id },
         data: {
@@ -307,7 +342,7 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
           ...(body.pet_type !== undefined && { pet_type: body.pet_type }),
           ...(body.breed_group !== undefined && { breed_group: body.breed_group }),
           ...(body.modality !== undefined && { modality: body.modality }),
-          ...(body.price !== undefined && { price: parseFloat(body.price) }),
+          ...(newPrice !== undefined && { price: newPrice }),
           ...(body.duration_minutes !== undefined && { duration_minutes: parseInt(body.duration_minutes) }),
           ...(body.is_addon !== undefined && { is_addon: !!body.is_addon }),
           ...(body.is_active !== undefined && { is_active: !!body.is_active }),

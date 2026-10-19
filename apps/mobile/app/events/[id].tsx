@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, MapPin, Users, Euro } from 'lucide-react-native'
 import { api } from '@/lib/api'
@@ -20,7 +21,7 @@ export default function EventDetailScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -78,6 +79,71 @@ export default function EventDetailScreen() {
     cancel.mutate()
   }
 
+  // ── Διοργανωτής/διαχειριστής: ακύρωση εκδήλωσης με επιστροφές (όπως στο web) ──
+  const isOrganizer = isAuthenticated && !!event
+    && (user?.email === event.organizer_email || user?.role === 'admin')
+  const { data: cancelPreview, refetch: refetchCancelPreview } = useQuery({
+    queryKey: ['event-cancel-preview', id],
+    queryFn: () => api.get(`/events/${id}/cancel-preview`).then(r => r.data?.data ?? r.data),
+    enabled: !!id && isOrganizer,
+  })
+
+  const cancelEvent = useMutation({
+    mutationFn: () => api.post(`/events/${id}/cancel`, {}),
+    onSuccess: (r: any) => {
+      const report = r?.data?.data
+      const amount = Number(report?.refunded_amount ?? 0).toFixed(2)
+      if (r?.data?.deleted) {
+        qc.invalidateQueries({ queryKey: ['events'] })
+        Alert.alert(t('events.cancelEvent'), t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
+        if (router.canGoBack()) router.back()
+        else router.replace('/events' as any)
+        return
+      }
+      // 207: η εκδήλωση έμεινε ακυρωμένη, κάποιες επιστροφές απέτυχαν.
+      const failed = (report?.failed?.length ?? 0) + (report?.in_progress?.length ?? 0)
+      qc.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
+      qc.invalidateQueries({ queryKey: ['event-registration', id] })
+      qc.invalidateQueries({ queryKey: ['event', id] })
+      Alert.alert(t('common.error'), t('events.cancelEventPartial', { count: failed }))
+    },
+    onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  // Κλείδωμα από το πάτημα μέχρι να κλείσει το Alert (ή να τελειώσει το POST):
+  // όσο φορτώνει η προεπισκόπηση το κουμπί δεν έδειχνε τίποτα, και δεύτερο
+  // πάτημα άνοιγε δεύτερο Alert → δεύτερο POST /cancel. Ref για τον άμεσο
+  // έλεγχο, state για να φαίνεται στο κουμπί.
+  const cancelEventLock = useRef(false)
+  const [cancelEventBusy, setCancelEventBusy] = useState(false)
+  const releaseCancelEvent = () => { cancelEventLock.current = false; setCancelEventBusy(false) }
+
+  // Η επιβεβαίωση λέει πόσοι ειδοποιούνται και πόσα χρήματα επιστρέφονται —
+  // με φρέσκα νούμερα τη στιγμή του πατήματος.
+  const onCancelEvent = async () => {
+    if (cancelEventLock.current || cancelEvent.isPending) return
+    cancelEventLock.current = true
+    setCancelEventBusy(true)
+    let fresh: any
+    try {
+      fresh = (await refetchCancelPreview()).data ?? cancelPreview
+    } catch {
+      fresh = cancelPreview
+    }
+    const lines = [
+      t('events.cancelEventParticipants', { count: fresh?.participants ?? 0 }),
+      ...(fresh?.refunds
+        ? [t('events.cancelEventRefunds', { count: fresh.refunds, amount: Number(fresh.refund_total ?? 0).toFixed(2) })]
+        : []),
+      t('events.cancelEventQuestion'),
+    ]
+    Alert.alert(t('events.cancelEvent'), lines.join('\n'), [
+      { text: t('common.dismiss'), style: 'cancel', onPress: releaseCancelEvent },
+      { text: t('events.cancelEvent'), style: 'destructive',
+        onPress: () => cancelEvent.mutate(undefined, { onSettled: releaseCancelEvent }) },
+    ], { cancelable: true, onDismiss: releaseCancelEvent })
+  }
+
   if (isLoading) return <Screen title={t('events.title')} back><SkeletonRows count={3} /></Screen>
   if (!event) return (
     <Screen title={t('events.title')} back>
@@ -97,6 +163,12 @@ export default function EventDetailScreen() {
   const refundFailed = registration?.payment_status === 'refund_failed'
     || registration?.registration?.status === 'refund_failed'
   const paidSeat = !!already && registration?.payment_status === 'paid'
+  // Ο διοργανωτής ακύρωσε: καμία νέα δήλωση· τι έγινε με τα χρήματα.
+  // Και από το ίδιο το GET /events/:id (`cancelled: true`), ώστε να το βλέπει
+  // και όποιος δεν είχε δηλώσει ή δεν είναι συνδεδεμένος. Αν ο server δεν
+  // στέλνει το πεδίο, μένει η συμπεριφορά του /registration.
+  const eventCancelled = !!registration?.event_cancelled || event?.cancelled === true
+  const cancelRefundDelayed = registration?.refund_reason === 'event_cancelled' && registration?.payment_status !== 'refunded'
   const refundHours = registration?.refund_hours ?? 48
   const refundUntil = registration?.refund_deadline
     ? new Date(registration.refund_deadline).toLocaleString(i18n.language, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -109,6 +181,7 @@ export default function EventDetailScreen() {
 
         <Card>
           <Text style={s.title}>{event.title}</Text>
+          {eventCancelled && <Badge label={t('status.cancelled')} tone="danger" style={{ marginTop: space.xs }} />}
           {!!event.organizer && <Text style={s.meta}>{event.organizer}</Text>}
 
           <View style={s.kvRow}>
@@ -139,7 +212,16 @@ export default function EventDetailScreen() {
           <Card><Text style={s.desc}>{event.description}</Text></Card>
         )}
 
-        {already ? (
+        {eventCancelled ? (
+          <>
+            <Text style={s.cancelledTxt}>
+              {registration?.refund_reason === 'event_cancelled' && registration?.payment_status === 'refunded'
+                ? t('events.cancelledByOrganizerRefunded')
+                : t('events.cancelledByOrganizer')}
+            </Text>
+            {cancelRefundDelayed && <Text style={s.note}>{t('events.cancelledByOrganizerRefundDelayed')}</Text>}
+          </>
+        ) : already ? (
           <>
             <Badge label={t('events.alreadyRegistered')} tone="success" />
             {paidSeat && !registration?.refundable ? (
@@ -182,8 +264,20 @@ export default function EventDetailScreen() {
             onPress={() => register.mutate()} full />
         )}
         {/* Πολιτική ακύρωσης κάτω από το κουμπί, για κάθε εκδήλωση με τιμή. */}
-        {isPaidEvent && !(already && !paidSeat) && !refundFailed && (
+        {isPaidEvent && !(already && !paidSeat) && !refundFailed && !eventCancelled && (
           <Text style={s.note}>{t('events.refundPolicy', { hours: refundHours })}</Text>
+        )}
+
+        {isOrganizer && (
+          <Card>
+            <Text style={s.cardTitle}>{t('events.manageEvent')}</Text>
+            <Text style={[s.note, s.manageHint]}>
+              {cancelPreview?.already_cancelled ? t('events.cancelEventPendingHint') : t('events.cancelEventHint')}
+            </Text>
+            <Button variant="danger" full loading={cancelEvent.isPending || cancelEventBusy}
+              disabled={cancelEvent.isPending || cancelEventBusy} onPress={onCancelEvent}
+              label={cancelPreview?.already_cancelled ? t('events.cancelEventRetry') : t('events.cancelEvent')} />
+          </Card>
         )}
       </ScrollView>
     </Screen>
@@ -199,4 +293,7 @@ const s = StyleSheet.create({
   kv: { ...type.body, color: colors.textMuted },
   desc: { ...type.body, color: colors.textMuted },
   note: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  cancelledTxt: { ...type.body, color: colors.danger, fontWeight: weight.semibold, textAlign: 'center' },
+  cardTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  manageHint: { textAlign: 'left', marginTop: space.xs, marginBottom: space.md },
 })

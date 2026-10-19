@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Image } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, Send, MapPin } from 'lucide-react-native'
+import { Users, Send, MapPin, ImagePlus } from 'lucide-react-native'
+import { pickAndUploadImage } from '@/lib/uploadImage'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
@@ -73,6 +74,22 @@ export default function CommunityDetailScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
+  // Φωτογραφία στη συζήτηση — όπως το web (φάκελος «communities»).
+  const [uploadingImg, setUploadingImg] = useState(false)
+  const sendImage = async () => {
+    setUploadingImg(true)
+    try {
+      const url = await pickAndUploadImage('communities')
+      if (!url) return
+      await api.post(`/communities/${id}/messages`, { image_url: url })
+      qc.invalidateQueries({ queryKey: ['community-messages', id] })
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message === 'permission'
+        ? t('providerEdit.photoPermission')
+        : e?.response?.data?.message || t('providerEdit.errUpload'))
+    } finally { setUploadingImg(false) }
+  }
+
   if (isLoading) return <Screen title={t('com.title')} back><SkeletonRows count={3} /></Screen>
   if (!community) return (
     <Screen title={t('com.title')} back>
@@ -117,7 +134,9 @@ export default function CommunityDetailScreen() {
           return (
             <View key={m.id} style={[s.msg, mine && s.msgMine]}>
               {!mine && <Text style={s.msgAuthor}>{m.author_name ?? m.author_email}</Text>}
-              <Text style={[s.msgTxt, mine && s.msgTxtMine]}>{m.content}</Text>
+              {!!m.content && <Text style={[s.msgTxt, mine && s.msgTxtMine]}>{m.content}</Text>}
+              {/* Μηνύματα με φωτογραφία (από web ή κινητό) — πριν δεν φαίνονταν καθόλου. */}
+              {!!m.image_url && <Image source={{ uri: m.image_url }} style={s.msgImg} resizeMode="cover" />}
             </View>
           )
         })}
@@ -125,6 +144,10 @@ export default function CommunityDetailScreen() {
 
       {isAuthenticated && isMember && (
         <View style={s.composer}>
+          <TouchableOpacity style={s.imgBtn} disabled={uploadingImg} onPress={sendImage}
+            accessibilityLabel={t('providerEdit.addPhoto')}>
+            <ImagePlus size={18} color={uploadingImg ? colors.textLight : colors.brand} />
+          </TouchableOpacity>
           <TextInput style={s.input} value={text} onChangeText={setText}
             placeholder={t('com.messageHint')} placeholderTextColor={colors.textLight} />
           <TouchableOpacity style={s.sendBtn}
@@ -165,6 +188,11 @@ const s = StyleSheet.create({
     ...type.body, color: colors.text, flex: 1, minHeight: 44,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingHorizontal: space.md,
+  },
+  msgImg: { width: 200, height: 150, borderRadius: radius.md, marginTop: space.xs, backgroundColor: colors.surfaceAlt },
+  imgBtn: {
+    width: 44, height: 44, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
   sendBtn: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
 })

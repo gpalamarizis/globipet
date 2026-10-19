@@ -831,6 +831,7 @@ const el = {
     ctaDesc: 'Συνδεθείτε με εξειδικευμένο κτηνίατρο τώρα',
     ctaButton: 'Τηλεϊατρική Συνεδρία →',
     newAnalysis: 'Νέα Ανάλυση',
+    sources: 'Πηγές σύγκρισης',
   },
   pgPlaydates: {
     types: {
@@ -1012,6 +1013,24 @@ const el = {
     noRefundCancel: 'Απομένουν λιγότερες από {{hours}} ώρες ως την έναρξη: η συμμετοχή δεν ακυρώνεται πλέον με επιστροφή χρημάτων.',
     confirmCancelRefund: 'Θα ακυρωθεί η συμμετοχή σου και θα επιστραφούν €{{amount}} στην κάρτα σου. Να γίνει η ακύρωση;',
     cancelledRefunded: 'Η συμμετοχή ακυρώθηκε και τα χρήματα επιστρέφονται',
+    cancelledByOrganizer: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή',
+    cancelledByOrganizerRefunded: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή — τα χρήματα επιστράφηκαν',
+    cancelledByOrganizerRefundDelayed: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή. Η επιστροφή των χρημάτων σου καθυστερεί — θα ολοκληρωθεί από εμάς· αν χρειαστείς κάτι, επικοινώνησε μαζί μας.',
+    manageEvent: 'Διαχείριση εκδήλωσης',
+    cancelEvent: 'Ακύρωση εκδήλωσης',
+    cancelEventHint: 'Ακυρώνονται όλες οι συμμετοχές, όσοι πλήρωσαν παίρνουν πίσω ολόκληρο το ποσό και ειδοποιούνται όλοι. Μετά η εκδήλωση διαγράφεται.',
+    cancelEventRetry: 'Ολοκλήρωση ακύρωσης',
+    cancelEventPendingHint: 'Η εκδήλωση έχει ακυρωθεί, αλλά κάποιες επιστροφές χρημάτων δεν ολοκληρώθηκαν. Δοκίμασε ξανά.',
+    cancelEventParticipants_one: '{{count}} συμμετέχων θα ειδοποιηθεί.',
+    cancelEventParticipants: '{{count}} συμμετέχοντες θα ειδοποιηθούν.',
+    cancelEventRefunds_one: '{{count}} πληρωμή θα επιστραφεί — σύνολο €{{amount}}.',
+    cancelEventRefunds: '{{count}} πληρωμές θα επιστραφούν — σύνολο €{{amount}}.',
+    cancelEventQuestion: 'Η ενέργεια δεν αναιρείται. Να ακυρωθεί η εκδήλωση;',
+    cancelEventDone_one: 'Η εκδήλωση ακυρώθηκε. Επιστράφηκε {{count}} πληρωμή (€{{amount}}) και ειδοποιήθηκαν οι συμμετέχοντες.',
+    cancelEventDone: 'Η εκδήλωση ακυρώθηκε. Επιστράφηκαν {{count}} πληρωμές (€{{amount}}) και ειδοποιήθηκαν οι συμμετέχοντες.',
+    cancelEventPartial_one: 'Η εκδήλωση ακυρώθηκε, αλλά {{count}} επιστροφή χρημάτων δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.',
+    cancelEventPartial: 'Η εκδήλωση ακυρώθηκε, αλλά {{count}} επιστροφές χρημάτων δεν ολοκληρώθηκαν. Δοκίμασε ξανά σε λίγο.',
+    cancelEventStarted: 'Η εκδήλωση έχει ήδη ξεκινήσει ή πραγματοποιηθεί, οπότε δεν ακυρώνεται πια με επιστροφές από εδώ. Για οτιδήποτε χρειαστεί, επικοινώνησε με την υποστήριξη.',
   },
   forum: {
     posted: 'Το θέμα δημοσιεύτηκε',
@@ -1183,6 +1202,7 @@ const el = {
   },
   cmpNotifPanel: {
     empty: 'Δεν υπάρχουν ειδοποιήσεις',
+    markAll: 'Σήμανση όλων ως αναγνωσμένων',
   },
   cmpUserMenu: {
     wishlist: 'Wishlist',
@@ -1243,6 +1263,9 @@ const el = {
     redirecting: 'Μεταφορά στην πληρωμή...',
     start: 'Ξεκίνα τη συνδρομή',
     featCancelWhere: 'Ακύρωση οποιαδήποτε στιγμή από το Προφίλ → Οι συνδρομές μου, χωρίς άλλες χρεώσεις',
+    successToast: 'Η συνδρομή ξεκίνησε! Θα τη βρεις στο Προφίλ → Οι συνδρομές μου.',
+    cancelledToast: 'Η πληρωμή της συνδρομής ακυρώθηκε — δεν έγινε καμία χρέωση.',
+    paymentNote: 'Η κάρτα σου χρεώνεται κάθε μήνα για 12 μήνες. Μετά τη 12η παράδοση η συνδρομή λήγει αυτόματα.',
   },
   pgOrderConfirm: {
     verifying: 'Επιβεβαίωση πληρωμής...',
@@ -1612,6 +1635,7 @@ const el = {
     errors: {
       noVetSelected: 'Δεν επιλέχθηκε κτηνίατρος', bookingFailed: 'Σφάλμα κατά την κράτηση',
       loginRequired: 'Απαιτείται σύνδεση για κράτηση',
+      invalidSchedule: 'Διάλεξε έγκυρη ημερομηνία (σήμερα ή αργότερα) και ώρα ΩΩ:ΛΛ.',
     },
     modal: {
       instantCall: 'Άμεση κλήση', instantCallDesc: 'Ο κτηνίατρος θα σας καλέσει άμεσα μετά την πληρωμή',
@@ -1999,6 +2023,8 @@ const el = {
   cart: {
     title: 'Καλάθι', empty: 'Το καλάθι σας είναι άδειο',
     checkout: 'Ολοκλήρωση αγοράς', total: 'Σύνολο', added: 'Προστέθηκε στο καλάθι!',
+    freeShipping: 'Δωρεάν αποστολή',
+    shippingNote: 'Τα μεταφορικά υπολογίζονται στο επόμενο βήμα',
   },
   notFound: {
     title: '404', message: 'Αυτή η σελίδα έχει χαθεί σαν κατοικίδιο...', home: 'Αρχική',
@@ -2010,7 +2036,9 @@ const el = {
     noOrders: 'Δεν έχετε παραγγελίες ακόμα',
     noOrdersDesc: 'Ανακαλύψτε τα προϊόντα μας',
     shop: 'Αγορές',
-    status: { pending: 'Εκκρεμεί', confirmed: 'Επιβεβαιώθηκε', shipped: 'Αποστάλθηκε', delivered: 'Παραδόθηκε', cancelled: 'Ακυρώθηκε' },
+    status: { pending: 'Εκκρεμεί', confirmed: 'Επιβεβαιώθηκε', shipped: 'Αποστάλθηκε', delivered: 'Παραδόθηκε', cancelled: 'Ακυρώθηκε', processing: 'Σε επεξεργασία', },
+    andMore: 'και {{count}} ακόμη',
+    tracking: 'Παρακολούθηση: {{code}}',
   },
   orderConfirm: {
     title: 'Η παραγγελία σας ολοκληρώθηκε!',
@@ -2500,6 +2528,9 @@ const el = {
     title: 'Πακέτα υπηρεσιών',
     update: 'Ενημέρωση',
     yourPrice: 'Η τιμή σας:',
+    fBasePrice: 'Βασική τιμή (€)',
+    basePriceHint: 'Χρησιμοποιείται μόνο αν δεν ορίσεις πακέτα.',
+    invalidPrice: 'Μη έγκυρη τιμή',
   },
   providerMkt: {
     targetCount_one: '{{count}} στόχος',
@@ -3540,6 +3571,7 @@ const en: typeof el = {
     ctaDesc: 'Connect with a qualified vet now',
     ctaButton: 'Telehealth Session →',
     newAnalysis: 'New Analysis',
+    sources: 'Comparison sources',
   },
   pgPlaydates: {
     types: {
@@ -3721,6 +3753,24 @@ const en: typeof el = {
     noRefundCancel: 'Less than {{hours}} hours to go before the start: the registration can no longer be cancelled with a refund.',
     confirmCancelRefund: 'Your registration will be cancelled and €{{amount}} will be refunded to your card. Cancel it?',
     cancelledRefunded: 'Registration cancelled — your money is being refunded',
+    cancelledByOrganizer: 'This event was cancelled by the organizer',
+    cancelledByOrganizerRefunded: 'This event was cancelled by the organizer — your money has been refunded',
+    cancelledByOrganizerRefundDelayed: 'This event was cancelled by the organizer. Your refund is delayed — we will complete it; if you need anything, contact us.',
+    manageEvent: 'Manage event',
+    cancelEvent: 'Cancel event',
+    cancelEventHint: 'All registrations are cancelled, everyone who paid gets a full refund and all participants are notified. The event is then deleted.',
+    cancelEventRetry: 'Complete cancellation',
+    cancelEventPendingHint: 'The event has been cancelled, but some refunds were not completed. Please try again.',
+    cancelEventParticipants_one: '{{count}} participant will be notified.',
+    cancelEventParticipants: '{{count}} participants will be notified.',
+    cancelEventRefunds_one: '{{count}} payment will be refunded — €{{amount}} in total.',
+    cancelEventRefunds: '{{count}} payments will be refunded — €{{amount}} in total.',
+    cancelEventQuestion: 'This cannot be undone. Cancel the event?',
+    cancelEventDone_one: 'The event was cancelled. {{count}} payment was refunded (€{{amount}}) and participants were notified.',
+    cancelEventDone: 'The event was cancelled. {{count}} payments were refunded (€{{amount}}) and participants were notified.',
+    cancelEventPartial_one: 'The event was cancelled, but {{count}} refund was not completed. Please try again shortly.',
+    cancelEventPartial: 'The event was cancelled, but {{count}} refunds were not completed. Please try again shortly.',
+    cancelEventStarted: 'The event has already started or taken place, so it can no longer be cancelled with refunds from here. If anything is needed, contact support.',
   },
   forum: {
     posted: 'Topic published',
@@ -3892,6 +3942,7 @@ const en: typeof el = {
   },
   cmpNotifPanel: {
     empty: 'No notifications',
+    markAll: 'Mark all as read',
   },
   cmpUserMenu: {
     wishlist: 'Wishlist',
@@ -3952,6 +4003,9 @@ const en: typeof el = {
     redirecting: 'Redirecting to payment...',
     start: 'Start the subscription',
     featCancelWhere: 'Cancel at any time from Profile → My subscriptions, with no further charges',
+    successToast: 'Your subscription has started! You\'ll find it under Profile → My subscriptions.',
+    cancelledToast: 'The subscription payment was cancelled — you have not been charged.',
+    paymentNote: 'Your card is charged every month for 12 months. After the 12th delivery the subscription ends automatically.',
   },
   pgOrderConfirm: {
     verifying: 'Confirming payment...',
@@ -4303,6 +4357,7 @@ const en: typeof el = {
     errors: {
       noVetSelected: 'No vet selected', bookingFailed: 'Booking failed',
       loginRequired: 'Login required to book',
+      invalidSchedule: 'Choose a valid date (today or later) and a time as HH:MM.',
     },
     modal: {
       instantCall: 'Instant call', instantCallDesc: 'The vet will call you immediately after payment',
@@ -4666,13 +4721,17 @@ const en: typeof el = {
   cart: {
     title: 'Cart', empty: 'Your cart is empty',
     checkout: 'Checkout', total: 'Total', added: 'Added to cart!',
+    freeShipping: 'Free shipping',
+    shippingNote: 'Shipping is calculated at the next step',
   },
   notFound: { title: '404', message: 'This page got lost like a pet...', home: 'Home' },
 
   orders: {
     title: 'My Orders', orderNumber: 'Order',
     noOrders: 'No orders yet', noOrdersDesc: 'Discover our products', shop: 'Shop',
-    status: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' },
+    status: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', processing: 'Processing', },
+    andMore: 'and {{count}} more',
+    tracking: 'Tracking: {{code}}',
   },
   orderConfirm: {
     title: 'Your order is complete!',
@@ -5161,6 +5220,9 @@ const en: typeof el = {
     title: 'Service packages',
     update: 'Update',
     yourPrice: 'Your price:',
+    fBasePrice: 'Base price (€)',
+    basePriceHint: 'Used only if you do not set up packages.',
+    invalidPrice: 'Invalid price',
   },
   providerMkt: {
     targetCount_one: '{{count}} target',
@@ -6201,6 +6263,7 @@ const es: typeof el = {
     ctaDesc: 'Contacte ahora con un veterinario especializado',
     ctaButton: 'Sesión de telemedicina →',
     newAnalysis: 'Nuevo análisis',
+    sources: 'Fuentes de comparación',
   },
   pgPlaydates: {
     types: {
@@ -6382,6 +6445,24 @@ const es: typeof el = {
     noRefundCancel: 'Faltan menos de {{hours}} horas para el inicio: la inscripción ya no se puede cancelar con reembolso.',
     confirmCancelRefund: 'Se cancelará tu inscripción y se reembolsarán €{{amount}} en tu tarjeta. ¿Cancelarla?',
     cancelledRefunded: 'Inscripción cancelada: se te está reembolsando el importe',
+    cancelledByOrganizer: 'El organizador ha cancelado este evento',
+    cancelledByOrganizerRefunded: 'El organizador ha cancelado este evento — te hemos devuelto el dinero',
+    cancelledByOrganizerRefundDelayed: 'El organizador ha cancelado este evento. El reembolso se está retrasando — lo completaremos nosotros; si necesitas algo, contáctanos.',
+    manageEvent: 'Gestionar evento',
+    cancelEvent: 'Cancelar evento',
+    cancelEventHint: 'Se cancelan todas las inscripciones, quienes pagaron reciben el reembolso completo y se avisa a todos. Después el evento se elimina.',
+    cancelEventRetry: 'Completar cancelación',
+    cancelEventPendingHint: 'El evento se ha cancelado, pero algunos reembolsos no se completaron. Inténtalo de nuevo.',
+    cancelEventParticipants_one: 'Se avisará a {{count}} participante.',
+    cancelEventParticipants: 'Se avisará a {{count}} participantes.',
+    cancelEventRefunds_one: 'Se reembolsará {{count}} pago — €{{amount}} en total.',
+    cancelEventRefunds: 'Se reembolsarán {{count}} pagos — €{{amount}} en total.',
+    cancelEventQuestion: 'Esta acción no se puede deshacer. ¿Cancelar el evento?',
+    cancelEventDone_one: 'El evento se ha cancelado. Se reembolsó {{count}} pago (€{{amount}}) y se avisó a los participantes.',
+    cancelEventDone: 'El evento se ha cancelado. Se reembolsaron {{count}} pagos (€{{amount}}) y se avisó a los participantes.',
+    cancelEventPartial_one: 'El evento se ha cancelado, pero {{count}} reembolso no se completó. Inténtalo de nuevo en un momento.',
+    cancelEventPartial: 'El evento se ha cancelado, pero {{count}} reembolsos no se completaron. Inténtalo de nuevo en un momento.',
+    cancelEventStarted: 'El evento ya ha empezado o se ha celebrado, así que ya no se puede cancelar con reembolsos desde aquí. Si necesitas algo, contacta con soporte.',
   },
   forum: {
     posted: 'Tema publicado',
@@ -6553,6 +6634,7 @@ const es: typeof el = {
   },
   cmpNotifPanel: {
     empty: 'No hay notificaciones',
+    markAll: 'Marcar todas como leídas',
   },
   cmpUserMenu: {
     wishlist: 'Lista de deseos',
@@ -6613,6 +6695,9 @@ const es: typeof el = {
     redirecting: 'Redirigiendo al pago...',
     start: 'Iniciar suscripción',
     featCancelWhere: 'Cancela cuando quieras desde Perfil → Mis suscripciones, sin más cargos',
+    successToast: '¡Tu suscripción ha comenzado! La encontrarás en Perfil → Mis suscripciones.',
+    cancelledToast: 'Se canceló el pago de la suscripción: no se te ha cobrado nada.',
+    paymentNote: 'Tu tarjeta se carga cada mes durante 12 meses. Tras la 12.ª entrega, la suscripción finaliza automáticamente.',
   },
   pgOrderConfirm: {
     verifying: 'Confirmando el pago...',
@@ -6964,6 +7049,7 @@ const es: typeof el = {
     errors: {
       noVetSelected: 'No se seleccionó veterinario', bookingFailed: 'Error en la reserva',
       loginRequired: 'Se requiere iniciar sesión para reservar',
+      invalidSchedule: 'Elige una fecha válida (hoy o posterior) y una hora HH:MM.',
     },
     modal: {
       instantCall: 'Llamada inmediata', instantCallDesc: 'El veterinario te llamará inmediatamente tras el pago',
@@ -7327,13 +7413,17 @@ const es: typeof el = {
   cart: {
     title: 'Cesta', empty: 'Tu cesta está vacía',
     checkout: 'Finalizar compra', total: 'Total', added: '¡Añadido a la cesta!',
+    freeShipping: 'Envío gratis',
+    shippingNote: 'El envío se calcula en el siguiente paso',
   },
   notFound: { title: '404', message: 'Esta página se perdió como una mascota...', home: 'Inicio' },
 
   orders: {
     title: 'Mis Pedidos', orderNumber: 'Pedido',
     noOrders: 'No tienes pedidos', noOrdersDesc: 'Descubre nuestros productos', shop: 'Comprar',
-    status: { pending: 'Pendiente', confirmed: 'Confirmado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' },
+    status: { pending: 'Pendiente', confirmed: 'Confirmado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado', processing: 'En proceso', },
+    andMore: 'y {{count}} más',
+    tracking: 'Seguimiento: {{code}}',
   },
   orderConfirm: {
     title: '¡Tu pedido está completo!',
@@ -7822,6 +7912,9 @@ const es: typeof el = {
     title: 'Paquetes de servicios',
     update: 'Actualizar',
     yourPrice: 'Tu precio:',
+    fBasePrice: 'Precio base (€)',
+    basePriceHint: 'Se usa solo si no defines paquetes.',
+    invalidPrice: 'Precio no válido',
   },
   providerMkt: {
     targetCount_one: '{{count}} objetivo',
@@ -8862,6 +8955,7 @@ const fr: typeof el = {
     ctaDesc: 'Échangez dès maintenant avec un vétérinaire qualifié',
     ctaButton: 'Séance de télémédecine →',
     newAnalysis: 'Nouvelle analyse',
+    sources: 'Sources de comparaison',
   },
   pgPlaydates: {
     types: {
@@ -9043,6 +9137,24 @@ const fr: typeof el = {
     noRefundCancel: 'Il reste moins de {{hours}} heures avant le début : l\'inscription ne peut plus être annulée avec remboursement.',
     confirmCancelRefund: 'Votre inscription sera annulée et €{{amount}} seront remboursés sur votre carte. L\'annuler ?',
     cancelledRefunded: 'Inscription annulée — le remboursement est en cours',
+    cancelledByOrganizer: 'Cet événement a été annulé par l’organisateur',
+    cancelledByOrganizerRefunded: 'Cet événement a été annulé par l’organisateur — vous avez été remboursé',
+    cancelledByOrganizerRefundDelayed: 'Cet événement a été annulé par l’organisateur. Votre remboursement est retardé — nous allons le finaliser ; en cas de besoin, contactez-nous.',
+    manageEvent: 'Gérer l’événement',
+    cancelEvent: 'Annuler l’événement',
+    cancelEventHint: 'Toutes les inscriptions sont annulées, les personnes ayant payé sont intégralement remboursées et tous les participants sont prévenus. L’événement est ensuite supprimé.',
+    cancelEventRetry: 'Finaliser l’annulation',
+    cancelEventPendingHint: 'L’événement a été annulé, mais certains remboursements n’ont pas abouti. Réessayez.',
+    cancelEventParticipants_one: '{{count}} participant sera prévenu.',
+    cancelEventParticipants: '{{count}} participants seront prévenus.',
+    cancelEventRefunds_one: '{{count}} paiement sera remboursé — €{{amount}} au total.',
+    cancelEventRefunds: '{{count}} paiements seront remboursés — €{{amount}} au total.',
+    cancelEventQuestion: 'Cette action est irréversible. Annuler l’événement ?',
+    cancelEventDone_one: 'L’événement a été annulé. {{count}} paiement a été remboursé (€{{amount}}) et les participants ont été prévenus.',
+    cancelEventDone: 'L’événement a été annulé. {{count}} paiements ont été remboursés (€{{amount}}) et les participants ont été prévenus.',
+    cancelEventPartial_one: 'L’événement a été annulé, mais {{count}} remboursement n’a pas abouti. Réessayez dans un instant.',
+    cancelEventPartial: 'L’événement a été annulé, mais {{count}} remboursements n’ont pas abouti. Réessayez dans un instant.',
+    cancelEventStarted: 'L’événement a déjà commencé ou eu lieu : il ne peut plus être annulé avec remboursements depuis cette page. En cas de besoin, contactez le support.',
   },
   forum: {
     posted: 'Sujet publié',
@@ -9214,6 +9326,7 @@ const fr: typeof el = {
   },
   cmpNotifPanel: {
     empty: 'Aucune notification',
+    markAll: 'Tout marquer comme lu',
   },
   cmpUserMenu: {
     wishlist: 'Liste d’envies',
@@ -9274,6 +9387,9 @@ const fr: typeof el = {
     redirecting: 'Redirection vers le paiement...',
     start: 'Démarrer l\'abonnement',
     featCancelWhere: 'Résiliation à tout moment depuis Profil → Mes abonnements, sans autre prélèvement',
+    successToast: 'Votre abonnement a commencé ! Vous le retrouverez dans Profil → Mes abonnements.',
+    cancelledToast: 'Le paiement de l’abonnement a été annulé — vous n’avez pas été débité.',
+    paymentNote: 'Votre carte est débitée chaque mois pendant 12 mois. Après la 12e livraison, l’abonnement prend fin automatiquement.',
   },
   pgOrderConfirm: {
     verifying: 'Confirmation du paiement...',
@@ -9625,6 +9741,7 @@ const fr: typeof el = {
     errors: {
       noVetSelected: 'Aucun vétérinaire sélectionné', bookingFailed: 'Échec de la réservation',
       loginRequired: 'Connexion requise pour réserver',
+      invalidSchedule: 'Choisissez une date valide (aujourd\'hui ou plus tard) et une heure HH:MM.',
     },
     modal: {
       instantCall: 'Appel immédiat', instantCallDesc: 'Le vétérinaire vous appellera immédiatement après le paiement',
@@ -9988,13 +10105,17 @@ const fr: typeof el = {
   cart: {
     title: 'Panier', empty: 'Votre panier est vide',
     checkout: 'Passer la commande', total: 'Total', added: 'Ajouté au panier!',
+    freeShipping: 'Livraison gratuite',
+    shippingNote: 'Les frais de port sont calculés à l\'étape suivante',
   },
   notFound: { title: '404', message: 'Cette page s\'est perdue comme un animal...', home: 'Accueil' },
 
   orders: {
     title: 'Mes Commandes', orderNumber: 'Commande',
     noOrders: 'Pas de commandes', noOrdersDesc: 'Découvrez nos produits', shop: 'Boutique',
-    status: { pending: 'En attente', confirmed: 'Confirmée', shipped: 'Expédiée', delivered: 'Livrée', cancelled: 'Annulée' },
+    status: { pending: 'En attente', confirmed: 'Confirmée', shipped: 'Expédiée', delivered: 'Livrée', cancelled: 'Annulée', processing: 'En cours', },
+    andMore: 'et {{count}} de plus',
+    tracking: 'Suivi : {{code}}',
   },
   orderConfirm: {
     title: 'Votre commande est complète!',
@@ -10483,6 +10604,9 @@ const fr: typeof el = {
     title: 'Forfaits de services',
     update: 'Mettre à jour',
     yourPrice: 'Votre prix :',
+    fBasePrice: 'Prix de base (€)',
+    basePriceHint: 'Utilisé uniquement si vous ne définissez pas de forfaits.',
+    invalidPrice: 'Prix non valide',
   },
   providerMkt: {
     targetCount_one: '{{count}} cible',
@@ -11523,6 +11647,7 @@ const zh: typeof el = {
     ctaDesc: '立即联系专业兽医',
     ctaButton: '远程医疗咨询 →',
     newAnalysis: '重新分析',
+    sources: '对比来源',
   },
   pgPlaydates: {
     types: {
@@ -11704,6 +11829,24 @@ const zh: typeof el = {
     noRefundCancel: '距开始已不足 {{hours}} 小时：报名无法再取消退款。',
     confirmCancelRefund: '您的报名将被取消，€{{amount}} 将退回到您的银行卡。确定取消吗？',
     cancelledRefunded: '报名已取消，款项正在退回',
+    cancelledByOrganizer: '该活动已被主办方取消',
+    cancelledByOrganizerRefunded: '该活动已被主办方取消 — 款项已退还',
+    cancelledByOrganizerRefundDelayed: '该活动已被主办方取消。您的退款有所延迟 — 我们会完成退款；如有需要，请联系我们。',
+    manageEvent: '管理活动',
+    cancelEvent: '取消活动',
+    cancelEventHint: '所有报名都将被取消，已付款者将获得全额退款，所有参与者都会收到通知。随后活动将被删除。',
+    cancelEventRetry: '完成取消',
+    cancelEventPendingHint: '活动已取消，但部分退款未完成。请重试。',
+    cancelEventParticipants_one: '将通知 {{count}} 位参与者。',
+    cancelEventParticipants: '将通知 {{count}} 位参与者。',
+    cancelEventRefunds_one: '将退还 {{count}} 笔付款，共 €{{amount}}。',
+    cancelEventRefunds: '将退还 {{count}} 笔付款，共 €{{amount}}。',
+    cancelEventQuestion: '此操作无法撤销。确定取消活动吗？',
+    cancelEventDone_one: '活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。',
+    cancelEventDone: '活动已取消。已退还 {{count}} 笔付款（€{{amount}}），并已通知参与者。',
+    cancelEventPartial_one: '活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。',
+    cancelEventPartial: '活动已取消，但有 {{count}} 笔退款未完成。请稍后重试。',
+    cancelEventStarted: '活动已开始或已举行，无法再在此处取消并退款。如有需要，请联系客服。',
   },
   forum: {
     posted: '主题已发布',
@@ -11875,6 +12018,7 @@ const zh: typeof el = {
   },
   cmpNotifPanel: {
     empty: '暂无通知',
+    markAll: '全部标为已读',
   },
   cmpUserMenu: {
     wishlist: '心愿单',
@@ -11935,6 +12079,9 @@ const zh: typeof el = {
     redirecting: '正在跳转到付款…',
     start: '开始订阅',
     featCancelWhere: '可随时在“个人资料 → 我的订阅”中取消，不再扣款',
+    successToast: '订阅已开始！您可以在 个人资料 → 我的订阅 中找到它。',
+    cancelledToast: '订阅付款已取消，未产生任何扣款。',
+    paymentNote: '您的银行卡将每月扣款，共 12 个月。第 12 次配送后订阅自动结束。',
   },
   pgOrderConfirm: {
     verifying: '正在确认付款…',
@@ -12286,6 +12433,7 @@ const zh: typeof el = {
     errors: {
       noVetSelected: '未选择兽医', bookingFailed: '预订失败',
       loginRequired: '需要登录才能预订',
+      invalidSchedule: '请选择有效日期（今天或以后）和时间（时:分）。',
     },
     modal: {
       instantCall: '即时通话', instantCallDesc: '付款后兽医将立即致电您',
@@ -12649,13 +12797,17 @@ const zh: typeof el = {
   cart: {
     title: '购物车', empty: '购物车为空',
     checkout: '结账', total: '总计', added: '已添加到购物车!',
+    freeShipping: '免运费',
+    shippingNote: '运费将在下一步计算',
   },
   notFound: { title: '404', message: '此页面像宠物一样迷路了...', home: '首页' },
 
   orders: {
     title: '我的订单', orderNumber: '订单',
     noOrders: '暂无订单', noOrdersDesc: '探索我们的商品', shop: '购物',
-    status: { pending: '待处理', confirmed: '已确认', shipped: '已发货', delivered: '已送达', cancelled: '已取消' },
+    status: { pending: '待处理', confirmed: '已确认', shipped: '已发货', delivered: '已送达', cancelled: '已取消', processing: '处理中', },
+    andMore: '还有 {{count}} 件',
+    tracking: '物流单号：{{code}}',
   },
   orderConfirm: {
     title: '您的订单已完成!',
@@ -13144,6 +13296,9 @@ const zh: typeof el = {
     title: '服务套餐',
     update: '更新',
     yourPrice: '您的价格：',
+    fBasePrice: '基础价格 (€)',
+    basePriceHint: '仅在未设置套餐时使用。',
+    invalidPrice: '价格无效',
   },
   providerMkt: {
     targetCount_one: '{{count}} 个目标',

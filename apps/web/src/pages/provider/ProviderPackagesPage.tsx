@@ -6,6 +6,7 @@ import {
   Package, Plus, Trash2, Edit2, Check, X, ChevronDown, ChevronRight,
   Sparkles, Clock, Search, Settings, Building2, Euro
 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -29,6 +30,8 @@ const GROUP_META: Record<string, { labelKey: string; color: string; emoji: strin
   emergency:    { labelKey: 'providerPkg.gEmergency',          color: 'bg-red-50 text-red-700 border-red-200',          emoji: '🚨' },
   other:        { labelKey: 'providerPkg.gOther',             color: 'bg-gray-50 text-gray-700 border-gray-200',       emoji: '📋' },
 }
+/** Ανώτατη τιμή — ίδια με τον server (packages.ts MAX_PRICE). */
+const MAX_PRICE = 100_000
 const SIZE_LABELS: Record<string, string> = { small: 'providerPkg.szSmall', medium: 'providerPkg.szMedium', large: 'providerPkg.szLarge', xlarge: 'providerPkg.szXLarge' }
 const MODALITY_LABELS: Record<string, string> = {
   in_clinic: 'providerPkg.modInClinic', home_visit: 'providerPkg.modHomeVisit', telehealth: 'providerPkg.modTelehealth', emergency: 'providerPkg.modEmergency'
@@ -50,13 +53,25 @@ const CATEGORY_LABELS: Record<string, { labelKey: string; emoji: string }> = {
 export default function ProviderPackagesPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  // «Νέα υπηρεσία» από τον πίνακα παρόχου ανοίγει εδώ (?new=1) τον ίδιο
+  // οδηγό με το κινητό (κατηγορία, στοιχεία, διεύθυνση, χάρτης, τιμή).
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [showPresetModal, setShowPresetModal] = useState(false)
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [showServiceEditModal, setShowServiceEditModal] = useState(false)
-  const [showNewServiceModal, setShowNewServiceModal] = useState(false)
+  const [showNewServiceModal, setShowNewServiceModal] = useState(() => searchParams.get('new') === '1')
   const [editingPackage, setEditingPackage] = useState<any>(null)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  // Το ?new=1 καταναλώνεται μία φορά: αφαιρείται από το URL (replace, χωρίς
+  // νέα εγγραφή ιστορικού) ώστε η ανανέωση της σελίδας να μην ξανανοίγει τον οδηγό.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return
+    setShowNewServiceModal(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('new')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['provider-packages'],
@@ -68,17 +83,23 @@ export default function ProviderPackagesPage() {
     return services[0]
   }, [services, selectedServiceId])
 
+  // Μήνυμα του server σε κάθε αποτυχία (π.χ. 409 «η υπηρεσία έχει
+  // κρατήσεις») — όπως στο κινητό. Πριν η αποτυχία ήταν σιωπηλή.
+  const showError = (e: any) => toast.error(e?.response?.data?.message || t('providerPkg.error'))
+
   const deletePackage = useMutation({
     mutationFn: (id: string) => api.delete(`/packages/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-packages'] })
       toast.success(t('providerPkg.pkgDeleted'))
     },
+    onError: showError,
   })
 
   const toggleActive = useMutation({
     mutationFn: ({ id, is_active }: any) => api.patch(`/packages/${id}`, { is_active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['provider-packages'] }),
+    onError: showError,
   })
 
   const deleteService = useMutation({
@@ -88,6 +109,7 @@ export default function ProviderPackagesPage() {
       toast.success(t('providerPkg.serviceDeleted'))
       setSelectedServiceId(null)
     },
+    onError: showError,
   })
 
   const groupedPackages = useMemo(() => {
@@ -278,7 +300,8 @@ export default function ProviderPackagesPage() {
       )}
 
       <PresetCatalogModal open={showPresetModal} onClose={() => setShowPresetModal(false)}
-        serviceId={activeService?.id} category={activeService?.category}
+        serviceId={activeService?.id} category={activeService?.category || activeService?.service_type}
+        existingNames={(activeService?.packages ?? []).map((p: any) => String(p.name).toLowerCase())}
         onImported={() => { queryClient.invalidateQueries({ queryKey: ['provider-packages'] }); setShowPresetModal(false) }}/>
       <CustomPackageModal open={showCustomModal}
         onClose={() => { setShowCustomModal(false); setEditingPackage(null) }}
@@ -299,7 +322,7 @@ export default function ProviderPackagesPage() {
 // ═══════════════════════════════════════════════════════════════
 // Preset Catalog Modal — pick templates AND set prices in one step
 // ═══════════════════════════════════════════════════════════════
-function PresetCatalogModal({ open, onClose, serviceId, category, onImported }: any) {
+function PresetCatalogModal({ open, onClose, serviceId, category, existingNames = [], onImported }: any) {
   const { t } = useTranslation()
   // Map<template_id, { price, duration_minutes }>
   const [selectedMap, setSelectedMap] = useState<Map<string, { price: string; duration_minutes: number }>>(new Map())
@@ -334,12 +357,16 @@ function PresetCatalogModal({ open, onClose, serviceId, category, onImported }: 
   })
 
   const filtered = useMemo(() => {
+    // Ό,τι υπάρχει ήδη με το ίδιο όνομα δεν ξαναπροσφέρεται (όπως στο
+    // κινητό), ώστε να μη δημιουργούνται διπλά πακέτα.
+    const have = new Set<string>(existingNames)
     return templates.filter((t: any) => {
+      if (have.has(String(t.name).toLowerCase())) return false
       if (filterGroup !== 'all' && t.group !== filterGroup) return false
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-  }, [templates, search, filterGroup])
+  }, [templates, search, filterGroup, existingNames])
 
   const groups = useMemo(() => Array.from(new Set<string>(templates.map((t: any) => t.group as string))), [templates])
 
@@ -519,6 +546,7 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
         home_visits: !!service.home_visits,
         emergency_available: !!service.emergency_available,
         years_experience: service.years_experience || 0,
+        price: service.price != null ? String(service.price) : '',
         specializations: Array.isArray(service.specializations) ? service.specializations.join(', ') : '',
         pet_types: Array.isArray(service.pet_types) ? service.pet_types.join(',') : '',
         languages: Array.isArray(service.languages) ? service.languages.join(',') : 'el,en',
@@ -527,8 +555,16 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
     }
   }, [service, open])
 
+  // Ίδιος έλεγχος με τον server (packages.ts parsePrice): αριθμός 0..100000.
+  // Κενό = αμετάβλητη (όπως στο κινητό)· το 0 στέλνεται κανονικά.
+  const priceNum = form.price === '' || form.price == null ? null : Number(String(form.price).trim().replace(',', '.'))
+  const priceOk = priceNum === null || (Number.isFinite(priceNum) && priceNum >= 0 && priceNum <= MAX_PRICE)
   const saveMutation = useMutation({
-    mutationFn: () => api.patch(`/packages/services/${service.id}`, form),
+    mutationFn: () => api.patch(`/packages/services/${service.id}`, {
+      ...form,
+      title: String(form.title ?? '').trim(),
+      price: priceNum ?? undefined,
+    }),
     onSuccess: () => { toast.success(t('providerPkg.serviceUpdated')); onSaved() },
     onError: (e: any) => toast.error(e.response?.data?.message || t('providerPkg.error')),
   })
@@ -573,6 +609,11 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
               latitude={form.latitude} longitude={form.longitude}
               onChange={c => setForm((f: any) => ({ ...f, ...c }))} />
             <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fBasePrice')}</label>
+              <input type="number" step="0.01" min="0" className="input" placeholder="0.00" value={form.price ?? ''} onChange={e => setForm({...form, price: e.target.value})}/>
+              <p className="text-xs text-gray-500 mt-1">{t('providerPkg.basePriceHint')}</p>
+            </div>
+            <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fSpecializations')}</label>
               <input className="input" value={form.specializations || ''} onChange={e => setForm({...form, specializations: e.target.value})}/>
             </div>
@@ -587,7 +628,7 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
           </div>
           <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-2 justify-end">
             <button onClick={onClose} className="btn-secondary">{t('providerPkg.cancel')}</button>
-            <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="btn-primary">
+            <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !String(form.title ?? '').trim() || !priceOk} className="btn-primary">
               {saveMutation.isPending ? t('providerPkg.saving') : t('providerPkg.save')}
             </button>
           </div>
@@ -607,24 +648,26 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
   const [form, setForm] = useState<any>({
     title: '', description: '', city: '', country: 'GR', location: '',
     latitude: null, longitude: null,
-    home_visits: false, emergency_available: false, years_experience: 0,
+    home_visits: false, emergency_available: false, years_experience: 0, price: '',
   })
 
   useEffect(() => {
     if (!open) {
       setStep(1); setCategory('')
       setForm({ title: '', description: '', city: '', country: 'GR', location: '',
-        latitude: null, longitude: null, home_visits: false, emergency_available: false, years_experience: 0 })
+        latitude: null, longitude: null, home_visits: false, emergency_available: false, years_experience: 0, price: '' })
     }
   }, [open])
 
   const createService = useMutation({
     mutationFn: () => api.post('/packages/setup', {
-      category, title: form.title, description: form.description,
+      category, title: form.title.trim(), description: form.description,
       city: form.city, country: form.country, location: form.location,
       latitude: form.latitude, longitude: form.longitude,
       home_visits: form.home_visits, emergency_available: form.emergency_available,
       years_experience: form.years_experience,
+      // Βασική τιμή — ίδιο πεδίο με το κινητό (κενό = 0 στον server).
+      price: form.price === '' ? undefined : Number(String(form.price).trim().replace(',', '.')),
       packages_with_prices: [], // δεν δίνουμε τιμές εδώ - θα τις βάλει μετά από το catalog
     }),
     onSuccess: (res: any) => {
@@ -701,6 +744,11 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
                 <ServiceLocationPicker address={form.location} city={form.city} country={form.country}
                   latitude={form.latitude} longitude={form.longitude}
                   onChange={c => setForm((f: any) => ({ ...f, ...c }))} />
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fBasePrice')}</label>
+                  <input type="number" step="0.01" min="0" className="input" placeholder="0.00" value={form.price} onChange={e => setForm({...form, price: e.target.value})}/>
+                  <p className="text-xs text-gray-500 mt-1">{t('providerPkg.basePriceHint')}</p>
+                </div>
                 <div className="flex flex-wrap gap-4 pt-2">
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.home_visits} onChange={e => setForm({...form, home_visits: e.target.checked})}/>{t('providerPkg.fHomeVisits')}</label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.emergency_available} onChange={e => setForm({...form, emergency_available: e.target.checked})}/>{t('providerPkg.gEmergency')}</label>
@@ -718,7 +766,9 @@ function NewServiceModal({ open, onClose, onCreated }: any) {
                 if (!category) return toast.error(t('providerPkg.chooseCategory'))
                 setStep(2)
               } else {
-                if (!form.title) return toast.error(t('providerPkg.needName'))
+                if (!form.title.trim()) return toast.error(t('providerPkg.needName'))
+                const p = form.price === '' ? 0 : Number(String(form.price).trim().replace(',', '.'))
+                if (!Number.isFinite(p) || p < 0 || p > MAX_PRICE) return toast.error(t('providerPkg.invalidPrice'))
                 createService.mutate()
               }
             }} disabled={createService.isPending} className="btn-primary">
