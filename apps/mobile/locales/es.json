@@ -427,7 +427,21 @@
     "street": "Calle y número",
     "summary": "Resumen",
     "title": "Finalizar compra",
-    "viva_note": "Te llevaremos a la página de pago de Viva. El pedido se confirma al completarse el cobro."
+    "viva_note": "Te llevaremos a la página de pago de Viva. El pedido se confirma al completarse el cobro.",
+    "stepAddress": "Dirección",
+    "stepShipping": "Envío",
+    "stepReview": "Revisión",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "pageTitle": "Finalizar pedido",
+    "cardInfo": "Paga con tarjeta, Apple Pay o Google Pay en la página segura de Viva.",
+    "fullName": "Nombre completo",
+    "phone": "Teléfono",
+    "city": "Ciudad",
+    "free": "Gratis",
+    "total": "Total",
+    "empty": "Tu carrito está vacío",
+    "goShop": "Ir a la tienda"
   },
   "com": {
     "birds": "Aves",
@@ -1819,5 +1833,9 @@
     "elta": "ELTA — entrega a domicilio",
     "freeOverNote": "Los pedidos de más de {{amount}} € tienen envío gratis.",
     "withdrawalText": "Como consumidor, puedes desistir de la compra en un plazo de 14 días desde la entrega, sin necesidad de justificación."
+  },
+  "campaignDiscount": {
+    "line": "Descuento: {{title}}",
+    "original": "Precio original"
   }
 }

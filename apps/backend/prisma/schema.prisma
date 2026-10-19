@@ -140,6 +140,10 @@ model Booking {
   provider_email         String
   provider_name          String
   provider_payout_amount Float?
+  /// Έκπτωση καμπάνιας σε ευρώ. Το total_price είναι ΗΔΗ μετά την έκπτωση.
+  discount_amount        Float?
+  /// Η καμπάνια της έκπτωσης — μετριέται ως εξαργύρωση όταν πληρωθεί.
+  campaign_id            String?          @db.VarChar(255)
   rating                 Int?
   review                 String?
   staff_id               String?          @db.VarChar(255)

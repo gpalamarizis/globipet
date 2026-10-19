@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
+import { bestDiscount, bookingBasePrice } from '../lib/campaignDiscount.js'
 import { createHash } from 'node:crypto'
 
 /**
@@ -194,13 +195,15 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
     })
 
     /**
-     * Πόσο πληρώνω τελικά.
+     * Πόσο πληρώνω τελικά — προεπισκόπηση για ταμείο και κράτηση.
      *
-     * Σώμα: { items: [{ type, id, price, qty }] }
-     * Επιστρέφει την τιμή κάθε είδους μετά την έκπτωση, και τι εφαρμόστηκε.
+     * Σώμα: { items: [{ type: 'product' | 'service' | 'service_package', id, qty }
+     *                | { type: 'booking', service_id, packages: [{ package_id, quantity }] }] }
      *
-     * ΚΑΝΟΝΑΣ: μία έκπτωση ανά είδος — η ΜΕΓΑΛΥΤΕΡΗ. Δεν σωρεύονται,
-     * γιατί δύο καμπάνιες 50% θα μηδένιζαν την τιμή.
+     * Οι τιμές διαβάζονται ΑΠΟ ΤΗ ΒΑΣΗ — ό,τι τιμή στείλει ο πελάτης αγνοείται.
+     * Ο υπολογισμός είναι ο ίδιος (lib/campaignDiscount) με αυτόν που κάνουν
+     * οι παραγγελίες και οι κρατήσεις όταν χρεώνουν, άρα η προεπισκόπηση λέει
+     * ακριβώς ό,τι θα χρεωθεί.
      */
     secured.post('/quote', async (req: any, reply) => {
       const email = (req.user as any).email
@@ -208,73 +211,48 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       if (!items) return reply.code(400).send({ message: 'Αναμένεται πίνακας items' })
       if (items.length > 100) return reply.code(400).send({ message: 'Πάρα πολλά είδη' })
 
+      const round2 = (n: number) => Math.round(n * 100) / 100
       const out: any[] = []
       let subtotal = 0, totalDiscount = 0
 
       for (const it of items) {
-        const type = String(it.type || '')
-        const id = String(it.id || '')
-        const price = Number(it.price) || 0
-        const qty = Math.max(1, Number(it.qty) || 1)
-        const line = price * qty
-        subtotal += line
+        const type = String(it?.type || '')
+        const qty = Math.min(Math.max(parseInt(String(it?.qty)) || 1, 1), 99)
+        let line: number | null = null
+        let dType: 'product' | 'service' | 'service_package' | null = null
+        let dId = ''
 
-        if (!['product', 'service', 'service_package'].includes(type) || !id) {
-          out.push({ ...it, line, discount: 0, final: line, campaign: null })
+        if (type === 'product') {
+          const p = await prisma.product.findUnique({ where: { id: String(it.id || '') } })
+          if (p) { line = p.price * qty; dType = 'product'; dId = p.id }
+        } else if (type === 'service') {
+          const s = await prisma.service.findUnique({ where: { id: String(it.id || '') } })
+          if (s) { line = s.price * qty; dType = 'service'; dId = s.id }
+        } else if (type === 'service_package') {
+          const sp = await prisma.servicePackage.findUnique({ where: { id: String(it.id || '') } })
+          if (sp) { line = sp.price * qty; dType = 'service_package'; dId = sp.id }
+        } else if (type === 'booking') {
+          const sid = String(it.service_id || '')
+          const base = await bookingBasePrice(sid, Array.isArray(it.packages) ? it.packages : [])
+          if (base != null) { line = base; dType = 'service'; dId = sid }
+        }
+
+        if (line == null || !dType) {
+          out.push({ type, id: it?.id ?? it?.service_id ?? null, qty, line: 0, discount: 0, final: 0, campaign: null })
           continue
         }
-
-        const allType = type === 'product' ? 'all_products' : 'all_services'
-
-        const found = await prisma.$queryRaw<any[]>`
-          SELECT c.id, c.title, c.discount_type, c.discount_value, c.min_order, c.boost
-            FROM campaigns c
-            JOIN campaign_targets t ON t.campaign_id = c.id
-           WHERE c.is_active
-             AND now() BETWEEN c.starts_at AND c.ends_at
-             AND c.discount_type IS NOT NULL
-             -- Ο πάροχος εκπτώνει ΜΟΝΟ τα δικά του. Χωρίς αυτό, καμπάνια
-             -- «όλα τα προϊόντα −100%» ενός παρόχου ίσχυε σε όλη την πλατφόρμα.
-             AND (c.owner_type = 'platform'
-                  OR (${type} = 'product' AND EXISTS (
-                        SELECT 1 FROM products p WHERE p.id = ${id} AND p.provider_email = c.owner_email))
-                  OR (${type} = 'service' AND EXISTS (
-                        SELECT 1 FROM services s WHERE s.id = ${id} AND s.provider_email = c.owner_email))
-                  OR (${type} = 'service_package' AND EXISTS (
-                        SELECT 1 FROM service_packages sp JOIN services s ON s.id = sp.service_id
-                         WHERE sp.id = ${id} AND s.provider_email = c.owner_email)))
-             AND (t.target_type = ${allType}
-                  OR (t.target_type = ${type} AND t.target_id = ${id}))
-             AND (c.min_order IS NULL OR c.min_order <= ${line})
-             AND (NOT EXISTS (SELECT 1 FROM campaign_audience a WHERE a.campaign_id = c.id)
-                  OR EXISTS (SELECT 1 FROM campaign_audience a
-                              WHERE a.campaign_id = c.id AND a.customer_email = ${email}))`
-
-        // Η μεγαλύτερη έκπτωση σε ευρώ κερδίζει — όχι το μεγαλύτερο ποσοστό,
-        // γιατί 10% σε 200 € είναι περισσότερα από 5 € σταθερά.
-        let best: any = null, bestOff = 0
-        for (const c of found) {
-          const off = c.discount_type === 'percent'
-            ? line * (Number(c.discount_value) / 100)
-            : Math.min(Number(c.discount_value) * qty, line)
-          if (off > bestOff) { bestOff = off; best = c }
-        }
-
-        const discount = Math.round(bestOff * 100) / 100
-        totalDiscount += discount
-        out.push({
-          ...it, line, discount, final: Math.round((line - discount) * 100) / 100,
-          campaign: best ? { id: best.id, title: best.title,
-                             type: best.discount_type, value: best.discount_value } : null,
-        })
+        const d = await bestDiscount(email, dType, dId, line, type === 'booking' ? 1 : qty)
+        subtotal += round2(line)
+        totalDiscount += d.discount
+        out.push({ type, id: dId, qty, line: round2(line), discount: d.discount, final: d.final, campaign: d.campaign })
       }
 
       return {
         data: {
           items: out,
-          subtotal: Math.round(subtotal * 100) / 100,
-          discount: Math.round(totalDiscount * 100) / 100,
-          total: Math.round((subtotal - totalDiscount) * 100) / 100,
+          subtotal: round2(subtotal),
+          discount: round2(totalDiscount),
+          total: round2(subtotal - totalDiscount),
         },
       }
     })

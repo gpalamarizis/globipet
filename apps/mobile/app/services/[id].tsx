@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } 
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star } from 'lucide-react-native'
+import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star, Tag } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
@@ -122,6 +122,16 @@ export default function ServiceDetailScreen() {
     onError: (e: any) =>
       Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('booking.err_book')),
   })
+
+  // Προεπισκόπηση έκπτωσης καμπάνιας — ο server υπολογίζει το ίδιο στην κράτηση.
+  const quotePackages = chosen.map((p: any) => ({ package_id: p.id, quantity: qty[p.id] ?? 1 }))
+  const { data: quote } = useQuery({
+    queryKey: ['quote-booking', id, quotePackages],
+    queryFn: () => api.post('/campaigns/quote', { items: [{ type: 'booking', service_id: id, packages: quotePackages }] })
+      .then(r => r.data?.data?.items?.[0] ?? null),
+    enabled: isAuthenticated && !!id,
+  })
+  const finalTotal = quote?.discount > 0 ? Number(quote.final) : Number(total)
 
   if (isLoading) return <Screen title={t('services.title')} back><SkeletonRows count={3} /></Screen>
 
@@ -337,9 +347,20 @@ export default function ServiceDetailScreen() {
             )}
 
             {/* Σύνολο και κράτηση */}
+            {quote?.discount > 0 && (
+              <View style={s.discRow}>
+                <View style={s.discLabel}>
+                  <View style={s.discIcon}><Tag size={13} color={colors.success} /></View>
+                  <Text style={s.discText} numberOfLines={2}>{t('campaignDiscount.line', { title: quote.campaign?.title })}</Text>
+                </View>
+                <Text style={s.discValue}>
+                  <Text style={s.strike}>€{Number(quote.line).toFixed(2)}</Text>  −€{Number(quote.discount).toFixed(2)}
+                </Text>
+              </View>
+            )}
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>{t('serviceDetail.total')}</Text>
-              <Text style={s.totalValue}>€{Number(total).toFixed(2)}</Text>
+              <Text style={s.totalValue}>€{finalTotal.toFixed(2)}</Text>
             </View>
 
             <Button
@@ -433,6 +454,12 @@ const s = StyleSheet.create({
     paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.borderLight,
   },
   totalLabel: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
+  discRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.md, paddingTop: space.md },
+  discLabel: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs, flex: 1, minWidth: 0 },
+  discIcon: { marginTop: 4 },
+  discText: { ...type.body, color: '#047857', flexShrink: 1 },
+  discValue: { ...type.body, color: '#047857', fontWeight: weight.semibold },
+  strike: { color: colors.textLight, textDecorationLine: 'line-through', fontWeight: weight.regular },
   totalValue: { ...type.section, color: colors.brand, fontWeight: weight.black },
   payNote: { ...type.caption, color: colors.textLight, textAlign: 'center' },
 })

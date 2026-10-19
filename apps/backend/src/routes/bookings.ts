@@ -4,6 +4,7 @@ import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
 import prisma from '../lib/prisma.js'
 import { calculateCommission } from '../lib/commission.js'
+import { bestDiscount } from '../lib/campaignDiscount.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
 import { cancelBooking, cancellationTerms, CancelError } from '../lib/cancellation.js'
 import { serverError } from '../lib/errors.js'
@@ -210,7 +211,11 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const totalPrice = Math.round((packageRows.length ? packagesTotal : service.price) * 100) / 100
+    const basePrice = Math.round((packageRows.length ? packagesTotal : service.price) * 100) / 100
+    // Έκπτωση καμπάνιας στην υπηρεσία (στόχος «η υπηρεσία» ή «όλες οι
+    // υπηρεσίες μου») — ίδιος υπολογισμός με την προεπισκόπηση της σελίδας.
+    const disc = await bestDiscount(email, 'service', service.id, basePrice, 1)
+    const totalPrice = disc.final
     const category = service.service_type || null
     const { rate, platformFee, providerPayout } = await calculateCommission(totalPrice, category)
 
@@ -242,6 +247,8 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         staff_id: staffId,
         staff_name: staffName,
         total_price: totalPrice,
+        discount_amount: disc.discount > 0 ? disc.discount : null,
+        campaign_id: disc.campaign?.id ?? null,
         // Server-owned state — never taken from the request.
         status: 'pending',
         payment_status: 'unpaid',

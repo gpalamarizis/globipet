@@ -1,57 +1,91 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Lock, ShoppingBag, ChevronRight, Check, Truck, ArrowLeft, Package } from 'lucide-react'
+import { Lock, ShoppingBag, ChevronRight, Check, Truck, ArrowLeft, Package, Tag } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { FREE_SHIPPING_OVER } from '@/lib/shipping'
 import toast from 'react-hot-toast'
 
-const SHIPPING_METHODS = [
-  { id: 'boxnow', label: 'BoxNow Locker', price: 2.50, desc: '1-2 εργάσιμες · Παραλαβή από locker', icon: '📦' },
-  { id: 'acs',    label: 'ACS Courier',   price: 3.99, desc: '1-3 εργάσιμες · Παράδοση στην πόρτα', icon: '🚚' },
-  { id: 'elta',   label: 'ΕΛΤΑ Courier',  price: 4.50, desc: '2-4 εργάσιμες · Παράδοση στην πόρτα', icon: '✉️' },
-]
+/**
+ * Ολοκλήρωση αγοράς — ίδια ροή και ίδια πεδία με το κινητό.
+ *
+ * ΤΙ ΑΛΛΑΞΕ
+ *   · Αφαιρέθηκε η «Αντικαταβολή»: η παραγγελία έμενε απλήρωτη για πάντα,
+ *     ο πάροχος δεν ειδοποιούνταν ποτέ, κι ο πελάτης έβλεπε «ολοκληρώθηκε».
+ *     Κανόνας: κάθε παραγγελία πληρώνεται στο Viva πριν επιβεβαιωθεί.
+ *   · Η έκπτωση καμπάνιας φαίνεται πριν την πληρωμή (POST /campaigns/quote,
+ *     τιμές της βάσης). Ο server υπολογίζει ξανά τα ίδια όταν δημιουργεί
+ *     την παραγγελία — τίποτα από εδώ δεν είναι δεσμευτικό.
+ *   · Τα μεταφορικά: δωρεάν όταν το ποσό ΜΕΤΑ την έκπτωση ξεπερνά το όριο,
+ *     όπως τα υπολογίζει ο server.
+ *   · Όλα τα κείμενα σε 5 γλώσσες (ήταν σταθερά ελληνικά).
+ */
+const SHIPPING = [
+  { id: 'boxnow', label: 'BOX NOW', subKey: 'checkout.locker', price: 2.5, icon: '📦' },
+  { id: 'acs',    label: 'ACS',     subKey: 'checkout.home_1_3', price: 3.99, icon: '🚚' },
+  { id: 'elta',   labelKey: 'checkout.elta', subKey: 'checkout.home_3_5', price: 4.5, icon: '✉️' },
+] as const
+
+type Step = 'address' | 'shipping' | 'review'
 
 export default function Checkout() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [step, setStep] = useState<'address' | 'shipping' | 'payment' | 'review'>('address')
+  const [step, setStep] = useState<Step>('address')
   const [address, setAddress] = useState({
     full_name: user?.full_name || '',
-    phone: '',
+    phone: (user as any)?.phone || '',
     street: '',
     city: '',
     postal_code: '',
-    country: 'GR',
+    notes: '',
   })
   const [shippingMethod, setShippingMethod] = useState<string>('boxnow')
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card')
 
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cart'],
     queryFn: () => api.get('/cart').then(r => r.data?.data ?? []),
   })
 
-  const selectedShipping = SHIPPING_METHODS.find(m => m.id === shippingMethod)!
-  const subtotal = cartItems.reduce((sum: number, item: any) => sum + ((item.product_price ?? item.price ?? 0) * item.quantity), 0)
-  const shipping = subtotal > 50 ? 0 : selectedShipping.price
-  const grandTotal = subtotal + shipping
+  const quoteItems = cartItems.map((i: any) => ({ type: 'product', id: i.product_id || i.id, qty: i.quantity }))
+  const { data: quote } = useQuery({
+    queryKey: ['quote-cart', quoteItems],
+    queryFn: () => api.post('/campaigns/quote', { items: quoteItems }).then(r => r.data?.data),
+    enabled: quoteItems.length > 0,
+  })
 
-  const steps = [
-    { id: 'address',  label: 'Διεύθυνση' },
-    { id: 'shipping', label: 'Αποστολή' },
-    { id: 'payment',  label: 'Πληρωμή' },
-    { id: 'review',   label: 'Επιβεβαίωση' },
+  const selected = SHIPPING.find(m => m.id === shippingMethod) ?? SHIPPING[0]
+  const listSubtotal = cartItems.reduce((sum: number, item: any) => sum + ((item.product_price ?? item.price ?? 0) * item.quantity), 0)
+  const subtotal = quote ? Number(quote.subtotal) : listSubtotal
+  const discount = quote ? Number(quote.discount) : 0
+  const afterDiscount = Math.round((subtotal - discount) * 100) / 100
+  const free = afterDiscount > FREE_SHIPPING_OVER
+  const shipping = free ? 0 : selected.price
+  const grandTotal = afterDiscount + shipping
+
+  // Μία γραμμή ανά καμπάνια, με το άθροισμα της έκπτωσης.
+  const discountLines: { title: string; amount: number }[] = []
+  for (const it of quote?.items ?? []) {
+    if (!it.campaign || !(it.discount > 0)) continue
+    const row = discountLines.find(d => d.title === it.campaign.title)
+    if (row) row.amount += it.discount
+    else discountLines.push({ title: it.campaign.title, amount: it.discount })
+  }
+
+  const steps: { id: Step; label: string }[] = [
+    { id: 'address',  label: t('checkout.stepAddress') },
+    { id: 'shipping', label: t('checkout.stepShipping') },
+    { id: 'review',   label: t('checkout.stepReview') },
   ]
 
   const placeOrder = useMutation({
     mutationFn: async () => {
-      // Only the product and quantity travel. Prices, names, images, the
-      // delivery fee and the order total are all resolved on the server —
-      // sending them here would be ignored at best and misleading at worst.
+      // Μόνο προϊόν και ποσότητα. Τιμές, έκπτωση, μεταφορικά και σύνολο τα
+      // υπολογίζει ο server.
       const items = cartItems.map((item: any) => ({
         product_id: item.product_id || item.id,
         quantity:   item.quantity,
@@ -59,41 +93,47 @@ export default function Checkout() {
       const { data: order } = await api.post('/orders', {
         items,
         shipping_address: { ...address, shipping_method: shippingMethod },
-        payment_method: paymentMethod,
+        payment_method: 'viva',
       })
-      if (paymentMethod === 'card') {
-        // The amount charged is the order total the server computed.
-        const { data: viva } = await api.post('/orders/viva/checkout', {
-          order_id: order.id,
-        })
-        if (viva.checkoutUrl) { window.location.href = viva.checkoutUrl; return }
-      }
-      return order
+      const orderId = order?.data?.id ?? order?.id
+      if (!orderId) throw new Error(t('checkout.err_no_order'))
+      const { data: viva } = await api.post('/orders/viva/checkout', { order_id: orderId })
+      if (viva?.checkoutUrl) { window.location.href = viva.checkoutUrl; return }
+      throw new Error(t('checkout.err_no_page'))
     },
-    onSuccess: (order) => {
-      if (order) { toast.success('Παραγγελία ολοκληρώθηκε! 🎉'); navigate(`/orders/${order.id}`) }
-    },
-    onError: (err: any) => toast.error(err?.message || 'Σφάλμα κατά την παραγγελία'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('checkout.err_order')),
   })
+
+  const addressOk = !!(address.full_name.trim() && address.phone.trim() && address.street.trim()
+    && address.city.trim() && address.postal_code.trim())
 
   if (cartItems.length === 0) return (
     <div className="page-container py-16 text-center">
       <ShoppingBag size={48} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Το καλάθι σας είναι άδειο</h2>
-      <button onClick={() => navigate('/marketplace')} className="btn-primary mt-4">Αγορές</button>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('checkout.empty')}</h2>
+      <button onClick={() => navigate('/marketplace')} className="btn-primary mt-4">{t('checkout.goShop')}</button>
     </div>
   )
 
   const stepIdx = steps.findIndex(s => s.id === step)
+  const money = (n: number) => `€${n.toFixed(2)}`
+
+  const field = (key: keyof typeof address, label: string, opts: { full?: boolean; type?: string; placeholder?: string } = {}) => (
+    <div className={opts.full ? 'col-span-2' : ''}>
+      <label className="text-xs font-medium text-gray-500 mb-1 block">{label}</label>
+      <input className="input" type={opts.type || 'text'} value={address[key]} placeholder={opts.placeholder}
+        onChange={e => setAddress(a => ({ ...a, [key]: e.target.value }))} />
+    </div>
+  )
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <button onClick={() => navigate(-1)} className="btn-ghost p-2"><ArrowLeft size={18}/></button>
-        <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">Ολοκλήρωση παραγγελίας</h1>
+        <button onClick={() => navigate(-1)} className="btn-ghost p-2" aria-label={t('checkout.back')}><ArrowLeft size={18}/></button>
+        <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('checkout.pageTitle')}</h1>
       </div>
 
-      {/* Steps */}
+      {/* Βήματα */}
       <div className="flex items-center justify-center mb-8">
         {steps.map((s, i) => (
           <div key={s.id} className="flex items-center">
@@ -113,159 +153,101 @@ export default function Checkout() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Step 1: Address */}
           {step === 'address' && (
             <div className="card p-6">
-              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Truck size={18}/> Διεύθυνση παράδοσης</h2>
+              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Truck size={18}/> {t('checkout.delivery')}</h2>
               <div className="grid grid-cols-2 gap-3">
+                {field('full_name', t('checkout.fullName'), { full: true })}
+                {field('phone', t('checkout.phone'), { type: 'tel' })}
+                {field('postal_code', t('checkout.postcode'))}
+                {field('street', t('checkout.address'), { full: true, placeholder: t('checkout.street') })}
+                {field('city', t('checkout.city'), { full: true })}
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Ονοματεπώνυμο</label>
-                  <input className="input" value={address.full_name} onChange={e => setAddress(a => ({...a, full_name: e.target.value}))} placeholder="Γιώργος Παπαδόπουλος" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Τηλέφωνο</label>
-                  <input className="input" value={address.phone} onChange={e => setAddress(a => ({...a, phone: e.target.value}))} placeholder="+30 6900000000" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Χώρα</label>
-                  <select className="input" value={address.country} onChange={e => setAddress(a => ({...a, country: e.target.value}))}>
-                    <option value="GR">Ελλάδα</option>
-                    <option value="CY">Κύπρος</option>
-                    <option value="DE">Γερμανία</option>
-                    <option value="GB">Ηνωμένο Βασίλειο</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Οδός και αριθμός</label>
-                  <input className="input" value={address.street} onChange={e => setAddress(a => ({...a, street: e.target.value}))} placeholder="Λεωφόρος Αθηνών 123" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Πόλη</label>
-                  <input className="input" value={address.city} onChange={e => setAddress(a => ({...a, city: e.target.value}))} placeholder="Αθήνα" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">ΤΚ</label>
-                  <input className="input" value={address.postal_code} onChange={e => setAddress(a => ({...a, postal_code: e.target.value}))} placeholder="10431" />
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">{t('checkout.notes')}</label>
+                  <textarea className="input" rows={2} value={address.notes} placeholder={t('checkout.notes_hint')}
+                    onChange={e => setAddress(a => ({ ...a, notes: e.target.value }))} />
                 </div>
               </div>
-              <button onClick={() => setStep('shipping')} disabled={!address.full_name || !address.street || !address.city}
+              <button onClick={() => setStep('shipping')} disabled={!addressOk}
                 className="btn-primary w-full mt-4 flex items-center justify-center gap-2">
-                Συνέχεια <ChevronRight size={16}/>
+                {t('checkout.continue')} <ChevronRight size={16}/>
               </button>
+              {!addressOk && <p className="text-xs text-gray-400 text-center mt-2">{t('checkout.fill_delivery')}</p>}
             </div>
           )}
 
-          {/* Step 2: Shipping */}
           {step === 'shipping' && (
             <div className="card p-6">
-              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Package size={18}/> Τρόπος αποστολής</h2>
+              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Package size={18}/> {t('checkout.shipping_method')}</h2>
               <div className="space-y-3 mb-5">
-                {SHIPPING_METHODS.map(m => (
+                {SHIPPING.map(m => (
                   <label key={m.id} className={cn('flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all',
                     shippingMethod === m.id ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300')}>
                     <input type="radio" name="shipping" value={m.id} checked={shippingMethod === m.id} onChange={() => setShippingMethod(m.id)} className="sr-only" />
                     <span className="text-2xl">{m.icon}</span>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-white">{m.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{m.desc}</p>
+                      <p className="font-semibold text-sm text-gray-900 dark:text-white">{'labelKey' in m ? t(m.labelKey) : m.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t(m.subKey)}</p>
                     </div>
-                    <div className="text-right">
-                      {subtotal > 50
-                        ? <span className="text-sm font-bold text-green-600">Δωρεάν</span>
-                        : <span className="text-sm font-bold text-gray-900 dark:text-white">€{m.price.toFixed(2)}</span>
-                      }
-                    </div>
+                    <span className={cn('text-sm font-bold', free ? 'text-green-600' : 'text-gray-900 dark:text-white')}>
+                      {free ? t('checkout.free') : money(m.price)}
+                    </span>
                     {shippingMethod === m.id && <Check size={16} className="text-brand-900 shrink-0" />}
                   </label>
                 ))}
               </div>
-              {subtotal > 50 && (
-                <p className="text-xs text-green-600 font-medium mb-4 text-center">🎉 Δωρεάν αποστολή για αγορές άνω των €50!</p>
-              )}
+              <p className={cn('text-xs font-medium mb-4 text-center', free ? 'text-green-600' : 'text-gray-500')}>
+                {t('checkout.free_over', { amount: FREE_SHIPPING_OVER })}
+              </p>
               <div className="flex gap-3">
-                <button onClick={() => setStep('address')} className="btn-secondary flex-1">Πίσω</button>
-                <button onClick={() => setStep('payment')} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                  Συνέχεια <ChevronRight size={16}/>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Payment */}
-          {step === 'payment' && (
-            <div className="card p-6">
-              <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><CreditCard size={18}/> Τρόπος πληρωμής</h2>
-              <div className="space-y-3 mb-5">
-                {[
-                  { id: 'card', label: 'Κάρτα / Apple Pay / Google Pay', icon: '💳' },
-                  { id: 'cash', label: 'Αντικαταβολή', icon: '💵' },
-                ].map(m => (
-                  <label key={m.id} className={cn('flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all',
-                    paymentMethod === m.id ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-200 dark:border-gray-700')}>
-                    <input type="radio" name="payment" value={m.id} checked={paymentMethod === m.id} onChange={() => setPaymentMethod(m.id as any)} className="sr-only" />
-                    <span className="text-xl">{m.icon}</span>
-                    <span className="font-medium text-sm text-gray-900 dark:text-white flex-1">{m.label}</span>
-                    {paymentMethod === m.id && <Check size={16} className="text-brand-900" />}
-                  </label>
-                ))}
-              </div>
-              {paymentMethod === 'card' && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-4">
-                  <div className="flex items-center gap-2">
-                    <Lock size={14} className="text-blue-600" />
-                    <span className="text-xs text-blue-600 font-medium">Θα μεταφερθείτε στο ασφαλές περιβάλλον πληρωμής Viva Wallet</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">Αποδεκτές κάρτες: Visa, Mastercard, American Express. Έως 12 άτοκες δόσεις.</p>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <button onClick={() => setStep('shipping')} className="btn-secondary flex-1">Πίσω</button>
+                <button onClick={() => setStep('address')} className="btn-secondary flex-1">{t('checkout.back')}</button>
                 <button onClick={() => setStep('review')} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                  Συνέχεια <ChevronRight size={16}/>
+                  {t('checkout.continue')} <ChevronRight size={16}/>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Review */}
           {step === 'review' && (
             <div className="card p-6">
-              <h2 className="font-bold text-gray-900 dark:text-white mb-4">Επιβεβαίωση παραγγελίας</h2>
+              <h2 className="font-bold text-gray-900 dark:text-white mb-4">{t('checkout.stepReview')}</h2>
               <div className="space-y-3 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">ΔΙΕΥΘΥΝΣΗ ΠΑΡΑΔΟΣΗΣ</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">{t('checkout.delivery')}</p>
                   <p className="text-sm text-gray-900 dark:text-white">{address.full_name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{address.street}, {address.city} {address.postal_code}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{address.phone}</p>
+                  {!!address.notes && <p className="text-sm text-gray-500 mt-1">{address.notes}</p>}
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">ΤΡΟΠΟΣ ΑΠΟΣΤΟΛΗΣ</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">{t('checkout.shipping_method')}</p>
                   <p className="text-sm text-gray-900 dark:text-white">
-                    {selectedShipping.icon} {selectedShipping.label} · {subtotal > 50 ? 'Δωρεάν' : `€${selectedShipping.price.toFixed(2)}`}
+                    {selected.icon} {'labelKey' in selected ? t(selected.labelKey) : selected.label} · {free ? t('checkout.free') : money(selected.price)}
                   </p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">ΤΡΟΠΟΣ ΠΛΗΡΩΜΗΣ</p>
-                  <p className="text-sm text-gray-900 dark:text-white">
-                    {paymentMethod === 'card' ? '💳 Κάρτα μέσω Viva Wallet' : '💵 Αντικαταβολή'}
-                  </p>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Lock size={14} className="text-blue-600 shrink-0" />
+                    <span className="text-xs text-blue-600 font-medium">{t('checkout.viva_note')}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">{t('checkout.cardInfo')}</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep('payment')} className="btn-secondary flex-1">Πίσω</button>
-                <button onClick={() => placeOrder.mutate()} disabled={placeOrder.isPending}
+                <button onClick={() => setStep('shipping')} className="btn-secondary flex-1">{t('checkout.back')}</button>
+                <button onClick={() => placeOrder.mutate()} disabled={placeOrder.isPending || !addressOk}
                   className="btn-primary flex-1 flex items-center justify-center gap-2">
                   <Lock size={14}/>
-                  {placeOrder.isPending ? 'Επεξεργασία...' : `Παραγγελία €${grandTotal.toFixed(2)}`}
+                  {placeOrder.isPending ? t('checkout.creating_order') : t('checkout.pay_amount', { amount: grandTotal.toFixed(2) })}
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Order summary */}
+        {/* Σύνοψη */}
         <div className="card p-5 h-fit sticky top-20">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Σύνοψη παραγγελίας</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4">{t('checkout.summary')}</h3>
           <div className="space-y-3 mb-4">
             {cartItems.map((item: any) => (
               <div key={item.id} className="flex items-center gap-3">
@@ -276,25 +258,31 @@ export default function Checkout() {
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.product_name ?? item.name}</p>
                   <p className="text-xs text-gray-500">x{item.quantity}</p>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">€{((item.product_price ?? item.price ?? 0) * item.quantity).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{money((item.product_price ?? item.price ?? 0) * item.quantity)}</p>
               </div>
             ))}
           </div>
           <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-              <span>Υποσύνολο</span><span>€{subtotal.toFixed(2)}</span>
+              <span>{t('checkout.products')}</span><span>{money(subtotal)}</span>
             </div>
+            {discountLines.map(d => (
+              <div key={d.title} className="flex items-start justify-between gap-3 text-sm text-green-700 dark:text-green-400">
+                {/* Αναδίπλωση αντί για «…»: ο τίτλος της καμπάνιας πρέπει να διαβάζεται ολόκληρος. */}
+                <span className="flex items-start gap-1.5 min-w-0"><Tag size={13} className="shrink-0 mt-[3px]"/><span className="break-words">{t('campaignDiscount.line', { title: d.title })}</span></span>
+                <span className="shrink-0">−{money(d.amount)}</span>
+              </div>
+            ))}
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-              <span>Μεταφορικά</span>
-              <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>{shipping === 0 ? 'Δωρεάν' : `€${shipping.toFixed(2)}`}</span>
+              <span>{t('checkout.shipping')}</span>
+              <span className={free ? 'text-green-600 font-medium' : ''}>{free ? t('checkout.free') : money(shipping)}</span>
             </div>
-            {subtotal > 50 && <p className="text-xs text-green-600">🎉 Δωρεάν αποστολή!</p>}
             <div className="flex justify-between font-bold text-gray-900 dark:text-white pt-2 border-t border-gray-100 dark:border-gray-800">
-              <span>Σύνολο</span><span>€{grandTotal.toFixed(2)}</span>
+              <span>{t('checkout.total')}</span><span>{money(grandTotal)}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
-            <Lock size={12}/> Ασφαλής πληρωμή με κρυπτογράφηση SSL
+            <Lock size={12}/> {t('productInfo.securePayment')}
           </div>
         </div>
       </div>

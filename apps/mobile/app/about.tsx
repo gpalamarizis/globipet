@@ -19,7 +19,7 @@ const WEB = 'https://globipet.com'
 const FOUNDERS = [
   { name: 'George Palamarizis', roleKey: 'about.founders.roles.ceo', bioKey: 'about.founders.bios.palamarizis', linkedin: 'https://www.linkedin.com/in/gpalamarizis/', photo: `${WEB}/founders/palamarizis.jpg` },
   { name: 'Meropi Topalidou', roleKey: 'about.founders.roles.pm', bioKey: 'about.founders.bios.topalidou', linkedin: 'https://www.linkedin.com/in/meropi-topalidou/', photo: `${WEB}/founders/topalidou.jpg` },
-  { name: 'Vasilis Rallis', roleKey: 'about.founders.roles.cfo', bioKey: 'about.founders.bios.rallis', linkedin: 'https://www.linkedin.com/in/vasilis-rallis/', photo: `${WEB}/founders/rallis.jpg` },
+  { name: 'Vasilis Rallis', roleKey: 'about.founders.roles.cfo', bioKey: 'about.founders.bios.rallis', linkedin: 'https://www.linkedin.com/in/vasilisrallis/', photo: `${WEB}/founders/rallis.jpg` },
 ]
 
 const SERVICES = [

@@ -427,7 +427,21 @@
     "street": "Street and number",
     "summary": "Summary",
     "title": "Checkout",
-    "viva_note": "You will be taken to the Viva payment page. The order is confirmed once the payment goes through."
+    "viva_note": "You will be taken to the Viva payment page. The order is confirmed once the payment goes through.",
+    "stepAddress": "Address",
+    "stepShipping": "Shipping",
+    "stepReview": "Review",
+    "continue": "Continue",
+    "back": "Back",
+    "pageTitle": "Checkout",
+    "cardInfo": "Pay by card, Apple Pay or Google Pay on the secure Viva page.",
+    "fullName": "Full name",
+    "phone": "Phone",
+    "city": "City",
+    "free": "Free",
+    "total": "Total",
+    "empty": "Your cart is empty",
+    "goShop": "Go to the shop"
   },
   "com": {
     "birds": "Birds",
@@ -1819,5 +1833,9 @@
     "elta": "ELTA — home delivery",
     "freeOverNote": "Orders over €{{amount}} ship for free.",
     "withdrawalText": "As a consumer you can withdraw from the purchase within 14 days of delivery, without giving a reason."
+  },
+  "campaignDiscount": {
+    "line": "Discount: {{title}}",
+    "original": "Original price"
   }
 }

@@ -22,7 +22,7 @@ const FOUNDERS = [
     name: 'Vasilis Rallis',
     roleKey: 'about.founders.roles.cfo',
     bioKey: 'about.founders.bios.rallis',
-    linkedin: 'https://www.linkedin.com/in/vasilis-rallis/',
+    linkedin: 'https://www.linkedin.com/in/vasilisrallis/',
     photo: '/founders/rallis.jpg',
   },
 ]

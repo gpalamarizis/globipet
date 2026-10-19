@@ -427,7 +427,21 @@
     "street": "街道和门牌号",
     "summary": "摘要",
     "title": "结算",
-    "viva_note": "您将跳转至 Viva 支付页面。付款完成后订单即确认。"
+    "viva_note": "您将跳转至 Viva 支付页面。付款完成后订单即确认。",
+    "stepAddress": "地址",
+    "stepShipping": "配送",
+    "stepReview": "确认",
+    "continue": "继续",
+    "back": "返回",
+    "pageTitle": "完成订单",
+    "cardInfo": "在 Viva 安全页面使用银行卡、Apple Pay 或 Google Pay 付款。",
+    "fullName": "姓名",
+    "phone": "电话",
+    "city": "城市",
+    "free": "免费",
+    "total": "合计",
+    "empty": "购物车是空的",
+    "goShop": "前往商城"
   },
   "com": {
     "birds": "鸟类",
@@ -1819,5 +1833,9 @@
     "elta": "ELTA — 送货上门",
     "freeOverNote": "订单超过 €{{amount}} 免运费。",
     "withdrawalText": "作为消费者，您可以在收货后 14 天内无理由撤销购买。"
+  },
+  "campaignDiscount": {
+    "line": "折扣：{{title}}",
+    "original": "原价"
   }
 }

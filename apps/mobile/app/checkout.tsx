@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Alert, Linking, TouchableOpacity } from 'react-
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package, Truck, CreditCard, Check } from 'lucide-react-native'
+import { Package, Truck, CreditCard, Check, Tag } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, EmptyState, Loading, Input, SectionHeader } from '@/components/ui'
@@ -56,13 +56,36 @@ export default function CheckoutScreen() {
   })
 
   const items = cart?.data ?? []
-  const subtotal = cart?.total ?? 0
+  const listSubtotal = cart?.total ?? 0
 
+  // Έκπτωση καμπάνιας — ίδιος υπολογισμός με αυτόν που θα χρεώσει ο server.
+  const quoteItems = items.map((i: any) => ({ type: 'product', id: i.product_id, qty: i.quantity }))
+  const { data: quote } = useQuery({
+    queryKey: ['quote-cart', quoteItems],
+    queryFn: () => api.post('/campaigns/quote', { items: quoteItems }).then(r => r.data?.data),
+    enabled: isAuthenticated && quoteItems.length > 0,
+  })
+  const subtotal = quote ? Number(quote.subtotal) : listSubtotal
+  const discount = quote ? Number(quote.discount) : 0
+  const afterDiscount = Math.round((subtotal - discount) * 100) / 100
+  const discountLines = useMemo(() => {
+    const rows: { title: string; amount: number }[] = []
+    for (const it of quote?.items ?? []) {
+      if (!it.campaign || !(it.discount > 0)) continue
+      const row = rows.find(r => r.title === it.campaign.title)
+      if (row) row.amount += it.discount
+      else rows.push({ title: it.campaign.title, amount: it.discount })
+    }
+    return rows
+  }, [quote])
+
+  // Δωρεάν μεταφορικά όταν το ποσό ΜΕΤΑ την έκπτωση ξεπερνά το όριο —
+  // όπως τα υπολογίζει ο server.
   const shipping = useMemo(
-    () => subtotal > FREE_OVER ? 0 : (SHIPPING.find(m => m.id === method)?.price ?? 0),
-    [subtotal, method],
+    () => afterDiscount > FREE_OVER ? 0 : (SHIPPING.find(m => m.id === method)?.price ?? 0),
+    [afterDiscount, method],
   )
-  const total = subtotal + shipping
+  const total = afterDiscount + shipping
 
   const complete = useMutation({
     mutationFn: async () => {
@@ -144,14 +167,14 @@ export default function CheckoutScreen() {
       <View style={{ gap: space.sm, marginBottom: space.lg }}>
         {SHIPPING.map(m => {
           const active = method === m.id
-          const free = subtotal > FREE_OVER
+          const free = afterDiscount > FREE_OVER
           return (
             <TouchableOpacity key={m.id} activeOpacity={0.7} onPress={() => setMethod(m.id)}>
               <Card style={active ? s.active : undefined}>
                 <View style={s.shipRow}>
                   <Truck size={icon.md} color={active ? colors.brand : colors.textLight} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[s.shipLabel, active && s.shipLabelActive]}>{m.label}</Text>
+                    <Text style={[s.shipLabel, active && s.shipLabelActive]}>{m.label ?? t(m.labelKey ?? '')}</Text>
                     <Text style={s.shipSub}>{t(m.subKey)}</Text>
                   </View>
                   <Text style={[s.shipPrice, free && s.free]}>
@@ -171,13 +194,22 @@ export default function CheckoutScreen() {
           <Text style={s.lineLabel}>{t('checkout.products')}</Text>
           <Text style={s.lineValue}>€{subtotal.toFixed(2)}</Text>
         </View>
+        {discountLines.map(d => (
+          <View key={d.title} style={[s.line, s.lineTop]}>
+            <View style={s.discLabel}>
+              <View style={s.discIcon}><Tag size={13} color={colors.success} /></View>
+              <Text style={s.discText} numberOfLines={2}>{t('campaignDiscount.line', { title: d.title })}</Text>
+            </View>
+            <Text style={s.discValue}>−€{d.amount.toFixed(2)}</Text>
+          </View>
+        ))}
         <View style={s.line}>
           <Text style={s.lineLabel}>{t('checkout.shipping')}</Text>
           <Text style={[s.lineValue, shipping === 0 && s.free]}>
             {shipping === 0 ? t('discover.free') : `€${shipping.toFixed(2)}`}
           </Text>
         </View>
-        {subtotal <= FREE_OVER && (
+        {afterDiscount <= FREE_OVER && (
           // Λέγεται πριν την πληρωμή, όχι μετά — τότε δεν βοηθά κανέναν.
           <Text style={s.hint}>
             {t('checkout.free_over', { amount: FREE_OVER })}
@@ -224,6 +256,11 @@ const s = StyleSheet.create({
   },
   lineLabel: { ...type.body, color: colors.textMuted },
   lineValue: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  lineTop: { alignItems: 'flex-start' },
+  discLabel: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs, flex: 1, minWidth: 0, marginRight: space.md },
+  discIcon: { marginTop: 4 },
+  discText: { ...type.body, color: '#047857', flexShrink: 1 },
+  discValue: { ...type.body, color: '#047857', fontWeight: weight.semibold },
   hint: { ...type.caption, color: colors.textLight, paddingBottom: space.sm },
   totalLine: {
     marginTop: space.sm, paddingTop: space.md,

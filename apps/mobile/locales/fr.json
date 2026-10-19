@@ -427,7 +427,21 @@
     "street": "Rue et numéro",
     "summary": "Récapitulatif",
     "title": "Commander",
-    "viva_note": "Vous serez redirigé vers la page de paiement Viva. La commande est confirmée dès le paiement effectué."
+    "viva_note": "Vous serez redirigé vers la page de paiement Viva. La commande est confirmée dès le paiement effectué.",
+    "stepAddress": "Adresse",
+    "stepShipping": "Livraison",
+    "stepReview": "Vérification",
+    "continue": "Continuer",
+    "back": "Retour",
+    "pageTitle": "Finaliser la commande",
+    "cardInfo": "Payez par carte, Apple Pay ou Google Pay sur la page sécurisée de Viva.",
+    "fullName": "Nom complet",
+    "phone": "Téléphone",
+    "city": "Ville",
+    "free": "Gratuit",
+    "total": "Total",
+    "empty": "Votre panier est vide",
+    "goShop": "Aller à la boutique"
   },
   "com": {
     "birds": "Oiseaux",
@@ -1819,5 +1833,9 @@
     "elta": "ELTA — livraison à domicile",
     "freeOverNote": "Les commandes de plus de {{amount}} € sont livrées gratuitement.",
     "withdrawalText": "En tant que consommateur, vous pouvez vous rétracter dans les 14 jours suivant la livraison, sans avoir à vous justifier."
+  },
+  "campaignDiscount": {
+    "line": "Remise : {{title}}",
+    "original": "Prix initial"
   }
 }

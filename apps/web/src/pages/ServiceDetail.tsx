@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Star, MapPin, Clock, Phone, Shield, Check,
   Calendar, ChevronRight, Heart, Share2, BadgeCheck, Home, Zap,
-  Stethoscope, Scissors, GraduationCap, Footprints, Building2, Car, Camera, Pill, PawPrint, Package
+  Stethoscope, Scissors, GraduationCap, Footprints, Building2, Car, Camera, Pill, PawPrint, Package, Tag
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -137,6 +137,18 @@ export default function ServiceDetail() {
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
+  // Προεπισκόπηση έκπτωσης καμπάνιας — ο server υπολογίζει το ίδιο όταν
+  // δημιουργεί την κράτηση, από τις τιμές της βάσης.
+  const quotePackages = (packages as any[])
+    .filter((pk: any) => (pkgQty[pk.id] ?? 0) > 0)
+    .map((pk: any) => ({ package_id: pk.id, quantity: pkgQty[pk.id] }))
+  const { data: quote } = useQuery({
+    queryKey: ['quote-booking', id, quotePackages],
+    queryFn: () => api.post('/campaigns/quote', { items: [{ type: 'booking', service_id: id, packages: quotePackages }] })
+      .then(r => r.data?.data?.items?.[0] ?? null),
+    enabled: isAuthenticated && !!id,
+  })
+
   const timeSlots = [
     '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00', '18:00',
@@ -195,7 +207,7 @@ export default function ServiceDetail() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           {/* Hero image */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="aspect-video rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -520,12 +532,24 @@ export default function ServiceDetail() {
 
                   {/* Το σύνολο ΠΡΙΝ το κουμπί: ο χρήστης βλέπει τι θα πληρώσει
                       πριν φύγει για το Viva, όχι αφού φτάσει εκεί. */}
-                  <div className="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
+                  {/* Έκπτωση καμπάνιας ΠΑΝΩ από το σύνολο: αρχική τιμή → έκπτωση → τελικό. */}
+                  {quote?.discount > 0 && (
+                    <div className="flex items-start justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-sm text-green-700 dark:text-green-400">
+                      <span className="flex items-start gap-1.5 min-w-0">
+                        <Tag size={13} className="shrink-0 mt-[3px]" />
+                        <span className="break-words">{t('campaignDiscount.line', { title: quote.campaign?.title })}</span>
+                      </span>
+                      <span className="shrink-0">
+                        <s className="text-gray-400 mr-2">{formatCurrency(quote.line)}</s>−{formatCurrency(quote.discount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className={cn('flex items-center justify-between py-3', !(quote?.discount > 0) && 'border-t border-gray-200 dark:border-gray-700')}>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('serviceDetailExtra.total')}
                     </span>
                     <span className="text-xl font-bold text-brand-900 dark:text-brand-400">
-                      {formatCurrency(displayTotal)}
+                      {formatCurrency(quote?.discount > 0 ? quote.final : displayTotal)}
                     </span>
                   </div>
 

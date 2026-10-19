@@ -4,6 +4,7 @@ import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
+import { bestDiscount, countRedemptions } from '../lib/campaignDiscount.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
@@ -139,6 +140,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     let totalPlatformFee = 0
     let totalProviderPayout = 0
     let computedTotal = 0
+    let totalDiscount = 0
 
     const enrichedItems = await Promise.all(items.map(async (item: any) => {
       const productId = item.product_id || item.id
@@ -147,7 +149,12 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       const price = product.price
       const quantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 99)
       const lineTotal = price * quantity
-      computedTotal += lineTotal
+      // Έκπτωση καμπάνιας — υπολογίζεται εδώ, από τιμές της βάσης. Η
+      // προμήθεια και το ποσό του παρόχου βγαίνουν από το ποσό ΜΕΤΑ την έκπτωση.
+      const disc = await bestDiscount(email, 'product', productId, lineTotal, quantity)
+      const lineFinal = disc.final
+      computedTotal += lineFinal
+      totalDiscount += disc.discount
       const category = product.category || null
       const providerEmail = product.provider_email || null
 
@@ -156,7 +163,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       let provider_payout: number | null = null
 
       if (providerEmail) {
-        const c = await calculateCommission(lineTotal, category)
+        const c = await calculateCommission(lineFinal, category)
         commission_rate = c.rate
         platform_fee = c.platformFee
         provider_payout = c.providerPayout
@@ -171,6 +178,8 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         name: product.name,
         price,
         quantity,
+        discount: disc.discount,
+        campaign_id: disc.campaign?.id ?? null,
         image: product.image_url ?? null,
         category,
         provider_email: providerEmail,
@@ -200,6 +209,7 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
           shipping_cost: shippingCost,
         }),
         payment_method,
+        discount_amount: totalDiscount > 0 ? Math.round(totalDiscount * 100) / 100 : null,
         platform_fee_amount: totalPlatformFee > 0 ? Math.round(totalPlatformFee * 100) / 100 : null,
         provider_payout_amount: totalProviderPayout > 0 ? Math.round(totalProviderPayout * 100) / 100 : null,
       }
@@ -253,6 +263,10 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (!order) return
 
       const items = order.items as any[]
+
+      // Μία εξαργύρωση ανά καμπάνια — εδώ φτάνουμε μόνο τη στιγμή που η
+      // παραγγελία γίνεται πληρωμένη, ποτέ δεύτερη φορά.
+      await countRedemptions(items.map(i => i.campaign_id))
 
       sendOrderConfirmedEmail(order.user_email, {
         orderId: order.id,
@@ -399,6 +413,8 @@ async function markBookingPaid(bookingId: string, transactionId: string) {
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
   if (!booking) return
+
+  await countRedemptions([booking.campaign_id])
 
   // Τώρα που πληρώθηκε, και ΜΟΝΟ τώρα, ενημερώνονται οι δύο πλευρές.
   //
