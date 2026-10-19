@@ -48,6 +48,7 @@ import communitiesRoutes from './routes/communities.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
+import registryRoutes from './routes/registry.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
 import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron } from './lib/cron.js'
 import { registerMessageTranslation } from './lib/apiMessages.js'
@@ -245,6 +246,7 @@ const routes = [
   { prefix: '/api/communities', handler: communitiesRoutes },
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
+  { prefix: '/api/registry', handler: registryRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
   { prefix: '/api/ai-subscriptions', handler: aiSubscriptionsRoutes },
   { prefix: '/api/settings', handler: settingsRoutes },

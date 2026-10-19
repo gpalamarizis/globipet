@@ -110,6 +110,7 @@ model Service {
   staff               ProviderStaff[]
   packages            ServicePackage[]
   official_shelter    OfficialShelter?
+  welfare_organisation WelfareOrganisation? @relation("WelfareOrgClaim")
 
   @@map("services")
 }
@@ -1598,4 +1599,37 @@ model OfficialShelter {
   @@index([municipality])
   @@index([category])
   @@map("official_shelters")
+}
+
+model WelfareOrganisation {
+  id             String    @id @default(uuid())
+  /// Σταθερό κλειδί για idempotent seed. Το μητρώο ΔΕΝ έχει επίσημους
+  /// κωδικούς, οπότε παράγεται από hash(επωνυμία|είδος|χώρα|δήμος).
+  registry_key   String    @unique @db.VarChar(64)
+  name           String
+  /// society | nonprofit | union | federation
+  kind           String    @db.VarChar(20)
+  country        String    @db.VarChar(80)
+  /// Κενός για τις οργανώσεις εκτός Ελλάδας: το μητρώο δεν τον καταγράφει.
+  municipality   String?   @db.VarChar(255)
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  phone          String?   @db.VarChar(100)
+  email          String?   @db.VarChar(255)
+  website        String?   @db.VarChar(255)
+  is_active      Boolean   @default(true)
+  source         String    @db.VarChar(255)
+  source_date    DateTime  @db.Date
+  /// Όπως και στα καταφύγια: η οργάνωση «διεκδικεί» την εγγραφή της όταν
+  /// εγγραφεί ως πάροχος. Δεν δημιουργούμε λογαριασμούς χωρίς συναίνεση.
+  claimed_service_id String? @unique
+  claimed_at     DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  claimed_service Service? @relation("WelfareOrgClaim", fields: [claimed_service_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([municipality])
+  @@index([kind])
+  @@map("welfare_organisations")
 }

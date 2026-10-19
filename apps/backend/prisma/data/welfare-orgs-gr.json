@@ -1,0 +1,3024 @@
+{
+  "meta": {
+    "source": "Μητρώο Φιλοζωικών Οργανώσεων (επίσημη λίστα, PDF)",
+    "source_generated": "2026-10-19",
+    "count": 335
+  },
+  "organisations": [
+    {
+      "registry_row": 1,
+      "registry_key": "bb2558eda200627ac67bda4dc2b406b7",
+      "name": "CATCARE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΑΝΔΡΙΟΥ"
+    },
+    {
+      "registry_row": 2,
+      "registry_key": "879e55fc21f5864c00b7810f5e92ef24",
+      "name": "NEW BEGINNINGS GREEK SPORTING DOG RESCUE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΣΠΑΤΩΝ-ΑΡΤΕΜΙΔΟΣ"
+    },
+    {
+      "registry_row": 3,
+      "registry_key": "df1c2e782942f5b3a610619ff4424f18",
+      "name": "SKOPELOS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΣΚΟΠΕΛΟΥ"
+    },
+    {
+      "registry_row": 4,
+      "registry_key": "c9805742bee38b5e8736e8b410fbae8a",
+      "name": "Zero Stray Pawject Germany e.V",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Γερμανία",
+      "municipality": null
+    },
+    {
+      "registry_row": 5,
+      "registry_key": "a47f594a1d105ca7c760f2532667a5e2",
+      "name": "ΘΩΜΑΣ ΔΙΑΣΩΣΕΙΣ ΖΩΩΝ - THOMAS RESCUES",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΕΑΣ ΠΡΟΠΟΝΤΙΔΑΣ"
+    },
+    {
+      "registry_row": 6,
+      "registry_key": "4bd840e1e57c49ec7dff9351e2802b5e",
+      "name": "ΚΕΡΚΥΡΑΙΚΗ ΕΤΑΙΡΕΙΑ ΠΡΟΣΤΑΣΙΑΣ ΖΩΩΝ-Κ.Ε.Π.Ζ.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΕΝΤΡΙΚΗΣ ΚΕΡΚΥΡΑΣ ΚΑΙ ΔΙΑΠΟΝΤΙΩΝ ΝΗΣΩΝ"
+    },
+    {
+      "registry_row": 7,
+      "registry_key": "6170024b016e6c853ecf1d487682aa3a",
+      "name": "ΠΡΟΣΤΑΣΙΑ ΔΥΣΤΥΧΩΝ ΑΔΕΣΠΟΤΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΛΛΙΘΕΑΣ"
+    },
+    {
+      "registry_row": 8,
+      "registry_key": "2bd6304d1ac7023065829214ccb4e68b",
+      "name": "ΠΡΟΣΤΑΣΙΑ ΖΩΩΝ ΑΙΓΙΝΑΣ ΚΑΙ ΑΓΚΙΣΤΡΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΙΓΙΝΑΣ"
+    },
+    {
+      "registry_row": 9,
+      "registry_key": "8f42f149f934ddc92651159ab1412343",
+      "name": "ΣΥΛΛΟΓΟΣ ΕΘΕΛΟΝΤΙΚΗ ΔΡΑΣΗ ΖΩΟΦΙΛΩΝ ΠΑΠΑΓΟΥ ΧΟΛΑΡΓΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΠΑΓΟΥ-ΧΟΛΑΡΓΟΥ"
+    },
+    {
+      "registry_row": 10,
+      "registry_key": "3c715d80f4f1b523f0d15b47b1c5cd89",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΚAI ΠΕΡΙΒΑΛΛΟΝΤΙΚΗ ΔΡΑΣΗ ΕΘΕΛΟΝΤΩΝ ΔΙΟΥ ΟΛΥΜΠΟΥ \"Ο ΠΕΡΙΤΑΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΟΥ-ΟΛΥΜΠΟΥ"
+    },
+    {
+      "registry_row": 11,
+      "registry_key": "2474275b59c5677d4e17a17c9fb76800",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΟΜΑΔΑ ΜΑΝΗΣ ΦΟΜ ΜΙΑΟ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΥΤΙΚΗΣ ΜΑΝΗΣ"
+    },
+    {
+      "registry_row": 12,
+      "registry_key": "4f1439709596547702bfc701341b312b",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΠΕΡΙΒΑΛΛΟΝΤΙΚΟ ΠΟΛΙΤΙΣΤΙΚΟ ΣΩΜΑΤΕΙΟ ΣΠΑΤΩΝ ΑΤΤΙΚΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΠΑΤΩΝ-ΑΡΤΕΜΙΔΟΣ"
+    },
+    {
+      "registry_row": 13,
+      "registry_key": "2e7ed4c8fd94f9115dcf6c4c1b049601",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΜΕΘΩΝΗΣ ΤΥΧΕΡΕΣ ΨΥΧΕΣ-LUCKY SOULS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΔΝΑΣ-ΚΟΛΙΝΔΡΟΥ"
+    },
+    {
+      "registry_row": 14,
+      "registry_key": "caca6f339754980e166c2e036c7eaf33",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΑΙΓΑΛΕΩ ΟΙ ΑΓΓΕΛΟΙ ΤΩΝ ΔΡΟΜΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΙΓΑΛΕΩ"
+    },
+    {
+      "registry_row": 15,
+      "registry_key": "daa1d7bcc5fad6b8f167106ee8ea9311",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΦΘΙΩΤΙΔΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΜΙΕΩΝ"
+    },
+    {
+      "registry_row": 16,
+      "registry_key": "cf47e145018cb690c2b000de3be5c586",
+      "name": "\"ΕΛ.Α.Δ.Α.\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΥΤΙΚΗΣ ΑΧΑΙΑΣ"
+    },
+    {
+      "registry_row": 17,
+      "registry_key": "b18d10ece5b1fc5ee66fbc3166b7bcd2",
+      "name": "\"ΠΕΡΙΤΑΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΤΡΕΩΝ"
+    },
+    {
+      "registry_row": 18,
+      "registry_key": "85eb61ccbeb1eec8f74b84893b3ca183",
+      "name": "\"ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΟΡΕΣΤΙΑΔΑΣ\" Μαζί για τα ζώα \"Η ΑΛΚΥΩΝΗ ΚΑΙ Ο ΛΕΩΝ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΟΡΕΣΤΙΑΔΑΣ"
+    },
+    {
+      "registry_row": 19,
+      "registry_key": "26184e510176e4a1eaf5d07728879930",
+      "name": ">",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΗΦΙΣΙΑΣ"
+    },
+    {
+      "registry_row": 20,
+      "registry_key": "4f7485a5a0aeec974d4d9b34e62a5cfe",
+      "name": ">",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΑΣ"
+    },
+    {
+      "registry_row": 21,
+      "registry_key": "8c61696a1898f2a6e8bc46b688cd8a2b",
+      "name": "A casa d'Irene",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΕΞΑΝΔΡΕΙΑΣ"
+    },
+    {
+      "registry_row": 22,
+      "registry_key": "cd501dc90ca4b873a35de1e0e47fd2c3",
+      "name": "A.C.E. Tiere in Not e.V",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Γερμανία",
+      "municipality": null
+    },
+    {
+      "registry_row": 23,
+      "registry_key": "c54db98e98ec5b25f32c9bb27b8b575b",
+      "name": "ABOUT A SHELTER",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΡΕΘΥΜΝΗΣ"
+    },
+    {
+      "registry_row": 24,
+      "registry_key": "e8618c1fde42b25566446123a2e9c53b",
+      "name": "ADOPT A PAW TODAY ΑΜΚΕ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 25,
+      "registry_key": "68d289e973e11aabf181562a24350149",
+      "name": "ANIM.A.L.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΡΙΣΑΙΩΝ"
+    },
+    {
+      "registry_row": 26,
+      "registry_key": "617dde19e9685426c52e9bd7c66e7966",
+      "name": "ANIMAID",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΣΠΡΟΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 27,
+      "registry_key": "28218fbce31aa0dfe1703deed11e8822",
+      "name": "ANIMAL ACTION AID",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΕΡΡΩΝ"
+    },
+    {
+      "registry_row": 28,
+      "registry_key": "bab71f1bcb20f59cd333bc46cf079f41",
+      "name": "Animal Action HELLAS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΙΡΑΙΩΣ"
+    },
+    {
+      "registry_row": 29,
+      "registry_key": "67ac3b744328a75bfb4c87aff68832ee",
+      "name": "ANIMAL EARTH",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΡΕΤΡΙΑΣ"
+    },
+    {
+      "registry_row": 30,
+      "registry_key": "55e96589dd246b1e3f25ebf0ae9600e0",
+      "name": "ANIMAL RESCUE RODOS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΡΟΔΟΥ"
+    },
+    {
+      "registry_row": 31,
+      "registry_key": "8c471b86ddbaef237525faf2adb0bb94",
+      "name": "Animal Welfare Karpathos- Φιλοζωική Δράση Καρπάθου",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΠΑΘΟΥ"
+    },
+    {
+      "registry_row": 32,
+      "registry_key": "902534f99aead8df3fcbd0fd14549407",
+      "name": "ARIEL",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΕΛΤΑ"
+    },
+    {
+      "registry_row": 33,
+      "registry_key": "8fd6b16bc850ac38ae0235292ae5617c",
+      "name": "ARMONIA COMMUNITY ANIMAL CENTRE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΥΣ-ΜΥΚΗΝΩΝ"
+    },
+    {
+      "registry_row": 34,
+      "registry_key": "4532c0da97c4beb86faba79799837f74",
+      "name": "AZI",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΜΟΡΓΟΥ"
+    },
+    {
+      "registry_row": 35,
+      "registry_key": "1a1d9aa0e6be3b7a780d7b7feb9c18c0",
+      "name": "CAT RESCUE ATHENS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 36,
+      "registry_key": "48687b7da7e99542dc0f4bee0c198191",
+      "name": "CAT VEGAS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΤΕΡΙΝΗΣ"
+    },
+    {
+      "registry_row": 37,
+      "registry_key": "52351af909da2b6f49e2cba59afe421f",
+      "name": "CHALKIDIKI ANIMAL RESCUE ΧΑΛΚΙΔΙΚΗ ΔΙΑΣΩΣΗ ΤΩΝ ΖΩΩΝ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΣΣΑΝΔΡΑΣ"
+    },
+    {
+      "registry_row": 38,
+      "registry_key": "3ff36b8d2faa0a580eed0d06dfb0ec88",
+      "name": "Cretan CAT-A-LIST",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΕΘΥΜΝΗΣ"
+    },
+    {
+      "registry_row": 39,
+      "registry_key": "cc47d940cf1f84bb85a798ed5b61f02d",
+      "name": "DOGS VOICE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 40,
+      "registry_key": "12a871b444e458a00d3c89c3dd7a8d7a",
+      "name": "ENΩΣΗ ΦΙΛΟΖΩΩΝ ΕΘΕΛΟΝΤΩΝ ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ - Ε.Φ.Ε.ΠΑ.Φ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ"
+    },
+    {
+      "registry_row": 41,
+      "registry_key": "1652426946b5f0963b2fbffbde055673",
+      "name": "FAIRY TAILS ANIMAL RESCUE ORGANIZATION ΑΜΚΕ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 42,
+      "registry_key": "6cad837bf27dd38b6cc1c3d1683003f0",
+      "name": "FELLNASEN-RETTER e.V.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Γερμανία",
+      "municipality": null
+    },
+    {
+      "registry_row": 43,
+      "registry_key": "4447b0115951dbc2783e4dcca948eb35",
+      "name": "filokardi",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΔΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 44,
+      "registry_key": "da1ab07b28c9a9aeb78442068f20c9e9",
+      "name": "Foster Kittens Greece- FKG Α.Μ.Κ.Ε.",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΝΙΚΑΙΑΣ-ΑΓΙΟΥ ΙΩΑΝΝΗ ΡΕΝΤΗ"
+    },
+    {
+      "registry_row": 45,
+      "registry_key": "24af57019a4c71a0028b1c8962ef00f4",
+      "name": "FURRY TALES",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΩΡΩΠΟΥ"
+    },
+    {
+      "registry_row": 46,
+      "registry_key": "9352533f7ab25e5514a19bedf1f20537",
+      "name": "GASAH KOS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΩ"
+    },
+    {
+      "registry_row": 47,
+      "registry_key": "b68c12ea1a70c0b2735e8f4b0134f933",
+      "name": "GLOBAL CAT FOUNDATION",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΡΟΔΟΥ"
+    },
+    {
+      "registry_row": 48,
+      "registry_key": "1894770a5fc1570468e53e384e13332c",
+      "name": "Green Action West Greece Πράσινη Δράση Δυτικής Ελλάδας",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΥΤΙΚΗΣ ΑΧΑΙΑΣ"
+    },
+    {
+      "registry_row": 49,
+      "registry_key": "d3e478bb6e0bfd2b7f8d22d09934085c",
+      "name": "HAPPY PAWS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΣΤΙΑΙΑΣ-ΑΙΔΗΨΟΥ"
+    },
+    {
+      "registry_row": 50,
+      "registry_key": "9017fb969626c4e88fbf96a892ed611d",
+      "name": "HEALING PAWS ANIMAL RESCUE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΚΥΝΘΟΥ"
+    },
+    {
+      "registry_row": 51,
+      "registry_key": "7a80d27dfb6841e94ccbdfe3260b601f",
+      "name": "HERMIONIDAS STRAYS ΜΗ ΚΕΡΔΟΣΚΟΠΙΚΗ ΕΤΑΙΡΕΙΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΕΡΜΙΟΝΙΔΑΣ"
+    },
+    {
+      "registry_row": 52,
+      "registry_key": "9024cb44f67a333dabb1ee04f53128cf",
+      "name": "Hopeland",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΡΜΗΣ"
+    },
+    {
+      "registry_row": 53,
+      "registry_key": "f6c3218642817125f09b5f3f62737811",
+      "name": "LESVOS CANINE SOCIETY",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΥΤΙΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 54,
+      "registry_key": "d850e7abad1f07902e2b6b308e7e84c4",
+      "name": "Lesvos X-strays",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΜΥΤΙΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 55,
+      "registry_key": "bcc15d73bae250ff9877a505ddf854be",
+      "name": "LITTLE FRIENDS LEFKAS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΛΕΥΚΑΔΑΣ"
+    },
+    {
+      "registry_row": 56,
+      "registry_key": "effa44d432fce5b2c702867bbf0ec449",
+      "name": "Navarino pet community",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΛΟΥ-ΝΕΣΤΟΡΟΣ"
+    },
+    {
+      "registry_row": 57,
+      "registry_key": "792ec0997bf74283022119f0af7197e8",
+      "name": "Naxos animal welfare society - Naws",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΑΞΟΥ ΚΑΙ ΜΙΚΡΩΝ ΚΥΚΛΑΔΩΝ"
+    },
+    {
+      "registry_row": 58,
+      "registry_key": "bb84637a7ee2b06df918eb0706b102d6",
+      "name": "PANGEA ANIMAL RESCUE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΛΒΗΣ"
+    },
+    {
+      "registry_row": 59,
+      "registry_key": "7d44634995e8288a94a58020be5feb69",
+      "name": "PAROSCAT",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΡΟΥ"
+    },
+    {
+      "registry_row": 60,
+      "registry_key": "a923cc55b526ae4c3b629cd8598ed34b",
+      "name": "Pawmates Rescue",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΔΡΑΜΑΣ"
+    },
+    {
+      "registry_row": 61,
+      "registry_key": "f2fa766218e7cce1bd5158316becc6f3",
+      "name": "Paws",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΟΡΟΥ"
+    },
+    {
+      "registry_row": 62,
+      "registry_key": "47df49e1aa8d7971ae2e4e6f7ff3906f",
+      "name": "Paws and Claws Kefalonia",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΣΤΟΛΙΟΥ"
+    },
+    {
+      "registry_row": 63,
+      "registry_key": "e421415efdf4079b3191b016f7bd8bdd",
+      "name": "PAXOS ANIMAL WELFARE SOCIETY (PAWS-PAXOS)",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΞΩΝ"
+    },
+    {
+      "registry_row": 64,
+      "registry_key": "5379cfed317991853693cc63219c371e",
+      "name": "Pepi's Strays House",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΔΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 65,
+      "registry_key": "034af61a437f41cc52f49362bf12c860",
+      "name": "Romi Animal Rescue",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΙΓΑΛΕΩ"
+    },
+    {
+      "registry_row": 66,
+      "registry_key": "e37f07ddb94edbef7bbe0a1498c2ac34",
+      "name": "ROMMEL Κέντρο Περίθαλψης και Προστασίας Άγριων Και Οικόσιτων Ζώων",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΔΡΙΤΣΑΙΝΑΣ-ΚΡΕΣΤΕΝΩΝ"
+    },
+    {
+      "registry_row": 67,
+      "registry_key": "806038d77529108474d218a849d16476",
+      "name": "SAPT Hellas",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΩΡΩΠΟΥ"
+    },
+    {
+      "registry_row": 68,
+      "registry_key": "880ed8b15775c04f2f03c0b181e831f3",
+      "name": "SAVE A GREEK STRAY",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΗΦΙΣΙΑΣ"
+    },
+    {
+      "registry_row": 69,
+      "registry_key": "da20c11901464aa8304b743653105051",
+      "name": "Save Animals Chania",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΝΙΩΝ"
+    },
+    {
+      "registry_row": 70,
+      "registry_key": "d101567342efbde3415b4cc35aebdbf9",
+      "name": "SAVE THE TAILS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΤΡΟΥΠΟΛΕΩΣ"
+    },
+    {
+      "registry_row": 71,
+      "registry_key": "4b33951118353d6a233fd75035dd9bcf",
+      "name": "SCARS - SECOND CHANCE ANIMAL RESCUE SOCIETY",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΟΥ ΔΗΜΗΤΡΙΟΥ"
+    },
+    {
+      "registry_row": 72,
+      "registry_key": "75f0eea8c74a840d33d744588f1a7ba8",
+      "name": "Skiathos Cat Welfare",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΣΚΙΑΘΟΥ"
+    },
+    {
+      "registry_row": 73,
+      "registry_key": "d316ab1d002cf4e2bba254b8b20ee979",
+      "name": "SKIATHOS DOG WELFARE ASSOCIATION",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΚΙΑΘΟΥ"
+    },
+    {
+      "registry_row": 74,
+      "registry_key": "906b20f6a49a1388232f777e8806d5f3",
+      "name": "Smart Paws Greece Save A Stray",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΣΠΑΡΤΗΣ"
+    },
+    {
+      "registry_row": 75,
+      "registry_key": "d17335c1199aec4e5da328b96d85850f",
+      "name": "SPECTRAL",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΣΣΑΛΟΝΙΚΗΣ"
+    },
+    {
+      "registry_row": 76,
+      "registry_key": "4671b0ac7f64ffc66384a7b8f8fb2a19",
+      "name": "SPETSES CARE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΣΠΕΤΣΩΝ"
+    },
+    {
+      "registry_row": 77,
+      "registry_key": "0fbfbf6026226c3885c9766c5a8349f7",
+      "name": "SPIRI DOGS GREECE",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 78,
+      "registry_key": "db6df62d514a43ac8425f54f768e6cd9",
+      "name": "Stray Animals & Volunteers Encounter-SAVE",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΥΚΟΒΡΥΣΗΣ-ΠΕΥΚΗΣ"
+    },
+    {
+      "registry_row": 79,
+      "registry_key": "3d21037987d9ca0c6e119b3a49c75b0a",
+      "name": "Stray animals Karditsas",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΔΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 80,
+      "registry_key": "ce960e36f8eb59b88ce679724c1499f7",
+      "name": "STRAY HOPE",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΤΡΙΦΥΛΙΑΣ"
+    },
+    {
+      "registry_row": 81,
+      "registry_key": "c27f9f84e0cccb2ccb9507cfbaaa9556",
+      "name": "STRAY PAWS SANTORINI",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΗΡΑΣ"
+    },
+    {
+      "registry_row": 82,
+      "registry_key": "5320676c0a7332c4f8f12c3ecf359a7d",
+      "name": "Stray Souls Ilia",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΧΑΡΩΣ"
+    },
+    {
+      "registry_row": 83,
+      "registry_key": "36112baed8600c34cea4b9c50531a8cb",
+      "name": "StrayCare.gr-Αδέσποτη Φροντίδα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΟΡΥΔΑΛΛΟΥ"
+    },
+    {
+      "registry_row": 84,
+      "registry_key": "1d7a77cfec1130965881840108ac169b",
+      "name": "THE PAWS PROJECT GREECE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΔΟΞΑΤΟΥ"
+    },
+    {
+      "registry_row": 85,
+      "registry_key": "81c24ef4bb8b01a5685082c0f0d77bd6",
+      "name": "Tierschutzverein Pangea e.V.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Γερμανία",
+      "municipality": null
+    },
+    {
+      "registry_row": 86,
+      "registry_key": "4e4ab4344fb7b6a8a0f83ac9b78c3a1d",
+      "name": "VOCAL",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΟΥ ΝΙΚΟΛΑΟΥ"
+    },
+    {
+      "registry_row": 87,
+      "registry_key": "392aa0db9ef989211e93a684cb621b1d",
+      "name": "VOUNISIOI/ORESIVIOI",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΥΡΕΩΤΙΚΗΣ"
+    },
+    {
+      "registry_row": 88,
+      "registry_key": "ca7807e0c26b629c6bf17f49ffcb5e8f",
+      "name": "ZANTE STRAYS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΚΥΝΘΟΥ"
+    },
+    {
+      "registry_row": 89,
+      "registry_key": "59fb2208e8063c020c4b53dc37e73c62",
+      "name": "¨Αδέσποτες ψυχές\" και στην Αγγλική Γλώσσα \"Stray's Souls Chalkida\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΚΙΔΕΩΝ"
+    },
+    {
+      "registry_row": 90,
+      "registry_key": "4219b18c47d8bd945bb66e0d3a68860d",
+      "name": "«Επταψυχες» - «Nine Lives»",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 91,
+      "registry_key": "add34919c151f0e6a66cfcded4859ea2",
+      "name": "«Φιλοζωική Ένωση – Αδέσποτες Ψυχές Αμαλιάδας»",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΗΛΙΔΑΣ"
+    },
+    {
+      "registry_row": 92,
+      "registry_key": "42aae30912bf0db384d1337d6c6c6dd5",
+      "name": "Α ΟΠΩΣ ΑΓΑΠΗ ΑΜΚΕ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 93,
+      "registry_key": "9f716cc9b255c293e1ebc015c61f096f",
+      "name": "ΑΓΑΠΗ ΓΙΑ ΤΑ ΖΩΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΛΛΑΣ"
+    },
+    {
+      "registry_row": 94,
+      "registry_key": "66f4722815b7fe0eae9a835b78bcc583",
+      "name": "ΑΔΕΣΠΟΤΑ ΔΙΚΑΙΩΜΑ ΣΤΗΝ ΖΩΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΔΡΑΒΙΔΑΣ-ΚΥΛΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 95,
+      "registry_key": "e8ce1de7a1a401fa6b1811a976fd68eb",
+      "name": "ΑΔΕΣΠΟΤΑ ΕΝ ΔΡΑΣΕΙ- ΕΛΛΑΔΑ / STRAYS IN ACTION - GREECE",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΣΤΟΛΙΟΥ"
+    },
+    {
+      "registry_row": 96,
+      "registry_key": "a83acc49e3f1f789d81bb93bc07df936",
+      "name": "Αδέσποτα Ζώα Λάρισας",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΡΙΣΑΙΩΝ"
+    },
+    {
+      "registry_row": 97,
+      "registry_key": "3cbe6dc78c9d34b160018e271f0ed9f1",
+      "name": "Αδέσποτα Μυστήρια Φιλοζωική Ομάδα Ελευσίνας",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΕΛΕΥΣΙΝΑΣ"
+    },
+    {
+      "registry_row": 98,
+      "registry_key": "f615d64b4da75a2b47b61aeeee9f3fec",
+      "name": "Αδεσποτα Ωρωπιοτακια- Φιλοζωικο σωματειο Μαλακασας",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΩΡΩΠΟΥ"
+    },
+    {
+      "registry_row": 99,
+      "registry_key": "e82556f9763f84a53740bbd67c868143",
+      "name": "ΑΔΕΣΠΟΤΑΚΙΑ ΚΑΒΑΛΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΒΑΛΑΣ"
+    },
+    {
+      "registry_row": 100,
+      "registry_key": "947a83cad371578f616bb2d7fc304d31",
+      "name": "ΑΔΕΣΠΟΤΑΚΙΑ ΝΕΑΠΟΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΙΚΑΙΑΣ-ΑΓΙΟΥ ΙΩΑΝΝΗ ΡΕΝΤΗ"
+    },
+    {
+      "registry_row": 101,
+      "registry_key": "47b392b28671429f92d7b3dd10ec4650",
+      "name": "Αδεσποτες Γατες Αντιπαρου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΤΙΠΑΡΟΥ"
+    },
+    {
+      "registry_row": 102,
+      "registry_key": "9d62b779d02153ce9b5526feeb1e9d52",
+      "name": "ΑΔΕΣΠΟΤΕΣ ΓΑΤΕΣ ΒΥΡΩΝΑ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΒΥΡΩΝΟΣ"
+    },
+    {
+      "registry_row": 103,
+      "registry_key": "f3e4f80feabe7f778571b7e73e92f529",
+      "name": "ΑΔΕΣΠΟΤΕΣ ΟΥΡΕΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΛΕΥΣΙΝΑΣ"
+    },
+    {
+      "registry_row": 104,
+      "registry_key": "5218d873903b645c02fccadd48913cb7",
+      "name": "ΑΔΕΣΠΟΤΕΣ ΠΑΤΟΥΣΕΣ ΠΥΡΓΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 105,
+      "registry_key": "9dfdcfff0d8b6d979c5a785e1d7e451c",
+      "name": "ΑΔΕΣΠΟΤΗ ΔΥΝΑΜΗ ΒΕΡΟΙΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΕΡΟΙΑΣ"
+    },
+    {
+      "registry_row": 106,
+      "registry_key": "1cc073df8b76d26ad0ec122379a4d07c",
+      "name": "ΑΔΕΣΠΟΤΗ ΜΕΡΙΜΝΑ STRAY CARE ΑΣΤΙΚΗ ΜΗ ΚΕΡΔΟΣΚΟΠΙΚΗ ΕΤΑΙΡΕΙΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΜΑΡΑΘΩΝΟΣ"
+    },
+    {
+      "registry_row": 107,
+      "registry_key": "4807433b2e206311ee4d9d0b94d76f6d",
+      "name": "ΑΔΕΣΠΟΤΟΙ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΑΥΠΛΙΕΩΝ"
+    },
+    {
+      "registry_row": 108,
+      "registry_key": "8f798df7b4c3ba764096030469a08b24",
+      "name": "ΑΔΕΣΠΟΤΟΙ ΑΓΓΕΛΟΙ ΤΑΝΑΓΡΑΣ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΤΑΝΑΓΡΑΣ"
+    },
+    {
+      "registry_row": 109,
+      "registry_key": "bd11ead7454d2f00437a318b65de5fd2",
+      "name": "ΑΔΕΣΠΟΤΟΙ ΕΘΕΛΟΝΤΕΣ ΛΑΡΙΣΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΡΙΣΑΙΩΝ"
+    },
+    {
+      "registry_row": 110,
+      "registry_key": "286dae0a692bf043b89be813c958cc52",
+      "name": "ΑΔΕΣΠΟΤΟΙ ΣΚΥΛΟΙ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΒΥΡΩΝΟΣ"
+    },
+    {
+      "registry_row": 111,
+      "registry_key": "68a89a396dc5e1a10b725c2497cf8231",
+      "name": "ΑΔΕΣΠΟΤΟΙ ΣΚΥΛΟΙ ΒΥΡΩΝΑ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΒΥΡΩΝΟΣ"
+    },
+    {
+      "registry_row": 112,
+      "registry_key": "8d9376b968644be71698d1d4908ac73a",
+      "name": "ΑΔΕΣΠΟΤΟΙ ΦΙΛΟΙ ΞΑΝΘΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΞΑΝΘΗΣ"
+    },
+    {
+      "registry_row": 113,
+      "registry_key": "4ef6d4cf31c6f04ead16e9f475f7b218",
+      "name": "Αδεσποτολόγιο",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 114,
+      "registry_key": "9a0b553f5022e553d650822ba8b0fdc8",
+      "name": "ΑΔΕΣΠΟΤΟΣ ΠΑΛΜΟΣ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΜΕΓΑΡΕΩΝ"
+    },
+    {
+      "registry_row": 115,
+      "registry_key": "c75d49583f5f285a3cfeb5c470781eb1",
+      "name": "Αδέσποτος Πλανήτης - Stray Planet",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΟΡΔΕΛΙΟΥ-ΕΥΟΣΜΟΥ"
+    },
+    {
+      "registry_row": 116,
+      "registry_key": "0a8fac3704434bc6b1b699782dd95fc9",
+      "name": "ΑΔΕΣΠΟΤΟΥΛΙΑ ΞΑΝΘΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΞΑΝΘΗΣ"
+    },
+    {
+      "registry_row": 117,
+      "registry_key": "f295a3b63054536fb9e5ce92beacb527",
+      "name": "ΑΙΘΕΡΑΣ ΚΑΙ ΓΑΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΚΑΡΙΑΣ"
+    },
+    {
+      "registry_row": 118,
+      "registry_key": "311fb8f5fc866b739e258d454c8b9644",
+      "name": "ΑΚΤΙΟΝ WATCH",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΚΤΙΟΥ-ΒΟΝΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 119,
+      "registry_key": "3081e47aacb9b66e05aafc1a8fc94d15",
+      "name": "ΑΛΛΗΛΕΓΓΥΗ ΣΤΑ ΑΔΕΣΠΟΤΑ – SOLIDARITY FOR STRAY ANIMALS",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΑΝΔΡΙΟΥ"
+    },
+    {
+      "registry_row": 120,
+      "registry_key": "1385f64d7e62104b8cde4f8af7ae64a1",
+      "name": "Ανθρωποι και Ζώα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΙΣΤΟΤΕΛΗ"
+    },
+    {
+      "registry_row": 121,
+      "registry_key": "e5022009898617d5c1c64afd14ee1670",
+      "name": "ΑΝΙΜΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΩΑΝΝΙΤΩΝ"
+    },
+    {
+      "registry_row": 122,
+      "registry_key": "ff4610f346b94d5a2ceb9d4e6a2f9e74",
+      "name": "ΑΡΓΟΣ ΚΙΒΩΤΟΣ ΘΕΣΠΡΩΤΊΑΣ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΗΓΟΥΜΕΝΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 123,
+      "registry_key": "8181f844300a7e53e4c6b1ae28bd0499",
+      "name": "ΑΡΤΑΜΙΤΙ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΠΙΔΑΥΡΟΥ"
+    },
+    {
+      "registry_row": 124,
+      "registry_key": "c010fdee79c1d9b81eaa9cd479b6ceb8",
+      "name": "ΑΡΤΕΜΙΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΕΑΣ ΙΩΝΙΑΣ"
+    },
+    {
+      "registry_row": 125,
+      "registry_key": "6c8cb0c8da61aa6a5413726d2b2633e8",
+      "name": "ΑΣ ΒΟΗΘΗΣΟΥΜΕ ΤΑ ΖΩΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 126,
+      "registry_key": "f6e35ea4dbd1964b6521ce588105c890",
+      "name": "Γάτες Φλοίσβου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΙΜΟΥ"
+    },
+    {
+      "registry_row": 127,
+      "registry_key": "85bdbfd8235a413845213dd1baedb2ad",
+      "name": "ΓΑΤΟΝΥΧΑΚΙΑ ΑΣΤΙΚΗ ΜΗ ΚΕΡΔΟΣΚΟΠΙΚΗ ΕΤΑΙΡΙΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΪΔΑΡΙΟΥ"
+    },
+    {
+      "registry_row": 128,
+      "registry_key": "dc192bc56b79ef76cd5e16fbb9bba915",
+      "name": "ΓΝΩΡΙΖΩ - ΑΓΑΠΑΩ - ΦΡΟΝΤΙΖΩ ΤΑ ΖΩΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΡΜΙΟΝΙΔΑΣ"
+    },
+    {
+      "registry_row": 129,
+      "registry_key": "81d28495e7543bc5b33fca5cdd689138",
+      "name": "ΔΑΝΑΟΣ ΑΣΤΙΚΗ ΜΗ ΚΕΡΔΟΣΚΟΠΙΚΗ ΕΤΑΙΡΕΙΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΛΟΥΤΡΑΚΙΟΥ-ΠΕΡΑΧΩΡΑΣ-ΑΓΙΩΝ ΘΕΟΔΩΡΩΝ"
+    },
+    {
+      "registry_row": 130,
+      "registry_key": "9d884a99b47396f0ce3f5c31def31c1c",
+      "name": "ΔΙΑΣΩΣΗ ΜΙΚΡΩΝ ΖΩΩΝ ΥΔΡΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΥΔΡΑΣ"
+    },
+    {
+      "registry_row": 131,
+      "registry_key": "9ef1f223d54145691d42dbabf0118c57",
+      "name": "Δικαιοσύνη για τα ζώα Justice for animals",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΛΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 132,
+      "registry_key": "1d5e728c9e3875ac4bb53cdb6e74ca2f",
+      "name": "Ε.Φ.Ε.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΡΩΠΙΑΣ"
+    },
+    {
+      "registry_row": 133,
+      "registry_key": "e04020456484770ee849acf728fd349e",
+      "name": "ΕΘΕΛΟΝΤΕΣ ΑΡΩΓΟΙ ΖΩΩΝ ΑΓΙΟΥ ΣΤΕΦΑΝΟΥ ΑΤΤΙΚΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΟΝΥΣΟΥ"
+    },
+    {
+      "registry_row": 134,
+      "registry_key": "ad875eee12935d19451c6fc1fc14254c",
+      "name": "ΕΘΕΛΟΝΤΕΣ ΑΔΕΣΠΟΤΩΝ ΨΥΧΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 135,
+      "registry_key": "d9eb8b52f37fbf43d8210f1cca2feb31",
+      "name": "ΕΘΕΛΟΝΤΕΣ ΦΙΛΟΖΩΟΙ ΑΛΕΞΑΝΔΡΕΙΑΣ ΕΦ.ΑΛ.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΕΞΑΝΔΡΕΙΑΣ"
+    },
+    {
+      "registry_row": 136,
+      "registry_key": "fce1d9293105f026cb536fe08fb131f0",
+      "name": "Εθελοντική Δράση Γη των Αδέσποτων",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΒΕΡΟΙΑΣ"
+    },
+    {
+      "registry_row": 137,
+      "registry_key": "4e9363c85d32fda56891e75f1079ecdf",
+      "name": "ΕΘΕΛΟΝΤΙΚΗ ΔΡΑΣΗ ΔΗΜΟΥ ΤΑΝΑΓΡΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΤΑΝΑΓΡΑΣ"
+    },
+    {
+      "registry_row": 138,
+      "registry_key": "f06e5b8bb05f1d702ba731ebc58ab113",
+      "name": "ΕΛ.ΠΑ.ΔΙ.ΖΩ.",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΟΥ ΑΤΤΙΚΗΣ"
+    },
+    {
+      "registry_row": 139,
+      "registry_key": "fd68490045437398cc670ab50bd4f24a",
+      "name": "ΕΛΕΥΘΕΡΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΡΙΣΑΙΩΝ"
+    },
+    {
+      "registry_row": 140,
+      "registry_key": "e38424517aab6864cccb0e2a1691a588",
+      "name": "ΕΛΛΗΝΙΚΕΣ ΠΑΤΟΥΣΕΣ ΠΑΡΕΧΟΝΤΑΣ ΣΤΑ ΖΩΑ ΕΥΖΩΙΑ ΚΑΙ ΠΡΟΣΤΑΣΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΤΡΕΩΝ"
+    },
+    {
+      "registry_row": 141,
+      "registry_key": "7b4091b201df7dd0d2795d387c6e5060",
+      "name": "ΕΛΛΗΝΙΚΗ ΠΡΟΣΤΑΣΙΑ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 142,
+      "registry_key": "457aa815d5888b473593c97bffc05115",
+      "name": "ΕΛΛΗΝΙΚΗ ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΖΑΧΑΡΩΣ ΗΛΕΙΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΧΑΡΩΣ"
+    },
+    {
+      "registry_row": 143,
+      "registry_key": "5320b7331f2759054ba58ef1e3ce4b80",
+      "name": "ΕΛΠΙΔΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΡΟΣΟΤΣΑΝΗΣ"
+    },
+    {
+      "registry_row": 144,
+      "registry_key": "0ab0aaf630640b2e806cb1ca79643f6f",
+      "name": "ΕΛΠΙΔΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΑΡΑΘΩΝΟΣ"
+    },
+    {
+      "registry_row": 145,
+      "registry_key": "911f3a7b88e898e97d27c194ba9fd34e",
+      "name": "ΕΝΩΣΗ ΕΘΕΛΟΝΤΩΝ ΑΔΕΣΠΟΤΩΝ ΧΑΛΚΙΔΑΣ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΚΙΔΕΩΝ"
+    },
+    {
+      "registry_row": 146,
+      "registry_key": "d74460dabaa278466f3dfb9f41630ed5",
+      "name": "ΕΝΩΣΗ ΦΙΛΌΖΩΩΝ ΣΚΥΡΟΥ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΣΚΥΡΟΥ"
+    },
+    {
+      "registry_row": 147,
+      "registry_key": "c75c6296ffe98372fe8364e14e0e8ffa",
+      "name": "ΕΠΑΖ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΑΡΩΝΙΚΟΥ"
+    },
+    {
+      "registry_row": 148,
+      "registry_key": "9dfa5305516a760dd5c4f3fb8e8fd974",
+      "name": "ΕΠΑΦΗ ΕΝΕΡΓΗ ΠΡΟΣΤΑΣΙΑ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΗΡΑΚΛΕΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΟΥ ΑΤΤΙΚΗΣ"
+    },
+    {
+      "registry_row": 149,
+      "registry_key": "86fe86b68f4aa55f76a791d0afec75f0",
+      "name": "ΖΑΚΥΝΘΙΝΟΣ ΟΜΙΛΟΣ ΜΕΡΙΜΝΑΣ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΚΥΝΘΟΥ"
+    },
+    {
+      "registry_row": 150,
+      "registry_key": "f51df49209a4e6e15197e618509e408a",
+      "name": "ΖΑΠ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΟΤΙΟΥ ΠΗΛΙΟΥ"
+    },
+    {
+      "registry_row": 151,
+      "registry_key": "077ae41a10307b7c44e6c681b8026f8f",
+      "name": "ΖΕΗΛ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΗΛΙΟΥΠΟΛΕΩΣ"
+    },
+    {
+      "registry_row": 152,
+      "registry_key": "3084266b3f1cb53bd42a7ea3a7ade731",
+      "name": "ΖΕΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΑΥΠΛΙΕΩΝ"
+    },
+    {
+      "registry_row": 153,
+      "registry_key": "b737e3c442041cebac45f172cc8b7b43",
+      "name": "ΖΟΩΦΙΛΙΚΗ ΕΝΩΣΗ ΕΘΕΛΟΝΤΩΝ ΔΗΜΟΥ ΑΓΡΙΝΙΟΥ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΡΙΝΙΟΥ"
+    },
+    {
+      "registry_row": 154,
+      "registry_key": "778c948e0bbe21cdbd269e4422a50ec6",
+      "name": "Ζω.Ε.Σ.",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΕΞΑΝΔΡΕΙΑΣ"
+    },
+    {
+      "registry_row": 155,
+      "registry_key": "2aa5cef59a2100991be21091da517c8b",
+      "name": "Ζω.Φι.Ψυ.",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΦΙΛΟΘΕΗΣ-ΨΥΧΙΚΟΥ"
+    },
+    {
+      "registry_row": 156,
+      "registry_key": "570787dbbff9b58e9130f02793a07529",
+      "name": "Ζώα Χωρίς Όνομα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΟΚΡΩΝ"
+    },
+    {
+      "registry_row": 157,
+      "registry_key": "28426cf776ca1c75159b04682e843610",
+      "name": "Ζωοφιλική Ένωση Μεγάρων",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΕΓΑΡΕΩΝ"
+    },
+    {
+      "registry_row": 158,
+      "registry_key": "912e96152b932568021ab42f5163216f",
+      "name": "ΖΩΟΦΙΛΙΚΗ ΟΜΑΔΑ ΙΤΕΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΕΛΦΩΝ"
+    },
+    {
+      "registry_row": 159,
+      "registry_key": "18cf230f776e752aef34bed72e0d22de",
+      "name": "ΖΩΟΦΙΛΙΚΗ ΟΜΑΔΑ ΠΑΝΕΠΙΣΤΗΜΙΟΥ ΙΩΑΝΝΙΝΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΩΑΝΝΙΤΩΝ"
+    },
+    {
+      "registry_row": 160,
+      "registry_key": "81803752a7952e0dddfa6c9515138222",
+      "name": "Ζωοφιλική Παρέμβαση Μελισσίων",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΝΤΕΛΗΣ"
+    },
+    {
+      "registry_row": 161,
+      "registry_key": "210df63fa44e01b5e06428daafc4e695",
+      "name": "ΖΩΟΦΙΛΙΚΗ ΣΑΛΑΜΙΝΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΑΛΑΜΙΝΑΣ"
+    },
+    {
+      "registry_row": 162,
+      "registry_key": "a286d7abc826003602578bad172e6fdc",
+      "name": "ΖΩΟΦΙΛΙΚΟΣ ΚΑΙ ΠΕΡΙΒΑΛΛΟΝΤΙΚΟΣ ΣΥΛΛΟΓΟΣ ΔΡΑΣΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΕΣΚΑΤΗΣ"
+    },
+    {
+      "registry_row": 163,
+      "registry_key": "a7eebebc4b3586b5bb7ce4fac78720f9",
+      "name": "ΖΩΟΦΙΛΙΚΟΣ ΠΕΡΙΒΑΛΛΟΝΤΙΚΟΣ ΚΑΙ ΠΟΛΙΤΙΣΤΙΚΟΣ ΣΥΛΛΟΓΟΣ \"ΣΥΝΔΡΑΣΗ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΜΙΕΩΝ"
+    },
+    {
+      "registry_row": 164,
+      "registry_key": "b7345308460f9f7863d34e2c924e0221",
+      "name": "Ζωόφιλοι Ρεθύμνου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΕΘΥΜΝΗΣ"
+    },
+    {
+      "registry_row": 165,
+      "registry_key": "c23be4c16701f4eb96bf62c79813b7e9",
+      "name": "ΖΩΟΦΙΛΟΣ ΣΥΛΛΟΓΟΣ ΧΑΛΚΙΔΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΚΙΔΕΩΝ"
+    },
+    {
+      "registry_row": 166,
+      "registry_key": "697be7ec48bc9b2bf95e886578e52444",
+      "name": "Ζωφόρος Πολιτισμός Περιβάλλον Ζωοφιλία",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΟΥ ΚΡΗΤΗΣ"
+    },
+    {
+      "registry_row": 167,
+      "registry_key": "224b7d17b4fa4b83403c686704d4b7d4",
+      "name": "Η ΑΓΙΑ ΒΑΡΒΑΡΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΑΣ ΒΑΡΒΑΡΑΣ"
+    },
+    {
+      "registry_row": 168,
+      "registry_key": "0d104de4382a533868a63fd7deff0fbc",
+      "name": "Η ΚΙΒΩΤΌΣ ΤΟΥ ΘΟΔΩΡΉ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΙΟΥ"
+    },
+    {
+      "registry_row": 169,
+      "registry_key": "3305125620fd3e46a8cf01ac02b3b55d",
+      "name": "Η ΠΑΤΡΑ ΓΙΑ ΟΛΑ ΤΑ ΖΩΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΤΡΕΩΝ"
+    },
+    {
+      "registry_row": 170,
+      "registry_key": "dce1c8f2a02f734cc62be3e088772b6f",
+      "name": "ΚΑΒΑΣΙΛΑ CARE",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΠΗΝΕΙΟΥ"
+    },
+    {
+      "registry_row": 171,
+      "registry_key": "93e44c8647432fa7d338bb759f07f8c5",
+      "name": "ΚΑΖ ΚΑΤΑΦΥΓΙΟ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΑΡΚΟΠΟΥΛΟΥ ΜΕΣΟΓΑΙΑΣ"
+    },
+    {
+      "registry_row": 172,
+      "registry_key": "2c7f768f637283e7d1895eda7ae733bc",
+      "name": "ΚΑΠΑ ΟΡΓΑΝΩΣΗ ΚΑΙ ΦΙΛΟΙ ΤΩΝ ΖΩΩΝ (KOFFA N.G.O.)",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΑΣΠΡΟΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 173,
+      "registry_key": "b4b66a599fbcf9240024fb6170c2df73",
+      "name": "ΚΑΤΑΦΥΓΙΟ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΣΣΑΛΟΝΙΚΗΣ"
+    },
+    {
+      "registry_row": 174,
+      "registry_key": "f3a18dfbaf3bdf8c23af2a0c90370137",
+      "name": "ΚΕΝΤΡΟ ΠΡΟΣΤΑΣΙΑΣ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΣΑΜΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΥΤΙΚΗΣ ΣΑΜΟΥ"
+    },
+    {
+      "registry_row": 175,
+      "registry_key": "6fa09f7a0e0016d93868baaa89dac748",
+      "name": "ΚΙ.ΔΙ.ΖΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΩΑΝΝΙΤΩΝ"
+    },
+    {
+      "registry_row": 176,
+      "registry_key": "3f7681fa3aabe0a9486771caa87bdf70",
+      "name": "ΚΙΒΩΤΟΣ ΜΥΤΙΛΗΝΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΥΤΙΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 177,
+      "registry_key": "cc4b4b390d9d85b4183ef45bb980dd3d",
+      "name": "ΚΙΝΗΣΗ ΠΟΛΙΤΩΝ ΓΙΑ ΤΗ ΔΙΑΣΩΣΗ ΤΩΝ ΜΙΚΡΩΝ ΜΑΣ ΦΙΛΩΝ ΤΗΣ ΠΕΡΙΟΧΗΣ ΓΟΥΒΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΕΡΣΟΝΗΣΟΥ"
+    },
+    {
+      "registry_row": 178,
+      "registry_key": "ceefc39624366e199ccdf35a24cd6e11",
+      "name": "ΚΟΡΙΝΘΙΑ ΠΡΟΣΤΑΣΙΑ ΑΣΤΙΚΗΣ ΠΑΝΙΔΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΟΥΤΡΑΚΙΟΥ-ΠΕΡΑΧΩΡΑΣ-ΑΓΙΩΝ ΘΕΟΔΩΡΩΝ"
+    },
+    {
+      "registry_row": 179,
+      "registry_key": "9aeb0b15fdd8550c5e28fdef4ca2a26a",
+      "name": "ΚΟΣΜΟΣ ΚΑΙ ΦΥΣΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΛΟΥ"
+    },
+    {
+      "registry_row": 180,
+      "registry_key": "ff277c8f053837561767ac0b58919ec2",
+      "name": "ΚΟΥΕ & ΚΑΤΣΟΥΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΟΤΙΑΣ ΚΥΝΟΥΡΙΑΣ"
+    },
+    {
+      "registry_row": 181,
+      "registry_key": "af8549cb56bb30a06f967e5c97accb55",
+      "name": "ΚΟΥΣΤΕΝΕΙΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΛΛΙΘΕΑΣ"
+    },
+    {
+      "registry_row": 182,
+      "registry_key": "7a9df0159d794ec4f6f33cb916e20d4e",
+      "name": "ΚΥΒΩΤΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΩ"
+    },
+    {
+      "registry_row": 183,
+      "registry_key": "3de77db7f3f342893a160b63e76847dd",
+      "name": "ΚΥΜΑ Φιλοζωικό Σωματείο Κύμης Αλιβερίου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΥΜΗΣ-ΑΛΙΒΕΡΙΟΥ"
+    },
+    {
+      "registry_row": 184,
+      "registry_key": "b4c6c1b1613bbbe3a780957f0b727b1f",
+      "name": "ΚΥΝ-ΩΝΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΝΙΩΝ"
+    },
+    {
+      "registry_row": 185,
+      "registry_key": "b57b7bea3d7a9aeeb6ef95def3bf35e3",
+      "name": "Λάιμα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΟΜΟΤΗΝΗΣ"
+    },
+    {
+      "registry_row": 186,
+      "registry_key": "24b182f118188d85a999f2e6b82d0d15",
+      "name": "ΜΕΡΙΜΝΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΧΑΡΝΩΝ"
+    },
+    {
+      "registry_row": 187,
+      "registry_key": "1c10358cfb9bfb6e4444d8259fe5a3a3",
+      "name": "ΜΕΡΙΜΝΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΑΡΚΟΠΟΥΛΟΥ ΜΕΣΟΓΑΙΑΣ"
+    },
+    {
+      "registry_row": 188,
+      "registry_key": "821d53c4bbba8a1ac403b8fa0e2e83b0",
+      "name": "ΜΙΑ ΑΓΚΑΛΙΑ ΓΙΑ ΤΑ ΑΔΕΣΠΟΤΑ ΜΚΟ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΓΓΑΙΟΥ"
+    },
+    {
+      "registry_row": 189,
+      "registry_key": "45ac728d016a93a303bf67f8392033e7",
+      "name": "ΝΩΕ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΓΓΑΙΟΥ"
+    },
+    {
+      "registry_row": 190,
+      "registry_key": "ee199d58415e8545ddff9b02fa4ef2ea",
+      "name": "ΞΕΧΑΣΜΕΝΕΣ ΨΥΧΕΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΡΙΣΑΙΩΝ"
+    },
+    {
+      "registry_row": 191,
+      "registry_key": "e9942e4f3e03b70ab568164a54e4368c",
+      "name": "Ο ΑΡΓΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΘΑΚΗΣ"
+    },
+    {
+      "registry_row": 192,
+      "registry_key": "17504ac245a3060a9f6bb2ec97a36997",
+      "name": "Ο κύριος Άκης - Χαρούμενο σπίτι",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΡΩΠΙΑΣ"
+    },
+    {
+      "registry_row": 193,
+      "registry_key": "63029d0e2fd8ef89b25b8f974c085873",
+      "name": "Ο.Ε.Φ Κυ.Μα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΕΛΤΑ"
+    },
+    {
+      "registry_row": 194,
+      "registry_key": "331bbf56ab55b4b01d1dfe2120593e9c",
+      "name": "ΟΔΕΚΑΖ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΤΡΙΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 195,
+      "registry_key": "58507d792f4fd7a6bd9e3416b0298754",
+      "name": "ΟΔΥΣΣΕΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΖΩΓΡΑΦΟΥ"
+    },
+    {
+      "registry_row": 196,
+      "registry_key": "90cb6ed4c10f953a065c058468bbb2a3",
+      "name": "ΟΙ ΜΑΧΗΤΕΣ ΤΩΝ ΔΡΟΜΩΝ ΧΑΙΔΑΡΙΟΥ ΑΙΓΑΛΕΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΪΔΑΡΙΟΥ"
+    },
+    {
+      "registry_row": 197,
+      "registry_key": "1c8a2fdf27dbb2cbf0227d7e58a7134e",
+      "name": "ΟΙ ΠΑΤΟΥΣΕΣ ΤΗΣ ΚΑΛΥΜΝΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΛΥΜΝΙΩΝ"
+    },
+    {
+      "registry_row": 198,
+      "registry_key": "07a3b1c768216afcf1bed2b43b55d7df",
+      "name": "ΟΜΑΔΑ ΔΙΑΣΩΣΗΣ ΚΑΙ ΥΠΕΡΑΣΠΙΣΗΣ ΖΩΩΝ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΛΑΙΑΣ-ΧΟΡΤΙΑΤΗ"
+    },
+    {
+      "registry_row": 199,
+      "registry_key": "aa1c5ca83126939157d454bd51e6dbe5",
+      "name": "ΟΜΟΣΠΟΝΔΙΑ ΖΩΟΦΙΛΙΚΩΝ ΣΩΜΑΤΕΙΩΝ ΕΛΛΑΔΑΣ",
+      "kind": "federation",
+      "kind_label_el": "Ομοσπονδία",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΟΥ ΑΤΤΙΚΗΣ"
+    },
+    {
+      "registry_row": 200,
+      "registry_key": "e2c742cfeab466c741768620e832d688",
+      "name": "ΟΡΜΗ- ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΔΗΜΟΥ ΘΕΡΜΑΪΚΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΡΜΑΪΚΟΥ"
+    },
+    {
+      "registry_row": 201,
+      "registry_key": "32cdfb6efa4db1edd13c014a50c713e0",
+      "name": "ΠΑΝΕΛΛΑΔΙΚΗ ΦΙΛΟΖΩΙΚΗ ΠΕΡΙΒΑΛΛΟΝΤΙΚΗ ΟΜΟΣΠΟΝΔΙΑ",
+      "kind": "federation",
+      "kind_label_el": "Ομοσπονδία",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΝΙΩΝ"
+    },
+    {
+      "registry_row": 202,
+      "registry_key": "c7337b94b8fced444ce2fb881fa9afca",
+      "name": "Πανελλήνια Ομάδα Κατά Της Κακοποίησης Των Ζώων",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 203,
+      "registry_key": "2e2c7357e9140892862d13f0e01d2b69",
+      "name": "Πανελλήνια Ομοσπονδία Νέμεσις",
+      "kind": "federation",
+      "kind_label_el": "Ομοσπονδία",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΝΙΩΝ"
+    },
+    {
+      "registry_row": 204,
+      "registry_key": "345bdf6d12da5c1ac4beaae200a83d6c",
+      "name": "ΠΑΝΕΛΛΗΝΙΑ ΦΙΛΟΖΩΙΚΗ ΟΜΟΣΠΟΝΔΙΑ",
+      "kind": "federation",
+      "kind_label_el": "Ομοσπονδία",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 205,
+      "registry_key": "9b3acced70903247da27f92e3ebd7df3",
+      "name": "ΠΑΝΕΛΛΗΝΙΟ ΦΙΛΟΖΩΙΚΟ - ΦΙΛΑΝΘΡΩΠΙΚΟ ΣΩΜΑΤΕΙΟ - ΑΠΟΛΛΩΝ 1111",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΛΑΙΑΣ-ΧΟΡΤΙΑΤΗ"
+    },
+    {
+      "registry_row": 206,
+      "registry_key": "580cdedb9c2e070ff583e520ff14ec62",
+      "name": "ΠΑΡΕΜΒΑΣΗ ΓΙΑ ΤΑ ΖΩΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΡΕΒΕΖΑΣ"
+    },
+    {
+      "registry_row": 207,
+      "registry_key": "bfc9068c2d29fc8a70b3b68e97ecf3e5",
+      "name": "ΠΕ.ΦΙ.ΠΟ. ΑΜΑΡΟΥΣΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΜΑΡΟΥΣΙΟΥ"
+    },
+    {
+      "registry_row": 208,
+      "registry_key": "ddd117fa8f454165df79ac54800c4520",
+      "name": "ΠΕΝΤΕΛΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΡΙΛΗΣΣΙΩΝ"
+    },
+    {
+      "registry_row": 209,
+      "registry_key": "43eb2a1240d8b2a40b4693304f51948c",
+      "name": "ΠΕΡΙΤΑΣ-ΚΥΝΟΛΟΓΙΚΟΣ ΚΑΙ ΠΟΛΙΤΙΣΤΙΚΟΣ ΣΥΛΛΟΓΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΕΞΑΝΔΡΟΥΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 210,
+      "registry_key": "b402e8294bbb41c99c40fd859ead6e65",
+      "name": "ΠΗΓΑΣΟΣ ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΡΑΦΗΝΑΣ-ΠΙΚΕΡΜΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΑΦΗΝΑΣ-ΠΙΚΕΡΜΙΟΥ"
+    },
+    {
+      "registry_row": 211,
+      "registry_key": "62d8828f65b0c122bacab449e31f7971",
+      "name": "ΠΟΛΙΤΙΣΤΙΚΟ ΟΙΚΟΛΟΓΙΚΟ ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΑΙΣΩΠΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΒΑΛΑΣ"
+    },
+    {
+      "registry_row": 212,
+      "registry_key": "5b07f3eb3740787c2b07f751e4e16dd9",
+      "name": "Πολιτιστικος Ζωοφιλικος Συλλογος",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΥΡΩΤΑ"
+    },
+    {
+      "registry_row": 213,
+      "registry_key": "53822da08a06c7aa114344e17083969a",
+      "name": "ΠΟΛΙΤΙΣΤΙΚΟΣ ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΤΡΙΠΟΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΤΡΙΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 214,
+      "registry_key": "3c47d19d19558b42f8b54eeaf45a9b88",
+      "name": "ΠΡΟΣΤΑΣΙΑ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ Η ΑΓΑΠΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΛΑΙΑΣ-ΧΟΡΤΙΑΤΗ"
+    },
+    {
+      "registry_row": 215,
+      "registry_key": "e4909b0de29efff93610eb859ed97978",
+      "name": "ΠΡΟΣΤΑΣΙΑ ΖΩΩΝ ΚΑΙ ΓΡΑΜΜΗ ΖΩΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΟΥ ΒΑΣΙΛΕΙΟΥ"
+    },
+    {
+      "registry_row": 216,
+      "registry_key": "347590869199294a6786ebe9c1176624",
+      "name": "ΠΡΟΣΤΑΣΙΑ ΖΩΩΝ ΚΥΘΗΡΑ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΥΘΗΡΩΝ"
+    },
+    {
+      "registry_row": 217,
+      "registry_key": "e6c4b08e47689b9a400df7187d03a907",
+      "name": "ΣΕΙΡΙΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΡΜΑΪΚΟΥ"
+    },
+    {
+      "registry_row": 218,
+      "registry_key": "9feea9c2dc5029f39e977a0e6b9ed88f",
+      "name": "ΣΠΑΖ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΓΛΥΦΑΔΑΣ"
+    },
+    {
+      "registry_row": 219,
+      "registry_key": "dd7bf7ef096c1dad05a375afcfbcefad",
+      "name": "ΣΤΕΓΗ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΣΠΡΟΠΥΡΓΟΥ"
+    },
+    {
+      "registry_row": 220,
+      "registry_key": "53cb49f562b4a7fdcef48ff6f857d77e",
+      "name": "ΣΤΕΓΗ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 221,
+      "registry_key": "98299ae63efb93f2e911307418f3110f",
+      "name": "ΣΤΕΓΗ ΠΡΟΣΤΑΣΙΑΣ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΕΡΑΠΕΤΡΑΣ"
+    },
+    {
+      "registry_row": 222,
+      "registry_key": "b22024132c66e14894a1c384d8151a84",
+      "name": "Στοργη",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΚΥΔΡΑΣ"
+    },
+    {
+      "registry_row": 223,
+      "registry_key": "12b2acd49ff999c34af79a9208a5da50",
+      "name": "ΣΥΛΛΟΓΟΣ ΑΓΑΠΗΣ ΓΙΑ ΤΑ ΖΩΑ ΒΛΑΣΣΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΟΡΙΝΘΙΩΝ"
+    },
+    {
+      "registry_row": 224,
+      "registry_key": "d81fdb870bf7400500cb4604b08550c3",
+      "name": "ΣΥΛΛΟΓΟΣ ΖΩΟΦΙΛΩΝ ΑΓΙΑΣ ΠΑΡΑΣΚΕΥΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΑΣ ΠΑΡΑΣΚΕΥΗΣ"
+    },
+    {
+      "registry_row": 225,
+      "registry_key": "46717bdec02c336a2a1f07c3ad369fb0",
+      "name": "Σύλλογος Ζωόφιλων Γιαννιτσών",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΛΛΑΣ"
+    },
+    {
+      "registry_row": 226,
+      "registry_key": "0c09efae56ec08bae9b9060da941174e",
+      "name": "Σύλλογος Ζωόφιλων Δήμου Κεφαλονιάς ΝΤΟΡΙΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΣΤΟΛΙΟΥ"
+    },
+    {
+      "registry_row": 227,
+      "registry_key": "c608f501bcc987ff61e7bb06deb3c7e8",
+      "name": "ΣΥΛΛΟΓΟΣ ΠΡΟΣΤΑΣΙΑΣ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΡΟΥ"
+    },
+    {
+      "registry_row": 228,
+      "registry_key": "c46847b0464189844cc68ad97f5e21d0",
+      "name": "ΣΥΛΛΟΓΟΣ ΠΡΟΣΤΑΣΙΑΣ ΖΩΩΝ Ι.Π. ΜΕΣΟΛΟΓΓΙΟΥ Η ΕΛΠΙΔΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΕΡΑΣ ΠΟΛΗΣ ΜΕΣΟΛΟΓΓΙΟΥ"
+    },
+    {
+      "registry_row": 229,
+      "registry_key": "00feec07774a74e9a5a9f8140e32436e",
+      "name": "Σύλλογος προστασίας των ζώων Σητείας \"ΑΛΗΛΛΕΓΓΥΗ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΗΤΕΙΑΣ"
+    },
+    {
+      "registry_row": 230,
+      "registry_key": "16d6125c5a23a5579fca3cd57e9f8b28",
+      "name": "ΣΥΛΛΟΓΟΣ ΦΙΛΟΖΩΙΚΗΣ ΡΟΔΟΥ(RAWS ANIMAL WELNESS SOCIETY)",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΟΔΟΥ"
+    },
+    {
+      "registry_row": 231,
+      "registry_key": "7bfed68f26e91c5346662ab22946f6ab",
+      "name": "ΣΥΛΛΟΓΟΣ ΦΙΛΩΝ ΖΩΩΝ Η ΕΛΠΙΔΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΜΩΠΙΑΣ"
+    },
+    {
+      "registry_row": 232,
+      "registry_key": "cada266159269be98a5586a312ef65cf",
+      "name": "ΣΥΛΛΟΓΟΣ ΦΙΛΩΝ ΤΩΝ ΖΩΩΝ ΧΑΛΑΝΔΡΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΛΑΝΔΡΙΟΥ"
+    },
+    {
+      "registry_row": 233,
+      "registry_key": "0477848af1aa08933f0946d6a9a7b638",
+      "name": "ΣΥΝΥΠΑΡΞΙΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΩΝ ΑΝΑΡΓΥΡΩΝ-ΚΑΜΑΤΕΡΟΥ"
+    },
+    {
+      "registry_row": 234,
+      "registry_key": "06aa7c085b7db72b28dd1bc030a64823",
+      "name": "ΣΩΜΑΤΕΙΟ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΛΕΡΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΕΡΟΥ"
+    },
+    {
+      "registry_row": 235,
+      "registry_key": "b0361ce6c8153a540a745c5dd158e56b",
+      "name": "Σωματείο Ζωόφιλων Λευκάδας - LAWS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΕΥΚΑΔΑΣ"
+    },
+    {
+      "registry_row": 236,
+      "registry_key": "6aed5f0b51843b05a88321b8a2676030",
+      "name": "Σωματείο Περίθαλψης και Προστασίας Αδέσποτων Ζώων \"STRAY.GR\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 237,
+      "registry_key": "e34a3bf3354217661ab68c4cf62f60bb",
+      "name": "ΣΩΜΑΤΕΙΟ ΦΙΛΟΖΩΟΙ ΕΝ ΔΡΑΣΕΙ ΚΑΣΤΟΡΙΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΣΤΟΡΙΑΣ"
+    },
+    {
+      "registry_row": 238,
+      "registry_key": "15f921e1bae7344b3849c94bd8ca53ec",
+      "name": "ΣΩΜΑΤΕΙΟ ΦΙΛΟΖΩΟΙ ΧΑΪΔΑΡΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΪΔΑΡΙΟΥ"
+    },
+    {
+      "registry_row": 239,
+      "registry_key": "6e04a97ba1fed10e6f97c3760029c6cc",
+      "name": "ΣΩΜΑΤΕΙΟ ΦΙΛΟΖΩΩΝ ΚΕΦΑΛΛΗΝΙΑΣ (KAT)",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΣΤΟΛΙΟΥ"
+    },
+    {
+      "registry_row": 240,
+      "registry_key": "0b6cb5c1cd4cd235b69d4d12989eb710",
+      "name": "ΣΩΤΗΡΙΑ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΑΛΙΜΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΙΜΟΥ"
+    },
+    {
+      "registry_row": 241,
+      "registry_key": "0e1bbeff720a43a9d586bfd695e55e68",
+      "name": "ΤΑ ΑΔΕΣΠΟΤΑΚΙΑ ΤΗΣ ΤΡΙΠΟΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΤΡΙΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 242,
+      "registry_key": "9c377ff4e69bc9846588547247e4a91b",
+      "name": "ΤΑ ΠΑΙΔΙΑ ΤΟΥ ΔΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΟΥ-ΟΛΥΜΠΟΥ"
+    },
+    {
+      "registry_row": 243,
+      "registry_key": "571d265c25345faabe236d09ea9d711c",
+      "name": "ΤΕΤΡΑΠΟΔΗ ΑΓΑΠΗ Μ Κ Ο",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΦΥΛΗΣ"
+    },
+    {
+      "registry_row": 244,
+      "registry_key": "df19609cdbda538951b5ed978635dcb7",
+      "name": "ΤΟ ΓΑΤΟΧΩΡΙΟ ΤΗΣ ΡΟΔΟΥ - THE CAT VILLAGE OF RHODES",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΟΔΟΥ"
+    },
+    {
+      "registry_row": 245,
+      "registry_key": "6ccf22128cf5bf505ee91c1f7f025b02",
+      "name": "Το καταφύγιο της Ναλα",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΚΟΝΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 246,
+      "registry_key": "449778eb40cdd191d13d39274309ecb3",
+      "name": "ΤΟ ΜΙΚΡΟ ΚΑΤΑΦΥΓΙΟ ΑΜΚΕ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΩΡΩΠΟΥ"
+    },
+    {
+      "registry_row": 247,
+      "registry_key": "c60e9fe15b18e0cea570eec2135019ea",
+      "name": "ΥΙΟΘΕΤΩ ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΚΕΡΚΥΡΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΕΝΤΡΙΚΗΣ ΚΕΡΚΥΡΑΣ ΚΑΙ ΔΙΑΠΟΝΤΙΩΝ ΝΗΣΩΝ"
+    },
+    {
+      "registry_row": 248,
+      "registry_key": "c6f1718186829baff70620c585edee3a",
+      "name": "Φ.Ο.Κ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΛΑΜΑΤΑΣ"
+    },
+    {
+      "registry_row": 249,
+      "registry_key": "7fd42937646fb1f368e46c3729cb0aa9",
+      "name": "ΦΑΤΣΟΥΛΕΣ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΙΑΣ"
+    },
+    {
+      "registry_row": 250,
+      "registry_key": "399b6111d99f05d8e1292ec7ea38481a",
+      "name": "ΦΙ.ΣΩ.Μ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΕΣΣΗΝΗΣ"
+    },
+    {
+      "registry_row": 251,
+      "registry_key": "7ccf2a39e652f63e6d34ef8edb226320",
+      "name": "ΦΙΛ.Ο.Β",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΒΑΡΗΣ-ΒΟΥΛΑΣ-ΒΟΥΛΙΑΓΜΕΝΗΣ"
+    },
+    {
+      "registry_row": 252,
+      "registry_key": "ba352631fe8603dda611e15ee623ac90",
+      "name": "ΦΙΛΟΖΙΚΟΣ ΣΥΛΛΟΓΟΣ \"ΦΙΛΟΙ ΚΑΡΔΙΑΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΩΛΟΥ - ΑΓΙΟΥ ΚΩΝΣΤΑΝΤΙΝΟΥ"
+    },
+    {
+      "registry_row": 253,
+      "registry_key": "cecc194ddc726ec80f94e510bf49a5e3",
+      "name": "ΦΙΛΟΖΩΗ ΔΡΑΣΗ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΗΓΟΥΜΕΝΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 254,
+      "registry_key": "1c533a06de762283b42af60efd7225de",
+      "name": "Φιλοζωική Δράση Εθελοντών Αγίας Μαρίνας Κορωπίου",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΚΡΩΠΙΑΣ"
+    },
+    {
+      "registry_row": 255,
+      "registry_key": "ac2ba26a8564501541f01b71c6250117",
+      "name": "Φιλοζωική Δράση Εθελοντών Αγίας Μαρίνας Κορωπίου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΛΛΗΝΙΚΟΥ-ΑΡΓΥΡΟΥΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 256,
+      "registry_key": "35eb47499d545ad5119aa78ccab17924",
+      "name": "Φιλοζωικη Δραση Ναυπακτου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΑΥΠΑΚΤΙΑΣ"
+    },
+    {
+      "registry_row": 257,
+      "registry_key": "b5afb70c59da6c5e0826977d9981ba6f",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΚΡΥΟΝΕΡΙΟΥ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΟΝΥΣΟΥ"
+    },
+    {
+      "registry_row": 258,
+      "registry_key": "5ce16176ffd4377ee8465ddefe39723b",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΛΟΚΡΙΔΑΣ",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΛΟΚΡΩΝ"
+    },
+    {
+      "registry_row": 259,
+      "registry_key": "b024f65030f1ac3c8f12b79743d4a6f9",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΕΝΩΣΗ ΜΕΤΑΜΟΡΦΩΣΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΕΤΑΜΟΡΦΩΣΕΩΣ"
+    },
+    {
+      "registry_row": 260,
+      "registry_key": "e257c70cd7fb35cde505533b8c172ba1",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΚΑΙ ΠΕΡΙΒΑΛΛΟΝΤΙΚΗ ΔΡΑΣΗ ΕΘΕΛΟΝΤΩΝ ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ ΚΑΙ ΝΕΑΣ ΣΜΥΡΝΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ"
+    },
+    {
+      "registry_row": 261,
+      "registry_key": "3d11a038df114ef1a6085175c6ed7cbf",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΚΑΙ ΠΕΡΙΒΑΛΛΟΝΤΙΚΗ ΕΝΩΣΗ ΕΘΕΛΟΝΤΩΝ ΔΗΜΟΥ ΒΑΡΗΣ ΒΟΥΛΑΣ ΒΟΥΛΙΑΓΜΕΝΗΣ >",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΒΑΡΗΣ-ΒΟΥΛΑΣ-ΒΟΥΛΙΑΓΜΕΝΗΣ"
+    },
+    {
+      "registry_row": 262,
+      "registry_key": "d82eb4799d37de67e61aedf88c69920d",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΜΥΚΟΝΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΥΚΟΝΟΥ"
+    },
+    {
+      "registry_row": 263,
+      "registry_key": "cdacae50f4690c4541f58f5f3c26d7b9",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΟΜΑΔΑ ΒΟΛΟΥ (ΦΙ.Ο.Β)",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΛΟΥ"
+    },
+    {
+      "registry_row": 264,
+      "registry_key": "f930151a2a0bb518318ceee80fe422ea",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΟΜΑΔΑ ΓΡΕΒΕΝΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΓΡΕΒΕΝΩΝ"
+    },
+    {
+      "registry_row": 265,
+      "registry_key": "e382515685e6e5f1d7c184251a064364",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΟΜΑΔΑ ΜΑΡΚΟΠΟΥΛΟ ΠΟΡΤΟ ΡΑΦΤΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΑΡΚΟΠΟΥΛΟΥ ΜΕΣΟΓΑΙΑΣ"
+    },
+    {
+      "registry_row": 266,
+      "registry_key": "3a74e624337d494fa376267be8763ef4",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΟΜΑΔΑ ΣΕΙΡΙΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΑΚΛΕΙΟΥ ΚΡΗΤΗΣ"
+    },
+    {
+      "registry_row": 267,
+      "registry_key": "9e3b4fcd4afce1a1b3f9cadadd702551",
+      "name": "Φιλοζωική Ομάδα Φωκίδας",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΕΛΦΩΝ"
+    },
+    {
+      "registry_row": 268,
+      "registry_key": "7c0adb99c7941dc0388da452090bbcbc",
+      "name": "Φιλοζωική Οργάνωση Αγρινίου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΓΡΙΝΙΟΥ"
+    },
+    {
+      "registry_row": 269,
+      "registry_key": "dddf9992f933856368f17f8beaf3769e",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΠΑΝΟΡΑΜΑΤΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΥΛΑΙΑΣ-ΧΟΡΤΙΑΤΗ"
+    },
+    {
+      "registry_row": 270,
+      "registry_key": "83203f02cf51a780b72a87868889e026",
+      "name": "ΦΙΛΟΖΩΙΚΗ ΠΑΡΕΜΒΑΣΗ ΔΗΜΟΥ ΕΛΛΗΝΙΚΟΥ ΑΡΓΥΡΟΥΠΟΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΛΛΗΝΙΚΟΥ-ΑΡΓΥΡΟΥΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 271,
+      "registry_key": "73200fec78140f0b187f0f48a997dbf3",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΚΑΙ ΟΙΚΟΛΟΓΙΚΟ ΣΩΜΑΤΕΙΟ ΚΕΑΣ ΤΕΤΡΑΠΟΔΙΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΕΑΣ"
+    },
+    {
+      "registry_row": 272,
+      "registry_key": "994ce5153c422616aceb1a88a2634445",
+      "name": "Φιλοζωικό Πολιτιστικό & Περιβαλλοντικό Σωματείο Κιβωτός",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΟΛΥΓΥΡΟΥ"
+    },
+    {
+      "registry_row": 273,
+      "registry_key": "64eddd7f17429aa2c27c91fb9c777e22",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΥΛΛΟΓΟΣ ΖΩΓΡΑΦΟΥ ΑΤΤΙΚΗΣ \"ΑΔΕΣΠΟΤΑΚΙΑ ΖΩΓΡΑΦΟΥ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΖΩΓΡΑΦΟΥ"
+    },
+    {
+      "registry_row": 274,
+      "registry_key": "9f5d4f3182645819a6ec124b3f3319b5",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ \"ΑΝΘΡΩΠΟΙ ΚΑΙ ΖΩΑ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΙΘΩΝΙΑΣ"
+    },
+    {
+      "registry_row": 275,
+      "registry_key": "ede01175f0ba346ff6aa46fb0455ebdc",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΑΔΕΣΠΟΤΗ ΜΑΤΙΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΜΠΕΛΟΚΗΠΩΝ-ΜΕΝΕΜΕΝΗΣ"
+    },
+    {
+      "registry_row": 276,
+      "registry_key": "912a1089ca357f1d1c23068390322e83",
+      "name": "Φιλοζωικό Σωματείο Άνδρου ΑΛΦΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΔΡΟΥ"
+    },
+    {
+      "registry_row": 277,
+      "registry_key": "5b1a6f01bf6455bb4898055a40e2468c",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΑΣΠΡΟΒΑΛΤΑΣ ΟΔΥΣΣΕΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΛΒΗΣ"
+    },
+    {
+      "registry_row": 278,
+      "registry_key": "5ed67c538d8bec8872345443b7f9ee60",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΑΣΤΥΠΑΛΑΙΑΣ \"Η ΦΩΝΗ ΤΩΝ ΖΩΩΝ\" (ANIMALS' VOICE)",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΣΤΥΠΑΛΑΙΑΣ"
+    },
+    {
+      "registry_row": 279,
+      "registry_key": "41131fc5d7c7f66374b170b41ba303a3",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΕΟΡΔΑΙΑΣ ΑΔΕΣΠΟΤΗ ΣΤΟΡΓΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΟΡΔΑΙΑΣ"
+    },
+    {
+      "registry_row": 280,
+      "registry_key": "d4b1cfe13d1e8b0212a8faa470ab85fa",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΚΑΤΕΡΙΝΗΣ \"Ο ΑΡΓΟΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΤΕΡΙΝΗΣ"
+    },
+    {
+      "registry_row": 281,
+      "registry_key": "ae6a030a4d73785b90642a7f71dd902b",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΚΙΒΩΤΟΣ ΑΛΕΞΑΝΔΡΟΥΠΟΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΛΕΞΑΝΔΡΟΥΠΟΛΗΣ"
+    },
+    {
+      "registry_row": 282,
+      "registry_key": "f4e431c6cd9d50b61e8a6b0f75aa08e9",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΛΑΓΚΑΔΑ ΣΥΝΥΠΑΡΧΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΑΓΚΑΔΑ"
+    },
+    {
+      "registry_row": 283,
+      "registry_key": "eebb0f155d803f703942391154a0314b",
+      "name": "Φιλοζωικο Σωματειο Λάιζα",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΡΓΟΥΣ-ΜΥΚΗΝΩΝ"
+    },
+    {
+      "registry_row": 284,
+      "registry_key": "d52c0fc6cd8444f49dc1fbbd1b719e15",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΛΗΜΝΟΥ - \"Αδέσποτες Ψυχές\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΗΜΝΟΥ"
+    },
+    {
+      "registry_row": 285,
+      "registry_key": "d8611e6d1bb7d1352731bf169450f612",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ Ο ΑΡΓΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΕΑΠΟΛΗΣ-ΣΥΚΕΩΝ"
+    },
+    {
+      "registry_row": 286,
+      "registry_key": "9cd6601ac871f7f31127a77da3970e57",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ"
+    },
+    {
+      "registry_row": 287,
+      "registry_key": "8a1a26d8f18c71f957966f89c77ad64e",
+      "name": "Φιλοζωικό Σωματείο Περιστερίου - Καν' το Εφικτό για τα Αδέσποτα\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΕΡΙΣΤΕΡΙΟΥ"
+    },
+    {
+      "registry_row": 288,
+      "registry_key": "a5423abbc830267379cb08a348c796f4",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΠΡΟΣΤΑΣΙΑΣ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΠΤΟΛΕΜΑΙΔΑΣ \"ΟΙ ΑΔΕΣΠΟΤΟΙ ΗΡΩΕΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΕΟΡΔΑΙΑΣ"
+    },
+    {
+      "registry_row": 289,
+      "registry_key": "e77e75291945257a5adaecb844069670",
+      "name": "Φιλοζωικό Σωματείο Σάμου",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΑΤΟΛΙΚΗΣ ΣΑΜΟΥ"
+    },
+    {
+      "registry_row": 290,
+      "registry_key": "57847c165985f70327939ec90cd65a39",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΣΥΝΥΠΑΡΧΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΛΟΥ"
+    },
+    {
+      "registry_row": 291,
+      "registry_key": "4a892fb2fd8f3c899006623b92e3501f",
+      "name": "ΦΙΛΟΖΩΙΚΟ ΣΩΜΑΤΕΙΟ ΦΑΡΣΑΛΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΦΑΡΣΑΛΩΝ"
+    },
+    {
+      "registry_row": 292,
+      "registry_key": "3638f601b594f0ff26dcaa63b7c96d95",
+      "name": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΟΝΥΣΟΥ"
+    },
+    {
+      "registry_row": 293,
+      "registry_key": "4400e22fa2c49da1764c15c5f1996f52",
+      "name": "ΦΙΛΟΖΩΪΚΟΣ ΟΜΙΛΟΣ ΗΜΑΘΙΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΕΡΟΙΑΣ"
+    },
+    {
+      "registry_row": 294,
+      "registry_key": "d6ae39c2f68bd2014de5385547677c84",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΟΜΙΛΟΣ ΣΕΡΡΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΕΡΡΩΝ"
+    },
+    {
+      "registry_row": 295,
+      "registry_key": "4251be1253440501b98db8e3b4395473",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΠΟΛΙΤΙΣΤΙΚΟΣ ΣΥΛΛΟΓΟΣ ΝΑΟΥΣΑΣ \"ΟΙ ΦΙΛΟΙ ΤΩΝ ΖΩΩΝ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΗΡΩΙΚΗΣ ΠΟΛΕΩΣ ΝΑΟΥΣΑΣ"
+    },
+    {
+      "registry_row": 296,
+      "registry_key": "e4c4df802492ffe19a76cae52b4bd13c",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΠΟΛΙΤΙΣΤΙΚΟΣ ΣΥΛΛΟΓΟΣ ΦΥΛΗΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΦΥΛΗΣ"
+    },
+    {
+      "registry_row": 297,
+      "registry_key": "7b64a8a66a3cf2c2798f90638d5553a6",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΑΔΕΣΠΟΤΗ ΠΑΡΕΑ ΡΟΔΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΡΟΔΟΥ"
+    },
+    {
+      "registry_row": 298,
+      "registry_key": "d20e7ac596873529233d3a48419a82bb",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΑΙΓΙΑΛΕΙΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΙΓΙΑΛΕΙΑΣ"
+    },
+    {
+      "registry_row": 299,
+      "registry_key": "0862089c402d0eefffa32635db885f04",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΕΘΕΛΟΝΤΩΝ ΒΟΡΕΙΑΣ ΕΥΒΟΙΑΣ ARTEMIS «ΑΡΤΕΜΗΣ»",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΙΣΤΙΑΙΑΣ-ΑΙΔΗΨΟΥ"
+    },
+    {
+      "registry_row": 300,
+      "registry_key": "9c9ab8af3b1e8b283cc58d04e4d1cd34",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΕΘΕΛΟΝΤΩΝ ΔΗΜΟΥ ΔΑΦΝΗΣ ΥΜΗΤΤΟΥ [ΦΕΔΥ] - Άργος",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΑΦΝΗΣ-ΥΜΗΤΤΟΥ"
+    },
+    {
+      "registry_row": 301,
+      "registry_key": "299859a43881cc344867358b2a143043",
+      "name": "Φιλοζωικός Σύλλογος Καλαμπάκας 'Η ΣΤΕΓΗ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΕΤΕΩΡΩΝ"
+    },
+    {
+      "registry_row": 302,
+      "registry_key": "2098fdaf66e45cfb388770b266b23df0",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΚΑΡΥΣΤΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΥΣΤΟΥ"
+    },
+    {
+      "registry_row": 303,
+      "registry_key": "e329e8a2f20ad60440f187ecf3906cc7",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΚΑΤΕΡΙΝΗΣ –ΚΙΒΩΤΟΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΤΕΡΙΝΗΣ"
+    },
+    {
+      "registry_row": 304,
+      "registry_key": "ab39319b97530955c585b8411e17161a",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΚΙΛΚΙΣ SPAWS",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΙΛΚΙΣ"
+    },
+    {
+      "registry_row": 305,
+      "registry_key": "e4edec6053d713eabbf9b3e4eea6bbe9",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΚΡΕΣΤΕΝΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΔΡΙΤΣΑΙΝΑΣ-ΚΡΕΣΤΕΝΩΝ"
+    },
+    {
+      "registry_row": 306,
+      "registry_key": "b5485f48b85b0b520241bd05a45bf56a",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΛΕΣΒΟΥ Ο ΠΑΝΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΜΥΤΙΛΗΝΗΣ"
+    },
+    {
+      "registry_row": 307,
+      "registry_key": "332fcd142be157489ce7b61b4986f69f",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΛΗΜΝΟΥ \"ANIMAL RESCUE LEMNOS''",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΗΜΝΟΥ"
+    },
+    {
+      "registry_row": 308,
+      "registry_key": "784899fce5eb09b18cab319084299ca9",
+      "name": "ΦΙΛΟΖΩΪΚΟΣ ΣΥΛΛΟΓΟΣ ΜΕΣΣΑΡΑΣ Η ΑΓΑΠΗ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΦΑΙΣΤΟΥ"
+    },
+    {
+      "registry_row": 309,
+      "registry_key": "f0c88da06eac0bee030e7042a8a1d361",
+      "name": "Φιλοζωικός σύλλογος Παγγαίου Η ΕΛΠΙΔΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΓΓΑΙΟΥ"
+    },
+    {
+      "registry_row": 310,
+      "registry_key": "e70709178a067aa3018fad2cb3a17f0b",
+      "name": "ΦΙΛΟΖΩΪΚΟΣ ΣΥΛΛΟΓΟΣ ΠΡΟΣΤΑΣΙΑΣ-ΠΕΡΙΘΑΛΨΗΣ ΑΔΕΣΠΟΤΩΝ ΖΩΩΝ ΔΗΜΟΥ ΠΗΝΕΙΟΥ (Σ.Π.Π.Α.Ζ.)",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΗΝΕΙΟΥ"
+    },
+    {
+      "registry_row": 311,
+      "registry_key": "bc27a96da20fcb16937c93b1401ebe2d",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΣΑΛΑΜΙΝΑΣ Κ.ΑΡ.ΔΙ.Α.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΑΛΑΜΙΝΑΣ"
+    },
+    {
+      "registry_row": 312,
+      "registry_key": "247fd33ea462fb6862e053fc23e8e9d9",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΣΙΑΤΙΣΤΑΣ \" Η ΕΥΘΥΝΗ'",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΟΪΟΥ"
+    },
+    {
+      "registry_row": 313,
+      "registry_key": "2b6773f296fad17711fb67584cbeb5f5",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΧΑΝΙΩΝ Η ΠΡΟΣΤΑΣΙΑ ΤΩΝ ΖΩΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΑΝΙΩΝ"
+    },
+    {
+      "registry_row": 314,
+      "registry_key": "13c46e55cdaf9459afa4f1d4aa0ea14f",
+      "name": "ΦΙΛΟΖΩΙΚΟΣ ΣΥΛΛΟΓΟΣ ΧΙΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΧΙΟΥ"
+    },
+    {
+      "registry_row": 315,
+      "registry_key": "3e0bc48ea2b31116ffca20583803f13a",
+      "name": "ΦΙΛΟΖΩΟΙ ΑΝΑΤΟΛΙΚΟΥ ΠΗΛΙΟΥ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΖΑΓΟΡΑΣ-ΜΟΥΡΕΣΙΟΥ"
+    },
+    {
+      "registry_row": 316,
+      "registry_key": "6357d71c94eeea676a5b5ab3d4394203",
+      "name": "ΦΙΛΟΖΩΟΙ ΔΙΔΥΜΟΤΕΙΧΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΔΥΜΟΤΕΙΧΟΥ"
+    },
+    {
+      "registry_row": 317,
+      "registry_key": "5500c175e377bba9ce1826dbd689fb6e",
+      "name": "Φιλοζωοι εθελοντες δημου διρφυων μεσσαπιων",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΙΡΦΥΩΝ-ΜΕΣΣΑΠΙΩΝ"
+    },
+    {
+      "registry_row": 318,
+      "registry_key": "ce0cca118325d1bba6c72d369a25f232",
+      "name": "Φιλόζωοι Εθελοντές Δράμας ΦΕΔΡΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΡΑΜΑΣ"
+    },
+    {
+      "registry_row": 319,
+      "registry_key": "8256f70b82e33da60d7d758cb1f86ec0",
+      "name": "Φιλόζωοι Εθελοντές Εκάλης - Ένωση Ecali Strays",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΚΗΦΙΣΙΑΣ"
+    },
+    {
+      "registry_row": 320,
+      "registry_key": "2dbbecfba823c8bd266d03248642de85",
+      "name": "ΦΙΛΟΖΩΟΙ ΕΘΕΛΟΝΤΕΣ ΠΑΡΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΡΟΥ"
+    },
+    {
+      "registry_row": 321,
+      "registry_key": "973ab2185153a95028f898bf9bd80c2f",
+      "name": "ΦΙΛΟΖΩΟΙ ΕΘΕΛΟΝΤΕΣ ΠΑΤΡΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΤΡΕΩΝ"
+    },
+    {
+      "registry_row": 322,
+      "registry_key": "680a8f491cb10f288eb8785fd07a5c72",
+      "name": "ΦΙΛΟΖΩΟΙ ΕΜΕΙΣ",
+      "kind": "nonprofit",
+      "kind_label_el": "ΑΜΚΕ (Αστική Μη Κερδοσκοπική Εταιρεία)",
+      "country": "Ελλάδα",
+      "municipality": "ΗΓΟΥΜΕΝΙΤΣΑΣ"
+    },
+    {
+      "registry_row": 323,
+      "registry_key": "b3af630a8108d10766b8339e4dc85bef",
+      "name": "ΦΙΛΟΖΩΟΙ ΛΕΙΨΩΝ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΛΕΙΨΩΝ"
+    },
+    {
+      "registry_row": 324,
+      "registry_key": "fd01cdb1917eaf4d8ce22dc95746331b",
+      "name": "ΦΙΛΟΖΩΩ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΘΕΣΣΑΛΟΝΙΚΗΣ"
+    },
+    {
+      "registry_row": 325,
+      "registry_key": "a3e92cc8ef82c0cb0d47f3e2f56edb85",
+      "name": "ΦΙΛΟΙ ΖΩΩΝ ΒΥΡΩΝΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΒΥΡΩΝΟΣ"
+    },
+    {
+      "registry_row": 326,
+      "registry_key": "cbfe2a926048a5aee69c45fab202eb9f",
+      "name": "Φίλοι Ζώων ή Φ.Ζ.Κ.Α.",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΘΗΝΑΙΩΝ"
+    },
+    {
+      "registry_row": 327,
+      "registry_key": "70e50b2fa5534510d947b7432307ebf9",
+      "name": "Φίλοι Ζώων Καρπάθου - Animal Friends of Karpathos",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΑΡΠΑΘΟΥ"
+    },
+    {
+      "registry_row": 328,
+      "registry_key": "2f6b5773758f30883daa06641ecb6fc8",
+      "name": "Φίλοι Ζώων Λήμνου η Ελπίδα",
+      "kind": "union",
+      "kind_label_el": "Ένωση",
+      "country": "Ελλάδα",
+      "municipality": "ΛΗΜΝΟΥ"
+    },
+    {
+      "registry_row": 329,
+      "registry_key": "f3632a38390f1947ae7596706373dab9",
+      "name": "ΦΙΛΟΙ ΤΩΝ ΖΩΩΝ \"ΚΙΒΩΤΟΣ\"",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΚΕΝΤΡΙΚΗΣ ΚΕΡΚΥΡΑΣ ΚΑΙ ΔΙΑΠΟΝΤΙΩΝ ΝΗΣΩΝ"
+    },
+    {
+      "registry_row": 330,
+      "registry_key": "970039b596d71c4e84a56c57e0f90196",
+      "name": "ΦΙΛΟΙ ΤΩΝ ΖΩΩΝ ΔΡΑΜΑΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΔΡΑΜΑΣ"
+    },
+    {
+      "registry_row": 331,
+      "registry_key": "1640337262baa551c6edb35f2c638a24",
+      "name": "ΦΙΛΟΙ ΤΩΝ ΖΩΩΝ ΠΑΠΑΓΟΥ ΧΟΛΑΡΓΟΥ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΠΑΠΑΓΟΥ-ΧΟΛΑΡΓΟΥ"
+    },
+    {
+      "registry_row": 332,
+      "registry_key": "1ac763f6ba184977347f1d6f79385112",
+      "name": "ΦΙΛΟΣΙΝΤΙΚΕΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΙΝΤΙΚΗΣ"
+    },
+    {
+      "registry_row": 333,
+      "registry_key": "cd63aa362353728ae7bbfe2298dd94af",
+      "name": "ΦΙΣΑΑ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΣΠΑΤΩΝ-ΑΡΤΕΜΙΔΟΣ"
+    },
+    {
+      "registry_row": 334,
+      "registry_key": "8747ad96b080ce62cf8d84e176eb4560",
+      "name": "ΦΡΟΝΤΙΖΩ φιλοζωικό πολιτιστικό σωματείο",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΝΕΑΠΟΛΗΣ-ΣΥΚΕΩΝ"
+    },
+    {
+      "registry_row": 335,
+      "registry_key": "757b88ae5cddfe2624315fd3eb5a23c4",
+      "name": "ΧΑΡΟΥΜΕΝΕΣ ΠΑΤΟΥΣΕΣ",
+      "kind": "society",
+      "kind_label_el": "Φιλοζωικό Σωματείο/Σύλλογος",
+      "country": "Ελλάδα",
+      "municipality": "ΑΝΔΡΑΒΙΔΑΣ-ΚΥΛΛΗΝΗΣ"
+    }
+  ]
+}

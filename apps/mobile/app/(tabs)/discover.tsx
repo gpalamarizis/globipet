@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse } from 'lucide-react-native'
+import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 
@@ -40,6 +40,8 @@ const SECTIONS = [
   { key: 'events', Icon: CalendarDays,   titleKey: 'events.title', subKey: 'events.emptyHint', route: '/events', tint: 'hosting' },
   { key: 'breeds', Icon: Dog,            titleKey: 'breeds.title', subKey: 'breeds.search',    route: '/breeds', tint: 'grooming' },
   { key: 'legal', Icon: Scale, titleKey: 'legal.title', subKey: 'legal.subtitle', route: '/pet-legal', tint: 'veterinary' },
+  { key: 'shelters', Icon: HomeIcon, titleKey: 'shelters.title', subKey: 'shelters.subtitle', route: '/shelters', tint: 'hosting' },
+  { key: 'orgs', Icon: HeartHandshake, titleKey: 'orgs.title', subKey: 'orgs.subtitle', route: '/welfare-orgs', tint: 'veterinary' },
   { key: 'ai-emotion',  Icon: Heart,       titleKey: 'discover.ai_emotion',        subKey: 'discover.how_pet_feels',     route: '/ai-emotion', tint: 'grooming' },
   { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
   { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },

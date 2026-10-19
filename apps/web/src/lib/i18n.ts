@@ -4,6 +4,30 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { detectAndApplyGeoLanguage } from './geoLocale'
 
 const el = {
+  orgs: {
+    source: 'Πηγή: Μητρώο Φιλοζωικών Οργανώσεων',
+    website: 'Ιστοσελίδα',
+    kindFederation: 'Ομοσπονδίες',
+    kindUnion: 'Ενώσεις',
+    kindNonprofit: 'ΑΜΚΕ',
+    kindSociety: 'Σωματεία',
+    count: '{{count}} οργανώσεις',
+    search: 'Αναζήτηση ονόματος ή δήμου',
+    subtitle: 'Το επίσημο μητρώο φιλοζωικών οργανώσεων. Απευθύνσου σε αυτές για αδέσποτα, υιοθεσίες και εθελοντισμό.',
+    title: 'Φιλοζωικές οργανώσεις',
+  },
+  shelters: {
+    source: 'Πηγή: Επίσημο Μητρώο Καταφυγίων',
+    website: 'Ιστοσελίδα',
+    catInterMunicipal: 'Διαδημοτικά',
+    catPrivate: 'Ιδιωτικά',
+    catAssociation: 'Σωματεία',
+    catMunicipality: 'Δημοτικά',
+    count: '{{count}} καταφύγια',
+    search: 'Αναζήτηση ονόματος ή δήμου',
+    subtitle: 'Το επίσημο μητρώο καταφυγίων αδέσποτων ζώων στην Ελλάδα.',
+    title: 'Καταφύγια',
+  },
   passport: {
     access: 'Πρόσβαση',
     travel: 'Διαβατήριο',
@@ -27,6 +51,8 @@ const el = {
     category: 'Κατηγορία',
   },
   nav: {
+    welfareOrgs: 'Φιλοζωικές',
+    shelters: 'Καταφύγια',
     home: 'Αρχική', shop: 'Κατάστημα', marketplace: 'Marketplace',
     services: 'Υπηρεσίες', telehealth: 'Τηλεϊατρική', social: 'Social',
     forum: 'Forum', community: 'Κοινότητα', events: 'Εκδηλώσεις',
@@ -1239,6 +1265,30 @@ const el = {
 
 // English
 const en: typeof el = {
+  orgs: {
+    source: 'Source: Animal Welfare Organisation Registry',
+    website: 'Website',
+    kindFederation: 'Federations',
+    kindUnion: 'Unions',
+    kindNonprofit: 'Non-profits',
+    kindSociety: 'Societies',
+    count: '{{count}} organisations',
+    search: 'Search by name or municipality',
+    subtitle: 'The official registry of animal welfare organisations. Contact them about strays, adoptions and volunteering.',
+    title: 'Animal welfare organisations',
+  },
+  shelters: {
+    source: 'Source: Official Shelter Registry',
+    website: 'Website',
+    catInterMunicipal: 'Inter-municipal',
+    catPrivate: 'Private',
+    catAssociation: 'Associations',
+    catMunicipality: 'Municipal',
+    count: '{{count}} shelters',
+    search: 'Search by name or municipality',
+    subtitle: 'The official registry of stray animal shelters in Greece.',
+    title: 'Shelters',
+  },
   passport: {
     access: 'Access',
     travel: 'Travel',
@@ -1262,6 +1312,8 @@ const en: typeof el = {
     category: 'Category',
   },
   nav: {
+    welfareOrgs: 'Welfare orgs',
+    shelters: 'Shelters',
     home: 'Home', shop: 'Shop', marketplace: 'Marketplace',
     services: 'Services', telehealth: 'Telehealth', social: 'Social',
     forum: 'Forum', community: 'Community', events: 'Events',
@@ -2426,6 +2478,30 @@ const en: typeof el = {
 
 // Spanish
 const es: typeof el = {
+  orgs: {
+    source: 'Fuente: Registro de Organizaciones de Protección Animal',
+    website: 'Sitio web',
+    kindFederation: 'Federaciones',
+    kindUnion: 'Uniones',
+    kindNonprofit: 'Sin ánimo de lucro',
+    kindSociety: 'Sociedades',
+    count: '{{count}} organizaciones',
+    search: 'Buscar por nombre o municipio',
+    subtitle: 'El registro oficial de organizaciones de protección animal. Contáctalas para animales callejeros, adopciones y voluntariado.',
+    title: 'Organizaciones de protección animal',
+  },
+  shelters: {
+    source: 'Fuente: Registro Oficial de Refugios',
+    website: 'Sitio web',
+    catInterMunicipal: 'Intermunicipales',
+    catPrivate: 'Privados',
+    catAssociation: 'Asociaciones',
+    catMunicipality: 'Municipales',
+    count: '{{count}} refugios',
+    search: 'Buscar por nombre o municipio',
+    subtitle: 'El registro oficial de refugios de animales callejeros en Grecia.',
+    title: 'Refugios',
+  },
   passport: {
     access: 'Acceso',
     travel: 'Pasaporte',
@@ -2449,6 +2525,8 @@ const es: typeof el = {
     category: 'Categoría',
   },
   nav: {
+    welfareOrgs: 'Protectoras',
+    shelters: 'Refugios',
     home: 'Inicio', shop: 'Tienda', marketplace: 'Marketplace',
     services: 'Servicios', telehealth: 'Telesalud', social: 'Social',
     forum: 'Foro', community: 'Comunidad', events: 'Eventos',
@@ -3613,6 +3691,30 @@ const es: typeof el = {
 
 // French
 const fr: typeof el = {
+  orgs: {
+    source: 'Source : registre des organisations de protection animale',
+    website: 'Site web',
+    kindFederation: 'Fédérations',
+    kindUnion: 'Unions',
+    kindNonprofit: 'Associations à but non lucratif',
+    kindSociety: 'Associations',
+    count: '{{count}} organisations',
+    search: 'Rechercher par nom ou commune',
+    subtitle: 'Le registre officiel des organisations de protection animale. Contactez-les pour les animaux errants, les adoptions et le bénévolat.',
+    title: 'Organisations de protection animale',
+  },
+  shelters: {
+    source: 'Source : registre officiel des refuges',
+    website: 'Site web',
+    catInterMunicipal: 'Intercommunaux',
+    catPrivate: 'Privés',
+    catAssociation: 'Associations',
+    catMunicipality: 'Municipaux',
+    count: '{{count}} refuges',
+    search: 'Rechercher par nom ou commune',
+    subtitle: 'Le registre officiel des refuges pour animaux errants en Grèce.',
+    title: 'Refuges',
+  },
   passport: {
     access: 'Accès',
     travel: 'Passeport',
@@ -3636,6 +3738,8 @@ const fr: typeof el = {
     category: 'Catégorie',
   },
   nav: {
+    welfareOrgs: 'Protection animale',
+    shelters: 'Refuges',
     home: 'Accueil', shop: 'Boutique', marketplace: 'Marketplace',
     services: 'Services', telehealth: 'Télésanté', social: 'Social',
     forum: 'Forum', community: 'Communauté', events: 'Événements',
@@ -4800,6 +4904,30 @@ const fr: typeof el = {
 
 // Chinese
 const zh: typeof el = {
+  orgs: {
+    source: '来源：动物保护组织登记册',
+    website: '网站',
+    kindFederation: '联合会',
+    kindUnion: '联盟',
+    kindNonprofit: '非营利',
+    kindSociety: '协会',
+    count: '{{count}} 个组织',
+    search: '按名称或市镇搜索',
+    subtitle: '动物保护组织官方登记册。可就流浪动物、领养和志愿服务与其联系。',
+    title: '动物保护组织',
+  },
+  shelters: {
+    source: '来源：官方收容所登记册',
+    website: '网站',
+    catInterMunicipal: '跨市政',
+    catPrivate: '私营',
+    catAssociation: '协会',
+    catMunicipality: '市政',
+    count: '{{count}} 个收容所',
+    search: '按名称或市镇搜索',
+    subtitle: '希腊流浪动物收容所官方登记册。',
+    title: '收容所',
+  },
   passport: {
     access: '访问权限',
     travel: '旅行',
@@ -4823,6 +4951,8 @@ const zh: typeof el = {
     category: '类别',
   },
   nav: {
+    welfareOrgs: '动物保护',
+    shelters: '收容所',
     home: '首页', shop: '商店', marketplace: '市场',
     services: '服务', telehealth: '远程医疗', social: '社交',
     forum: '论坛', community: '社区', events: '活动',

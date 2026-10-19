@@ -1056,5 +1056,29 @@
     "commentHint": "Cuéntanos qué tal fue — opcional",
     "thanks": "Gracias",
     "thanksHint": "Tu reseña ayuda a otros propietarios a elegir."
+  },
+  "shelters": {
+    "title": "Refugios",
+    "subtitle": "El registro oficial de refugios de animales callejeros en Grecia.",
+    "search": "Buscar por nombre o municipio",
+    "count": "{{count}} refugios",
+    "catMunicipality": "Municipales",
+    "catAssociation": "Asociaciones",
+    "catPrivate": "Privados",
+    "catInterMunicipal": "Intermunicipales",
+    "website": "Sitio web",
+    "source": "Fuente: Registro Oficial de Refugios"
+  },
+  "orgs": {
+    "title": "Organizaciones de protección animal",
+    "subtitle": "El registro oficial de organizaciones de protección animal. Contáctalas para animales callejeros, adopciones y voluntariado.",
+    "search": "Buscar por nombre o municipio",
+    "count": "{{count}} organizaciones",
+    "kindSociety": "Sociedades",
+    "kindNonprofit": "Sin ánimo de lucro",
+    "kindUnion": "Uniones",
+    "kindFederation": "Federaciones",
+    "website": "Sitio web",
+    "source": "Fuente: Registro de Organizaciones de Protección Animal"
   }
 }

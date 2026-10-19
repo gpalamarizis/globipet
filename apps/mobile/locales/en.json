@@ -1056,5 +1056,29 @@
     "commentHint": "Tell us how it went — optional",
     "thanks": "Thank you",
     "thanksHint": "Your review helps other owners choose."
+  },
+  "shelters": {
+    "title": "Shelters",
+    "subtitle": "The official registry of stray animal shelters in Greece.",
+    "search": "Search by name or municipality",
+    "count": "{{count}} shelters",
+    "catMunicipality": "Municipal",
+    "catAssociation": "Associations",
+    "catPrivate": "Private",
+    "catInterMunicipal": "Inter-municipal",
+    "website": "Website",
+    "source": "Source: Official Shelter Registry"
+  },
+  "orgs": {
+    "title": "Animal welfare organisations",
+    "subtitle": "The official registry of animal welfare organisations. Contact them about strays, adoptions and volunteering.",
+    "search": "Search by name or municipality",
+    "count": "{{count}} organisations",
+    "kindSociety": "Societies",
+    "kindNonprofit": "Non-profits",
+    "kindUnion": "Unions",
+    "kindFederation": "Federations",
+    "website": "Website",
+    "source": "Source: Animal Welfare Organisation Registry"
   }
 }

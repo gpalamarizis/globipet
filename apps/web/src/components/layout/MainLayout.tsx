@@ -2,12 +2,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart,
-  Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar,
-  MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen,
-  Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon
-} from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake } from 'lucide-react'
 import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -39,6 +34,9 @@ const communityDropdown = [
   { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,   color: 'text-green-500' },
   { path: '/communities', labelKey: 'nav.communities', icon: Building2,  color: 'text-purple-500' },
   { path: '/forum',       labelKey: 'nav.forum',       icon: MessageSquare, color: 'text-blue-500' },
+  // Τα δύο επίσημα μητρώα: δημόσια δεδομένα, όχι πάροχοι της πλατφόρμας.
+  { path: '/shelters',    labelKey: 'nav.shelters',    icon: HomeIcon,      color: 'text-amber-600' },
+  { path: '/welfare-organisations', labelKey: 'nav.welfareOrgs', icon: HeartHandshake, color: 'text-rose-500' },
 ]
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────

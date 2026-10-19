@@ -27,6 +27,8 @@ const AiEmotion         = lazy(() => import('@/pages/AiEmotion'))
 const AiStoolUrine      = lazy(() => import('@/pages/AiStoolUrine'))
 const PetLegal          = lazy(() => import('@/pages/PetLegal'))
 const PetPassport       = lazy(() => import('@/pages/PetPassport'))
+const Shelters          = lazy(() => import('@/pages/Shelters'))
+const WelfareOrgs       = lazy(() => import('@/pages/WelfareOrgs'))
 const Playdates         = lazy(() => import('@/pages/Playdates'))
 const Communities       = lazy(() => import('@/pages/Communities'))
 const Telehealth        = lazy(() => import('@/pages/Telehealth'))
@@ -226,6 +228,8 @@ export default function App() {
                 <Route path="/cookies"         element={<CookiePreferencesPage />} />
                 <Route path="/legal"           element={<PetLegal />} />
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />
+                <Route path="/shelters"       element={<Shelters />} />
+                <Route path="/welfare-organisations" element={<WelfareOrgs />} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"      element={<PrivateRoute><Telehealth /></PrivateRoute>} />

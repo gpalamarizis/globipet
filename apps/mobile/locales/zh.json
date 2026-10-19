@@ -1056,5 +1056,29 @@
     "commentHint": "说说体验如何 — 可选",
     "thanks": "谢谢",
     "thanksHint": "您的评价能帮助其他主人做出选择。"
+  },
+  "shelters": {
+    "title": "收容所",
+    "subtitle": "希腊流浪动物收容所官方登记册。",
+    "search": "按名称或市镇搜索",
+    "count": "{{count}} 个收容所",
+    "catMunicipality": "市政",
+    "catAssociation": "协会",
+    "catPrivate": "私营",
+    "catInterMunicipal": "跨市政",
+    "website": "网站",
+    "source": "来源：官方收容所登记册"
+  },
+  "orgs": {
+    "title": "动物保护组织",
+    "subtitle": "动物保护组织官方登记册。可就流浪动物、领养和志愿服务与其联系。",
+    "search": "按名称或市镇搜索",
+    "count": "{{count}} 个组织",
+    "kindSociety": "协会",
+    "kindNonprofit": "非营利",
+    "kindUnion": "联盟",
+    "kindFederation": "联合会",
+    "website": "网站",
+    "source": "来源：动物保护组织登记册"
   }
 }

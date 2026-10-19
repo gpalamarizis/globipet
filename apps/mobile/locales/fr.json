@@ -1056,5 +1056,29 @@
     "commentHint": "Dites-nous comment ça s'est passé — facultatif",
     "thanks": "Merci",
     "thanksHint": "Votre avis aide d'autres propriétaires à choisir."
+  },
+  "shelters": {
+    "title": "Refuges",
+    "subtitle": "Le registre officiel des refuges pour animaux errants en Grèce.",
+    "search": "Rechercher par nom ou commune",
+    "count": "{{count}} refuges",
+    "catMunicipality": "Municipaux",
+    "catAssociation": "Associations",
+    "catPrivate": "Privés",
+    "catInterMunicipal": "Intercommunaux",
+    "website": "Site web",
+    "source": "Source : registre officiel des refuges"
+  },
+  "orgs": {
+    "title": "Organisations de protection animale",
+    "subtitle": "Le registre officiel des organisations de protection animale. Contactez-les pour les animaux errants, les adoptions et le bénévolat.",
+    "search": "Rechercher par nom ou commune",
+    "count": "{{count}} organisations",
+    "kindSociety": "Associations",
+    "kindNonprofit": "Associations à but non lucratif",
+    "kindUnion": "Unions",
+    "kindFederation": "Fédérations",
+    "website": "Site web",
+    "source": "Source : registre des organisations de protection animale"
   }
 }
