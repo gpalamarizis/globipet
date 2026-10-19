@@ -1,12 +1,22 @@
 import { useCallback, useState } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
+
+/**
+ * Ύψος μπάρας κατάστασης συν αναπνοή.
+ *
+ * StatusBar.currentHeight δίνει την πραγματική τιμή στο Android. Τα
+ * useSafeAreaInsets επιστρέφουν 0 όταν η εφαρμογή δεν είναι ρητά
+ * edge-to-edge, ενώ το σύστημα σχεδιάζει ούτως ή άλλως από κάτω — γι'
+ * αυτό δεν τα εμπιστευόμαστε εδώ. Κάτω όριο 48, όσο ίσχυε πριν.
+ */
+const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
 
 /**
  * Ανακάλυψη.
@@ -65,7 +75,7 @@ export default function DiscoverScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
       }>
 
-      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}>
+      <View style={s.header}>
         <Text style={s.title}>{t('discover.title')}</Text>
         <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
       </View>
@@ -118,6 +128,10 @@ export default function DiscoverScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
+    // Σταθερό και ασφαλές: η κεφαλίδα μπορεί να αποδοθεί σε πολλά
+    // σημεία της ίδιας οθόνης (συνδεδεμένος / αποσυνδεδεμένος χρήστης),
+    // και inline παράκαμψη θα ίσχυε μόνο σε όποια θυμηθεί κανείς.
+    paddingTop: HEADER_TOP,
     backgroundColor: colors.navy,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,

@@ -1,10 +1,20 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, StatusBar } from 'react-native'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+
+/**
+ * Ύψος μπάρας κατάστασης συν αναπνοή.
+ *
+ * StatusBar.currentHeight δίνει την πραγματική τιμή στο Android. Τα
+ * useSafeAreaInsets επιστρέφουν 0 όταν η εφαρμογή δεν είναι ρητά
+ * edge-to-edge, ενώ το σύστημα σχεδιάζει ούτως ή άλλως από κάτω — γι'
+ * αυτό δεν τα εμπιστευόμαστε εδώ. Κάτω όριο 48, όσο ίσχυε πριν.
+ */
+const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
 
 /**
  * Προφίλ.
@@ -45,7 +55,7 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: tabSpace.paddingTop }]}><Text style={s.title}>{t('tabs.profile')}</Text></View>
+      <View style={s.header}><Text style={s.title}>{t('tabs.profile')}</Text></View>
       <View style={s.empty}>
         <UserIcon size={icon.hero} color={colors.border} />
         <Text style={s.emptyTitle}>{t('profile.not_logged_in')}</Text>
@@ -120,6 +130,10 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
   header: {
+    // Σταθερό και ασφαλές: η κεφαλίδα μπορεί να αποδοθεί σε πολλά
+    // σημεία της ίδιας οθόνης (συνδεδεμένος / αποσυνδεδεμένος χρήστης),
+    // και inline παράκαμψη θα ίσχυε μόνο σε όποια θυμηθεί κανείς.
+    paddingTop: HEADER_TOP,
     backgroundColor: colors.navy,
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
