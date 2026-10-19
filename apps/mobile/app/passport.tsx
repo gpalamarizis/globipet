@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl,
-} from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import {
@@ -12,6 +10,10 @@ import {
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+
+/** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
+ *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
+const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
 
 /**
  * Ιατρικός φάκελος.
@@ -162,8 +164,7 @@ export default function PassportScreen() {
 
       {/* Επιλογή κατοικιδίου */}
       {pets.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={s.petRow} contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+        <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
           {pets.map((x: any) => (
             <TouchableOpacity key={x.id} activeOpacity={0.7}
               style={[s.petChip, activePetId === x.id && s.petChipActive]}
@@ -172,7 +173,7 @@ export default function PassportScreen() {
               <Text style={[s.petName, activePetId === x.id && s.petNameActive]}>{x.name}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       )}
 
       {!activePetId ? (
@@ -183,8 +184,7 @@ export default function PassportScreen() {
         </View>
       ) : (
         <>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            style={s.tabRow} contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm }}>
+          <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
             {TABS.map(tb => (
               <TouchableOpacity key={tb.id} activeOpacity={0.7}
                 style={[s.tab, tab === tb.id && s.tabActive]}
@@ -197,7 +197,7 @@ export default function PassportScreen() {
                 )}
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}
             contentContainerStyle={{ padding: space.lg, paddingBottom: 100 }}
@@ -398,7 +398,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', gap: space.lg,
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
+    paddingTop: HEADER_TOP,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

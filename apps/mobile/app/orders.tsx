@@ -1,14 +1,16 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Image,
-} from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Image, Platform, StatusBar } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Package, ArrowLeft, Truck } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+
+/** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
+ *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
+const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
 
 /**
  * Οι παραγγελίες μου.
@@ -165,7 +167,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', gap: space.lg,
     backgroundColor: colors.navy,
-    paddingTop: space.xxxl + space.lg,
+    paddingTop: HEADER_TOP,
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     borderBottomLeftRadius: radius.xxl,

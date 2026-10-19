@@ -1,11 +1,28 @@
 import React, { useEffect, useRef } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { bottomSystemSpace, TAB_BAR_CONTENT } from '../../app/(tabs)/_layout'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, ViewStyle, RefreshControl, Animated, KeyboardTypeOptions, Dimensions, useWindowDimensions } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, ViewStyle, RefreshControl, Animated, KeyboardTypeOptions, Dimensions, useWindowDimensions, Platform, StatusBar } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft } from 'lucide-react-native'
 import { router, useSegments } from 'expo-router'
 import theme, { colors, space, radius, font, weight, shadow, icon, touch } from '@/theme'
+
+/**
+ * Ύψος μπάρας κατάστασης συν αναπνοή, με κατώτατο όριο.
+ *
+ * ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ SafeAreaView
+ *   Στο Android τα insets επιστρέφουν 0 όταν η εφαρμογή δεν είναι ρητά
+ *   edge-to-edge, ΕΝΩ το σύστημα σχεδιάζει ούτως ή άλλως κάτω από τη
+ *   μπάρα. Το SafeAreaView τότε δεν προσθέτει τίποτα και η κεφαλίδα
+ *   κάθεται πάνω στην ώρα — σε κάθε οθόνη που το χρησιμοποιεί.
+ *
+ *   Το StatusBar.currentHeight δίνει την πραγματική τιμή στο Android.
+ *   Το κατώτατο 48 είναι όσο ίσχυε στις καρτέλες πριν και δούλευε.
+ */
+const SAFE_TOP = Math.max(
+  (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.sm,
+  48,
+)
 
 const typo = theme.type
 
@@ -101,7 +118,7 @@ export function Screen({
   )
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeAreaView style={[s.screen, { paddingTop: SAFE_TOP }]} edges={[]}>
       {header}
       {body}
     </SafeAreaView>
