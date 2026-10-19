@@ -7,6 +7,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
+import { SocialTermsNotice } from '@/components/LegalLinks'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
 /**
@@ -159,6 +160,9 @@ export default function LoginScreen() {
                   <Text style={[s.socialText, { color: '#fff' }]}>{t('auth.continue_facebook')}</Text>
                 </>}
           </TouchableOpacity>
+
+          {/* Ένα πρώτο «Συνέχεια με Google» δημιουργεί λογαριασμό. */}
+          <SocialTermsNotice />
         </View>
 
         <TouchableOpacity activeOpacity={0.7} style={s.footer}

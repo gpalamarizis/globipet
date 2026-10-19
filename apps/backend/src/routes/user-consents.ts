@@ -66,6 +66,20 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'user_id ή cookie_id απαιτείται' })
     }
 
+    /**
+     * Οι όροι γίνονται αποδεκτοί στην εγγραφή. Μια αλλαγή προτιμήσεων που
+     * ΔΕΝ τους αναφέρει (banner, σελίδα cookies, κινητό) κρατά την
+     * προηγούμενη τιμή — αλλιώς η τελευταία εγγραφή θα έλεγε ψευδώς ότι ο
+     * χρήστης δεν έχει αποδεχτεί τους όρους.
+     */
+    const prev = (terms_accepted === undefined || privacy_accepted === undefined)
+      ? await prisma.userConsent.findFirst({
+          where: req.userId ? { user_id: req.userId } : { cookie_id },
+          orderBy: { created_at: 'desc' },
+          select: { terms_accepted: true, privacy_accepted: true },
+        })
+      : null
+
     const record = await prisma.userConsent.create({
       data: {
         user_id: req.userId,
@@ -74,8 +88,8 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
         analytics: !!analytics,
         marketing: !!marketing,
         functional: !!functional,
-        terms_accepted: !!terms_accepted,
-        privacy_accepted: !!privacy_accepted,
+        terms_accepted: terms_accepted === undefined ? !!prev?.terms_accepted : !!terms_accepted,
+        privacy_accepted: privacy_accepted === undefined ? !!prev?.privacy_accepted : !!privacy_accepted,
         source: source || 'cookie_banner',
         ip_address: (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip,
         user_agent: (req.headers['user-agent'] as string) || null,

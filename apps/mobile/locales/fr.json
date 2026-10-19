@@ -113,7 +113,9 @@
     "dobHint": "Date de naissance — âge minimum 15 ans",
     "dobDay": "JJ",
     "dobMonth": "MM",
-    "dobYear": "AAAA"
+    "dobYear": "AAAA",
+    "role_both": "Les deux",
+    "role_both_desc": "Propriétaire et prestataire"
   },
   "home": {
     "greeting": "Bonjour, {{name}} ! 👋",
@@ -1111,5 +1113,46 @@
     "none": "—",
     "neverViewed": "Jamais consultés",
     "neverViewedHint": "Personne ne les a ouverts — il leur faut peut-être une photo ou un meilleur titre."
+  },
+  "legalConsent": {
+    "accept": "J’accepte les",
+    "terms": "Conditions d’utilisation",
+    "and": "et la",
+    "privacy": "Politique de confidentialité",
+    "required": "Pour créer un compte, vous devez accepter les Conditions d’utilisation et la Politique de confidentialité.",
+    "social": "En continuant avec Google ou Facebook, vous acceptez les"
+  },
+  "legalDocs": {
+    "terms": "Conditions d’utilisation",
+    "privacyPolicy": "Politique de confidentialité",
+    "lastUpdated": "Dernière mise à jour",
+    "contact": "Questions :"
+  },
+  "consents": {
+    "title": "Consentements",
+    "subtitle": "Choisissez ce que vous autorisez. Vous pouvez le modifier à tout moment.",
+    "alwaysOn": "Toujours actifs",
+    "save": "Enregistrer mes choix",
+    "saved": "Vos choix ont été enregistrés",
+    "errorSave": "Impossible d’enregistrer. Veuillez réessayer.",
+    "loginPrompt": "Connectez-vous pour gérer vos consentements",
+    "scopeNote": "Vos choix s’appliquent à votre compte, dans l’application et sur globipet.com.",
+    "lastChanged": "Dernière modification",
+    "necessary": {
+      "title": "Essentiels",
+      "desc": "Connexion, panier, sécurité et réglages de base. La plateforme ne fonctionne pas sans eux, ils ne peuvent donc pas être désactivés."
+    },
+    "analytics": {
+      "title": "Statistiques",
+      "desc": "Données agrégées sur les fonctions utilisées et les difficultés rencontrées, pour améliorer la plateforme."
+    },
+    "marketing": {
+      "title": "Marketing",
+      "desc": "Offres pertinentes sur et en dehors de la plateforme. Sans cela, les publicités restent mais sont aléatoires."
+    },
+    "functional": {
+      "title": "Fonctionnels",
+      "desc": "Mémorisent des choix comme la langue, le thème et les recherches récentes, pour ne pas avoir à les refaire à chaque fois."
+    }
   }
 }

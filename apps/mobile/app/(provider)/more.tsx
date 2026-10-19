@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2 } from 'lucide-react-native'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -23,6 +23,12 @@ const ITEMS = [
   { key: 'insights',  Icon: BarChart3,  labelKey: 'providerTabs.insights',  route: '/(provider)/insights' },
   { key: 'translations', Icon: Languages2, labelKey: 'providerTabs.translations', route: '/(provider)/translations' },
   { key: 'language',  Icon: Languages, labelKey: 'language.title',         route: '/language' },
+  // Ο καθαρός πάροχος δεν βλέπει το καταναλωτικό προφίλ — χωρίς αυτά δεν
+  // είχε πρόσβαση σε εξαγωγή/διαγραφή δεδομένων, συγκαταθέσεις και όρους.
+  { key: 'privacy',   Icon: ShieldCheck, labelKey: 'privacy.title',         route: '/privacy' },
+  { key: 'consents',  Icon: SlidersHorizontal, labelKey: 'consents.title',  route: '/consents' },
+  { key: 'terms',     Icon: FileText,  labelKey: 'legalDocs.terms',         route: '/terms' },
+  { key: 'policy',    Icon: Lock,      labelKey: 'legalDocs.privacyPolicy', route: '/privacy-policy' },
 ]
 
 export default function ProviderMore() {

@@ -95,7 +95,43 @@ const registerSchema = z.object({
   preferred_language: language.optional(),
   phone: phone.optional(),
   birth_date: z.string().optional(),
+  /**
+   * Αποδοχή Όρων Χρήσης και Πολιτικής Απορρήτου — υποχρεωτική.
+   * Ο GDPR (άρθρο 7§1) θέλει να μπορούμε να ΑΠΟΔΕΙΞΟΥΜΕ την αποδοχή· η φόρμα
+   * από μόνη της δεν αρκεί, γιατί οποιοσδήποτε μπορεί να καλέσει το API.
+   */
+  terms_accepted: z.literal(true, {
+    errorMap: () => ({ message: 'Πρέπει να αποδεχτείς τους Όρους Χρήσης και την Πολιτική Απορρήτου' }),
+  }),
 })
+
+/**
+ * Καταγράφει την αποδοχή όρων στο ιστορικό συγκαταθέσεων.
+ *
+ * registration  — ο χρήστης τσέκαρε ρητά το κουτί της φόρμας.
+ * social_signup — νέος λογαριασμός από Google/Facebook, όπου η φόρμα δείχνει
+ *                 «Συνεχίζοντας αποδέχεσαι τους Όρους και την Πολιτική».
+ *
+ * Αποτυχία εδώ δεν ακυρώνει την εγγραφή (ο λογαριασμός έχει ήδη δημιουργηθεί)
+ * αλλά γράφεται στα logs με πρόθεμα [consent], ώστε να εντοπιστεί.
+ */
+async function recordSignupConsent(req: any, userId: string, source: 'registration' | 'social_signup') {
+  try {
+    await prisma.userConsent.create({
+      data: {
+        user_id: userId,
+        necessary: true,
+        terms_accepted: true,
+        privacy_accepted: true,
+        source,
+        ip_address: (req.headers?.['x-forwarded-for'] as string)?.split(',')[0] || req.ip,
+        user_agent: (req.headers?.['user-agent'] as string) || null,
+      },
+    })
+  } catch (err) {
+    console.error('[consent] signup consent not recorded', userId, err)
+  }
+}
 
 const loginSchema = z.object({
   email: emailField,
@@ -255,6 +291,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         ai_trial_started_at: new Date(),
       }
     })
+    await recordSignupConsent(req, user.id, 'registration')
     // Auto-link any provider_staff records pre-created by an employer for
     // this email. If a provider added their employee's email before the
     // employee registered, this links the account so the employee immediately
@@ -375,6 +412,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             ai_trial_started_at: new Date(),
           }
         })
+        await recordSignupConsent(req, user.id, 'social_signup')
       } else if (!user.profile_photo && (verifiedUser.picture || googleUserData.profile_photo)) {
         user = await prisma.user.update({
           where: { id: user.id },
@@ -450,6 +488,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             ai_trial_started_at: new Date(),
           }
         })
+        await recordSignupConsent(req, user.id, 'social_signup')
       } else if (!user.profile_photo && fbPicture) {
         user = await prisma.user.update({
           where: { id: user.id },
@@ -532,6 +571,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             ai_trial_started_at: new Date(),
           }
         })
+        await recordSignupConsent(req, user.id, 'social_signup')
       } else if (!user.profile_photo && googleUser.picture) {
         user = await prisma.user.update({ where: { id: user.id }, data: { profile_photo: googleUser.picture } })
       }
@@ -602,6 +642,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             ai_trial_started_at: new Date(),
           }
         })
+        await recordSignupConsent(req, user.id, 'social_signup')
       }
 
       const { password_hash: _, ...userSafe } = user as any

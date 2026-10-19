@@ -41,6 +41,7 @@ export default function Register() {
   const [birthDate, setBirthDate] = useState('')
   const [role, setRole] = useState<'user' | 'service_provider' | 'both'>('user')
   const [showPass, setShowPass] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,11 +52,16 @@ export default function Register() {
     // Έλεγχος ηλικίας και εδώ, για να μη φτάσει ο χρήστης στο σφάλμα του
     // διακομιστή. Η πραγματική δικλείδα είναι στο backend.
     if (ageFrom(birthDate) < 15) {
-      toast.error('Πρέπει να είσαι τουλάχιστον 15 ετών για να δημιουργήσεις λογαριασμό')
+      toast.error(t('registerExtra.minAgeError'))
+      return
+    }
+    // Ρητή αποδοχή όρων — ο server την απαιτεί και την καταγράφει.
+    if (!acceptTerms) {
+      toast.error(t('legalConsent.required'))
       return
     }
     try {
-      await register({ full_name: fullName, email, password, role, birth_date: birthDate })
+      await register({ full_name: fullName, email, password, role, birth_date: birthDate, terms_accepted: true })
       // If user came from /trial, auto-start the AI trial with the chosen plan
       if (redirectTo === '/trial' && trialPlanId) {
         try {
@@ -105,6 +111,12 @@ export default function Register() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
               {t('authExtraLogin.registerFacebook')}
             </button>
+            <p className="text-[11px] leading-4 text-gray-400 text-center pt-1">
+              {t('legalConsent.social')}{' '}
+              <Link to="/terms" target="_blank" className="text-brand-900 dark:text-yellow-400 hover:underline">{t('legalConsent.terms')}</Link>{' '}
+              {t('legalConsent.and')}{' '}
+              <Link to="/privacy" target="_blank" className="text-brand-900 dark:text-yellow-400 hover:underline">{t('legalConsent.privacy')}</Link>.
+            </p>
           </div>
 
           <div className="relative mb-5">
@@ -138,7 +150,7 @@ export default function Register() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ημερομηνία γέννησης</label>
               <input type="date" className="input" value={birthDate} max={maxBirthDate()}
                 onChange={e => setBirthDate(e.target.value)} required />
-              <p className="text-xs text-gray-400 mt-1">Απαιτείται ελάχιστη ηλικία 15 ετών.</p>
+              <p className="text-xs text-gray-400 mt-1">{t('registerExtra.minAgeHint')}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.iAm')}</label>
@@ -160,6 +172,17 @@ export default function Register() {
                 ))}
               </div>
             </div>
+            {/* Κουτί 16px = ύψος γραμμής του text-xs: στοιχίζεται με την πρώτη γραμμή. */}
+            <label className="flex items-start gap-2.5 pt-1 text-xs leading-4 text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+              <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)}
+                className="h-4 w-4 shrink-0 m-0 rounded border-gray-300 accent-brand-900" />
+              <span>
+                {t('legalConsent.accept')}{' '}
+                <Link to="/terms" target="_blank" className="text-brand-900 dark:text-yellow-400 font-medium hover:underline">{t('legalConsent.terms')}</Link>{' '}
+                {t('legalConsent.and')}{' '}
+                <Link to="/privacy" target="_blank" className="text-brand-900 dark:text-yellow-400 font-medium hover:underline">{t('legalConsent.privacy')}</Link>.
+              </span>
+            </label>
             <button type="submit" disabled={isLoading} className="btn-primary w-full mt-4">
               {isLoading ? t('authExtraLogin.registering') : t('auth.register')}
             </button>

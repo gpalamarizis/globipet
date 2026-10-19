@@ -113,7 +113,9 @@
     "dobHint": "Date of birth — minimum age 15",
     "dobDay": "DD",
     "dobMonth": "MM",
-    "dobYear": "YYYY"
+    "dobYear": "YYYY",
+    "role_both": "Both",
+    "role_both_desc": "Owner and provider"
   },
   "home": {
     "greeting": "Hi, {{name}}! 👋",
@@ -1111,5 +1113,46 @@
     "none": "—",
     "neverViewed": "Never viewed",
     "neverViewedHint": "Nobody has opened these — they may need a photo or a better title."
+  },
+  "legalConsent": {
+    "accept": "I accept the",
+    "terms": "Terms of Service",
+    "and": "and the",
+    "privacy": "Privacy Policy",
+    "required": "To create an account you need to accept the Terms of Service and the Privacy Policy.",
+    "social": "By continuing with Google or Facebook you accept the"
+  },
+  "legalDocs": {
+    "terms": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "lastUpdated": "Last updated",
+    "contact": "Questions:"
+  },
+  "consents": {
+    "title": "Consents",
+    "subtitle": "Choose what you allow. You can change it at any time.",
+    "alwaysOn": "Always on",
+    "save": "Save choices",
+    "saved": "Your choices have been saved",
+    "errorSave": "Could not save. Please try again.",
+    "loginPrompt": "Sign in to manage your consents",
+    "scopeNote": "Your choices apply to your account, in the app and on globipet.com.",
+    "lastChanged": "Last changed",
+    "necessary": {
+      "title": "Essential",
+      "desc": "Sign-in, cart, security and basic settings. The platform cannot work without them, so they cannot be switched off."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "desc": "Aggregate data on which features are used and where people struggle, so we can improve the platform."
+    },
+    "marketing": {
+      "title": "Marketing",
+      "desc": "Relevant offers on and off the platform. Without it, ads still appear but are random."
+    },
+    "functional": {
+      "title": "Functional",
+      "desc": "Remembers choices such as language, theme and recent searches, so you do not have to set them every time."
+    }
   }
 }

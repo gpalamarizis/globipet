@@ -113,7 +113,9 @@
     "dobHint": "Fecha de nacimiento — edad mínima 15",
     "dobDay": "DD",
     "dobMonth": "MM",
-    "dobYear": "AAAA"
+    "dobYear": "AAAA",
+    "role_both": "Ambos",
+    "role_both_desc": "Propietario y proveedor"
   },
   "home": {
     "greeting": "¡Hola, {{name}}! 👋",
@@ -1111,5 +1113,46 @@
     "none": "—",
     "neverViewed": "Sin ninguna vista",
     "neverViewedHint": "Nadie los ha abierto: quizá necesiten una foto o un título mejor."
+  },
+  "legalConsent": {
+    "accept": "Acepto los",
+    "terms": "Términos de Servicio",
+    "and": "y la",
+    "privacy": "Política de Privacidad",
+    "required": "Para crear una cuenta debes aceptar los Términos de Servicio y la Política de Privacidad.",
+    "social": "Al continuar con Google o Facebook aceptas los"
+  },
+  "legalDocs": {
+    "terms": "Términos de Servicio",
+    "privacyPolicy": "Política de Privacidad",
+    "lastUpdated": "Última actualización",
+    "contact": "Preguntas:"
+  },
+  "consents": {
+    "title": "Consentimientos",
+    "subtitle": "Elige qué permites. Puedes cambiarlo cuando quieras.",
+    "alwaysOn": "Siempre activas",
+    "save": "Guardar opciones",
+    "saved": "Tus opciones se han guardado",
+    "errorSave": "No se pudo guardar. Inténtalo de nuevo.",
+    "loginPrompt": "Inicia sesión para gestionar tus consentimientos",
+    "scopeNote": "Tus opciones se aplican a tu cuenta, en la app y en globipet.com.",
+    "lastChanged": "Último cambio",
+    "necessary": {
+      "title": "Necesarias",
+      "desc": "Inicio de sesión, carrito, seguridad y ajustes básicos. La plataforma no funciona sin ellas, por eso no se pueden desactivar."
+    },
+    "analytics": {
+      "title": "Estadísticas",
+      "desc": "Datos agregados sobre qué funciones se usan y dónde hay dificultades, para mejorar la plataforma."
+    },
+    "marketing": {
+      "title": "Marketing",
+      "desc": "Ofertas relevantes dentro y fuera de la plataforma. Sin ellas, los anuncios siguen apareciendo pero son aleatorios."
+    },
+    "functional": {
+      "title": "Funcionales",
+      "desc": "Recuerdan opciones como el idioma, el tema y las búsquedas recientes, para que no tengas que indicarlas cada vez."
+    }
   }
 }

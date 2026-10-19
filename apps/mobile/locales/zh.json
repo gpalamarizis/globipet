@@ -113,7 +113,9 @@
     "dobHint": "出生日期 — 最低年龄 15 岁",
     "dobDay": "日",
     "dobMonth": "月",
-    "dobYear": "年"
+    "dobYear": "年",
+    "role_both": "两者皆是",
+    "role_both_desc": "宠物主人兼服务商"
   },
   "home": {
     "greeting": "你好，{{name}}！👋",
@@ -1111,5 +1113,46 @@
     "none": "—",
     "neverViewed": "从未被浏览",
     "neverViewedHint": "还没有人打开过——也许需要一张照片或更好的标题。"
+  },
+  "legalConsent": {
+    "accept": "我接受",
+    "terms": "服务条款",
+    "and": "和",
+    "privacy": "隐私政策",
+    "required": "创建账户前须接受服务条款和隐私政策。",
+    "social": "使用 Google 或 Facebook 继续即表示您接受"
+  },
+  "legalDocs": {
+    "terms": "服务条款",
+    "privacyPolicy": "隐私政策",
+    "lastUpdated": "最后更新",
+    "contact": "如有疑问："
+  },
+  "consents": {
+    "title": "同意设置",
+    "subtitle": "选择您允许的内容，可随时更改。",
+    "alwaysOn": "始终开启",
+    "save": "保存选择",
+    "saved": "您的选择已保存",
+    "errorSave": "无法保存，请重试。",
+    "loginPrompt": "登录以管理您的同意设置",
+    "scopeNote": "您的选择适用于您的账户，包括应用和 globipet.com。",
+    "lastChanged": "最后更改",
+    "necessary": {
+      "title": "必要",
+      "desc": "登录、购物车、安全和基本设置。缺少这些平台无法运行，因此无法关闭。"
+    },
+    "analytics": {
+      "title": "统计",
+      "desc": "关于功能使用情况和使用难点的汇总数据，用于改进平台。"
+    },
+    "marketing": {
+      "title": "营销",
+      "desc": "平台内外的相关优惠。关闭后广告仍会出现，但为随机内容。"
+    },
+    "functional": {
+      "title": "功能",
+      "desc": "记住语言、主题和最近搜索等选择，无需每次重新设置。"
+    }
   }
 }

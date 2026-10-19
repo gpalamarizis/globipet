@@ -48,7 +48,7 @@ async function recordConsent(state: Omit<ConsentState, 'timestamp'>, source = 'c
     analytics: state.analytics,
     marketing: state.marketing,
     functional: state.functional,
-    terms_accepted: false,
+    // terms_accepted δεν στέλνεται: ο server κρατά την αποδοχή της εγγραφής.
     privacy_accepted: true, // banner acknowledgement implies privacy notice acknowledgement
     source,
   }).catch(() => {})

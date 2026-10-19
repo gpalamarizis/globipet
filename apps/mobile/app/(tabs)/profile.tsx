@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -41,6 +41,9 @@ const MENU = [
   { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
   { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
   { key: 'privacy',    Icon: ShieldCheck, labelKey: 'privacy.title',             route: '/privacy' },
+  { key: 'consents',   Icon: SlidersHorizontal, labelKey: 'consents.title',      route: '/consents' },
+  { key: 'terms',      Icon: FileText,    labelKey: 'legalDocs.terms',           route: '/terms' },
+  { key: 'policy',     Icon: Lock,        labelKey: 'legalDocs.privacyPolicy',   route: '/privacy-policy' },
 ]
 
 export default function ProfileScreen() {

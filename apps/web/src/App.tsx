@@ -84,7 +84,6 @@ const AboutPage         = lazy(() => import('@/pages/AboutPage'))
 const HelpPage          = lazy(() => import('@/pages/HelpPage'))
 const FaqPage           = lazy(() => import('@/pages/FaqPage'))
 const ContactPage       = lazy(() => import('@/pages/ContactPage'))
-const LegalPage         = lazy(() => import('@/pages/LegalPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -202,9 +201,6 @@ export default function App() {
                 <Route path="/help"            element={<HelpPage />} />
                 <Route path="/faq"             element={<FaqPage />} />
                 <Route path="/contact"         element={<ContactPage />} />
-                <Route path="/terms"           element={<LegalPage variant="terms" />} />
-                <Route path="/privacy"         element={<LegalPage variant="privacy" />} />
-                <Route path="/cookies"         element={<LegalPage variant="cookies" />} />
                 <Route path="/social"          element={<Social />} />
                 <Route path="/marketplace"     element={<Marketplace />} />
                 <Route path="/marketplace/:id" element={<ProductDetail />} />

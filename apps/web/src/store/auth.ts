@@ -34,6 +34,8 @@ interface RegisterData {
    * καλούντες — ο έλεγχος είναι ούτως ή άλλως στο backend.
    */
   birth_date?: string
+  /** Ρητή αποδοχή Όρων και Πολιτικής Απορρήτου — ο server την απαιτεί. */
+  terms_accepted?: boolean
 }
 
 // Sync user's preferred language with i18n

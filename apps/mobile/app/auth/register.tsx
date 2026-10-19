@@ -7,6 +7,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Eye, EyeOff, Mail, Lock, User, Sparkles, Calendar } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
+import { TermsCheckbox, SocialTermsNotice } from '@/components/LegalLinks'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
 /**
@@ -37,6 +38,8 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
 const ROLES = [
   { id: 'user',             labelKey: 'auth.role_owner',    subKey: 'auth.role_owner_desc' },
   { id: 'service_provider', labelKey: 'auth.role_provider', subKey: 'auth.role_provider_desc' },
+  // Όπως στο web: ιδιοκτήτης ΚΑΙ πάροχος, βλέπει και τα δύο μέρη.
+  { id: 'both',             labelKey: 'auth.role_both',     subKey: 'auth.role_both_desc' },
 ]
 
 export default function RegisterScreen() {
@@ -46,6 +49,7 @@ export default function RegisterScreen() {
   const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'user' })
   const [dob, setDob] = useState({ d: '', m: '', y: '' })
   const [showPassword, setShowPassword] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [facebookLoading, setFacebookLoading] = useState(false)
 
@@ -91,12 +95,15 @@ export default function RegisterScreen() {
     }
     const age = validateDob()
     if ('error' in age) { Alert.alert(t('common.error'), age.error); return }
+    // Ρητή αποδοχή όρων — ο server την απαιτεί και την καταγράφει.
+    if (!acceptTerms) { Alert.alert(t('common.error'), t('legalConsent.required')); return }
     try {
       await register({
         ...form,
         full_name: form.full_name.trim(),
         email: form.email.trim(),
         birth_date: age.iso,
+        terms_accepted: true,
       })
       router.replace('/(tabs)')
     } catch (err: any) {
@@ -211,6 +218,8 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
+          <TermsCheckbox checked={acceptTerms} onToggle={() => setAcceptTerms(v => !v)} />
+
           <TouchableOpacity style={[s.primaryBtn, busy && s.btnDisabled]}
             activeOpacity={0.85} disabled={busy} onPress={handleRegister}>
             {isLoading
@@ -237,6 +246,8 @@ export default function RegisterScreen() {
               : <><Text style={s.fbF}>f</Text>
                   <Text style={[s.socialText, { color: '#fff' }]}>{t('auth.continue_facebook')}</Text></>}
           </TouchableOpacity>
+
+          <SocialTermsNotice />
         </View>
 
         <TouchableOpacity activeOpacity={0.7} style={s.footer}
