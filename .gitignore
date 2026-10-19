@@ -296,3 +296,5 @@ credentials.json
 *.keystore
 credentials/ 
 *.jks
+
+Claude outputs/
