@@ -109,6 +109,7 @@ model Service {
   bookings            Booking[]
   staff               ProviderStaff[]
   packages            ServicePackage[]
+  official_shelter    OfficialShelter?
 
   @@map("services")
 }
@@ -1560,4 +1561,41 @@ model ProviderVerificationRequest {
 
   @@index([status, created_at], map: "provider_verification_status_idx")
   @@map("provider_verification_requests")
+}
+
+/// Επίσημο Μητρώο Καταφυγίων (ΥΠΕΣ). Δεδομένα αναφοράς — δεν είναι πάροχοι.
+/// Ένα καταφύγιο γίνεται πάροχος μόνο αν κάνει εγγραφή και «διεκδικήσει»
+/// την εγγραφή του (claimed_service_id).
+model OfficialShelter {
+  id                 String    @id @default(uuid())
+  /// Σταθερό κλειδί για idempotent seed: ο επίσημος κωδικός ELxxSHExxx αν
+  /// υπάρχει, αλλιώς hash(δικαιούχος|επωνυμία|δήμος).
+  registry_key       String    @unique @db.VarChar(64)
+  official_code      String?   @unique @db.VarChar(20)
+  code_raw           String?   @db.VarChar(100)
+  name               String
+  /// Ιδιωτικό πεδίο. Όταν είναι φυσικό πρόσωπο ΔΕΝ επιστρέφεται ποτέ από το API.
+  operator_name      String
+  operator_is_person Boolean   @default(false)
+  /// municipality | association | private | inter_municipal
+  category           String    @db.VarChar(30)
+  municipality       String    @db.VarChar(255)
+  address            String?
+  latitude           Float?
+  longitude          Float?
+  phone              String?   @db.VarChar(100)
+  email              String?   @db.VarChar(255)
+  website            String?   @db.VarChar(255)
+  is_active          Boolean   @default(true)
+  source             String    @db.VarChar(255)
+  source_date        DateTime  @db.Date
+  claimed_service_id String?   @unique
+  claimed_at         DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  claimed_service    Service?  @relation(fields: [claimed_service_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([municipality])
+  @@index([category])
+  @@map("official_shelters")
 }
