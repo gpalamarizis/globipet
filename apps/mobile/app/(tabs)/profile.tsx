@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -39,11 +39,14 @@ const MENU = [
   { key: 'telehealth', Icon: Stethoscope, labelKey: 'profile.menu.telehealth',       route: '/telehealth' },
   { key: 'wishlist',   Icon: Heart,       labelKey: 'wishlist.title',            route: '/wishlist' },
   { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
+  { key: 'notifications', Icon: Bell,     labelKey: 'account.notifications',     route: '/notification-settings' },
+  { key: 'password',   Icon: KeyRound,    labelKey: 'account.changePassword',    route: '/change-password' },
   { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
   { key: 'privacy',    Icon: ShieldCheck, labelKey: 'privacy.title',             route: '/privacy' },
   { key: 'consents',   Icon: SlidersHorizontal, labelKey: 'consents.title',      route: '/consents' },
   { key: 'terms',      Icon: FileText,    labelKey: 'legalDocs.terms',           route: '/terms' },
   { key: 'policy',     Icon: Lock,        labelKey: 'legalDocs.privacyPolicy',   route: '/privacy-policy' },
+  { key: 'help',       Icon: LifeBuoy,    labelKey: 'account.menuHelp',          route: '/help' },
 ]
 
 export default function ProfileScreen() {

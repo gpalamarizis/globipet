@@ -60,8 +60,12 @@ export default function ProviderTabLayout() {
       {/* Οθόνες του χώρου παρόχου που ΔΕΝ είναι καρτέλες: ανοίγουν από
           μέσα και δεν πρέπει να εμφανίζονται στη μπάρα. */}
       <Tabs.Screen name="new-service" options={{ href: null }} />
-      <Tabs.Screen name="new-staff" options={{ href: null }} />
-      <Tabs.Screen name="new-product" options={{ href: null }} />
+      <Tabs.Screen name="staff-form" options={{ href: null }} />
+      <Tabs.Screen name="product-form" options={{ href: null }} />
+      <Tabs.Screen name="service-form" options={{ href: null }} />
+      <Tabs.Screen name="packages" options={{ href: null }} />
+      <Tabs.Screen name="package-form" options={{ href: null }} />
+      <Tabs.Screen name="package-catalog" options={{ href: null }} />
       <Tabs.Screen name="new-campaign" options={{ href: null }} />
       <Tabs.Screen name="products" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />

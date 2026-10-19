@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Mail, Phone, MapPin, Send, MessageSquare } from 'lucide-react'
+import { Mail, MapPin, Send, MessageSquare } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -52,13 +52,6 @@ export default function ContactPage() {
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('contact.email')}</h3>
               <a href="mailto:info@globipet.com" className="text-sm text-brand-900 dark:text-yellow-400 hover:underline">info@globipet.com</a>
-            </div>
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-3">
-                <Phone size={20} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('contact.phone')}</h3>
-              <a href="tel:+302100000000" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">+30 210 000 0000</a>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
               <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-3">

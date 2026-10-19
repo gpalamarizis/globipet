@@ -2,6 +2,27 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
+/**
+ * Πεδία που ορίζει ο ίδιος ο πάροχος.
+ *
+ * ΓΙΑΤΙ: το POST/PATCH περνούσαν ΟΛΟ το σώμα στη βάση. Ένας πάροχος μπορούσε
+ * να στείλει is_verified: true, rating: 5, reviews_count: 900 και να
+ * εμφανιστεί ως επαληθευμένος με τέλεια βαθμολογία. Τα πεδία αυτά τα ορίζει
+ * η πλατφόρμα (έλεγχος, κριτικές), όχι ο πάροχος. Ο admin εξαιρείται.
+ */
+const SERVICE_EDITABLE = new Set([
+  'title', 'description', 'city', 'location', 'latitude', 'longitude', 'home_visits',
+  'emergency_available', 'years_experience', 'specializations', 'pet_types', 'languages',
+  'is_active', 'available_days', 'available_since', 'contact_email', 'contact_phone',
+  'image_url', 'cover_image', 'is_available_now', 'price', 'provider_name', 'service_type',
+  'category', 'country',
+])
+function pickService(body: any, isAdmin: boolean) {
+  const src = body ?? {}
+  if (isAdmin) { const { id: _i, created_at: _c, updated_at: _u, ...rest } = src; return rest }
+  return Object.fromEntries(Object.entries(src).filter(([k]) => SERVICE_EDITABLE.has(k)))
+}
+
 const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (req: any) => {
     const lang = getRequestLang(req)
@@ -25,6 +46,48 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
   // Οι υπηρεσίες του συνδεδεμένου παρόχου.
   // ΠΡΟΣΟΧΗ: πρέπει να δηλώνεται ΠΡΙΝ από το '/:id', αλλιώς το parametric
   // route πιάνει το "my" ως αναγνωριστικό υπηρεσίας.
+  /**
+   * Μαζική εισαγωγή υπηρεσιών από Excel/CSV — για τον ΙΔΙΟ τον πάροχο.
+   *
+   * Η καρτέλα Import του web καλούσε /services/bulk, που δεν υπήρχε (404):
+   * η εισαγωγή δεν δούλεψε ποτέ. Το /admin/bulk-import είναι μόνο για admin.
+   */
+  app.post('/bulk', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
+    const { email, full_name, role } = req.user as any
+    if (role !== 'admin' && role !== 'service_provider' && role !== 'both') {
+      return reply.code(403).send({ message: 'Μόνο πάροχοι μπορούν να δημιουργούν υπηρεσίες' })
+    }
+    const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 500) : []
+    if (items.length === 0) return reply.code(400).send({ message: 'Δεν υπάρχουν εγγραφές για εισαγωγή' })
+    const first = await prisma.service.findFirst({ where: { provider_email: email }, orderBy: { created_at: 'asc' } })
+    let created = 0
+    const failed: { row: number; message: string }[] = []
+    for (const [i, it] of items.entries()) {
+      const title = String(it?.name ?? '').trim()
+      const price = Number(it?.price)
+      if (!title) { failed.push({ row: i + 2, message: 'Λείπει όνομα' }); continue }
+      try {
+        await prisma.service.create({
+          data: {
+            provider_email: email,
+            provider_name: first?.provider_name || full_name,
+            title,
+            description: String(it?.description ?? '').trim() || title,
+            price: Number.isFinite(price) && price >= 0 ? price : 0,
+            service_type: String(it?.type || it?.category || first?.service_type || 'other'),
+            category: String(it?.type || it?.category || first?.category || first?.service_type || 'other'),
+            city: String(it?.city || first?.city || ''),
+            is_active: true,
+          },
+        })
+        created++
+      } catch (err: any) {
+        failed.push({ row: i + 2, message: 'Μη έγκυρη εγγραφή' })
+      }
+    }
+    return { count: created, failed }
+  })
+
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const email = (req.user as any).email
     const data = await prisma.service.findMany({
@@ -49,7 +112,8 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     // Callers cannot spoof provider_email; only admins can set it explicitly.
     const { provider_email: bodyOwner, ...body } = req.body ?? {}
     const provider_email = (role === 'admin' && bodyOwner) || email
-    return prisma.service.create({ data: { ...body, provider_email, provider_name: body.provider_name || full_name } })
+    const clean: any = pickService(body, role === 'admin')
+    return prisma.service.create({ data: { ...clean, provider_email, provider_name: clean.provider_name || full_name } })
   })
 
   // Επιβεβαιώνει ότι η υπηρεσία ανήκει στον συνδεδεμένο χρήστη.
@@ -70,9 +134,8 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {
     if (!(await assertOwner(req, reply))) return
-    const data = { ...req.body }
+    const data: any = pickService(req.body, (req.user as any).role === 'admin')
     delete data.provider_email        // δεν αλλάζει ιδιοκτήτη
-    delete data.id
     return prisma.service.update({ where: { id: req.params.id }, data })
   })
 

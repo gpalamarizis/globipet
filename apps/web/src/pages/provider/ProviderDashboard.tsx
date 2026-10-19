@@ -48,6 +48,8 @@ function ImportTab() {
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<any[]>([])
+  // ΟΛΕΣ οι γραμμές του αρχείου. Πριν εισάγονταν μόνο οι 5 της προεπισκόπησης.
+  const [rows, setRows] = useState<any[]>([])
   const [columns, setColumns] = useState<string[]>([])
   const [importType, setImportType] = useState<'products' | 'services'>('products')
   const [importing, setImporting] = useState(false)
@@ -66,11 +68,15 @@ function ImportTab() {
         if (data.length > 0) {
           const headers = data[0].map(String)
           setColumns(headers)
-          setPreview(data.slice(1, 6).map(row => {
-            const obj: any = {}
-            headers.forEach((h, i) => obj[h] = row[i] ?? '')
-            return obj
-          }))
+          const all = data.slice(1)
+            .filter(row => row.some(c => String(c ?? '').trim() !== ''))
+            .map(row => {
+              const obj: any = {}
+              headers.forEach((h, i) => obj[h] = row[i] ?? '')
+              return obj
+            })
+          setRows(all)
+          setPreview(all.slice(0, 5))
         }
       } else if (ext === 'docx' || ext === 'doc') {
         // For Word files, show manual entry guidance
@@ -84,21 +90,25 @@ function ImportTab() {
   }
 
   const doImport = async () => {
-    if (!preview.length) return
+    if (!rows.length) return
     setImporting(true)
     try {
       const endpoint = importType === 'products' ? '/products/bulk' : '/services/bulk'
-      const items = preview.map(row => ({
+      const items = rows.map(row => ({
         name: row[t('providerDash.name')] || row['name'] || row['Name'] || Object.values(row)[0],
-        price: parseFloat(row[t('providerDash.price')] || row['price'] || row['Price'] || '0'),
+        price: parseFloat(String(row[t('providerDash.price')] || row['price'] || row['Price'] || '0').replace(',', '.')),
         description: row[t('providerDash.description')] || row['description'] || row['Description'] || '',
         category: row[t('providerDash.category')] || row['category'] || row['Category'] || 'other',
+        type: row[t('providerDash.type')] || row['type'] || row['Type'] || undefined,
+        stock: row[t('providerDash.stock')] || row['stock'] || row['Stock'] || undefined,
       }))
-      await api.post(endpoint, { items })
-      toast.success(t('providerDash.importedOk', { count: items.length }))
+      const res = await api.post(endpoint, { items })
+      const failed = res.data?.failed?.length ?? 0
+      toast.success(t('providerDash.importedOk', { count: res.data?.count ?? items.length }))
+      if (failed > 0) toast.error(t('providerEdit.importFailedRows', { count: failed }))
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
       queryClient.invalidateQueries({ queryKey: ['provider-services'] })
-      setFile(null); setPreview([]); setColumns([])
+      setFile(null); setPreview([]); setRows([]); setColumns([])
     } catch {
       toast.error(t('providerDash.errImport'))
     } finally {
@@ -167,7 +177,7 @@ function ImportTab() {
       {preview.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white">{t('providerDash.previewCount', { count: preview.length })}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('providerDash.previewCount', { count: rows.length })}</h3>
             <div className="flex items-center gap-2 text-xs text-green-600">
               <CheckCircle size={14} />{t('providerDash.readyToImport')}</div>
           </div>
@@ -185,7 +195,7 @@ function ImportTab() {
           </div>
           <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end">
             <button onClick={doImport} disabled={importing} className="btn-primary flex items-center gap-2">
-              <Upload size={16} /> {importing ? t('providerDash.importing') : t('providerDash.importRecords', { count: preview.length })}
+              <Upload size={16} /> {importing ? t('providerDash.importing') : t('providerDash.importRecords', { count: rows.length })}
             </button>
           </div>
         </div>
@@ -472,8 +482,11 @@ function ServicesTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">{services.length} {t('providerDash.tabServices')}</p>
+        <div className="flex gap-2">
+        <Link to="/provider/packages" className="btn-secondary flex items-center gap-2 text-sm">{t('providerPkg.title')}</Link>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
           <Plus size={16} />{t('providerDash.newService')}</button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -533,7 +546,7 @@ function ServicesTab() {
             </div>
             <p className="font-bold text-gray-900 dark:text-white">€{s.price}</p>
             <div className="flex gap-1">
-              <button className="btn-ghost p-2"><Edit size={14} className="text-gray-400"/></button>
+              <Link to="/provider/packages" className="btn-ghost p-2" title={t('providerPkg.title')} aria-label={t('providerPkg.edit')}><Edit size={14} className="text-gray-400"/></Link>
               <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteService.mutate(s.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
             </div>
           </div>
@@ -549,7 +562,11 @@ function ProductsTab() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: 'food', stock: '0' })
+  // null = νέο προϊόν. Πριν το κουμπί «επεξεργασία» δεν έκανε τίποτα.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const EMPTY = { name: '', description: '', price: '', sale_price: '', category: 'food', stock: '0', brand: '', image_url: '' }
+  const [form, setForm] = useState(EMPTY)
+  const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const { data: products = [], isLoading } = useQuery({
@@ -558,48 +575,105 @@ function ProductsTab() {
     enabled: !!user,
   })
 
-  const addProduct = useMutation({
-    mutationFn: () => api.post('/products', { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) }),
+  const openNew = () => { setEditingId(null); setForm(EMPTY); setShowForm(true) }
+  const openEdit = (p: any) => {
+    setEditingId(p.id)
+    setForm({
+      name: p.name ?? '', description: p.description ?? '', price: String(p.price ?? ''),
+      sale_price: p.sale_price != null ? String(p.sale_price) : '', category: p.category || 'other',
+      stock: String(p.stock ?? 0), brand: p.brand ?? '', image_url: p.image_url || p.images?.[0] || '',
+    })
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const price = parseFloat(form.price)
+  const sale = form.sale_price.trim() ? parseFloat(form.sale_price) : null
+  const valid = !!form.name.trim() && price > 0 && (sale === null || (sale > 0 && sale < price))
+
+  const payload = () => ({
+    name: form.name.trim(), description: form.description.trim() || form.name.trim(),
+    category: form.category, price, sale_price: sale, stock: parseInt(form.stock) || 0,
+    brand: form.brand.trim() || null, image_url: form.image_url || null,
+    images: form.image_url ? [form.image_url] : [],
+  })
+
+  const saveProduct = useMutation({
+    mutationFn: () => editingId ? api.patch(`/products/${editingId}`, payload()) : api.post('/products', payload()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-products'] })
-      toast.success(t('providerDash.productAdded'))
-      setShowForm(false)
-      setForm({ name: '', description: '', price: '', category: 'food', stock: '0' })
+      toast.success(editingId ? t('providerEdit.productUpdated') : t('providerDash.productAdded'))
+      setShowForm(false); setEditingId(null); setForm(EMPTY)
     },
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerEdit.errSave')),
   })
 
   const deleteProduct = useMutation({
     mutationFn: (id: string) => api.delete(`/products/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['provider-products'] }); toast.success(t('providerDash.productDeleted')) },
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('providerEdit.errSave')),
   })
+
+  const uploadPhoto = async (file: File) => {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await api.post('/upload?folder=products', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const url = r.data?.url || r.data?.file_url
+      if (url) setForm(f => ({ ...f, image_url: url }))
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || t('providerEdit.errUpload'))
+    } finally { setUploading(false) }
+  }
+
+  const CATEGORIES = ['food', 'toys', 'accessories', 'health', 'grooming', 'training', 'housing', 'other']
+  const label = 'text-xs font-medium text-gray-500 mb-1 block'
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">{products.length} {t('providerDash.tabProducts')}</p>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
+        <button onClick={() => (showForm && !editingId ? setShowForm(false) : openNew())} className="btn-primary flex items-center gap-2 text-sm">
           <Plus size={16} />{t('providerDash.newProduct')}</button>
       </div>
 
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="card p-5">
-            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('providerDash.newProduct')}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.name')}</label><input className="input" placeholder={t('providerDash.phProduct')} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.category')}</label>
+            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">
+              {editingId ? t('providerEdit.editProduct') : t('providerDash.newProduct')}
+            </h3>
+            <div className="flex gap-4 items-start mb-3">
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="w-24 h-24 shrink-0 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center text-xs text-gray-400 hover:border-brand-300">
+                {form.image_url
+                  ? <img src={form.image_url} alt="" className="w-full h-full object-cover" />
+                  : <span className="flex flex-col items-center gap-1"><Upload size={18} />{uploading ? t('providerEdit.uploading') : t('providerEdit.addPhoto')}</span>}
+              </button>
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = '' }} />
+              <div className="flex-1 grid grid-cols-1 gap-3">
+                <div><label className={label}>{t('providerDash.name')}</label><input className="input" placeholder={t('providerDash.phProduct')} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} /></div>
+                <div><label className={label}>{t('providerEdit.brand')}</label><input className="input" value={form.brand} onChange={e => setForm(f => ({...f, brand: e.target.value}))} /></div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div><label className={label}>{t('providerDash.category')}</label>
                 <select className="input" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                  {['food','toys','accessories','health','grooming','training','housing','other'].map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{t(`marketplace.categories.${c}`, c)}</option>)}
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.priceEur')}</label><input className="input" type="number" placeholder="15.99" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.stock')}</label><input className="input" type="number" placeholder="100" value={form.stock} onChange={e => setForm(f => ({...f, stock: e.target.value}))} /></div>
-              <div><label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerDash.description')}</label><textarea className="input resize-none" rows={2} placeholder={t('providerDash.phProductDesc')} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
+              <div><label className={label}>{t('providerDash.priceEur')}</label><input className="input" type="number" step="0.01" placeholder="15.99" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} /></div>
+              <div><label className={label}>{t('providerEdit.salePrice')}</label><input className="input" type="number" step="0.01" placeholder="—" value={form.sale_price} onChange={e => setForm(f => ({...f, sale_price: e.target.value}))} /></div>
+              <div><label className={label}>{t('providerDash.stock')}</label><input className="input" type="number" placeholder="100" value={form.stock} onChange={e => setForm(f => ({...f, stock: e.target.value}))} /></div>
+              <div className="col-span-2 sm:col-span-4"><label className={label}>{t('providerDash.description')}</label><textarea className="input resize-none" rows={2} placeholder={t('providerDash.phProductDesc')} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
             </div>
+            {sale !== null && !(sale < price) && <p className="text-xs text-red-500 mt-2">{t('providerEdit.saleTooHigh')}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">{t('providerDash.cancel')}</button>
-              <button onClick={() => addProduct.mutate()} disabled={!form.name || !form.price || addProduct.isPending} className="btn-primary flex-1">
-                {addProduct.isPending ? t('providerDash.saving') : t('providerDash.save')}
+              <button onClick={() => { setShowForm(false); setEditingId(null) }} className="btn-secondary flex-1">{t('providerDash.cancel')}</button>
+              <button onClick={() => saveProduct.mutate()} disabled={!valid || saveProduct.isPending || uploading} className="btn-primary flex-1">
+                {saveProduct.isPending ? t('providerDash.saving') : t('providerDash.save')}
               </button>
             </div>
           </motion.div>
@@ -612,20 +686,20 @@ function ProductsTab() {
           <div className="card p-10 text-center">
             <Package size={32} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">{t('providerDash.noProducts')}</p>
-            <button onClick={() => setShowForm(true)} className="btn-primary mt-4 text-sm">{t('providerDash.addFirstProduct')}</button>
+            <button onClick={openNew} className="btn-primary mt-4 text-sm">{t('providerDash.addFirstProduct')}</button>
           </div>
         ) : products.map((p: any) => (
           <div key={p.id} className="card p-4 flex items-center gap-4">
-            {p.images?.[0] ? <img src={p.images[0]} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
-              : <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-xl">📦</div>}
-            <div className="flex-1">
-              <p className="font-medium text-gray-900 dark:text-white">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.category} · {t('providerDash.stock')}: {p.stock ?? '—'}</p>
+            {(p.image_url || p.images?.[0]) ? <img src={p.image_url || p.images[0]} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+              : <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0"><Package size={18} className="text-gray-400" /></div>}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+              <p className="text-xs text-gray-500">{t(`marketplace.categories.${p.category}`, p.category)} · {t('providerDash.stock')}: {p.stock ?? '—'}</p>
             </div>
-            <p className="font-bold text-gray-900 dark:text-white">€{p.price}</p>
+            <p className="font-bold text-gray-900 dark:text-white">€{Number(p.sale_price ?? p.price ?? 0).toFixed(2)}</p>
             <div className="flex gap-1">
-              <button className="btn-ghost p-2"><Edit size={14} className="text-gray-400"/></button>
-              <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteProduct.mutate(p.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
+              <button onClick={() => openEdit(p)} className="btn-ghost p-2" aria-label={t('providerEdit.editProduct')}><Edit size={14} className="text-gray-400"/></button>
+              <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteProduct.mutate(p.id) }} className="btn-ghost p-2" aria-label={t('providerPkg.delete')}><Trash2 size={14} className="text-red-400"/></button>
             </div>
           </div>
         ))}

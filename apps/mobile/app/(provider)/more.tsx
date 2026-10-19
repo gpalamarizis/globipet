@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock } from 'lucide-react-native'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -22,6 +22,8 @@ const ITEMS = [
   { key: 'calendar',  Icon: CalendarDays, labelKey: 'providerTabs.calendar', route: '/(provider)/calendar' },
   { key: 'insights',  Icon: BarChart3,  labelKey: 'providerTabs.insights',  route: '/(provider)/insights' },
   { key: 'translations', Icon: Languages2, labelKey: 'providerTabs.translations', route: '/(provider)/translations' },
+  { key: 'notifications', Icon: Bell,  labelKey: 'account.notifications',  route: '/notification-settings' },
+  { key: 'password',  Icon: KeyRound,  labelKey: 'account.changePassword',  route: '/change-password' },
   { key: 'language',  Icon: Languages, labelKey: 'language.title',         route: '/language' },
   // Ο καθαρός πάροχος δεν βλέπει το καταναλωτικό προφίλ — χωρίς αυτά δεν
   // είχε πρόσβαση σε εξαγωγή/διαγραφή δεδομένων, συγκαταθέσεις και όρους.
@@ -29,6 +31,7 @@ const ITEMS = [
   { key: 'consents',  Icon: SlidersHorizontal, labelKey: 'consents.title',  route: '/consents' },
   { key: 'terms',     Icon: FileText,  labelKey: 'legalDocs.terms',         route: '/terms' },
   { key: 'policy',    Icon: Lock,      labelKey: 'legalDocs.privacyPolicy', route: '/privacy-policy' },
+  { key: 'help',      Icon: LifeBuoy,  labelKey: 'account.menuHelp',        route: '/help' },
 ]
 
 export default function ProviderMore() {

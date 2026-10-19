@@ -230,6 +230,15 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       if (!service || service.provider_email !== userEmail) {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
       }
+      // Ίδιος κανόνας με το DELETE /services/:id: υπηρεσία με κρατήσεις δεν
+      // σβήνεται — από εδώ περνούσε χωρίς έλεγχο.
+      const bookings = await prisma.booking.count({ where: { service_id: req.params.id } })
+      if (bookings > 0) {
+        return reply.code(409).send({
+          message: 'Η υπηρεσία έχει κρατήσεις και δεν διαγράφεται. Απενεργοποίησέ την αντί να τη σβήσεις.',
+          code: 'SERVICE_HAS_BOOKINGS', bookings,
+        })
+      }
       await prisma.service.delete({ where: { id: req.params.id } })
       return reply.code(204).send()
     })
@@ -274,6 +283,11 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
       }
       const body = req.body as any
+      // Αρνητική ή μη αριθμητική τιμή θα περνούσε σε κρατήσεις και προμήθειες.
+      if (body.price !== undefined) {
+        const p = parseFloat(body.price)
+        if (!Number.isFinite(p) || p < 0) return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
+      }
       const updated = await prisma.servicePackage.update({
         where: { id: req.params.id },
         data: {

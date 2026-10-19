@@ -1,16 +1,17 @@
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { Mail, MessageSquare, BookOpen, HelpCircle, Phone, ArrowRight } from 'lucide-react'
+import { Mail, MessageSquare, BookOpen, HelpCircle, ArrowRight } from 'lucide-react'
 
 export default function HelpPage() {
   const { t } = useTranslation()
 
   const channels = [
-    { icon: MessageSquare, title: t('help.liveChat'), desc: t('help.liveChatDesc'), action: t('help.startChat'), href: '#' },
+    // Το «Live Chat» οδηγούσε στο «#» — δεν υπάρχει τέτοια υπηρεσία. Στη θέση
+    // του η φόρμα επικοινωνίας, όπως και στο κινητό.
+    { icon: MessageSquare, title: t('account.contactForm'), desc: t('account.contactFormDesc'), action: t('contact.send'), href: '/contact' },
     { icon: Mail, title: t('help.email'), desc: t('help.emailDesc'), action: 'support@globipet.com', href: 'mailto:support@globipet.com' },
     { icon: BookOpen, title: t('help.faq'), desc: t('help.faqDesc'), action: t('help.browseFaq'), href: '/faq' },
-    { icon: Phone, title: t('help.phone'), desc: t('help.phoneDesc'), action: '+30 210 000 0000', href: 'tel:+302100000000' },
   ]
 
   const topics = [
@@ -35,7 +36,7 @@ export default function HelpPage() {
       <section className="py-12 px-4">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">{t('help.contactChannels')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {channels.map((c) => (
               <a key={c.title} href={c.href}
                 className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-800 group">

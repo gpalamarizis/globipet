@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
+import * as SecureStore from 'expo-secure-store'
 import { api } from './api'
 
 /**
@@ -101,6 +102,8 @@ export async function getPushToken(): Promise<string | null> {
  */
 export async function registerPushToken(): Promise<void> {
   try {
+    // Ο χρήστης τις απενεργοποίησε από την εφαρμογή: σεβόμαστε την επιλογή.
+    if (await isPushOptedOut()) return
     const token = await getPushToken()
     if (!token) return
     await api.post('/notifications/push/register', {
@@ -182,4 +185,60 @@ export function usePushRouting(): void {
 
     return () => { alive = false; sub.remove() }
   }, [router])
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Ρύθμιση από τον χρήστη — οθόνη «Ειδοποιήσεις» (αντίστοιχη της κάρτας web)
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Ο χρήστης που απενεργοποίησε τις ειδοποιήσεις από την εφαρμογή ΔΕΝ πρέπει
+ * να ξαναγραφτεί σιωπηλά στην επόμενη σύνδεση ή εκκίνηση. Η επιλογή του
+ * κρατιέται στη συσκευή — είναι ρύθμιση ΑΥΤΗΣ της συσκευής, όπως και στο web.
+ */
+const OPT_OUT_KEY = 'globipet_push_optout'
+
+export async function isPushOptedOut(): Promise<boolean> {
+  try { return (await SecureStore.getItemAsync(OPT_OUT_KEY)) === '1' } catch { return false }
+}
+
+export type PushState = 'unsupported' | 'denied' | 'off' | 'on'
+
+/** Κατάσταση χωρίς να εμφανιστεί ποτέ διάλογος άδειας. */
+export async function getPushState(): Promise<PushState> {
+  if (!Device.isDevice) return 'unsupported'
+  try {
+    const perm = await Notifications.getPermissionsAsync()
+    if (!perm.granted && !perm.canAskAgain) return 'denied'
+    if (!perm.granted || (await isPushOptedOut())) return 'off'
+    return 'on'
+  } catch {
+    return 'unsupported'
+  }
+}
+
+/** Ενεργοποίηση ή απενεργοποίηση για αυτή τη συσκευή. Επιστρέφει τη νέα κατάσταση. */
+export async function setPushEnabled(on: boolean): Promise<PushState> {
+  if (on) {
+    try { await SecureStore.deleteItemAsync(OPT_OUT_KEY) } catch {}
+    const token = await getPushToken().catch(() => null)
+    if (!token) return getPushState()
+    try {
+      await api.post('/notifications/push/register', {
+        token,
+        platform: Platform.OS,
+        device_name: Device.deviceName || Device.modelName || undefined,
+      })
+    } catch {
+      return 'off'
+    }
+    return 'on'
+  }
+  // Για να σβηστεί η συσκευή στον server χρειάζεται το τοκεν· αν η άδεια
+  // υπάρχει, το getPushToken το δίνει χωρίς διάλογο.
+  const perm = await Notifications.getPermissionsAsync().catch(() => null)
+  if (perm?.granted) await getPushToken().catch(() => null)
+  await unregisterPushToken()
+  try { await SecureStore.setItemAsync(OPT_OUT_KEY, '1') } catch {}
+  return 'off'
 }

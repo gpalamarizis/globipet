@@ -303,11 +303,15 @@ export default function Profile() {
       {!hasGoogleAuth && (
         <div className="mt-6">
           <ChangeMyPasswordCard />
-
-          {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων */}
-          <MyDataCard />
         </div>
       )}
+
+      {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων. ΕΚΤΟΣ του
+          ελέγχου Google: το δικαίωμα ισχύει για κάθε λογαριασμό, όπως και
+          στο κινητό. */}
+      <div className="mt-6">
+        <MyDataCard />
+      </div>
 
       {/* Logout */}
       <button onClick={logout} className="w-full mt-6 flex items-center justify-center gap-2 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">

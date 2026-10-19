@@ -233,6 +233,7 @@ function StaffEditor({
     phone: staff?.phone ?? '',
     specialties: (staff?.specialties ?? []).join(', '),
     is_active: staff?.is_active ?? true,
+    accepts_telehealth: (staff as any)?.accepts_telehealth ?? false,
   })
 
   const save = useMutation({
@@ -245,6 +246,7 @@ function StaffEditor({
         phone: form.phone.trim() || undefined,
         specialties: form.specialties.split(',').map(s => s.trim()).filter(Boolean),
         is_active: form.is_active,
+        accepts_telehealth: form.accepts_telehealth,
       }
       if (isNew) {
         payload.service_id = form.service_id
@@ -317,6 +319,10 @@ function StaffEditor({
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2">
             <input type="checkbox" checked={form.is_active} onChange={e => setField('is_active', e.target.checked)} />
             {t('providerStaff.isActive')}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2">
+            <input type="checkbox" checked={form.accepts_telehealth} onChange={e => setField('accepts_telehealth', e.target.checked)} />
+            {t('providerEdit.acceptsTelehealth')}
           </label>
         </div>
 

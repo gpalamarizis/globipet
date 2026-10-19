@@ -3,6 +3,24 @@ import prisma from '../lib/prisma.js'
 import { createHash } from 'node:crypto'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
+/**
+ * Πεδία προϊόντος που ορίζει ο πάροχος.
+ *
+ * ΓΙΑΤΙ: όλο το σώμα πήγαινε στη βάση — rating, reviews_count, views_count,
+ * is_featured ορίζονταν από τον ίδιο τον πωλητή. Και κάθε άγνωστο πεδίο
+ * (π.χ. το is_active που έστελνε το κινητό) έριχνε την εγγραφή με σφάλμα
+ * Prisma: η προσθήκη προϊόντος από το κινητό αποτύγχανε ΠΑΝΤΑ.
+ */
+const PRODUCT_EDITABLE = new Set([
+  'name', 'description', 'price', 'category', 'brand', 'image_url', 'images', 'stock',
+  'target_species', 'discount_percentage', 'sale_price', 'is_subscribable',
+])
+const PRODUCT_ADMIN = new Set([...PRODUCT_EDITABLE, 'is_featured', 'rating', 'reviews_count'])
+function pickProduct(body: any, isAdmin: boolean) {
+  const allow = isAdmin ? PRODUCT_ADMIN : PRODUCT_EDITABLE
+  return Object.fromEntries(Object.entries(body ?? {}).filter(([k]) => allow.has(k)))
+}
+
 const productsRoutes: FastifyPluginAsync = async (app) => {
 
   /** Load a product and verify the caller can mutate it. */
@@ -65,6 +83,41 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
    * Admins see all products; providers see only their own.
    * Returns raw (untranslated) data so the owner can edit source content.
    */
+  /**
+   * Μαζική εισαγωγή προϊόντων από Excel/CSV — για τον ίδιο τον πάροχο.
+   * Η καρτέλα Import του web καλούσε /products/bulk, που δεν υπήρχε (404).
+   */
+  app.post('/bulk', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    if (!assertCanSell(req, reply)) return
+    const { email } = req.user as any
+    const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 500) : []
+    if (items.length === 0) return reply.code(400).send({ message: 'Δεν υπάρχουν εγγραφές για εισαγωγή' })
+    let created = 0
+    const failed: { row: number; message: string }[] = []
+    for (const [i, it] of items.entries()) {
+      const name = String(it?.name ?? '').trim()
+      const price = Number(it?.price)
+      if (!name) { failed.push({ row: i + 2, message: 'Λείπει όνομα' }); continue }
+      if (!Number.isFinite(price) || price <= 0) { failed.push({ row: i + 2, message: 'Μη έγκυρη τιμή' }); continue }
+      try {
+        await prisma.product.create({
+          data: {
+            provider_email: email,
+            name,
+            description: String(it?.description ?? '').trim() || name,
+            price,
+            category: String(it?.category || 'other'),
+            stock: Math.max(0, parseInt(String(it?.stock ?? '0'), 10) || 0),
+          },
+        })
+        created++
+      } catch {
+        failed.push({ row: i + 2, message: 'Μη έγκυρη εγγραφή' })
+      }
+    }
+    return { count: created, failed }
+  })
+
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const user = req.user as any
     const where = user.role === 'admin' ? {} : { provider_email: user.email }
@@ -124,18 +177,18 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
     // Admins may override the owner via provider_email in body; others cannot.
     const provider_email = (role === 'admin' && req.body?.provider_email) || email
     // Strip caller-supplied provider_email from body so we own the value.
-    const { provider_email: _ignored, ...body } = req.body ?? {}
-    return prisma.product.create({ data: { ...body, provider_email } })
+    const data: any = pickProduct(req.body, role === 'admin')
+    return prisma.product.create({ data: { ...data, provider_email } })
   })
 
   app.patch('/:id', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const product = await assertOwnsProduct(req, reply, req.params.id)
     if (!product) return
     // Never allow re-assigning ownership through PATCH — only admins can.
-    const { provider_email, ...body } = req.body ?? {}
-    const data = ((req.user as any).role === 'admin' && provider_email)
-      ? { ...body, provider_email }
-      : body
+    const isAdmin = (req.user as any).role === 'admin'
+    const body: any = pickProduct(req.body, isAdmin)
+    const provider_email = req.body?.provider_email
+    const data = (isAdmin && provider_email) ? { ...body, provider_email } : body
     return prisma.product.update({ where: { id: product.id }, data })
   })
 

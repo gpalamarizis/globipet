@@ -15,6 +15,15 @@ import prisma from '../lib/prisma.js'
 
 const MAX = { name: 120, email: 200, subject: 200, message: 5000 }
 
+/**
+ * Διαφυγή HTML. Όνομα και θέμα έμπαιναν ωμά στο email προς info@: ένα
+ * «όνομα» με <a href> ή <img> γινόταν σύνδεσμος/εικόνα μέσα στο εισερχόμενο
+ * της εταιρείας — έτοιμο εργαλείο phishing με τη δική μας διεύθυνση.
+ */
+function esc(v: string) {
+  return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function looksLikeEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)
 }
@@ -68,9 +77,9 @@ const contactRoutes: FastifyPluginAsync = async (app) => {
           // So hitting reply in the mail client answers the person who wrote.
           reply_to: email,
           subject: subject ? `[GlobiPet] ${subject}` : `[GlobiPet] Μήνυμα από ${name}`,
-          html: `<p><strong>${name}</strong> &lt;${email}&gt;</p>`
-              + (subject ? `<p><strong>Θέμα:</strong> ${subject}</p>` : '')
-              + `<hr><p style="white-space:pre-line">${message.replace(/</g, '&lt;')}</p>`,
+          html: `<p><strong>${esc(name)}</strong> &lt;${esc(email)}&gt;</p>`
+              + (subject ? `<p><strong>Θέμα:</strong> ${esc(subject)}</p>` : '')
+              + `<hr><p style="white-space:pre-line">${esc(message)}</p>`,
         }),
       }).catch(err => console.error('[contact] notification email failed:', err?.message))
     } else {
