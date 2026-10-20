@@ -1357,7 +1357,8 @@
     "placementCount_one": "{{count}} ubicación",
     "audienceCount_one": "{{count}} cliente",
     "offerForCount_one": "La oferta se aplicará solo a {{count}} cliente.",
-    "daysLeft_one": "{{count}} día restante"
+    "daysLeft_one": "{{count}} día restante",
+    "errPercentBelow100": "El porcentaje debe ser inferior a 100: ofertas gratuitas solo previo acuerdo con GlobiPet"
   },
   "providerCampaignNew": {
     "title": "Nueva campaña"

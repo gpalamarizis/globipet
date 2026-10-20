@@ -2675,6 +2675,7 @@ const el = {
     total: 'Συνολικά',
     whatItCovers: 'Τι αφορά',
     whereShown: 'Πού προβάλλεται',
+    errPercentBelow100: 'Το ποσοστό πρέπει να είναι κάτω από 100 — δωρεάν παροχή μόνο μετά από συμφωνία με την GlobiPet',
   },
   providerCus: {
     sentTo_one: 'Στάλθηκε σε {{count}} πελάτη',
@@ -5392,6 +5393,7 @@ const en: typeof el = {
     total: 'Total',
     whatItCovers: 'What it covers',
     whereShown: 'Where it appears',
+    errPercentBelow100: 'The percentage must be below 100 — free offers only by agreement with GlobiPet',
   },
   providerCus: {
     sentTo_one: 'Sent to {{count}} customer',
@@ -8109,6 +8111,7 @@ const es: typeof el = {
     total: 'Total',
     whatItCovers: 'A qué se aplica',
     whereShown: 'Dónde se muestra',
+    errPercentBelow100: 'El porcentaje debe ser inferior a 100: ofertas gratuitas solo previo acuerdo con GlobiPet',
   },
   providerCus: {
     sentTo_one: 'Enviado a {{count}} cliente',
@@ -10826,6 +10829,7 @@ const fr: typeof el = {
     total: 'Total',
     whatItCovers: 'Ce qui est concerné',
     whereShown: 'Où elle apparaît',
+    errPercentBelow100: 'Le pourcentage doit être inférieur à 100 — offres gratuites uniquement sur accord avec GlobiPet',
   },
   providerCus: {
     sentTo_one: 'Envoyé à {{count}} client',
@@ -13543,6 +13547,7 @@ const zh: typeof el = {
     total: '合计',
     whatItCovers: '适用范围',
     whereShown: '展示位置',
+    errPercentBelow100: '百分比必须低于 100——免费优惠需与 GlobiPet 协商同意',
   },
   providerCus: {
     sentTo_one: '已发送给 {{count}} 位客户',

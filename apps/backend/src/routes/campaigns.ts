@@ -309,8 +309,10 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
         }
         const v = Number(b.discount_value)
         if (!(v > 0)) return reply.code(400).send({ message: 'Το ποσό πρέπει να είναι θετικό' })
-        if (b.discount_type === 'percent' && v > 100) {
-          return reply.code(400).send({ message: 'Το ποσοστό δεν μπορεί να ξεπερνά το 100' })
+        // 100% = δωρεάν: επιτρέπεται μόνο μετά από συμφωνία με την πλατφόρμα,
+        // όχι από τη φόρμα του παρόχου.
+        if (b.discount_type === 'percent' && v >= 100) {
+          return reply.code(400).send({ message: 'Το ποσοστό πρέπει να είναι κάτω από 100 — δωρεάν παροχή μόνο μετά από συμφωνία με την GlobiPet' })
         }
       }
 
@@ -372,8 +374,8 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
         if (t && !['percent', 'amount'].includes(t)) {
           return reply.code(400).send({ message: 'Ο τύπος πρέπει να είναι percent ή amount' })
         }
-        if (t === 'percent' && v! > 100) {
-          return reply.code(400).send({ message: 'Το ποσοστό δεν μπορεί να ξεπερνά το 100' })
+        if (t === 'percent' && v! >= 100) {
+          return reply.code(400).send({ message: 'Το ποσοστό πρέπει να είναι κάτω από 100 — δωρεάν παροχή μόνο μετά από συμφωνία με την GlobiPet' })
         }
         await prisma.$executeRaw`
           UPDATE campaigns SET discount_type = ${t}, discount_value = ${v} WHERE id = ${id}`

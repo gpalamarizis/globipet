@@ -205,8 +205,8 @@ export default function ProviderMarketingPage() {
     if (hasType && !(Number(form.discount_value) > 0)) {
       return toast.error(t('providerMkt.errDiscountPair'))
     }
-    if (hasType && form.discount_type === 'percent' && Number(form.discount_value) > 100) {
-      return toast.error(t('providerMkt.errPercentMax'))
+    if (hasType && form.discount_type === 'percent' && Number(form.discount_value) >= 100) {
+      return toast.error(t('providerMkt.errPercentBelow100'))
     }
     save.mutate({
       title: form.title.trim(),

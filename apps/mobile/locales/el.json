@@ -1357,7 +1357,8 @@
     "placementCount_one": "{{count}} προβολή",
     "audienceCount_one": "{{count}} πελάτης",
     "offerForCount_one": "Η προσφορά θα ισχύει μόνο για {{count}} πελάτη.",
-    "daysLeft_one": "{{count}} μέρα ακόμα"
+    "daysLeft_one": "{{count}} μέρα ακόμα",
+    "errPercentBelow100": "Το ποσοστό πρέπει να είναι κάτω από 100 — δωρεάν παροχή μόνο μετά από συμφωνία με την GlobiPet"
   },
   "providerCampaignNew": {
     "title": "Νέα καμπάνια"

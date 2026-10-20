@@ -1357,7 +1357,8 @@
     "placementCount_one": "{{count}} 个展示位",
     "audienceCount_one": "{{count}} 位客户",
     "offerForCount_one": "该优惠仅适用于 {{count}} 位客户。",
-    "daysLeft_one": "还剩 {{count}} 天"
+    "daysLeft_one": "还剩 {{count}} 天",
+    "errPercentBelow100": "百分比必须低于 100——免费优惠需与 GlobiPet 协商同意"
   },
   "providerCampaignNew": {
     "title": "新建活动"

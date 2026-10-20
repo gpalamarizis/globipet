@@ -59,7 +59,7 @@ export default function CampaignFormScreen() {
     if (hasType) {
       const v = Number(form.discount_value.replace(',', '.'))
       if (!(v > 0)) return t('providerMkt.errDiscountPair')
-      if (form.discount_type === 'percent' && v > 100) return t('providerMkt.errPercentMax')
+      if (form.discount_type === 'percent' && v >= 100) return t('providerMkt.errPercentBelow100')
     }
     return null
   }

@@ -55,6 +55,7 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   'Η καμπάνια δεν σου ανήκει': ['This campaign is not yours', 'Esta campaña no es tuya', 'Cette campagne ne vous appartient pas', '该活动不属于您'],
   'Συμπλήρωσε και τύπο και ποσό έκπτωσης, ή κανένα': ['Set both the discount type and amount, or neither', 'Indica tipo e importe del descuento, o ninguno', 'Indiquez le type et le montant de la remise, ou aucun', '请同时填写折扣类型和金额，或都不填'],
   'Ο τύπος πρέπει να είναι percent ή amount': ['The type must be percent or amount', 'El tipo debe ser percent o amount', 'Le type doit être percent ou amount', '类型必须为 percent 或 amount'],
+  'Το ποσοστό πρέπει να είναι κάτω από 100 — δωρεάν παροχή μόνο μετά από συμφωνία με την GlobiPet': ['The percentage must be below 100 — free offers only by agreement with GlobiPet', 'El porcentaje debe ser inferior a 100: ofertas gratuitas solo previo acuerdo con GlobiPet', 'Le pourcentage doit être inférieur à 100 — offres gratuites uniquement sur accord avec GlobiPet', '百分比必须低于 100——免费优惠需与 GlobiPet 协商同意'],
   'Το ποσοστό δεν μπορεί να ξεπερνά το 100': ['The percentage cannot exceed 100', 'El porcentaje no puede superar 100', 'Le pourcentage ne peut dépasser 100', '百分比不能超过 100'],
   'Δεν είστε μέλος': ['You are not a member', 'No eres miembro', 'Vous n\'êtes pas membre', '您不是成员'],
   'Το περιεχόμενο είναι υποχρεωτικό': ['Content is required', 'El contenido es obligatorio', 'Le contenu est obligatoire', '内容为必填项'],
