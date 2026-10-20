@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle, XCircle, Loader2, Package } from 'lucide-react'
@@ -42,15 +42,32 @@ export default function OrderConfirmation() {
 
   const isPaid = order?.payment_status === 'paid'
 
+  // Το verify απάντησε (οριστικά). Σε 503/δίκτυο (η Viva δεν απάντησε)
+  // μένει false και ξαναδοκιμάζεται στο polling, όπως στο BookingConfirmation.
+  const verified = useRef(false)
+  const verifyInFlight = useRef(false)
+  const runVerify = useCallback(async () => {
+    if (verified.current || verifyInFlight.current || !transactionId || !id) return
+    verifyInFlight.current = true
+    try {
+      await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
+      verified.current = true
+    } catch (err: any) {
+      const st = err?.response?.status ?? err?.statusCode
+      // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
+      if (st && st >= 400 && st < 500) verified.current = true
+    } finally {
+      verifyInFlight.current = false
+    }
+  }, [transactionId, id])
+
   // Verify Viva payment when redirected back
   useEffect(() => {
     if (!cameFromViva || !id) return
     let cancelled = false
     const verify = async () => {
       try {
-        if (transactionId) {
-          await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
-        }
+        await runVerify()
         await refetch()
       } catch {
         // The webhook confirms independently; the poll below will catch it.
@@ -72,10 +89,11 @@ export default function OrderConfirmation() {
     const interval = setInterval(() => {
       elapsed += 3
       if (elapsed > 60) { clearInterval(interval); return }
-      refetch()
+      if (!verified.current && transactionId) runVerify().finally(() => { refetch() })
+      else refetch()
     }, 3000)
     return () => clearInterval(interval)
-  }, [cameFromViva, isPaid, refetch])
+  }, [cameFromViva, isPaid, refetch, runVerify, transactionId])
 
   // Waiting covers both the explicit verify call and the window where the
   // webhook has not reported yet.

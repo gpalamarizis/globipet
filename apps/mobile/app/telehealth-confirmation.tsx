@@ -18,7 +18,9 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   ο server ελέγχει ξανά με το Viva, δεν εμπιστεύεται τον πελάτη.
  *
  *   Τρέχει ΜΙΑ φορά: ένας δείκτης εμποδίζει δεύτερη κλήση αν η οθόνη
- *   ξαναποδοθεί, ώστε να μην υπάρξουν διπλές επιβεβαιώσεις.
+ *   ξαναποδοθεί, ώστε να μην υπάρξουν διπλές επιβεβαιώσεις. Ο δείκτης
+ *   τίθεται μόλις ο server απαντήσει οριστικά· σε 503/δίκτυο (η Viva δεν
+ *   απάντησε) ξαναδοκιμάζεται σε κάθε ανανέωση, όπως στο booking-confirmation.
  *
  *   Όπως η σελίδα /telehealth/:id/confirmation του web: επαλήθευση και χωρίς
  *   transactionId (όταν ανοίγει αμέσως μετά το άνοιγμα της Viva ή από τη
@@ -34,9 +36,10 @@ export default function TelehealthConfirmationScreen() {
   // Η Viva επιστρέφει το transaction ως ?t=· δεκτό και το transactionId.
   const transactionId = params.transactionId || params.t
   const verified = useRef(false)
+  const verifying = useRef(false)
   const [joining, setJoining] = useState(false)
 
-  const { data: session, isLoading } = useQuery({
+  const { data: session, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ['telehealth-session', id],
     queryFn: () => api.get(`/telehealth/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
@@ -49,20 +52,32 @@ export default function TelehealthConfirmationScreen() {
   })
 
   const verify = useMutation({
-    mutationFn: () => api.post(`/telehealth/${id}/viva/verify`, { transaction_id: transactionId }),
+    mutationFn: () => {
+      verifying.current = true
+      return api.post(`/telehealth/${id}/viva/verify`, { transaction_id: transactionId })
+    },
+    onError: (err: any) => {
+      const st = err?.response?.status
+      // 4xx = οριστική απάντηση· χωρίς transactionId δεν υπάρχει τι να
+      // ξαναεπαληθευτεί (το webhook επιβεβαιώνει ανεξάρτητα).
+      if ((st && st >= 400 && st < 500) || !transactionId) verified.current = true
+    },
+    onSettled: () => { verifying.current = false },
     onSuccess: () => {
+      verified.current = true
       qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
       qc.invalidateQueries({ queryKey: ['telehealth'] })
       qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
     },
   })
 
+  // Στο άνοιγμα και σε κάθε ανανέωση (polling) όσο δεν έχει απαντήσει οριστικά.
   useEffect(() => {
-    if (!verified.current && id) {
-      verified.current = true
-      verify.mutate()
-    }
-  }, [id, transactionId])
+    if (verified.current || verifying.current || !id) return
+    if ((session as any)?.payment_status === 'paid') { verified.current = true; return }
+    verifying.current = true
+    verify.mutate()
+  }, [id, transactionId, dataUpdatedAt])
 
   if (isLoading) return <Screen title={t('teleConfirm.title')}><SkeletonRows count={3} /></Screen>
 

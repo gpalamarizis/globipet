@@ -257,6 +257,9 @@ async function verifyEventPayment(registrationId: string, transactionId: string)
   }
 }
 
+/** Μορφή του transaction id της Viva (UUID) — όπως στο verify των κρατήσεων. */
+const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** Συμβατότητα: «πληρώνει αυτή η συναλλαγή την εγγραφή;» */
 export async function vivaPaidEventRegistration(registrationId: string, transactionId: string): Promise<boolean> {
   const r = await verifyEventPayment(registrationId, transactionId)
@@ -1257,6 +1260,12 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     try {
       const reg = await prisma.eventRegistration.findUnique({ where: { id } })
       if (!reg || reg.user_email !== email) return reply.code(404).send({ message: 'Δεν βρέθηκε συμμετοχή' })
+
+      // Το transaction id της Viva είναι UUID· οτιδήποτε άλλο δεν φτάνει στη Viva.
+      if (transaction_id != null && transaction_id !== ''
+        && (typeof transaction_id !== 'string' || !VIVA_TXN_RE.test(transaction_id))) {
+        return reply.code(400).send({ message: 'Μη έγκυρο αναγνωριστικό συναλλαγής' })
+      }
 
       if (reg.status === 'pending_payment' && transaction_id) {
         const r = await confirmEventRegistrationPayment(String(id), String(transaction_id))

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { CheckCircle, XCircle, Loader2, Video, Calendar, Clock, Smartphone } from 'lucide-react'
@@ -25,9 +25,22 @@ export default function TelehealthConfirmation() {
     enabled: !!id && isAuthenticated,
   })
 
+  // Το verify απάντησε (οριστικά). Σε 503/δίκτυο (η Viva δεν απάντησε)
+  // μένει false και ξαναδοκιμάζεται στο polling, όπως στο BookingConfirmation.
+  const verified = useRef(false)
+  const verifying = useRef(false)
   const verify = useMutation({
-    mutationFn: () => api.post(`/telehealth/${id}/viva/verify`, { transaction_id: transactionId }),
-    onSuccess: () => refetch(),
+    mutationFn: () => {
+      verifying.current = true
+      return api.post(`/telehealth/${id}/viva/verify`, { transaction_id: transactionId })
+    },
+    onSuccess: () => { verified.current = true; refetch() },
+    onError: (err: any) => {
+      const st = err?.response?.status ?? err?.statusCode
+      // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
+      if (st && st >= 400 && st < 500) verified.current = true
+    },
+    onSettled: () => { verifying.current = false },
   })
 
   useEffect(() => {
@@ -40,9 +53,13 @@ export default function TelehealthConfirmation() {
   // Poll every 3s while still unpaid (covers webhook-confirmed-before-redirect cases)
   useEffect(() => {
     if (!isAuthenticated || consultation?.payment_status === 'paid') return
-    const interval = setInterval(() => refetch(), 3000)
+    const interval = setInterval(() => {
+      if (!verified.current && transactionId) { if (!verifying.current) { verifying.current = true; verify.mutate() } }
+      else refetch()
+    }, 3000)
     return () => clearInterval(interval)
-  }, [isAuthenticated, consultation?.payment_status, refetch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, consultation?.payment_status, refetch, transactionId])
 
   const isPaid = consultation?.payment_status === 'paid'
   const isPending = !consultation || consultation.payment_status === 'unpaid'

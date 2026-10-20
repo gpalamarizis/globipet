@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, RefreshControl, Platform, StatusBar, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, RefreshControl, Platform, StatusBar, Alert, ActivityIndicator } from 'react-native'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Search, X, ShoppingCart, Package, Star, Heart } from 'lucide-react-native'
@@ -178,42 +178,44 @@ export default function MarketplaceScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow}
-        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm, alignItems: 'center' }}>
-        {CATEGORIES.map(c => {
-          const active = category === c.id
-          return (
-            <TouchableOpacity
-              key={c.id}
-              activeOpacity={0.7}
-              style={[s.chip, active && s.chipActive]}
-              onPress={() => setCategory(c.id)}>
-              <Text style={s.chipEmoji}>{c.emoji}</Text>
-              <Text style={[s.chipText, active && s.chipTextActive]}>{t(c.labelKey)}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-
-      {/* Ταξινόμηση — ίδιες επιλογές με το web. */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.sortRow}
-        contentContainerStyle={{ paddingHorizontal: space.lg, gap: space.sm, alignItems: 'center' }}>
-        {SORTS.map(k => {
-          const active = sort === k
-          return (
-            <TouchableOpacity key={k} activeOpacity={0.7}
-              style={[s.sortChip, active && s.chipActive]}
-              onPress={() => setSort(k)}>
-              <Text style={[s.sortText, active && s.chipTextActive]}>{t(`marketplace.sort.${k}`)}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-
       <FlatList
         data={products}
         ListHeaderComponent={
           <>
+            {/* Φίλτρα: πλέγμα 3 στηλών, χωρίς οριζόντια κύλιση — κυλούν μαζί με
+                τα προϊόντα, ώστε να μην επικαλύπτονται σε μεγάλη γραμματοσειρά. */}
+            <View style={s.grid}>
+              {CATEGORIES.map(c => {
+                const active = category === c.id
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    activeOpacity={0.7}
+                    style={[s.chip, active && s.chipActive]}
+                    onPress={() => setCategory(c.id)}>
+                    <Text style={s.chipEmoji} maxFontSizeMultiplier={1.2}>{c.emoji}</Text>
+                    <Text style={[s.chipText, active && s.chipTextActive]} numberOfLines={1}
+                      maxFontSizeMultiplier={1.2}>{t(c.labelKey)}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            {/* Ταξινόμηση — ίδιες επιλογές με το web. */}
+            <View style={[s.grid, s.sortGrid]}>
+              {SORTS.map(k => {
+                const active = sort === k
+                return (
+                  <TouchableOpacity key={k} activeOpacity={0.7}
+                    style={[s.chip, s.sortChip, active && s.chipActive]}
+                    onPress={() => setSort(k)}>
+                    <Text style={[s.sortText, active && s.chipTextActive]} numberOfLines={2}
+                      maxFontSizeMultiplier={1.2}>{t(`marketplace.sort.${k}`)}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
             <CampaignBanner page="marketplace" slot="banner" />
             {/* Πλήθος αποτελεσμάτων, όπως στο web. */}
             {!isLoading && total != null && (
@@ -291,17 +293,21 @@ export default function MarketplaceScreen() {
                 )}
               </View>
 
-              <Text style={s.name} numberOfLines={2}>{item.name}</Text>
+              <Text style={s.name} numberOfLines={2} maxFontSizeMultiplier={1.2}>{item.name}</Text>
 
-              {item.reviews_count > 0 && (
-                <View style={s.ratingRow}>
-                  <Star size={icon.xs} color={colors.accent} fill={colors.accent} />
-                  <Text style={s.rating}>{item.rating?.toFixed(1)} ({item.reviews_count})</Text>
-                </View>
-              )}
+              {/* Η γραμμή κρατά πάντα τη θέση της, ώστε τιμή και κουμπί να
+                  στοιχίζονται σε όλες τις κάρτες της ίδιας σειράς. */}
+              <View style={s.ratingRow}>
+                {item.reviews_count > 0 && (
+                  <>
+                    <Star size={icon.xs} color={colors.accent} fill={colors.accent} />
+                    <Text style={s.rating} maxFontSizeMultiplier={1.2}>{item.rating?.toFixed(1)} ({item.reviews_count})</Text>
+                  </>
+                )}
+              </View>
 
               <View style={s.priceRow}>
-                <Text style={s.price}>€{Number(price ?? 0).toFixed(2)}</Text>
+                <Text style={s.price} maxFontSizeMultiplier={1.2}>€{Number(price ?? 0).toFixed(2)}</Text>
                 {onSale && <Text style={s.oldPrice}>€{Number(item.price ?? 0).toFixed(2)}</Text>}
               </View>
 
@@ -310,7 +316,7 @@ export default function MarketplaceScreen() {
                 activeOpacity={0.8}
                 disabled={busy || item.stock === 0}
                 onPress={() => handleAdd(item.id)}>
-                <Text style={[s.addText, justAdded && s.addTextDone]}>
+                <Text style={[s.addText, justAdded && s.addTextDone]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
                   {item.stock === 0 ? t('marketplace.out_of_stock')
                     : justAdded ? t('marketplace.added')
                     : busy ? '…'
@@ -358,42 +364,39 @@ const s = StyleSheet.create({
   },
   search: { flex: 1, ...type.body, color: colors.text, padding: 0 },
 
-  filterRow: { paddingTop: space.lg, maxHeight: 68, flexGrow: 0 },
-  sortRow: { paddingTop: space.sm, maxHeight: 52, flexGrow: 0 },
-  sortChip: {
-    paddingHorizontal: space.md, height: 36, justifyContent: 'center',
-    borderRadius: radius.full, backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  sortText: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  // Πλέγμα 3 στηλών: (100% − 2 κενά) / 3.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.sm },
+  sortGrid: { marginBottom: space.md },
+  sortChip: { justifyContent: 'center', minHeight: 40 },
+  sortText: { fontSize: 11, lineHeight: 14, textAlign: 'center', color: colors.textMuted, fontWeight: weight.semibold },
   count: { ...type.caption, color: colors.textMuted, marginBottom: space.sm },
   heartBtn: {
     position: 'absolute', top: space.sm, right: space.sm,
-    width: 30, height: 30, borderRadius: radius.full,
+    width: 26, height: 26, borderRadius: radius.full,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg,
-    height: touch.min,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    width: '31.8%',
+    minHeight: 34, paddingHorizontal: space.xs, paddingVertical: 6,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border,
   },
   chipActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
-  chipEmoji: { fontSize: 16 },
-  chipText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
+  chipEmoji: { fontSize: 12 },
+  chipText: { fontSize: 12, lineHeight: 16, flexShrink: 1, color: colors.textMuted, fontWeight: weight.semibold },
   chipTextActive: { color: colors.brand, fontWeight: weight.bold },
 
   card: {
     flex: 1,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: space.md,
+    padding: space.sm,
     ...shadow.sm,
   },
   imgBox: {
-    height: 130, borderRadius: radius.md,
+    height: 96, borderRadius: radius.md,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
@@ -405,28 +408,28 @@ const s = StyleSheet.create({
     paddingHorizontal: space.sm, paddingVertical: 2,
     borderRadius: radius.sm,
   },
-  saleText: { ...type.caption, color: '#fff', fontWeight: weight.bold },
+  saleText: { fontSize: 11, lineHeight: 14, color: '#fff', fontWeight: weight.bold },
 
   name: {
-    ...type.caption, color: colors.text, fontWeight: weight.semibold,
-    marginTop: space.sm, minHeight: 32,
+    fontSize: 12, lineHeight: 15, color: colors.text, fontWeight: weight.semibold,
+    marginTop: space.xs, height: 30,
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
-  rating: { ...type.caption, color: colors.textMuted },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs, height: 16 },
+  rating: { fontSize: 11, lineHeight: 14, color: colors.textMuted },
 
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs, marginTop: space.xs },
-  price: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold },
-  oldPrice: { ...type.caption, color: colors.textLight, textDecorationLine: 'line-through' },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: space.xs, marginTop: space.xs, marginBottom: 'auto' as any },
+  price: { fontSize: 15, lineHeight: 20, color: colors.brand, fontWeight: weight.bold },
+  oldPrice: { fontSize: 11, lineHeight: 14, color: colors.textLight, textDecorationLine: 'line-through' },
 
   addBtn: {
-    marginTop: space.sm,
-    height: touch.min,
+    marginTop: space.xs,
+    height: 34,
     borderRadius: radius.md,
     backgroundColor: colors.brand,
     alignItems: 'center', justifyContent: 'center',
   },
   addBtnDone: { backgroundColor: colors.successBg },
-  addText: { ...type.caption, color: '#fff', fontWeight: weight.bold },
+  addText: { fontSize: 12, lineHeight: 16, color: '#fff', fontWeight: weight.bold },
   addTextDone: { color: colors.success },
 
   skeleton: { backgroundColor: colors.surfaceAlt },

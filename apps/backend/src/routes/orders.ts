@@ -2,13 +2,13 @@
 import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
-import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
+import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { bestDiscount, countRedemptions } from '../lib/campaignDiscount.js'
 import { effectivePrice } from '../lib/price.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
-import { markTelehealthPaid, vivaPaidConsultation } from './telehealth.js'
+import { markTelehealthPaid, verifyConsultationPayment } from './telehealth.js'
 import { confirmEventRegistrationPayment, handleEventPaymentWebhook } from './events.js'
 import { handleBookingPaymentWebhook } from '../lib/bookingPayment.js'
 import { sendPushToUser } from '../lib/push.js'
@@ -343,21 +343,32 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
  *
  * Everything is checked against Viva's own record: the transaction exists,
  * it succeeded, it points back at this order, and it covers the amount.
+ *
+ *   'ok'        — επαληθεύτηκε
+ *   'not_found' — δεν υπάρχει παραγγελία με αυτό το id (ή η βάση δεν απάντησε —
+ *                 όπως πριν: δεν ξέρουμε ότι είναι παραγγελία, επόμενος κλάδος)
+ *   'invalid'   — η Viva απάντησε: η συναλλαγή δεν πληρώνει αυτή την παραγγελία
+ *   'error'     — η παραγγελία υπάρχει αλλά η επαλήθευση δεν ολοκληρώθηκε
+ *                 (Viva 5xx/429, timeout, δίκτυο, διαπιστευτήρια): πρέπει να
+ *                 ξαναγίνει. Πριν αντιμετωπιζόταν ως άκυρη, το webhook απαντούσε
+ *                 200 και η Viva δεν το ξανάστελνε — η πληρωμή χανόταν.
  */
-async function vivaPaymentIsValid(orderId: string, transactionId: string): Promise<boolean> {
+async function verifyOrderPayment(orderId: string, transactionId: string): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } }).catch((err: any) => {
+    console.error('[viva] order lookup error:', err?.message)
+    return null
+  })
+  if (!order) return 'not_found'
   try {
-    const order = await prisma.order.findUnique({ where: { id: orderId } })
-    if (!order) return false
-
     const tx = await getVivaTransaction(transactionId)
-    if (!tx || tx.statusId !== 'F') return false
+    if (!tx || tx.statusId !== 'F') return 'invalid'
 
     // The transaction must name this order. Viva echoes back the
     // merchantTrns we sent when the payment order was created.
     const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
     if (trns !== orderId) {
       console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not ${orderId}`)
-      return false
+      return 'invalid'
     }
 
     // And it must cover the total. Viva reports amounts in euros here; allow
@@ -365,15 +376,21 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
     if (Number.isFinite(paid) && paid + 0.01 < order.total_amount) {
       console.error(`[viva] transaction ${transactionId} paid ${paid}, order needs ${order.total_amount}`)
-      return false
+      return 'invalid'
     }
-    return true
+    return 'ok'
   } catch (err: any) {
-    // A verification that cannot complete is a verification that failed.
-    console.error('[viva] verification error:', err?.message)
-    return false
+    if (isVivaDefinitiveRejection(err)) {
+      console.error('[viva] order transaction rejected by Viva:', err?.message)
+      return 'invalid'
+    }
+    console.error('[viva] order verification error (will retry):', err?.message)
+    return 'error'
   }
 }
+
+/** Μορφή του transaction id της Viva (UUID) — όπως στο verify των κρατήσεων. */
+const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
   // Viva webhook - payment confirmation (PUBLIC - no auth)
   app.post('/viva/webhook', async (req: any, reply) => {
@@ -400,6 +417,8 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
           const txn = String(transactionId)
           let bookingOutcome: 'handled' | 'retry' | 'not_mine' = 'not_mine'
           let legacyEventOutcome: Awaited<ReturnType<typeof confirmEventRegistrationPayment>> = null
+          let orderOutcome: Awaited<ReturnType<typeof verifyOrderPayment>> = 'not_found'
+          let consultationOutcome: Awaited<ReturnType<typeof verifyConsultationPayment>> = 'not_found'
 
           if (ref.startsWith('ev:')) {
             // Εκδηλώσεις (merchantTrns `ev:<εγγραφή>:<nonce>`): εξετάζονται
@@ -412,7 +431,12 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
             // Η επαλήθευση στη Viva δεν ολοκληρώθηκε: μη-2xx ώστε η Viva να
             // ξαναστείλει το webhook (μόνο για αυτόν τον κλάδο).
             if (ev === 'retry') return reply.code(503).send({ received: false, retry: true })
-          } else if (await vivaPaymentIsValid(ref, txn)) {
+          } else if ((orderOutcome = await verifyOrderPayment(ref, txn)) === 'error') {
+            // Παραγγελία της οποίας η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx,
+            // δίκτυο): μη-2xx ώστε η Viva να ξαναστείλει το webhook. Μόνο όταν
+            // η παραγγελία υπάρχει — αλλιώς δεν είναι δική μας.
+            return reply.code(503).send({ received: false, retry: true })
+          } else if (orderOutcome === 'ok') {
             const updated = await prisma.order.updateMany({
               where: { id: ref, payment_status: { not: 'paid' } },
               data: {
@@ -422,7 +446,10 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
               },
             }).catch(() => null)
             if (updated && updated.count > 0) await firePaidSideEffects(ref)
-          } else if (await vivaPaidConsultation(ref, txn)) {
+          } else if ((consultationOutcome = await verifyConsultationPayment(ref, txn)) === 'error') {
+            // Τηλεϊατρική (η συνεδρία υπάρχει), η επαλήθευση δεν ολοκληρώθηκε: 503.
+            return reply.code(503).send({ received: false, retry: true })
+          } else if (consultationOutcome === 'ok') {
             await markTelehealthPaid(ref, txn).catch((err) => {
               console.error('markTelehealthPaid error:', err)
             })
@@ -435,7 +462,7 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
             // ίδιας κράτησης (ή πληρωμή ακυρωμένης) επιστρέφεται αυτόματα.
             // Κράτηση της οποίας η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx,
             // δίκτυο): μη-2xx ώστε η Viva να ξαναστείλει το webhook. Μόνο
-            // αυτός ο κλάδος — οι παραγγελίες/τηλεϊατρική απαντούν όπως πριν.
+            // αυτός ο κλάδος (οι παραγγελίες/τηλεϊατρική έχουν τον δικό τους πιο πάνω).
             if (bookingOutcome === 'retry') return reply.code(503).send({ received: false, retry: true })
           } else if ((legacyEventOutcome = await confirmEventRegistrationPayment(ref, txn).catch((err) => {
             console.error('confirmEventRegistrationPayment error:', err)
@@ -475,12 +502,36 @@ async function vivaPaymentIsValid(orderId: string, transactionId: string): Promi
 
   // Manual verify (called from success page)
   app.post('/viva/verify', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { order_id, transaction_id } = req.body as any
+    const { order_id, transaction_id } = (req.body ?? {}) as any
     try {
+      // Μόνο ο πελάτης της παραγγελίας (ή admin) μαθαίνει την κατάσταση πληρωμής.
+      const { email, role } = req.user as any
+      const owner = await prisma.order.findUnique({ where: { id: String(order_id ?? '') }, select: { user_email: true } })
+      if (!owner) return reply.code(404).send({ message: 'Η παραγγελία δεν βρέθηκε' })
+      if (owner.user_email !== email && role !== 'admin') return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+      // Το transaction id της Viva είναι UUID· οτιδήποτε άλλο δεν φτάνει στη Viva.
+      if (transaction_id != null && transaction_id !== ''
+        && (typeof transaction_id !== 'string' || !VIVA_TXN_RE.test(transaction_id))) {
+        return reply.code(400).send({ message: 'Μη έγκυρο αναγνωριστικό συναλλαγής' })
+      }
       if (transaction_id) {
+        // Η ίδια συναλλαγή έχει ήδη καταχωρηθεί (webhook ή προηγούμενο verify):
+        // χωρίς νέα ερώτηση στη Viva — ώστε ένα σφάλμα της να μη δώσει 503
+        // για παραγγελία που είναι ήδη πληρωμένη.
+        const existing = await prisma.order.findUnique({
+          where: { id: String(order_id) }, select: { payment_status: true, payment_ref: true },
+        })
+        if (existing?.payment_status === 'paid' && existing.payment_ref === transaction_id) {
+          return { paid: true, order_id }
+        }
         // Same check as the webhook: succeeded, for this order, for the
         // full amount.
-        if (await vivaPaymentIsValid(String(order_id), String(transaction_id))) {
+        const verdict = await verifyOrderPayment(String(order_id), String(transaction_id))
+        // Η Viva δεν απάντησε (5xx/δίκτυο): 503, ο πελάτης ξαναδοκιμάζει.
+        if (verdict === 'error') {
+          return reply.code(503).send({ message: 'Η επαλήθευση της πληρωμής δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.', retry: true })
+        }
+        if (verdict === 'ok') {
           const updated = await prisma.order.updateMany({
             where: { id: order_id, payment_status: { not: 'paid' } },
             data: { status: 'confirmed', payment_status: 'paid', payment_ref: String(transaction_id) },

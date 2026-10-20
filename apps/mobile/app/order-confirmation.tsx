@@ -24,7 +24,9 @@ const paymentFailed = (o: any) => o?.payment_status === 'failed' || o?.status ==
  *   ο server ελέγχει ξανά με το Viva, δεν εμπιστεύεται τον πελάτη.
  *
  *   Τρέχει ΜΙΑ φορά: ένας δείκτης εμποδίζει δεύτερη κλήση αν η οθόνη
- *   ξαναποδοθεί, ώστε να μην υπάρξουν διπλές επιβεβαιώσεις.
+ *   ξαναποδοθεί, ώστε να μην υπάρξουν διπλές επιβεβαιώσεις. Ο δείκτης
+ *   τίθεται μόλις ο server απαντήσει οριστικά· σε 503/δίκτυο (η Viva δεν
+ *   απάντησε) ξαναδοκιμάζεται σε κάθε ανανέωση, όπως στο booking-confirmation.
  */
 export default function OrderConfirmationScreen() {
   const { t } = useTranslation()
@@ -32,11 +34,12 @@ export default function OrderConfirmationScreen() {
   const qc = useQueryClient()
   const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
   const verified = useRef(false)
+  const verifying = useRef(false)
   // Όπως στο web: αν ήρθαμε από την πληρωμή, ξαναρωτάμε κάθε 3″ για έως ένα
   // λεπτό, γιατί το webhook του Viva μπορεί να επιβεβαιώσει μετά την επιστροφή.
   const [pollUntil] = useState(() => transactionId ? Date.now() + 60_000 : 0)
 
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/orders/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
@@ -46,8 +49,18 @@ export default function OrderConfirmationScreen() {
   })
 
   const verify = useMutation({
-    mutationFn: () => api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId }),
+    mutationFn: () => {
+      verifying.current = true
+      return api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
+    },
+    onError: (err: any) => {
+      const st = err?.response?.status
+      // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
+      if (st && st >= 400 && st < 500) verified.current = true
+    },
+    onSettled: () => { verifying.current = false },
     onSuccess: () => {
+      verified.current = true
       qc.invalidateQueries({ queryKey: ['order', id] })
       // Το κλειδί της λίστας είναι 'my-orders' (orders.tsx)· το 'orders' δεν
       // ανανέωνε τίποτα.
@@ -55,12 +68,13 @@ export default function OrderConfirmationScreen() {
     },
   })
 
+  // Στο άνοιγμα και σε κάθε ανανέωση (polling) όσο δεν έχει απαντήσει οριστικά.
   useEffect(() => {
-    if (!verified.current && id && transactionId) {
-      verified.current = true
-      verify.mutate()
-    }
-  }, [id, transactionId])
+    if (verified.current || verifying.current || !id || !transactionId) return
+    if (order?.payment_status === 'paid') { verified.current = true; return }
+    verifying.current = true
+    verify.mutate()
+  }, [id, transactionId, dataUpdatedAt])
 
   if (isLoading) return <Screen title={t('orderConfirm.title')}><SkeletonRows count={3} /></Screen>
 

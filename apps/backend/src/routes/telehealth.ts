@@ -1,7 +1,7 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
-import { createVivaPaymentOrder, getVivaTransaction } from '../lib/viva.js'
+import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
@@ -93,32 +93,54 @@ export async function findTelehealthById(id: string) {
  * It never asked whether it was for this consultation, or for enough money —
  * so any successful transaction id the caller happened to hold, including a
  * cheap one of their own, could mark a session paid.
+ *
+ *   'ok'        — επαληθεύτηκε
+ *   'not_found' — δεν υπάρχει συνεδρία με αυτό το id (ή η βάση δεν απάντησε)
+ *   'invalid'   — η Viva απάντησε: η συναλλαγή δεν πληρώνει αυτή τη συνεδρία
+ *   'error'     — η συνεδρία υπάρχει αλλά η επαλήθευση δεν ολοκληρώθηκε (Viva
+ *                 5xx/429, timeout, δίκτυο, διαπιστευτήρια): πρέπει να ξαναγίνει
+ *                 — το webhook απαντά 503 και το verify 503. Πριν ήταν «άκυρη»
+ *                 και η πληρωμή χανόταν.
  */
-export async function vivaPaidConsultation(consultationId: string, transactionId: string): Promise<boolean> {
+export async function verifyConsultationPayment(consultationId: string, transactionId: string): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
+  const c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } }).catch((err: any) => {
+    console.error('[viva] consultation lookup error:', err?.message)
+    return null
+  })
+  if (!c) return 'not_found'
   try {
-    const c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
-    if (!c) return false
-
     const tx = await getVivaTransaction(transactionId)
-    if (!tx || tx.statusId !== 'F') return false
+    if (!tx || tx.statusId !== 'F') return 'invalid'
 
     const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
     if (trns !== consultationId) {
       console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not ${consultationId}`)
-      return false
+      return 'invalid'
     }
 
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
     if (Number.isFinite(paid) && paid + 0.01 < c.price) {
       console.error(`[viva] transaction ${transactionId} paid ${paid}, session costs ${c.price}`)
-      return false
+      return 'invalid'
     }
-    return true
+    return 'ok'
   } catch (err: any) {
-    console.error('[viva] consultation verification error:', err?.message)
-    return false
+    if (isVivaDefinitiveRejection(err)) {
+      console.error('[viva] consultation transaction rejected by Viva:', err?.message)
+      return 'invalid'
+    }
+    console.error('[viva] consultation verification error (will retry):', err?.message)
+    return 'error'
   }
 }
+
+/** Συμβατότητα: «πληρώνει αυτή η συναλλαγή τη συνεδρία;» */
+export async function vivaPaidConsultation(consultationId: string, transactionId: string): Promise<boolean> {
+  return (await verifyConsultationPayment(consultationId, transactionId)) === 'ok'
+}
+
+/** Μορφή του transaction id της Viva (UUID) — όπως στο verify των κρατήσεων. */
+const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const routes: FastifyPluginAsync = async (app) => {
 
@@ -328,7 +350,7 @@ const routes: FastifyPluginAsync = async (app) => {
   // Manual verify (called from the confirmation page after Viva redirect)
   app.post('/:id/viva/verify', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { id } = req.params
-    const { transaction_id } = req.body as any
+    const { transaction_id } = (req.body ?? {}) as any
     try {
       const consultation = await prisma.telehealthConsultation.findUnique({ where: { id } })
       if (!consultation) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
@@ -342,8 +364,18 @@ const routes: FastifyPluginAsync = async (app) => {
       if (consultation.payment_status === 'paid') {
         return { paid: true, data: consultation }
       }
+      // Το transaction id της Viva είναι UUID· οτιδήποτε άλλο δεν φτάνει στη Viva.
+      if (transaction_id != null && transaction_id !== ''
+        && (typeof transaction_id !== 'string' || !VIVA_TXN_RE.test(transaction_id))) {
+        return reply.code(400).send({ message: 'Μη έγκυρο αναγνωριστικό συναλλαγής' })
+      }
       if (transaction_id) {
-        if (await vivaPaidConsultation(String(id), String(transaction_id))) {
+        const verdict = await verifyConsultationPayment(String(id), String(transaction_id))
+        // Η Viva δεν απάντησε (5xx/δίκτυο): 503, ο πελάτης ξαναδοκιμάζει.
+        if (verdict === 'error') {
+          return reply.code(503).send({ message: 'Η επαλήθευση της πληρωμής δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.', retry: true })
+        }
+        if (verdict === 'ok') {
           await markTelehealthPaid(id, transaction_id)
           const fresh = await prisma.telehealthConsultation.findUnique({ where: { id } })
           return { paid: true, data: fresh }
