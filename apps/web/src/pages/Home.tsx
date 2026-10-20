@@ -10,6 +10,9 @@ import { effectivePrice, isOnSale } from '@/lib/price'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
+// Σύνδεσμοι καταστημάτων εφαρμογών: ορίζονται μόνο όταν κυκλοφορήσει η εφαρμογή.
+const APP_STORE_URL = import.meta.env.VITE_APP_STORE_URL || ''
+const PLAY_STORE_URL = import.meta.env.VITE_PLAY_STORE_URL || ''
 
 export default function Home() {
   const { t, i18n } = useTranslation()
@@ -463,24 +466,31 @@ export default function Home() {
       <section className="bg-brand-900 py-16 px-4 text-center text-white">
         <h2 className="text-3xl font-display font-bold tracking-tight mb-3">{t('home.footerCta.title')}</h2>
         <p className="text-white/70 text-sm mb-8">{t('home.footerCta.subtitle')}</p>
+        {/* Κουμπιά καταστημάτων: μόνο όταν έχει οριστεί ο σύνδεσμος της εφαρμογής (μέχρι την κυκλοφορία κρυφά). */}
+        {(APP_STORE_URL || PLAY_STORE_URL) && (
         <div className="flex gap-3 justify-center flex-wrap">
+          {APP_STORE_URL && (
           <a
-            href="https://apps.apple.com"
+            href={APP_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white text-brand-900 font-bold text-sm px-6 py-3 rounded-xl hover:bg-orange-50 transition-colors"
           >
             📱 App Store
           </a>
+          )}
+          {PLAY_STORE_URL && (
           <a
-            href="https://play.google.com"
+            href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-white border-2 border-white/30 text-sm font-semibold px-6 py-3 rounded-xl hover:border-white/60 transition-colors"
           >
             ▶ Google Play
           </a>
+          )}
         </div>
+        )}
       </section>
     </div>
   )

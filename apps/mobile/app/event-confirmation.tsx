@@ -20,8 +20,17 @@ import { colors, space, radius, type, weight } from '@/theme'
  *   Πάντα: παρακολούθηση της εγγραφής όσο εκκρεμεί — το webhook μπορεί να
  *   επιβεβαιώσει πρώτο ή αργότερα.
  */
+// 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη: το
+// new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω από το UTC έδειχνε την
+// προηγούμενη μέρα. Άγνωστη μορφή μένει ως έχει.
+const fmtYmd = (d: string | undefined, lang: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d ?? '')
+  if (!m) return d ?? ''
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 export default function EventConfirmationScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
@@ -37,11 +46,14 @@ export default function EventConfirmationScreen() {
     enabled: !!id,
   })
 
-  const { data: reg, isLoading, refetch } = useQuery({
+  const { data: reg, isLoading, refetch, error: regError } = useQuery({
     queryKey: ['event-registration', id],
     queryFn: () => api.get(`/events/${id}/registration`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
+    // 404 = η εκδήλωση δεν υπάρχει πια· οριστική απάντηση, χωρίς νέα απόπειρα (όπως το web).
+    retry: (n, e: any) => e?.response?.status !== 404 && n < 2,
   })
+  const gone = (regError as any)?.response?.status === 404
 
   const status: string | undefined = reg?.registration?.status
   const regId: string | undefined = reg?.registration?.id
@@ -71,13 +83,15 @@ export default function EventConfirmationScreen() {
   // Όσο εκκρεμεί: παρακολούθηση για 90". Μετά λέμε «σε εκκρεμότητα» — ΟΧΙ
   // «απέτυχε»: ο χρήστης μπορεί να είναι ακόμη στη Viva και το webhook
   // επιβεβαιώνει ανεξάρτητα (η κατάσταση φαίνεται στην εκδήλωση).
+  // Και σε `refunding` (επιστροφή σε εξέλιξη), όπως στο web: νέα ανάγνωση
+  // μέχρι να γίνει `refunded` / `refund_failed`.
   useEffect(() => {
-    if (status !== 'pending_payment' || timedOut) return
+    if ((status !== 'pending_payment' && status !== 'refunding') || timedOut) return
     let elapsed = 0
     const interval = setInterval(() => {
       elapsed += 3
       if (elapsed > 90) { clearInterval(interval); setTimedOut(true); return }
-      if (!verified.current && transactionId) runVerify()
+      if (!verified.current && transactionId && status === 'pending_payment') runVerify()
       else refetch()
     }, 3000)
     return () => clearInterval(interval)
@@ -105,7 +119,6 @@ export default function EventConfirmationScreen() {
   const confirmed = status === 'registered'
   const refunded = status === 'refunded'
   const refundFailed = status === 'refund_failed'
-  const waiting = status === 'pending_payment' && !timedOut
   const stillPending = status === 'pending_payment' && timedOut
   // Το 'refunded' σημαίνει είτε «γέμισε, αυτόματη επιστροφή» είτε «ακύρωσες
   // με επιστροφή». Αν ο server δίνει τον λόγο το λέμε, αλλιώς ουδέτερο κείμενο.
@@ -124,14 +137,22 @@ export default function EventConfirmationScreen() {
     || (cancelledFlag && (status === 'cancelled' || refunding
       || ((refunded || refundFailed) && refundReason !== 'cancelled' && refundReason !== 'full')))
   const neutralRefund = refunded && !fullRefund
-  const bad = !confirmed && !waiting && !stillPending && !neutralRefund
+  // `refunding` χωρίς λόγο (ή «full») και χωρίς ακύρωση εκδήλωσης = η αυτόματη επιστροφή
+  // (γέμισε) τρέχει: «σε εξέλιξη» όσο διαρκεί η παρακολούθηση και μετά
+  // «η επιστροφή καθυστερεί», όπως στο web — όχι «Η πληρωμή απέτυχε».
+  const refundingFull = refunding && (!refundReason || refundReason === 'full') && !cancelledFlag
+  const waiting = (status === 'pending_payment' || refundingFull) && !timedOut
+  // Επιστροφή σε εξέλιξη μετά από δική σου ακύρωση: όχι κόκκινο (ρολόι, όπως στο web).
+  const bad = !confirmed && !waiting && !stillPending && !neutralRefund && !(cancelRefund && refunding) && !refundingFull
   // Σύνολο μόνο για επιβεβαιωμένη πληρωμή — όχι για εκκρεμή/επιστραμμένη.
   const paidConfirmed = reg?.payment_status === 'paid' || (confirmed && reg?.payment_status == null)
 
   // Πίσω στην εκδήλωση χωρίς να στοιβάζονται οθόνες· από deep link (χωρίς
   // προηγούμενη οθόνη) αντικατάσταση με την εκδήλωση.
   const backToEvent = () => {
-    if (router.canGoBack()) router.back()
+    // Η εκδήλωση δεν υπάρχει πια: στη λίστα εκδηλώσεων, όχι σε σελίδα που δεν βρίσκεται.
+    if (gone) router.replace('/events' as any)
+    else if (router.canGoBack()) router.back()
     else router.replace({ pathname: '/events/[id]', params: { id: String(id) } } as any)
   }
 
@@ -146,7 +167,9 @@ export default function EventConfirmationScreen() {
              : <Clock size={40} color={colors.warning} />}
           </View>
           <Text style={s.heroTitle}>
-            {confirmed ? t('eventConfirm.confirmed')
+            {gone ? t('eventConfirm.gone')
+              : confirmed ? t('eventConfirm.confirmed')
+              : refundingFull ? t('eventConfirm.full')
               : waiting || stillPending ? t('teleConfirm.pending')
               // «…τα χρήματα επιστράφηκαν» μόνο αν ο λόγος ήταν η ακύρωση της εκδήλωσης (όπως στο web).
               : eventCancelled ? (refunded && refundReason === 'event_cancelled' ? t('events.cancelledByOrganizerRefunded') : t('events.cancelledByOrganizer'))
@@ -156,13 +179,18 @@ export default function EventConfirmationScreen() {
               : t('teleConfirm.failed')}
           </Text>
           <Text style={s.heroTxt}>
-            {confirmed ? t('eventConfirm.confirmedHint')
+            {gone ? t('eventConfirm.goneHint')
+              : confirmed ? t('eventConfirm.confirmedHint')
+              : refundingFull ? t(waiting ? 'eventConfirm.refundInProgressHint' : 'eventConfirm.fullRefundDelayedHint')
               : waiting ? t('eventConfirm.pendingHint')
               : stillPending ? t('eventConfirm.pendingLateHint')
               : eventCancelled ? (refunded ? t('eventConfirm.refundedHint')
                 : refunding ? t('eventConfirm.refundInProgressHint')
                 : status === 'cancelled' ? t('eventConfirm.eventCancelledHint')
                 : t('events.cancelledByOrganizerRefundDelayed'))
+              // Ο χρήστης ακύρωσε ο ίδιος — όχι «γέμισε» (όπως το web).
+              : cancelRefund && refunding ? t('eventConfirm.refundInProgressHint')
+              : cancelRefund && refundFailed ? t('eventConfirm.cancelledRefundDelayedHint')
               : neutralRefund ? t('eventConfirm.refundedHint')
               : refunded ? t('eventConfirm.fullRefundedHint')
               : refundFailed ? t('eventConfirm.fullRefundDelayedHint')
@@ -174,7 +202,7 @@ export default function EventConfirmationScreen() {
           <Card>
             <Text style={s.title}>{event.title}</Text>
             <View style={s.kv}>
-              <Text style={s.k}>{event.date}{event.time ? ` · ${event.time}` : ''}</Text>
+              <Text style={s.k}>{fmtYmd(event.date, i18n.language)}{event.time ? ` · ${event.time}` : ''}</Text>
               {confirmed && <Badge label={t('events.alreadyRegistered')} tone="success" />}
             </View>
             {paidConfirmed && reg?.amount_paid != null && (
@@ -186,7 +214,7 @@ export default function EventConfirmationScreen() {
           </Card>
         )}
 
-        <Button label={event?.title ?? t('events.title')} icon={<CalendarDays size={18} color={colors.textOnDark} />}
+        <Button label={gone ? t('events.title') : event?.title ?? t('events.title')} icon={<CalendarDays size={18} color={colors.textOnDark} />}
           onPress={backToEvent} full />
       </ScrollView>
     </Screen>

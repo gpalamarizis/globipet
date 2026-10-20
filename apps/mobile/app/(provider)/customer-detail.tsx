@@ -8,6 +8,7 @@ import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, Button, Input, Loading, EmptyState } from '@/components/ui'
 import { Chips } from '@/components/Chips'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { fmtYmd } from '@/lib/dates'
 
 /**
  * Καρτέλα πελάτη — ίδια με το web: σύνοψη, ιδιωτική σημείωση με ετικέτες,
@@ -15,7 +16,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * μηνύματα που του έστειλε ο πάροχος (με ένδειξη ανάγνωσης).
  */
 export default function CustomerDetailScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const { email } = useLocalSearchParams<{ email: string }>()
   const [note, setNote] = useState('')
@@ -161,7 +162,7 @@ export default function CustomerDetailScreen() {
         {detail.bookings.map((b: any) => (
           <View key={b.id} style={s.booking}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={s.bDate}>{b.booking_date} · {b.booking_time}</Text>
+              <Text style={s.bDate}>{fmtYmd(b.booking_date, i18n.language)} · {b.booking_time}</Text>
               {!!b.staff_name && <Text style={s.meta}>{b.staff_name}</Text>}
             </View>
             {!!b.rating && (

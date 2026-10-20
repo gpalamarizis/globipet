@@ -43,10 +43,11 @@ export default function MyDataCard() {
 
   const requestDelete = useMutation({
     mutationFn: () => api.post('/user-rights/delete-request', { reason: reason.trim() || undefined }),
-    onSuccess: (r: any) => {
+    // Μόνο το μεταφρασμένο κείμενο — όχι το ελληνικό message του server.
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['delete-status'] })
       setConfirming(false); setReason('')
-      toast.success(r?.data?.message || t('privacy.deleteRequestedHint'))
+      toast.success(t('privacy.deleteRequestedHint'))
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || t('common.error')),
   })

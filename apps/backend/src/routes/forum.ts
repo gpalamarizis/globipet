@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { identityOf } from '../lib/userName.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
@@ -45,12 +46,14 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/:id/replies', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name, profile_photo } = req.user as any
+    const { email } = req.user as any
     const { content } = req.body as any
     if (!content?.trim()) return reply.code(400).send({ message: 'Το περιεχόμενο είναι υποχρεωτικό' })
 
     const topic = await prisma.forumTopic.findUnique({ where: { id: req.params.id }, select: { id: true } })
     if (!topic) return reply.code(404).send({ message: 'Το θέμα δεν βρέθηκε' })
+    // Το JWT δεν έχει όνομα/φωτογραφία: από τη βάση (lib/userName).
+    const author = await identityOf(email)
 
     // Create the reply and bump the counter together, so the two cannot drift
     // apart if one write fails.
@@ -59,8 +62,8 @@ const routes: FastifyPluginAsync = async (app) => {
         data: {
           topic_id: topic.id,
           author_email: email,
-          author_name: full_name || email.split('@')[0],
-          author_photo: profile_photo || null,
+          author_name: author.name,
+          author_photo: author.photo,
           content: String(content).trim().slice(0, 10000),
         },
       }),
@@ -80,7 +83,7 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
     }
     const { content } = req.body as any
-    if (!content?.trim()) return reply.code(400).send({ message: 'Κενό περιεχόμενο' })
+    if (!String(content ?? '').trim()) return reply.code(400).send({ message: 'Κενό περιεχόμενο' })
     const updated = await prisma.forumReply.update({
       where: { id: existing.id },
       data: { content: String(content).trim().slice(0, 10000) },
@@ -139,11 +142,13 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name } = req.user as any
+    const { email } = req.user as any
     const { title, content, category, tags } = req.body as any
-    if (!title || !content || !category) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    if (!String(title ?? '').trim() || !String(content ?? '').trim() || !category) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    // Το JWT δεν έχει όνομα: από τη βάση (lib/userName).
+    const author = await identityOf(email)
     const topic = await prisma.forumTopic.create({
-      data: { author_email: email, author_name: full_name || email.split('@')[0], title, content, category, tags: tags || [] }
+      data: { author_email: email, author_name: author.name, title, content, category, tags: tags || [] }
     })
     return reply.code(201).send(topic)
   })
@@ -167,6 +172,13 @@ const routes: FastifyPluginAsync = async (app) => {
 
     const body = (req.body ?? {}) as any
     const data: any = {}
+    // Κενός τίτλος/περιεχόμενο θα άφηνε θέμα χωρίς τίτλο ή σώμα (το POST τα απαιτεί).
+    if (body.title !== undefined && !String(body.title ?? '').trim()) {
+      return reply.code(400).send({ message: 'Ο τίτλος είναι υποχρεωτικός' })
+    }
+    if (body.content !== undefined && !String(body.content ?? '').trim()) {
+      return reply.code(400).send({ message: 'Το περιεχόμενο είναι υποχρεωτικό' })
+    }
     if (body.title !== undefined) data.title = String(body.title).slice(0, 300)
     if (body.content !== undefined) data.content = String(body.content)
     if (body.category !== undefined) data.category = body.category

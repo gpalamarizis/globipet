@@ -4,59 +4,61 @@ import { Pencil, Save, RotateCcw, Eye, Layout, Home, Scale, Video, Info } from '
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 const SECTIONS = [
   {
     id: 'home',
-    label: 'Αρχική Σελίδα',
+    label: 'adminContent.sec_home',
     icon: Home,
     preview: 'globipet.com',
     fields: [
-      { key: 'tagline',            label: 'Tagline (badge πάνω από τίτλο)', type: 'text', placeholder: '#1 Pet Super-App' },
-      { key: 'hero_title_1',       label: 'Τίτλος — γραμμή 1 (πορτοκαλί)', type: 'text', placeholder: 'Η καλύτερη' },
-      { key: 'hero_title_2',       label: 'Τίτλος — γραμμή 2 (πορτοκαλί)', type: 'text', placeholder: 'καλύτερους φίλους' },
-      { key: 'hero_subtitle',      label: 'Υπότιτλος', type: 'text', placeholder: 'Το all-in-one pet super-app...' },
-      { key: 'hero_cta',           label: 'Κουμπί CTA', type: 'text', placeholder: 'Ξεκινήστε Τώρα' },
-      { key: 'services_title',     label: 'Τίτλος Ενότητας Υπηρεσιών', type: 'text', placeholder: 'Υπηρεσίες' },
-      { key: 'services_subtitle',  label: 'Υπότιτλος Ενότητας Υπηρεσιών', type: 'text', placeholder: 'Βρες τον καλύτερο πάροχο κοντά σου' },
-      { key: 'marquee_text',       label: 'Κυλιόμενο Κείμενο (marquee)', type: 'text', placeholder: 'Η καλύτερη εφαρμογή κατοικιδίων στον κόσμο' },
+      { key: 'tagline',            label: 'adminContent.lbl_home_tagline', type: 'text', placeholder: 'adminContent.ph_home_tagline' },
+      { key: 'hero_title_1',       label: 'adminContent.lbl_home_hero_title_1', type: 'text', placeholder: 'adminContent.ph_home_hero_title_1' },
+      { key: 'hero_title_2',       label: 'adminContent.lbl_home_hero_title_2', type: 'text', placeholder: 'adminContent.ph_home_hero_title_2' },
+      { key: 'hero_subtitle',      label: 'adminContent.lbl_home_hero_subtitle', type: 'text', placeholder: 'adminContent.ph_home_hero_subtitle' },
+      { key: 'hero_cta',           label: 'adminContent.lbl_home_hero_cta', type: 'text', placeholder: 'adminContent.ph_home_hero_cta' },
+      { key: 'services_title',     label: 'adminContent.lbl_home_services_title', type: 'text', placeholder: 'adminContent.ph_home_services_title' },
+      { key: 'services_subtitle',  label: 'adminContent.lbl_home_services_subtitle', type: 'text', placeholder: 'adminContent.ph_home_services_subtitle' },
+      { key: 'marquee_text',       label: 'adminContent.lbl_home_marquee_text', type: 'text', placeholder: 'adminContent.ph_home_marquee_text' },
     ],
   },
   {
     id: 'general',
-    label: 'Γενικές Ρυθμίσεις',
+    label: 'adminContent.sec_general',
     icon: Info,
-    preview: 'Όλες οι σελίδες',
+    preview: 'adminContent.allPages',
     fields: [
-      { key: 'site_name',      label: 'Όνομα Site', type: 'text', placeholder: 'GlobiPet' },
-      { key: 'tagline',        label: 'Tagline', type: 'text', placeholder: '#1 Pet Super-App' },
-      { key: 'footer_slogan',  label: 'Footer Slogan', type: 'text', placeholder: 'Best care for the best human\'s friends' },
-      { key: 'contact_email',  label: 'Email Επικοινωνίας', type: 'text', placeholder: 'info@globipet.com' },
+      { key: 'site_name',      label: 'adminContent.lbl_general_site_name', type: 'text', placeholder: 'adminContent.ph_general_site_name' },
+      { key: 'tagline',        label: 'adminContent.lbl_general_tagline', type: 'text', placeholder: 'adminContent.ph_general_tagline' },
+      { key: 'footer_slogan',  label: 'adminContent.lbl_general_footer_slogan', type: 'text', placeholder: 'adminContent.ph_general_footer_slogan' },
+      { key: 'contact_email',  label: 'adminContent.lbl_general_contact_email', type: 'text', placeholder: 'adminContent.ph_general_contact_email' },
     ],
   },
   {
     id: 'telehealth',
-    label: 'Τηλεϊατρική',
+    label: 'adminContent.sec_telehealth',
     icon: Video,
     preview: 'globipet.com/telehealth',
     fields: [
-      { key: 'page_title',    label: 'Τίτλος Σελίδας', type: 'text', placeholder: 'Τηλεϊατρική' },
-      { key: 'page_subtitle', label: 'Υπότιτλος Σελίδας', type: 'textarea', placeholder: 'Βιντεοκλήση με εξειδικευμένο κτηνίατρο' },
+      { key: 'page_title',    label: 'adminContent.lbl_telehealth_page_title', type: 'text', placeholder: 'adminContent.ph_telehealth_page_title' },
+      { key: 'page_subtitle', label: 'adminContent.lbl_telehealth_page_subtitle', type: 'textarea', placeholder: 'adminContent.ph_telehealth_page_subtitle' },
     ],
   },
   {
     id: 'legal',
-    label: 'Νομική Υποστήριξη',
+    label: 'adminContent.sec_legal',
     icon: Scale,
     preview: 'globipet.com/legal',
     fields: [
-      { key: 'page_title',    label: 'Τίτλος Σελίδας', type: 'text', placeholder: 'Νομική Υποστήριξη Κατοικιδίων' },
-      { key: 'page_subtitle', label: 'Υπότιτλος Σελίδας', type: 'textarea', placeholder: 'AI νομικός σύμβουλος...' },
+      { key: 'page_title',    label: 'adminContent.lbl_legal_page_title', type: 'text', placeholder: 'adminContent.ph_legal_page_title' },
+      { key: 'page_subtitle', label: 'adminContent.lbl_legal_page_subtitle', type: 'textarea', placeholder: 'adminContent.ph_legal_page_subtitle' },
     ],
   },
 ]
 
 export default function AdminContentPage() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const [activeSection, setActiveSection] = useState('home')
   const [draft, setDraft] = useState<Record<string, string>>({})
@@ -83,18 +85,18 @@ export default function AdminContentPage() {
   const save = useMutation({
     mutationFn: () => api.patch(`/settings/content/${activeSection}`, draft),
     onSuccess: () => {
-      toast.success('Αποθηκεύτηκε!')
+      toast.success(t('adminContent.saved'))
       setHasChanges(false)
       qc.invalidateQueries({ queryKey: ['admin-content'] })
       qc.invalidateQueries({ queryKey: ['content-home'] })
     },
-    onError: () => toast.error('Σφάλμα αποθήκευσης'),
+    onError: () => toast.error(t('adminContent.saveError')),
   })
 
   const reset = () => {
     setDraft(savedContent)
     setHasChanges(false)
-    toast('Επαναφορά αλλαγών', { icon: '↩️' })
+    toast(t('adminContent.reverted'), { icon: '↩️' })
   }
 
   return (
@@ -105,24 +107,24 @@ export default function AdminContentPage() {
             <Layout size={20} className="text-purple-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Περιεχόμενο Σελίδων</h1>
-            <p className="text-sm text-gray-500">Άλλαξε κείμενα και στατιστικά χωρίς κώδικα</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('adminContent.title')}</h1>
+            <p className="text-sm text-gray-500">{t('adminContent.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {hasChanges && (
             <button onClick={reset} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2">
-              <RotateCcw size={14} /> Αναίρεση
+              <RotateCcw size={14} /> {t('adminContent.undo')}
             </button>
           )}
           <a href={section.preview.startsWith('globipet') ? `https://${section.preview}` : '#'}
             target="_blank" rel="noreferrer"
             className="btn-secondary flex items-center gap-2 text-sm px-3 py-2">
-            <Eye size={14} /> Προεπισκόπηση
+            <Eye size={14} /> {t('adminContent.preview')}
           </a>
           <button onClick={() => save.mutate()} disabled={!hasChanges || save.isPending}
             className="btn-primary flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
-            <Save size={14} /> {save.isPending ? 'Αποθήκευση...' : 'Αποθήκευση'}
+            <Save size={14} /> {save.isPending ? t('adminContent.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -139,8 +141,8 @@ export default function AdminContentPage() {
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
                 <s.icon size={16} />
                 <div className="min-w-0">
-                  <p className="truncate">{s.label}</p>
-                  <p className={cn('text-[10px] truncate', activeSection === s.id ? 'text-purple-200' : 'text-gray-400')}>{s.preview}</p>
+                  <p className="truncate">{t(s.label)}</p>
+                  <p className={cn('text-[10px] truncate', activeSection === s.id ? 'text-purple-200' : 'text-gray-400')}>{s.preview.startsWith('globipet') ? s.preview : t(s.preview)}</p>
                 </div>
               </button>
             ))}
@@ -150,15 +152,15 @@ export default function AdminContentPage() {
         {/* Fields */}
         <div className="flex-1">
           {isLoading ? (
-            <div className="card p-8 text-center text-gray-400">Φόρτωση...</div>
+            <div className="card p-8 text-center text-gray-400">{t('adminContent.loading')}</div>
           ) : (
             <div className="card p-6">
               <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
                 <section.icon size={18} className="text-purple-600" />
-                <h2 className="font-bold text-gray-900 dark:text-white">{section.label}</h2>
+                <h2 className="font-bold text-gray-900 dark:text-white">{t(section.label)}</h2>
                 {hasChanges && (
                   <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                    Μη αποθηκευμένες αλλαγές
+                    {t('adminContent.unsaved')}
                   </span>
                 )}
               </div>
@@ -167,14 +169,14 @@ export default function AdminContentPage() {
                 {section.fields.map(field => (
                   <div key={field.key}>
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block uppercase tracking-wide">
-                      {field.label}
+                      {t(field.label)}
                     </label>
                     <div className="relative">
                       {field.type === 'textarea' ? (
                         <textarea
                           value={draft[field.key] ?? savedContent[field.key] ?? ''}
                           onChange={e => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
+                          placeholder={t(field.placeholder)}
                           rows={3}
                           className="input w-full resize-none text-sm"
                         />
@@ -183,7 +185,7 @@ export default function AdminContentPage() {
                           type="text"
                           value={draft[field.key] ?? savedContent[field.key] ?? ''}
                           onChange={e => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
+                          placeholder={t(field.placeholder)}
                           className="input w-full text-sm pr-8"
                         />
                       )}
@@ -192,7 +194,7 @@ export default function AdminContentPage() {
                       )}
                     </div>
                     {field.placeholder && (
-                      <p className="text-xs text-gray-400 mt-1">Προεπιλογή: {field.placeholder}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('adminContent.defaultValue', { value: t(field.placeholder) })}</p>
                     )}
                   </div>
                 ))}
@@ -201,17 +203,17 @@ export default function AdminContentPage() {
               {/* Live preview for home */}
               {activeSection === 'home' && (
                 <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Προεπισκόπηση Hero</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{t('adminContent.heroPreview')}</p>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 text-center">
                     <div className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full font-semibold mb-3">
                       ⚡ {draft.tagline || '#1 Pet Super-App'}
                     </div>
                     <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                      <span className="text-orange-600">{draft.hero_title_1 || 'Η καλύτερη'}</span>
-                      {' '}φροντίδα για τους{' '}
-                      <span className="text-orange-600">{draft.hero_title_2 || 'καλύτερους φίλους'}</span> σου
+                      <span className="text-orange-600">{draft.hero_title_1 || t('adminContent.ph_home_hero_title_1')}</span>
+                      {' '}{t('adminContent.heroMiddle')}{' '}
+                      <span className="text-orange-600">{draft.hero_title_2 || t('adminContent.ph_home_hero_title_2')}</span> {t('adminContent.heroEnd')}
                     </h1>
-                    <p className="text-sm text-gray-500 mb-4">{draft.hero_subtitle || 'Το all-in-one pet super-app...'}</p>
+                    <p className="text-sm text-gray-500 mb-4">{draft.hero_subtitle || t('adminContent.ph_home_hero_subtitle')}</p>
                   </div>
                 </div>
               )}

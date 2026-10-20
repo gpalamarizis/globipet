@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 import { coordsFromBody } from '../lib/geocode.js'
+import { fullNameOf } from '../lib/userName.js'
 
 /**
  * Πεδία που ορίζει ο ίδιος ο πάροχος.
@@ -29,6 +30,14 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     const lang = getRequestLang(req)
     const { q, city, service_type, verified, emergency, min_rating, page = 1, limit = 20 } = req.query
     const where: any = {}
+    // Ανενεργές υπηρεσίες (απενεργοποιημένες από τον πάροχο) εκτός του
+    // δημόσιου καταλόγου. Ο διαχειριστής (συνδεδεμένος, role admin) τις βλέπει
+    // όλες, όπως πριν· ο πάροχος βλέπει τις δικές του στο GET /my.
+    let isAdmin = false
+    if (req.headers?.authorization) {
+      try { await req.jwtVerify(); isAdmin = (req.user as any)?.role === 'admin' } catch { isAdmin = false }
+    }
+    if (!isAdmin) where.is_active = true
     if (q) where.OR = [{ provider_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
     if (city) where.city = { contains: city, mode: 'insensitive' }
     if (service_type) where.service_type = service_type
@@ -37,7 +46,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     if (min_rating) where.rating = { gte: Number(min_rating) }
     const skip = (Number(page) - 1) * Number(limit)
     const [data, total] = await Promise.all([
-      prisma.service.findMany({ where, skip, take: Number(limit), orderBy: { rating: 'desc' } }),
+      prisma.service.findMany({ where, skip, take: Number(limit), orderBy: [{ rating: 'desc' }, { id: 'asc' }] }),
       prisma.service.count({ where })
     ])
     const translated = await translateRecords('service', data, lang)
@@ -61,6 +70,8 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 500) : []
     if (items.length === 0) return reply.code(400).send({ message: 'Δεν υπάρχουν εγγραφές για εισαγωγή' })
     const first = await prisma.service.findFirst({ where: { provider_email: email }, orderBy: { created_at: 'asc' } })
+    // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+    const providerName = first?.provider_name || full_name || await fullNameOf(email)
     let created = 0
     const failed: { row: number; message: string }[] = []
     for (const [i, it] of items.entries()) {
@@ -71,7 +82,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
         await prisma.service.create({
           data: {
             provider_email: email,
-            provider_name: first?.provider_name || full_name,
+            provider_name: providerName,
             title,
             description: String(it?.description ?? '').trim() || title,
             price: Number.isFinite(price) && price >= 0 ? price : 0,
@@ -93,7 +104,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     const email = (req.user as any).email
     const data = await prisma.service.findMany({
       where: { provider_email: email },
-      orderBy: { created_at: 'desc' },
+      orderBy: [{ created_at: 'desc' }, { id: 'asc' }],
     })
     return { data, total: data.length }
   })
@@ -118,7 +129,13 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     const coords = coordsFromBody(body)
     if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
     Object.assign(clean, coords.data)
-    return prisma.service.create({ data: { ...clean, provider_email, provider_name: clean.provider_name || full_name } })
+    // description/city είναι NOT NULL: χωρίς αυτά (ή με null) η βάση έριχνε
+    // 500. Προεπιλογές όπως στο /bulk: περιγραφή = τίτλος, πόλη κενή.
+    if (clean.description == null) clean.description = typeof clean.title === 'string' ? clean.title : ''
+    if (clean.city == null) clean.city = ''
+    // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+    const providerName = clean.provider_name || full_name || await fullNameOf(provider_email)
+    return prisma.service.create({ data: { ...clean, provider_email, provider_name: providerName } })
   })
 
   // Επιβεβαιώνει ότι η υπηρεσία ανήκει στον συνδεδεμένο χρήστη.
@@ -141,6 +158,10 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     if (!(await assertOwner(req, reply))) return
     const data: any = pickService(req.body, (req.user as any).role === 'admin')
     delete data.provider_email        // δεν αλλάζει ιδιοκτήτη
+    // NOT NULL στήλες: null από τη φόρμα («άδειασε το πεδίο») γίνεται κενό
+    // κείμενο αντί για 500.
+    if (data.description === null) data.description = ''
+    if (data.city === null) data.city = ''
     const coords = coordsFromBody(req.body)
     if ('error' in coords) return reply.code(400).send({ message: coords.error, field: 'latitude' })
     Object.assign(data, coords.data)

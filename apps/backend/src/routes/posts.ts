@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { identityOf } from '../lib/userName.js'
 
 const postsRoutes: FastifyPluginAsync = async (app) => {
 
@@ -83,7 +84,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
 
   // POST create post
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name, profile_photo } = req.user as any
+    const { email } = req.user as any
     const { content, image_url, tags, pet_name, pet_id } = req.body as any
     if (!content?.trim()) return reply.code(400).send({ message: 'Το περιεχόμενο είναι υποχρεωτικό' })
 
@@ -96,11 +97,13 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Το JWT δεν έχει όνομα/φωτογραφία: από τη βάση (lib/userName).
+    const author = await identityOf(email)
     const post = await prisma.post.create({
       data: {
         author_email: email,
-        author_name: full_name || email.split('@')[0],
-        author_photo: profile_photo || null,
+        author_name: author.name,
+        author_photo: author.photo,
         content: content.trim(),
         image_url: image_url || null,
         tags: Array.isArray(tags) ? tags : [],
@@ -188,20 +191,22 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/:id/comments', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name, profile_photo } = req.user as any
+    const { email } = req.user as any
     const { content } = req.body as any
     if (!content?.trim()) return reply.code(400).send({ message: 'Το σχόλιο δεν μπορεί να είναι κενό' })
 
     const post = await prisma.post.findUnique({ where: { id: req.params.id }, select: { id: true } })
     if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
 
+    // Το JWT δεν έχει όνομα/φωτογραφία: από τη βάση (lib/userName).
+    const author = await identityOf(email)
     const [created] = await prisma.$transaction([
       prisma.postComment.create({
         data: {
           post_id: post.id,
           author_email: email,
-          author_name: full_name || email.split('@')[0],
-          author_photo: profile_photo || null,
+          author_name: author.name,
+          author_photo: author.photo,
           content: String(content).trim().slice(0, 2000),
         },
       }),

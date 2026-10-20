@@ -39,7 +39,7 @@ type Message = {
 }
 
 export default function InboxScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [open, setOpen] = useState<Message | null>(null)
 
@@ -75,7 +75,7 @@ export default function InboxScreen() {
     if (h < 24) return h === 1 ? t('inbox.hour_ago_one') : t('inbox.hours_ago', { count: h })
     const days = Math.round(h / 24)
     if (days < 7) return days === 1 ? t('inbox.day_ago_one') : t('inbox.days_ago', { count: days })
-    return d.toLocaleDateString('el-GR')
+    return d.toLocaleDateString(i18n.language)
   }
 
   const renderItem = ({ item: m }: { item: Message }) => {

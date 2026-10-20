@@ -7,3 +7,9 @@
 //
 // Στην εκτέλεση δούλευε κανονικά — το Vite αντικαθιστά τις τιμές κατά το
 // build. Έλειπε μόνο η δήλωση τύπων.
+
+interface ImportMetaEnv {
+  // Σύνδεσμοι App Store / Google Play — όσο λείπουν, τα κουμπιά της αρχικής δεν εμφανίζονται.
+  readonly VITE_APP_STORE_URL?: string
+  readonly VITE_PLAY_STORE_URL?: string
+}

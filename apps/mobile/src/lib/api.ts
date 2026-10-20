@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
+import i18n from 'i18next'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://globipetbackend-production.up.railway.app/api'
 
@@ -50,6 +51,11 @@ export function setAuthToken(token: string | null) {
 api.interceptors.request.use(async config => {
   const token = authToken ?? await readStoredToken()
   if (token) (config.headers as any).Authorization = `Bearer ${token}`
+  // Η γλώσσα της εφαρμογής, ώστε το backend να επιστρέφει μεταφρασμένα
+  // δεδομένα σε αυτήν (getRequestLang: ?lang → preferred_language →
+  // Accept-Language) — όπως το web/src/lib/api.ts.
+  const lang = (i18n.resolvedLanguage || i18n.language || '').slice(0, 2).toLowerCase()
+  if (/^[a-z]{2}$/.test(lang)) (config.headers as any)['Accept-Language'] = lang
   return config
 })
 

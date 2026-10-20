@@ -153,8 +153,8 @@ const routes: FastifyPluginAsync = async (app) => {
    * the thing. Without the last rule the ratings are decoration.
    */
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name } = req.user as any
-    const { service_id, product_id, rating, comment } = req.body as any
+    const { email } = req.user as any
+    const { service_id, product_id, booking_id, rating, comment } = req.body as any
 
     if (!service_id && !product_id) {
       return reply.code(400).send({ message: 'Λείπει service_id ή product_id' })
@@ -182,6 +182,11 @@ const routes: FastifyPluginAsync = async (app) => {
 
     const trimmedComment = comment ? String(comment).trim().slice(0, 2000) : null
 
+    // Το JWT έχει μόνο id/email/role — όχι full_name. Χωρίς αυτό κάθε κριτική
+    // έπαιρνε ως όνομα το πρώτο μέρος του email.
+    const author = await prisma.user.findUnique({ where: { email }, select: { full_name: true } })
+    const customerName = author?.full_name?.trim() || email.split('@')[0]
+
     // ── Product review ───────────────────────────────────────────────
     if (product_id) {
       const product = await prisma.product.findUnique({ where: { id: product_id } })
@@ -203,7 +208,7 @@ const routes: FastifyPluginAsync = async (app) => {
           product_id,
           provider_email: product.provider_email ?? null,
           customer_email: email,
-          customer_name: full_name || email.split('@')[0],
+          customer_name: customerName,
           rating: parsedRating,
           comment: trimmedComment,
           order_id: orderId,
@@ -221,8 +226,11 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Δεν μπορείς να αξιολογήσεις τη δική σου υπηρεσία' })
     }
 
+    // Προαιρετικό booking_id (το στέλνουν web/κινητό από «Οι κρατήσεις μου»):
+    // η κριτική δένεται με τη συγκεκριμένη κράτηση. Χωρίς αυτό, όπως πριν.
     const booking = await prisma.booking.findFirst({
       where: {
+        ...(booking_id ? { id: String(booking_id) } : {}),
         service_id,
         customer_email: email,
         OR: [{ status: 'completed' }, { payment_status: 'paid' }],
@@ -242,11 +250,17 @@ const routes: FastifyPluginAsync = async (app) => {
         // the review at an unrelated provider's profile.
         provider_email: service.provider_email,
         customer_email: email,
-        customer_name: full_name || email.split('@')[0],
+        customer_name: customerName,
         rating: parsedRating,
         comment: trimmedComment,
         booking_id: booking.id,
       },
+    })
+    // Η κράτηση κρατά τη δική της βαθμολογία/σχόλιο: με αυτό το web και το
+    // κινητό κρύβουν το «Γράψε κριτική» (booking.rating != null).
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { rating: parsedRating, review: trimmedComment },
     })
     await recalcServiceRating(service_id)
     return reply.code(201).send({ data: review })
@@ -283,6 +297,13 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
     }
     await prisma.review.delete({ where: { id: existing.id } })
+    // Η κράτηση ξαναγίνεται αξιολογήσιμη (βλ. booking.update στο POST).
+    if (existing.booking_id) {
+      await prisma.booking.updateMany({
+        where: { id: existing.booking_id },
+        data: { rating: null, review: null },
+      })
+    }
     // Keep the average honest after the row is gone.
     if (existing.service_id) await recalcServiceRating(existing.service_id)
     if (existing.product_id) await recalcProductRating(existing.product_id)

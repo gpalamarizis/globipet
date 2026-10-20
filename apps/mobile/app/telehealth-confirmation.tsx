@@ -28,7 +28,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   Deep link: globipet://telehealth-confirmation?id=<συνεδρία>&transactionId=<t>
  */
 export default function TelehealthConfirmationScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const params = useLocalSearchParams<{ id: string; transactionId?: string; t?: string }>()
@@ -99,6 +99,18 @@ export default function TelehealthConfirmationScreen() {
     }
   }
 
+  // Ημερομηνία/ώρα συνεδρίας, όπως στο web· scheduled_date (YYYY-MM-DD) ως τοπική
+  // ημερομηνία στη γλώσσα του χρήστη — όχι new Date('YYYY-MM-DD') (UTC).
+  const dateLabel = (() => {
+    const [y, m, d] = String(session?.scheduled_date ?? '').split('-').map(Number)
+    if (!y || !m || !d) return session?.scheduled_date ?? '—'
+    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+  })()
+
+  // Πίσω στην τηλεϊατρική χωρίς να στοιβάζονται οθόνες· αν δεν υπάρχει στο
+  // ιστορικό (π.χ. deep link), αντικατάσταση.
+  const backToTelehealth = () => router.dismissTo('/telehealth' as any)
+
   return (
     <Screen title={t('teleConfirm.title')} scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
@@ -123,6 +135,10 @@ export default function TelehealthConfirmationScreen() {
               <Text style={s.v}>#{String(session.id).slice(0, 8)}</Text>
             </View>
             <View style={s.kv}>
+              <Text style={s.k}>{t('serviceDetail.date')}</Text>
+              <Text style={s.v}>{dateLabel}{session.scheduled_time ? ` · ${session.scheduled_time}` : ''}</Text>
+            </View>
+            <View style={s.kv}>
               <Text style={s.k}>{t('common.total')}</Text>
               <Text style={s.v}>€{Number(session.price ?? 0).toFixed(2)}</Text>
             </View>
@@ -139,7 +155,7 @@ export default function TelehealthConfirmationScreen() {
             onPress={joinCall} loading={joining} disabled={joining} full />
         )}
         <Button label={t('profile.menu.telehealth')} icon={<Stethoscope size={18} color={colors.textOnDark} />}
-          onPress={() => router.replace('/telehealth' as any)} full />
+          onPress={backToTelehealth} full />
         <Button label={t('tele.title')} variant="secondary"
           onPress={() => router.replace('/(tabs)/index' as any)} full />
       </ScrollView>

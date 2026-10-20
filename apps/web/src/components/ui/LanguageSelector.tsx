@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
 
 const languages = [
   { code: 'el', label: 'Ελληνικά', flag: '🇬🇷' },
@@ -18,7 +19,15 @@ export default function LanguageSelector() {
   const current = languages.find(l => l.code === i18n.language) || languages[0]
 
   const change = (code: string) => {
-    i18n.changeLanguage(code)
+    // Συνδεδεμένος χρήστης: η επιλογή αποθηκεύεται και στον server
+    // (preferred_language) και στον user του store, αλλιώς στο επόμενο
+    // rehydrate το applyUserLanguage επανέφερε την παλιά γλώσσα. Αν ο server
+    // αποτύχει, η γλώσσα έχει ήδη αλλάξει τοπικά (updateLanguage).
+    if (useAuthStore.getState().user) {
+      useAuthStore.getState().updateLanguage(code)
+    } else {
+      i18n.changeLanguage(code)
+    }
     setOpen(false)
   }
 

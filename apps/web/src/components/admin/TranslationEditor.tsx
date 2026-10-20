@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, Globe } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const LANGUAGES = [
   { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
@@ -33,8 +34,9 @@ export default function TranslationEditor({
   defaultName,
   defaultDescription,
   fields = ['name', 'description'],
-  title = 'Επεξεργασία μεταφράσεων',
+  title,
 }: Props) {
+  const { t } = useTranslation()
   const [activeLang, setActiveLang] = useState<string>('en')
   const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({})
   const [descTranslations, setDescTranslations] = useState<Record<string, string>>({})
@@ -90,7 +92,7 @@ export default function TranslationEditor({
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <Globe size={20} className="text-brand-900" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title ?? t('adminTrEditor.title')}</h3>
               </div>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <X size={18} />
@@ -128,17 +130,17 @@ export default function TranslationEditor({
               <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-base">🇬🇷</span>
-                  <span className="text-sm font-medium text-gray-500">Ελληνικά (default)</span>
+                  <span className="text-sm font-medium text-gray-500">{t('adminTrEditor.greekDefault')}</span>
                 </div>
                 {fields.includes('name') && (
                   <div className="mb-2">
-                    <label className="text-xs text-gray-500 mb-1 block">Όνομα</label>
+                    <label className="text-xs text-gray-500 mb-1 block">{t('adminTrEditor.name')}</label>
                     <input type="text" className="input bg-white dark:bg-gray-900" value={defaultName || ''} readOnly />
                   </div>
                 )}
                 {fields.includes('description') && (
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Περιγραφή</label>
+                    <label className="text-xs text-gray-500 mb-1 block">{t('adminTrEditor.description')}</label>
                     <textarea className="input bg-white dark:bg-gray-900 resize-none" rows={3} value={defaultDescription || ''} readOnly />
                   </div>
                 )}
@@ -154,11 +156,11 @@ export default function TranslationEditor({
                 </div>
                 {fields.includes('name') && (
                   <div className="mb-3">
-                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Όνομα</label>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('adminTrEditor.name')}</label>
                     <input
                       type="text"
                       className="input"
-                      placeholder={`Μετάφραση στα ${LANGUAGES.find(l => l.code === activeLang)?.name}`}
+                      placeholder={t('adminTrEditor.translateTo', { lang: LANGUAGES.find(l => l.code === activeLang)?.name })}
                       value={nameTranslations[activeLang] || ''}
                       onChange={(e) => setNameTranslations({ ...nameTranslations, [activeLang]: e.target.value })}
                     />
@@ -166,11 +168,11 @@ export default function TranslationEditor({
                 )}
                 {fields.includes('description') && (
                   <div>
-                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Περιγραφή</label>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('adminTrEditor.description')}</label>
                     <textarea
                       className="input resize-none"
                       rows={5}
-                      placeholder={`Μετάφραση στα ${LANGUAGES.find(l => l.code === activeLang)?.name}`}
+                      placeholder={t('adminTrEditor.translateTo', { lang: LANGUAGES.find(l => l.code === activeLang)?.name })}
                       value={descTranslations[activeLang] || ''}
                       onChange={(e) => setDescTranslations({ ...descTranslations, [activeLang]: e.target.value })}
                     />
@@ -182,11 +184,11 @@ export default function TranslationEditor({
             {/* Footer */}
             <div className="flex items-center justify-between p-5 border-t border-gray-100 dark:border-gray-800">
               <p className="text-xs text-gray-500">
-                💡 Αφήστε άδειο για να χρησιμοποιηθεί η ελληνική έκδοση
+                {t('adminTrEditor.emptyHint')}
               </p>
               <div className="flex gap-2">
-                <button onClick={onClose} className="btn-secondary">Ακύρωση</button>
-                <button onClick={handleSave} className="btn-primary">Αποθήκευση μεταφράσεων</button>
+                <button onClick={onClose} className="btn-secondary">{t('common.cancel')}</button>
+                <button onClick={handleSave} className="btn-primary">{t('adminTrEditor.saveTranslations')}</button>
               </div>
             </div>
           </motion.div>

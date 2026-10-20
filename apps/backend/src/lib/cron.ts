@@ -4,6 +4,8 @@ import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
 import { sendPushToUser } from './push.js'
+import { resolveStuckBookingRefunds } from './cancellation.js'
+import { resolveStuckEventRefunds } from '../routes/events.js'
 
 export function startAiTrialExpiryCron() {
   // Runs once a day at 09:00 server time
@@ -354,5 +356,36 @@ export function startRetentionCron() {
     }
 
     console.log('🧹 Ολοκληρώθηκε')
+  })
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ΚΟΛΛΗΜΕΝΕΣ ΕΠΙΣΤΡΟΦΕΣ (`refunding`) — κρατήσεις και εκδηλώσεις
+   ═══════════════════════════════════════════════════════════════════════
+   Κάθε 15 λεπτά. Βρίσκει ό,τι έμεινε `refunding` πάνω από 15 λεπτά (η
+   διεργασία που ξεκίνησε την επιστροφή έπεσε στη μέση) και το τακτοποιεί
+   ΧΩΡΙΣ ποτέ νέα επιστροφή στα τυφλά: μόνο με απόδειξη (audit ή Viva) γίνεται
+   «επιστράφηκε»· αλλιώς σημειώνεται για τον διαχειριστή. Λεπτομέρειες:
+   lib/cancellation.ts (resolveStuckBookingRefunds) και routes/events.ts
+   (resolveStuckEventRefunds). Ασφαλές με πολλά instances: κάθε τακτοποίηση
+   γίνεται υπό κλείδωμα βάσης (lib/refundLock).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export function startStuckRefundsCron() {
+  let running = false
+  cron.schedule('*/15 * * * *', async () => {
+    if (running) return
+    running = true
+    try {
+      const b = await resolveStuckBookingRefunds()
+      const e = await resolveStuckEventRefunds()
+      if (b.completed || b.flagged || e.refunded || e.failed) {
+        console.log(`💶 Κολλημένες επιστροφές: κρατήσεις ${b.completed} ολοκληρώθηκαν / ${b.flagged} για έλεγχο · εκδηλώσεις ${e.refunded} επιστράφηκαν / ${e.failed} για έλεγχο`)
+      }
+    } catch (err: any) {
+      console.error('Stuck refunds cron error:', err?.message ?? err)
+    } finally {
+      running = false
+    }
   })
 }

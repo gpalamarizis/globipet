@@ -103,6 +103,9 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   'Κάποια προϊόντα δεν είναι πλέον διαθέσιμα': ['Some products are no longer available', 'Algunos productos ya no están disponibles', 'Certains produits ne sont plus disponibles', '部分商品已不可用'],
   'Η παραγγελία έχει ήδη πληρωθεί': ['The order has already been paid', 'El pedido ya está pagado', 'La commande a déjà été payée', '该订单已付款'],
   'Η συνεδρία έχει πληρωθεί και δεν διαγράφεται. Χρησιμοποίησε ακύρωση.': ['The session has been paid and cannot be deleted. Use cancel instead.', 'La sesión está pagada y no se puede eliminar. Usa cancelar.', 'La séance a été payée et ne peut être supprimée. Utilisez l\'annulation.', '该问诊已付款，无法删除，请使用取消。'],
+  'Η συνεδρία έχει πληρωθεί· για ακύρωση επικοινώνησε με την υποστήριξη.': ['The session has been paid; to cancel it, please contact support.', 'La sesión ya está pagada; para cancelarla, contacta con soporte.', 'La séance a été payée ; pour l\'annuler, contactez le support.', '该问诊已付款；如需取消，请联系客服。'],
+  'Η παραγγελία έχει ακυρωθεί': ['The order has been cancelled', 'El pedido ha sido cancelado', 'La commande a été annulée', '该订单已取消'],
+  'Η παραγγελία δεν μπορεί πλέον να πληρωθεί': ['This order can no longer be paid', 'Este pedido ya no se puede pagar', 'Cette commande ne peut plus être payée', '该订单已无法付款'],
   'Μόνο πάροχοι μπορούν να αλλάξουν διαθεσιμότητα': ['Only providers can change availability', 'Solo los proveedores pueden cambiar la disponibilidad', 'Seuls les prestataires peuvent modifier la disponibilité', '只有服务商可以更改可用状态'],
   'Δεν βρέθηκε κτηνιατρική υπηρεσία για αυτόν τον πάροχο': ['No veterinary service was found for this provider', 'No se encontró servicio veterinario para este proveedor', 'Aucun service vétérinaire trouvé pour ce prestataire', '未找到该服务商的兽医服务'],
   'Η υπηρεσία τηλεϊατρικής δεν βρέθηκε': ['Telehealth service not found', 'Servicio de telemedicina no encontrado', 'Service de télémédecine introuvable', '未找到远程问诊服务'],
@@ -245,6 +248,7 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   'Ο λογαριασμός είναι ήδη συνδεδεμένος με άλλον γιατρό': ['That account is already linked to another practitioner', 'Esa cuenta ya está vinculada a otro profesional', 'Ce compte est déjà lié à un autre praticien', '该账号已关联其他接诊人员'],
   'Αυτό το προϊόν δεν διαθέτει συνδρομή': ['This product does not offer a subscription', 'Este producto no ofrece suscripción', 'Ce produit ne propose pas d\'abonnement', '该产品不提供订阅'],
   'Έχεις ήδη ενεργή συνδρομή για αυτό το προϊόν': ['You already have an active subscription for this product', 'Ya tienes una suscripción activa para este producto', 'Vous avez déjà un abonnement actif pour ce produit', '您已有该产品的有效订阅'],
+  'Έχεις ήδη συνδρομή σε παύση για αυτό το προϊόν': ['You already have a paused subscription for this product', 'Ya tienes una suscripción en pausa para este producto', 'Vous avez déjà un abonnement en pause pour ce produit', '您已有该产品的已暂停订阅'],
   'Λείπει το κατοικίδιο ή το αναγνωριστικό συσκευής': ['The pet or the device identifier is missing', 'Falta la mascota o el identificador del dispositivo', 'L\'animal ou l\'identifiant de l\'appareil est manquant', '缺少宠物或设备标识'],
   'Μη έγκυρο αναγνωριστικό συσκευής': ['Invalid device identifier', 'Identificador de dispositivo no válido', 'Identifiant d\'appareil non valide', '设备标识无效'],
   'Η συσκευή είναι ήδη καταχωρημένη': ['The device is already registered', 'El dispositivo ya está registrado', 'L\'appareil est déjà enregistré', '该设备已注册'],
@@ -293,15 +297,94 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   'Η εκδήλωση έχει ήδη ξεκινήσει ή πραγματοποιηθεί — η ακύρωση με επιστροφές γίνεται μόνο από την υποστήριξη.': ['The event has already started or taken place — only support can cancel it with refunds.', 'El evento ya ha empezado o se ha celebrado: solo el equipo de soporte puede cancelarlo con reembolsos.', 'L\'événement a déjà commencé ou eu lieu — seul le support peut l\'annuler avec remboursements.', '活动已开始或已举行——只有客服可以取消并退款。'],
   'Η εικόνα είναι πολύ μεγάλη (έως 5MB)': ['The image is too large (max 5MB)', 'La imagen es demasiado grande (máx. 5 MB)', 'L\'image est trop volumineuse (5 Mo max.)', '图片过大（最大 5MB）'],
   'Η κλήση είναι διαθέσιμη από 30 λεπτά πριν έως 3 ώρες μετά την ώρα της συνεδρίας':['The call is available from 30 minutes before until 3 hours after the session time', 'La llamada está disponible desde 30 minutos antes hasta 3 horas después de la hora de la sesión', 'L\'appel est disponible de 30 minutes avant à 3 heures après l\'heure de la séance', '通话可在问诊时间前 30 分钟至后 3 小时内进行'],
+  // ── Ε10: μηνύματα που έλειπαν (επέστρεφαν πάντα ελληνικά) ──────────────
+  // Πληρωμές / επαλήθευση
+  'Η πληρωμή δεν ξεκίνησε.': ['The payment could not be started.', 'No se pudo iniciar el pago.', 'Le paiement n\'a pas pu être lancé.', '无法发起付款。'],
+  'Μη έγκυρο αναγνωριστικό συναλλαγής': ['Invalid transaction ID', 'Identificador de transacción no válido', 'Identifiant de transaction non valide', '交易编号无效'],
+  'Η επαλήθευση της πληρωμής δεν ολοκληρώθηκε. Δοκίμασε ξανά σε λίγο.': ['The payment could not be verified yet. Please try again shortly.', 'No se pudo completar la verificación del pago. Inténtalo de nuevo en un momento.', 'La vérification du paiement n\'a pas abouti. Réessayez dans un instant.', '付款验证未完成，请稍后重试。'],
+  'Η κράτηση δεν μπορεί πλέον να πληρωθεί': ['This booking can no longer be paid', 'Esta reserva ya no se puede pagar', 'Cette réservation ne peut plus être payée', '该预约已无法付款'],
+  'Η συνδρομή δεν δημιουργήθηκε.': ['The subscription was not created.', 'No se ha creado la suscripción.', 'L\'abonnement n\'a pas été créé.', '订阅未创建。'],
+  'Η αλλαγή δεν ολοκληρώθηκε στον πάροχο πληρωμών. Δεν έγινε καμία αλλαγή — δοκίμασε ξανά σε λίγο.': ['The change could not be completed with the payment provider. Nothing was changed — please try again shortly.', 'No se pudo completar el cambio con el proveedor de pagos. No se ha cambiado nada; inténtalo de nuevo en unos minutos.', 'La modification n\'a pas pu être effectuée auprès du prestataire de paiement. Rien n\'a été modifié — réessayez dans un instant.', '无法在支付服务商处完成更改。未做任何更改，请稍后重试。'],
+  // Κρατήσεις
+  'Η ώρα του ραντεβού έχει περάσει — η κράτηση δεν ακυρώνεται πλέον.': ['The appointment time has passed — the booking can no longer be cancelled.', 'La hora de la cita ya ha pasado: la reserva ya no se puede cancelar.', 'L\'heure du rendez-vous est passée — la réservation ne peut plus être annulée.', '预约时间已过——该预约无法再取消。'],
+  'Η κράτηση δεν μπορεί να ακυρωθεί σε αυτή την κατάσταση.': ['The booking cannot be cancelled in its current status.', 'La reserva no se puede cancelar en este estado.', 'La réservation ne peut pas être annulée dans cet état.', '该预约在当前状态下无法取消。'],
+  'Η επιστροφή χρημάτων δεν ολοκληρώθηκε, οπότε η κράτηση δεν ακυρώθηκε. Δοκίμασε ξανά σε λίγο.': ['The refund could not be completed, so the booking was not cancelled. Please try again shortly.', 'No se pudo completar el reembolso, así que la reserva no se ha cancelado. Inténtalo de nuevo en un momento.', 'Le remboursement n\'a pas abouti, la réservation n\'a donc pas été annulée. Réessayez dans un instant.', '退款未完成，因此预约未取消。请稍后重试。'],
+  'Η κράτηση άλλαξε στο μεταξύ — ανανέωσε τη σελίδα και δοκίμασε ξανά.': ['The booking changed in the meantime — refresh the page and try again.', 'La reserva ha cambiado entretanto: actualiza la página e inténtalo de nuevo.', 'La réservation a changé entre-temps — actualisez la page et réessayez.', '该预约已发生变化——请刷新页面后重试。'],
+  'Μόνο κράτηση σε αναμονή επιβεβαιώνεται': ['Only a pending booking can be confirmed', 'Solo se puede confirmar una reserva pendiente', 'Seule une réservation en attente peut être confirmée', '只有待确认的预约才能确认'],
+  'Μόνο επιβεβαιωμένη κράτηση σημειώνεται ως «δεν προσήλθε»': ['Only a confirmed booking can be marked as a no-show', 'Solo una reserva confirmada se puede marcar como «no se presentó»', 'Seule une réservation confirmée peut être marquée « absent »', '只有已确认的预约才能标记为“未到场”'],
+  // Εκδηλώσεις
+  'Μη εξουσιοδοτημένη πρόσβαση': ['Unauthorised access', 'Acceso no autorizado', 'Accès non autorisé', '未经授权的访问'],
+  'Η εκδήλωση ακυρώθηκε από τον διοργανωτή': ['The event was cancelled by the organizer', 'El evento ha sido cancelado por el organizador', 'L\'événement a été annulé par l\'organisateur', '该活动已被组织者取消'],
+  'Υπάρχουν πληρωμένες συμμετοχές ή επιστροφές σε εξέλιξη — χρησιμοποίησε την «Ακύρωση εκδήλωσης» ώστε να επιστραφούν τα χρήματα. Η εκδήλωση δεν διαγράφηκε.': ['There are paid registrations or refunds in progress — use “Cancel event” so the money is refunded. The event was not deleted.', 'Hay inscripciones pagadas o reembolsos en curso: usa «Cancelar evento» para que se devuelva el dinero. El evento no se ha eliminado.', 'Des inscriptions payées ou des remboursements sont en cours — utilisez « Annuler l\'événement » pour que l\'argent soit remboursé. L\'événement n\'a pas été supprimé.', '存在已付款的报名或进行中的退款——请使用“取消活动”以退还款项。活动未被删除。'],
+  'Η ακύρωση δεν ξεκίνησε. Δοκίμασε ξανά σε λίγο.': ['The cancellation could not be started. Please try again shortly.', 'No se pudo iniciar la cancelación. Inténtalo de nuevo en un momento.', 'L\'annulation n\'a pas pu démarrer. Réessayez dans un instant.', '无法开始取消，请稍后重试。'],
+  'Η εκδήλωση ακυρώθηκε, αλλά κάποιες επιστροφές χρημάτων δεν ολοκληρώθηκαν. Δοκίμασε ξανά σε λίγο.': ['The event was cancelled, but some refunds were not completed. Please try again shortly.', 'El evento se ha cancelado, pero algunos reembolsos no se han completado. Inténtalo de nuevo en un momento.', 'L\'événement a été annulé, mais certains remboursements n\'ont pas abouti. Réessayez dans un instant.', '活动已取消，但部分退款尚未完成。请稍后重试。'],
+  'Η ακύρωση δεν ολοκληρώθηκε. Δοκίμασε ξανά.': ['The cancellation was not completed. Please try again.', 'La cancelación no se ha completado. Inténtalo de nuevo.', 'L\'annulation n\'a pas abouti. Réessayez.', '取消未完成，请重试。'],
+  // Εισαγωγές / διαχείριση
+  'Δεν υπάρχουν εγγραφές για εισαγωγή': ['There are no rows to import', 'No hay registros para importar', 'Aucune ligne à importer', '没有可导入的记录'],
+  'Λείπουν υποχρεωτικά πεδία (name, price, category)': ['Required fields are missing (name, price, category)', 'Faltan campos obligatorios (name, price, category)', 'Des champs obligatoires sont manquants (name, price, category)', '缺少必填字段（name、price、category）'],
+  'Λείπουν υποχρεωτικά πεδία (provider_name, provider_email, service_type, city)': ['Required fields are missing (provider_name, provider_email, service_type, city)', 'Faltan campos obligatorios (provider_name, provider_email, service_type, city)', 'Des champs obligatoires sont manquants (provider_name, provider_email, service_type, city)', '缺少必填字段（provider_name、provider_email、service_type、city）'],
+  'Λείπει το όνομα εταιρείας': ['The company name is missing', 'Falta el nombre de la empresa', 'Le nom de la société est manquant', '缺少公司名称'],
+  'Ο στόχος δεν σου ανήκει': ['This target is not yours', 'Este objetivo no es tuyo', 'Cette cible ne vous appartient pas', '该目标不属于您'],
+  'Το αρχείο είναι πολύ μεγάλο (25MB για βίντεο)': ['The file is too large (25MB for videos)', 'El archivo es demasiado grande (25 MB para vídeos)', 'Le fichier est trop volumineux (25 Mo pour les vidéos)', '文件过大（视频最大 25MB）'],
+  'Το αρχείο είναι πολύ μεγάλο (5MB)': ['The file is too large (5MB)', 'El archivo es demasiado grande (5 MB)', 'Le fichier est trop volumineux (5 Mo)', '文件过大（最大 5MB）'],
+  // Γενικά / επικύρωση
+  'Μη έγκυρα δεδομένα': ['Invalid data', 'Datos no válidos', 'Données non valides', '数据无效'],
+  'Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.': ['Something went wrong. Please try again shortly.', 'Algo ha salido mal. Inténtalo de nuevo en un momento.', 'Une erreur s\'est produite. Réessayez dans un instant.', '出了点问题，请稍后重试。'],
+  'Η ανάλυση δεν ολοκληρώθηκε.': ['The analysis could not be completed.', 'No se pudo completar el análisis.', 'L\'analyse n\'a pas pu être effectuée.', '分析未完成。'],
+  'Η ενέργεια δεν ολοκληρώθηκε.': ['The action could not be completed.', 'No se pudo completar la acción.', 'L\'action n\'a pas pu être effectuée.', '操作未完成。'],
+  'Μη έγκυρη διεύθυνση email': ['Invalid email address', 'Dirección de email no válida', 'Adresse e-mail non valide', '邮箱地址无效'],
+  'Η διεύθυνση email είναι υπερβολικά μεγάλη': ['The email address is too long', 'La dirección de email es demasiado larga', 'L\'adresse e-mail est trop longue', '邮箱地址过长'],
+  'Το τηλέφωνο είναι υπερβολικά μεγάλο': ['The phone number is too long', 'El teléfono es demasiado largo', 'Le numéro de téléphone est trop long', '电话号码过长'],
+  'Η διεύθυνση πρέπει να ξεκινά με http:// ή https://': ['The address must start with http:// or https://', 'La dirección debe empezar por http:// o https://', 'L\'adresse doit commencer par http:// ou https://', '地址必须以 http:// 或 https:// 开头'],
+  'Ο κωδικός είναι υπερβολικά μεγάλος': ['The password is too long', 'La contraseña es demasiado larga', 'Le mot de passe est trop long', '密码过长'],
+  'Ο κωδικός είναι υποχρεωτικός': ['The password is required', 'La contraseña es obligatoria', 'Le mot de passe est obligatoire', '密码为必填项'],
+  'Μη έγκυρος σύνδεσμος επαναφοράς': ['Invalid reset link', 'Enlace de restablecimiento no válido', 'Lien de réinitialisation non valide', '重置链接无效'],
+  'Πρέπει να αποδεχτείς τους Όρους Χρήσης και την Πολιτική Απορρήτου': ['You must accept the Terms of Use and the Privacy Policy', 'Debes aceptar las Condiciones de uso y la Política de privacidad', 'Vous devez accepter les Conditions d\'utilisation et la Politique de confidentialité', '您必须接受使用条款和隐私政策'],
+  'Το βιογραφικό ξεπερνά τους 2000 χαρακτήρες': ['The bio exceeds 2000 characters', 'La biografía supera los 2000 caracteres', 'La biographie dépasse 2000 caractères', '个人简介超过 2000 个字符'],
+  'Το πεδίο ονοματεπώνυμο είναι υποχρεωτικό': ['The full name field is required', 'El campo nombre completo es obligatorio', 'Le champ nom complet est obligatoire', '姓名为必填项'],
+  'Το πεδίο ονοματεπώνυμο ξεπερνά τους 120 χαρακτήρες': ['The full name field exceeds 120 characters', 'El campo nombre completo supera los 120 caracteres', 'Le champ nom complet dépasse 120 caractères', '姓名超过 120 个字符'],
 }
 
 const IDX: Record<Exclude<Lang, 'el'>, number> = { en: 0, es: 1, fr: 2, zh: 3 }
+
+/**
+ * Μηνύματα με μεταβλητό μέρος (αριθμοί, κωδικοί) — δεν ταιριάζουν ακριβώς
+ * σε κλειδί του MESSAGES. Κάθε κανόνας: ελληνικό πρότυπο → [en, es, fr, zh]
+ * με $1, $2 … για τα κομμάτια που κρατιούνται αυτούσια.
+ */
+const PATTERNS: Array<[RegExp, [string, string, string, string]]> = [
+  // 429 του rate limit (index.ts)
+  [/^Πολλά αιτήματα\. Δοκίμασε ξανά σε (\d+) δευτερόλεπτα\.$/, ['Too many requests. Try again in $1 seconds.', 'Demasiadas solicitudes. Inténtalo de nuevo en $1 segundos.', 'Trop de requêtes. Réessayez dans $1 secondes.', '请求过多，请在 $1 秒后重试。']],
+  [/^Πολλές προσπάθειες\. Δοκίμασε ξανά σε (\d+) λεπτά\.$/, ['Too many attempts. Try again in $1 minutes.', 'Demasiados intentos. Inténtalo de nuevo en $1 minutos.', 'Trop de tentatives. Réessayez dans $1 minutes.', '尝试次数过多，请在 $1 分钟后重试。']],
+  // Διαχείριση
+  [/^Το ποσό υπερβαίνει το πληρωμένο \((.+) €\)$/, ['The amount exceeds what was paid ($1 €)', 'El importe supera lo pagado ($1 €)', 'Le montant dépasse ce qui a été payé ($1 €)', '金额超过已付款金额（$1 €）']],
+  [/^Μη έγκυρη τιμή για (.+): πρέπει να είναι 0-100$/, ['Invalid value for $1: must be 0-100', 'Valor no válido para $1: debe estar entre 0 y 100', 'Valeur non valide pour $1 : doit être comprise entre 0 et 100', '$1 的值无效：必须在 0-100 之间']],
+  [/^Το (.+) δεν έχει ρυθμιστεί στον διακομιστή$/, ['$1 is not configured on the server', '$1 no está configurado en el servidor', '$1 n\'est pas configuré sur le serveur', '服务器未配置 $1']],
+  [/^Δεν βρέθηκε εταιρεία: (.+)$/, ['Company not found: $1', 'Empresa no encontrada: $1', 'Société introuvable : $1', '未找到公司：$1']],
+  [/^Εστάλη σε (\d+) από (\d+) παραλήπτες \((\d+) απέτυχαν\)$/, ['Sent to $1 of $2 recipients ($3 failed)', 'Enviado a $1 de $2 destinatarios ($3 fallidos)', 'Envoyé à $1 destinataires sur $2 ($3 échecs)', '已发送给 $2 位收件人中的 $1 位（$3 位失败）']],
+  [/^Εστάλη σε (\d+) από (\d+) παραλήπτες$/, ['Sent to $1 of $2 recipients', 'Enviado a $1 de $2 destinatarios', 'Envoyé à $1 destinataires sur $2', '已发送给 $2 位收件人中的 $1 位']],
+]
+
+/** «(κωδικός a3f91c)» που προσθέτει το lib/errors.ts στα σφάλματα συστήματος. */
+const REF_SUFFIX = /^([\s\S]*\S) \(κωδικός ([0-9a-f]+)\)$/
+const REF_WORD: Record<Exclude<Lang, 'el'>, string> = { en: 'code', es: 'código', fr: 'code', zh: '代码' }
 
 /** Μεταφράζει ένα μήνυμα. Άγνωστο ή ελληνικά → αυτούσιο. */
 export function translateMessage(text: string, lang: Lang): string {
   if (lang === 'el') return text
   const row = MESSAGES[text]
-  return row ? row[IDX[lang]] : text
+  if (row) return row[IDX[lang]]
+  for (const [re, tr] of PATTERNS) {
+    const m = re.exec(text)
+    if (m) return tr[IDX[lang]].replace(/\$(\d)/g, (_, i) => m[Number(i)] ?? '')
+  }
+  // Σφάλμα συστήματος (lib/errors.ts): μεταφράζεται το μήνυμα, ο κωδικός μένει.
+  const ref = REF_SUFFIX.exec(text)
+  if (ref) {
+    const base = translateMessage(ref[1], lang)
+    if (base !== ref[1]) return `${base} (${REF_WORD[lang]} ${ref[2]})`
+  }
+  return text
 }
 
 /** Γλώσσα αιτήματος: χρήστης → Accept-Language → ελληνικά. */

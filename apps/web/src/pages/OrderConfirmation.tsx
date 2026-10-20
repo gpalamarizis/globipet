@@ -34,6 +34,9 @@ function OrderConfirmationInner() {
   // Start in the verifying state when we came back from a payment, so the
   // first thing the customer sees is a spinner rather than a failure.
   const [verifying, setVerifying] = useState(cameFromViva)
+  // Αποτέλεσμα του verify (orders.ts): 'refunded' / 'refund_failed' = η
+  // πληρωμή επιστράφηκε (ή η επιστροφή καθυστερεί) — όπως στο BookingConfirmation.
+  const [result, setResult] = useState<string | null>(null)
 
   const { data: order, refetch } = useQuery({
     queryKey: ['order', id],
@@ -51,8 +54,9 @@ function OrderConfirmationInner() {
     if (verified.current || verifyInFlight.current || !transactionId || !id) return
     verifyInFlight.current = true
     try {
-      await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
+      const r = await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
       verified.current = true
+      setResult(r.data?.result ?? null)
     } catch (err: any) {
       const st = err?.response?.status ?? err?.statusCode
       // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
@@ -98,7 +102,10 @@ function OrderConfirmationInner() {
 
   // Waiting covers both the explicit verify call and the window where the
   // webhook has not reported yet.
-  const waiting = verifying || (cameFromViva && !isPaid)
+  const extraRefunded = result === 'refunded'
+  const extraRefundFailed = result === 'refund_failed'
+  // Επιστροφή = οριστική απάντηση: η πληρωμή δεν θα καταχωρηθεί, δεν περιμένουμε.
+  const waiting = verifying || (cameFromViva && !isPaid && !extraRefunded && !extraRefundFailed)
 
   // Αριθμός, σύνολο και κατάσταση — και στις δύο εκβάσεις, όπως στο κινητό
   // (πριν, σε εκκρεμή πληρωμή δεν φαινόταν ούτε το σύνολο ούτε η κατάσταση).
@@ -129,6 +136,11 @@ function OrderConfirmationInner() {
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.paidTitle')}</h1>
           <p className="text-gray-500 mb-6">{t('pgOrderConfirm.paidDesc')}</p>
+          {(extraRefunded || extraRefundFailed) && (
+            <p className="text-sm text-amber-600 mb-6">
+              {extraRefunded ? t('pgOrderConfirm.duplicateRefunded') : t('pgOrderConfirm.duplicateRefundDelayed')}
+            </p>
+          )}
           {details}
           <button onClick={() => navigate('/orders')} className="btn-primary w-full">
             <Package size={16} className="inline mr-2"/>{t('orderConfirm.myOrders')}
@@ -138,9 +150,13 @@ function OrderConfirmationInner() {
       ) : (
         <>
           <XCircle size={56} className="mx-auto text-amber-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('pgOrderConfirm.pendingTitle')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {extraRefunded || extraRefundFailed ? t('pgOrderConfirm.notChargedTitle') : t('pgOrderConfirm.pendingTitle')}
+          </h1>
           <p className="text-gray-500 mb-6">
-            {t('pgOrderConfirm.pendingDesc', { id: id?.slice(0, 8) })}
+            {extraRefunded ? t('pgOrderConfirm.lateRefunded')
+              : extraRefundFailed ? t('pgOrderConfirm.lateRefundDelayed')
+              : t('pgOrderConfirm.pendingDesc', { id: id?.slice(0, 8) })}
           </p>
           {details}
           <button onClick={() => navigate('/orders')} className="btn-secondary w-full">{t('orderConfirm.myOrders')}</button>

@@ -220,9 +220,12 @@ export async function refundVivaTransaction(
   const url = `${legacy}/api/transactions/${encodeURIComponent(transactionId)}${qs ? '?' + qs : ''}`
   const auth = Buffer.from(`${merchantId}:${apiKey}`).toString('base64')
 
+  // Όριο 90″ — μικρότερο από το timeout (120″) της συναλλαγής του
+  // lib/refundLock, ώστε το κλείδωμα να κρατιέται όσο διαρκεί η κλήση.
   const res = await fetch(url, {
     method: 'DELETE',
     headers: { Authorization: `Basic ${auth}` },
+    signal: AbortSignal.timeout(90_000),
   })
 
   const text = await res.text()

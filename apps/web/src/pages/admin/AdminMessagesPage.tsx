@@ -5,18 +5,20 @@ import { Mail, Send, Users, User, Search, CheckCircle, AlertCircle, X } from 'lu
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation, Trans } from 'react-i18next'
 
 const ROLE_GROUPS = [
-  { value: 'all',              label: 'Όλοι οι χρήστες',    emoji: '👥', color: 'bg-gray-100 text-gray-700' },
-  { value: 'user',             label: 'Μόνο χρήστες',       emoji: '🙋', color: 'bg-blue-100 text-blue-700' },
-  { value: 'service_provider', label: 'Πάροχοι υπηρεσιών',  emoji: '🔧', color: 'bg-orange-100 text-orange-700' },
-  { value: 'both',             label: 'Χρήστες & Πάροχοι',  emoji: '🤝', color: 'bg-purple-100 text-purple-700' },
-  { value: 'admin',            label: 'Διαχειριστές',        emoji: '🛡️', color: 'bg-red-100 text-red-700' },
+  { value: 'all',              label: 'adminMessages.role_all',    emoji: '👥', color: 'bg-gray-100 text-gray-700' },
+  { value: 'user',             label: 'adminMessages.role_user',       emoji: '🙋', color: 'bg-blue-100 text-blue-700' },
+  { value: 'service_provider', label: 'adminMessages.role_service_provider',  emoji: '🔧', color: 'bg-orange-100 text-orange-700' },
+  { value: 'both',             label: 'adminMessages.role_both',  emoji: '🤝', color: 'bg-purple-100 text-purple-700' },
+  { value: 'admin',            label: 'adminMessages.role_admin',        emoji: '🛡️', color: 'bg-red-100 text-red-700' },
 ]
 
 type Mode = 'single' | 'broadcast'
 
 export default function AdminMessagesPage() {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('single')
   const [searchQ, setSearchQ] = useState('')
   const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -35,7 +37,6 @@ export default function AdminMessagesPage() {
     mutationFn: () => {
       const payload: any = { subject, body }
       if (mode === 'single') {
-        if (!selectedUser) throw new Error('Επίλεξε παραλήπτη')
         payload.to_email = selectedUser.email
       } else {
         payload.to_role = selectedRole
@@ -44,12 +45,21 @@ export default function AdminMessagesPage() {
     },
     onSuccess: (res) => {
       setResult(res.data)
-      toast.success(res.data.message || 'Εστάλη επιτυχώς')
+      toast.success(res.data.message || t('adminMessages.sent'))
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα αποστολής'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('adminMessages.sendError')),
   })
 
-  const canSend = subject.trim() && body.trim() && (mode === 'broadcast' || selectedUser)
+  // Ο παραλήπτης ελέγχεται στο πάτημα (μήνυμα «Επίλεξε παραλήπτη»), όχι με απενεργοποίηση του κουμπιού.
+  const canSend = subject.trim() && body.trim()
+  const handleSend = () => {
+    if (mode === 'single' && !selectedUser) {
+      toast.error(t('adminMessages.pickRecipient'))
+      return
+    }
+    setResult(null)
+    sendEmail.mutate()
+  }
 
   return (
     <div className="page-container py-8 max-w-3xl">
@@ -58,8 +68,8 @@ export default function AdminMessagesPage() {
           <Mail size={20} className="text-blue-600" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Αποστολή Email</h1>
-          <p className="text-sm text-gray-500">Επικοινώνησε απευθείας με χρήστες ή παρόχους</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('adminMessages.title')}</h1>
+          <p className="text-sm text-gray-500">{t('adminMessages.subtitle')}</p>
         </div>
       </div>
 
@@ -68,12 +78,12 @@ export default function AdminMessagesPage() {
         <button onClick={() => { setMode('single'); setResult(null) }}
           className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all',
             mode === 'single' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-          <User size={15} /> Συγκεκριμένος Χρήστης
+          <User size={15} /> {t('adminMessages.singleUser')}
         </button>
         <button onClick={() => { setMode('broadcast'); setResult(null) }}
           className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all',
             mode === 'broadcast' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-          <Users size={15} /> Broadcast σε Ομάδα
+          <Users size={15} /> {t('adminMessages.broadcastGroup')}
         </button>
       </div>
 
@@ -81,7 +91,7 @@ export default function AdminMessagesPage() {
         {/* Single user picker */}
         {mode === 'single' && (
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Παραλήπτης</label>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminMessages.recipient')}</label>
             {selectedUser ? (
               <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                 <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-semibold text-sm shrink-0">
@@ -102,7 +112,7 @@ export default function AdminMessagesPage() {
                   <Search size={15} className="text-gray-400 shrink-0" />
                   <input
                     type="text"
-                    placeholder="Αναζήτηση με email ή όνομα..."
+                    placeholder={t('adminMessages.searchPlaceholder')}
                     value={searchQ}
                     onChange={e => setSearchQ(e.target.value)}
                     className="flex-1 text-sm bg-transparent outline-none"
@@ -133,50 +143,50 @@ export default function AdminMessagesPage() {
         {/* Broadcast group picker */}
         {mode === 'broadcast' && (
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">Ομάδα Παραληπτών</label>
+            <label className="text-xs font-medium text-gray-500 mb-2 block">{t('adminMessages.recipientGroup')}</label>
             <div className="flex flex-wrap gap-2">
               {ROLE_GROUPS.map(g => (
                 <button key={g.value} onClick={() => setSelectedRole(g.value)}
                   className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all',
                     selectedRole === g.value ? 'border-brand-900 bg-brand-50 text-brand-900' : 'border-gray-200 text-gray-600 hover:border-gray-300')}>
-                  <span>{g.emoji}</span>{g.label}
+                  <span>{g.emoji}</span>{t(g.label)}
                 </button>
               ))}
             </div>
             <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 mt-3 flex items-center gap-2">
-              ⚠️ Το broadcast αποστέλλεται σε <strong>όλους</strong> τους χρήστες της επιλεγμένης ομάδας. Σιγουρέψου ότι το περιεχόμενο είναι κατάλληλο.
+              <Trans i18nKey="adminMessages.broadcastWarning" components={{ b: <strong /> }} />
             </p>
           </div>
         )}
 
         {/* Subject */}
         <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Θέμα Email</label>
+          <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminMessages.subject')}</label>
           <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
-            placeholder="π.χ. Σημαντική ενημέρωση για το λογαριασμό σας"
+            placeholder={t('adminMessages.subjectPh')}
             className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white" />
         </div>
 
         {/* Body */}
         <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Κείμενο Μηνύματος</label>
+          <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminMessages.body')}</label>
           <textarea value={body} onChange={e => setBody(e.target.value)} rows={8}
-            placeholder="Γράψε το μήνυμά σου εδώ...&#10;&#10;Η αλλαγή γραμμής αντιστοιχεί σε νέα παράγραφο στο email."
+            placeholder={t('adminMessages.bodyPh')}
             className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white resize-none" />
-          <p className="text-xs text-gray-400 mt-1">{body.length} χαρακτήρες</p>
+          <p className="text-xs text-gray-400 mt-1">{t('adminMessages.chars', { count: body.length })}</p>
         </div>
 
         {/* Send button */}
         <button
-          onClick={() => { setResult(null); sendEmail.mutate() }}
+          onClick={handleSend}
           disabled={!canSend || sendEmail.isPending}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm transition-all disabled:opacity-50">
           <Send size={16} />
           {sendEmail.isPending
-            ? 'Αποστολή...'
+            ? t('adminMessages.sending')
             : mode === 'broadcast'
-              ? `Broadcast σε ${ROLE_GROUPS.find(g => g.value === selectedRole)?.label}`
-              : 'Αποστολή Email'}
+              ? t('adminMessages.broadcastTo', { group: t(ROLE_GROUPS.find(g => g.value === selectedRole)?.label ?? '') })
+              : t('adminMessages.title')}
         </button>
 
         {/* Result */}
@@ -189,7 +199,7 @@ export default function AdminMessagesPage() {
               <p className="text-sm font-semibold text-gray-900 dark:text-white">{result.message}</p>
               {result.recipients_count > 1 && (
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Σύνολο: {result.recipients_count} παραλήπτες · Επιτυχία: {result.sent} · Αποτυχία: {result.failed}
+                  {t('adminMessages.summary', { total: result.recipients_count, sent: result.sent, failed: result.failed })}
                 </p>
               )}
             </div>

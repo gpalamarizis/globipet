@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban, UserCheck, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
@@ -179,7 +179,7 @@ export default function Events() {
                       )}
                       {ev.price > 0 && (
                         <div className="absolute bottom-2 left-2 badge bg-white/95 text-gray-900 text-[10px] font-bold">
-                          €{ev.price}
+                          {formatCurrency(Number(ev.price))}
                         </div>
                       )}
                       {ev.price === 0 && (

@@ -121,7 +121,7 @@ export default function PetDetailScreen() {
 
         <Card>
           <Text style={s.sectionTitle}>{t('passport.identity')}</Text>
-          {([['pets.gender', pet.gender === 'female' ? t('passport.female') : t('passport.male')],
+          {([['pets.gender', pet.gender === 'female' ? t('passport.female') : pet.gender === 'male' ? t('passport.male') : '—'],
              ['pets.weight', pet.weight ? `${pet.weight} kg` : '—'],
              ['pets.color', pet.color || '—'],
              ['pets.microchip', pet.microchip_number || t('pets.no_chip')],

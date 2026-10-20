@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Globe, Check, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuthStore } from '@/store/auth'
 
 const LANGUAGES = [
   { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
@@ -32,9 +33,14 @@ export default function LanguageSwitcher({ variant = 'compact', onLanguageChange
   }, [])
 
   const handleSelect = async (code: string) => {
-    await i18n.changeLanguage(code)
-    localStorage.setItem('globipet_language', code)
     setOpen(false)
+    // Συνδεδεμένος χρήστης: αποθήκευση και στον server/στο store (βλ. LanguageSelector).
+    if (useAuthStore.getState().user) {
+      await useAuthStore.getState().updateLanguage(code)
+    } else {
+      await i18n.changeLanguage(code)
+    }
+    try { localStorage.setItem('globipet_language', code) } catch {}
     onLanguageChange?.(code)
   }
 

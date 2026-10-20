@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
-  ArrowLeft, MessageSquare, Eye, Pin, CheckCircle2, Send, Trash2, Check,
+  ArrowLeft, MessageSquare, Eye, Pin, CheckCircle2, Send, Trash2, Check, Pencil,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -25,6 +25,13 @@ export default function ForumTopic() {
   const { user, isAuthenticated } = useAuthStore()
   const queryClient = useQueryClient()
   const [reply, setReply] = useState('')
+  // Επεξεργασία θέματος (PATCH /forum/:id: title, content) και απάντησης
+  // (PATCH /forum/replies/:replyId: content) — συντάκτης ή admin, όπως ο server.
+  const [editingTopic, setEditingTopic] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null)
+  const [editReplyText, setEditReplyText] = useState('')
 
   const { data: topic, isLoading, isError } = useQuery({
     queryKey: ['forum-topic', id],
@@ -52,6 +59,28 @@ export default function ForumTopic() {
   const deleteReply = useMutation({
     mutationFn: (replyId: string) => api.delete(`/forum/replies/${replyId}`),
     onSuccess: () => { invalidate(); toast.success(t('common.deleted')) },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  const updateTopic = useMutation({
+    mutationFn: () => api.patch(`/forum/${id}`, { title: editTitle.trim(), content: editContent.trim() }),
+    onSuccess: () => { setEditingTopic(false); invalidate(); toast.success(t('common.saved')) },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  const deleteTopic = useMutation({
+    mutationFn: () => api.delete(`/forum/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forum-topics'] })
+      toast.success(t('common.deleted'))
+      navigate('/forum')
+    },
+    onError: (err: any) => toast.error(err?.message || t('common.error')),
+  })
+
+  const updateReply = useMutation({
+    mutationFn: (replyId: string) => api.patch(`/forum/replies/${replyId}`, { content: editReplyText.trim() }),
+    onSuccess: () => { setEditingReplyId(null); invalidate(); toast.success(t('common.saved')) },
     onError: (err: any) => toast.error(err?.message || t('common.error')),
   })
 
@@ -94,9 +123,15 @@ export default function ForumTopic() {
           </span>
         </div>
 
-        <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white mb-3">
-          {topic.title}
-        </h1>
+        {editingTopic ? (
+          <input className="input mb-3" value={editTitle} maxLength={300}
+            placeholder={t('forum.titlePlaceholder')}
+            onChange={e => setEditTitle(e.target.value)} />
+        ) : (
+          <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white mb-3">
+            {topic.title}
+          </h1>
+        )}
 
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-900 dark:text-yellow-400 font-semibold text-xs">
@@ -112,9 +147,42 @@ export default function ForumTopic() {
           </div>
         </div>
 
-        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
-          {topic.content}
-        </p>
+        {editingTopic ? (
+          <>
+            <textarea className="input resize-none" rows={6} value={editContent}
+              placeholder={t('forum.contentPlaceholder')}
+              onChange={e => setEditContent(e.target.value)} />
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setEditingTopic(false)} className="btn-secondary text-sm">
+                {t('common.cancel')}
+              </button>
+              <button onClick={() => updateTopic.mutate()}
+                disabled={!editTitle.trim() || !editContent.trim() || updateTopic.isPending}
+                className="btn-primary text-sm">
+                {updateTopic.isPending ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+            {topic.content}
+          </p>
+        )}
+
+        {/* Ο συντάκτης (ή admin) διορθώνει ή διαγράφει το θέμα του. */}
+        {(isTopicAuthor || isAdmin) && !editingTopic && (
+          <div className="flex justify-end gap-1 mt-3">
+            <button onClick={() => { setEditTitle(topic.title ?? ''); setEditContent(topic.content ?? ''); setEditingTopic(true) }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-brand-900 px-2 py-1">
+              <Pencil size={13} /> {t('common.edit')}
+            </button>
+            <button onClick={() => { if (confirm(t('forum.confirmDeleteTopic'))) deleteTopic.mutate() }}
+              disabled={deleteTopic.isPending}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 px-2 py-1">
+              <Trash2 size={13} /> {t('common.delete')}
+            </button>
+          </div>
+        )}
 
         {topic.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-4">
@@ -160,6 +228,13 @@ export default function ForumTopic() {
                     <Check size={14} />
                   </button>
                 )}
+                {(r.author_email === user?.email || isAdmin) && editingReplyId !== r.id && (
+                  <button onClick={() => { setEditReplyText(r.content ?? ''); setEditingReplyId(r.id) }}
+                    title={t('common.edit')}
+                    className="text-gray-400 hover:text-brand-900 p-1">
+                    <Pencil size={14} />
+                  </button>
+                )}
                 {(r.author_email === user?.email || isAdmin) && (
                   <button onClick={() => {
                       if (confirm(t('forum.confirmDelete'))) deleteReply.mutate(r.id)
@@ -170,9 +245,26 @@ export default function ForumTopic() {
                 )}
               </div>
             </div>
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
-              {r.content}
-            </p>
+            {editingReplyId === r.id ? (
+              <>
+                <textarea className="input resize-none" rows={4} value={editReplyText}
+                  onChange={e => setEditReplyText(e.target.value)} />
+                <div className="flex justify-end gap-2 mt-3">
+                  <button onClick={() => setEditingReplyId(null)} className="btn-secondary text-sm">
+                    {t('common.cancel')}
+                  </button>
+                  <button onClick={() => updateReply.mutate(r.id)}
+                    disabled={!editReplyText.trim() || updateReply.isPending}
+                    className="btn-primary text-sm">
+                    {updateReply.isPending ? t('common.loading') : t('common.save')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                {r.content}
+              </p>
+            )}
           </motion.div>
         ))}
 

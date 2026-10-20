@@ -9,6 +9,8 @@ import { serverError } from '../lib/errors.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { sendPushToUser } from '../lib/push.js'
 import { broadcastToUser } from './notifications.js'
+import { withRefundLock } from '../lib/refundLock.js'
+import { fullNameOf } from '../lib/userName.js'
 
 /**
  * Εκδηλώσεις με τιμή — πληρωμή μέσω Viva.
@@ -109,6 +111,28 @@ async function alreadyRefunded(registrationId: string, transactionId: string): P
  *   null        — δεν προκύπτει
  */
 async function refundReason(reg: { id: string; status: string; viva_transaction_id: string | null }): Promise<'full' | 'cancelled' | 'event_cancelled' | null> {
+  // Αυτο-ακύρωση: η τελευταία καταγραφή επιστροφής για ΑΥΤΗ τη συναλλαγή
+  // είναι το σημάδι διεκδίκησης (DELETE /:id/register) ή η επιστροφή του
+  // χρήστη. Καλύπτει και το `refunding` (σε εξέλιξη) και το `refund_failed`
+  // που αφήνει η εργασία των κολλημένων επιστροφών (lib/cron.ts) — αλλιώς
+  // έβγαιναν null / «γέμισε». Μια νεότερη αυτόματη επιστροφή (π.χ. ακύρωση
+  // της εκδήλωσης μετά από αποτυχημένη αυτο-ακύρωση) υπερισχύει.
+  if (['refunding', 'refund_failed', 'refunded'].includes(reg.status) && reg.viva_transaction_id) {
+    try {
+      const last = await prisma.auditLog.findFirst({
+        where: {
+          resource: 'event_registration', resource_id: reg.id,
+          action: { in: [EVENT_REFUND_CLAIM_ACTION, ...REFUND_ACTIONS] },
+          metadata: { path: ['transaction_id'], equals: reg.viva_transaction_id },
+        },
+        orderBy: { created_at: 'desc' },
+        select: { action: true },
+      })
+      if (last?.action === EVENT_REFUND_CLAIM_ACTION || last?.action === 'event_registration_refund') return 'cancelled'
+    } catch {
+      // Σφάλμα βάσης: όπως πριν (παρακάτω).
+    }
+  }
   if (reg.status === 'refund_failed') {
     // Αποτυχημένη επιστροφή: λόγος από την τελευταία απόπειρα (αλλιώς, όπως
     // πάντα, «γέμισε»).
@@ -148,8 +172,16 @@ async function refundReason(reg: { id: string; status: string; viva_transaction_
   }
 }
 
-/** Επιστροφές σε εξέλιξη σε αυτή τη διεργασία (ίδια συναλλαγή δύο φορές ταυτόχρονα). */
+/**
+ * Επιστροφές σε εξέλιξη σε αυτή τη διεργασία (ίδια συναλλαγή δύο φορές
+ * ταυτόχρονα). Πρώτο, φθηνό φίλτρο· η πραγματική διεκδίκηση, που ισχύει και
+ * ανάμεσα σε πολλά instances, είναι το κλείδωμα της βάσης (withRefundLock).
+ */
 const refundsInFlight = new Set<string>()
+
+/** Κλειδί διεκδίκησης (lib/refundLock) μιας επιστροφής εγγραφής εκδήλωσης. */
+export const eventRefundLockKey = (registrationId: string, transactionId: string) =>
+  `event_registration|${registrationId}|${transactionId}`
 
 /**
  * Πλήρης επιστροφή μιας συναλλαγής που δεν αντιστοιχεί (πια) σε θέση.
@@ -157,6 +189,12 @@ const refundsInFlight = new Set<string>()
  *   'refunded' — έγινε τώρα
  *   'already'  — είχε ήδη γίνει (audit) ή γίνεται αυτή τη στιγμή· καμία κλήση
  *   'failed'   — η Viva αρνήθηκε ή ο έλεγχος δεν ολοκληρώθηκε· χρειάζεται χειρισμό
+ *
+ * Ο έλεγχος audit → επιστροφή → audit γίνεται υπό διεκδίκηση στη βάση
+ * (pg_try_advisory_xact_lock, lib/refundLock): ένα δεύτερο instance με την
+ * ίδια συναλλαγή παίρνει 'already' και δεν καλεί τη Viva. Αν η διεκδίκηση
+ * δεν γίνει (σφάλμα βάσης) → πετιέται, καμία κλήση στη Viva· το webhook
+ * απαντά 503 και ξαναδοκιμάζεται.
  */
 async function refundOrphanPayment(
   registrationId: string, transactionId: string, why: string,
@@ -164,6 +202,18 @@ async function refundOrphanPayment(
   const key = `${registrationId}|${transactionId}`
   if (refundsInFlight.has(key)) return 'already'
   refundsInFlight.add(key)
+  try {
+    const r = await withRefundLock(eventRefundLockKey(registrationId, transactionId),
+      () => refundOrphanPaymentLocked(registrationId, transactionId, why))
+    return r.locked ? r.value : 'already'
+  } finally {
+    refundsInFlight.delete(key)
+  }
+}
+
+async function refundOrphanPaymentLocked(
+  registrationId: string, transactionId: string, why: string,
+): Promise<'refunded' | 'already' | 'failed'> {
   try {
     if (await alreadyRefunded(registrationId, transactionId)) {
       console.error(`[viva] event registration ${registrationId}: transaction ${transactionId} already refunded — skipped (${why})`)
@@ -185,8 +235,6 @@ async function refundOrphanPayment(
       metadata: { transaction_id: transactionId, reason: why },
     })
     return 'failed'
-  } finally {
-    refundsInFlight.delete(key)
   }
 }
 
@@ -321,21 +369,31 @@ export async function markEventRegistrationPaid(
     })
     if (claimed.count === 0) return 'lost' as const
 
-    // Η θέση μετριέται ΤΩΡΑ, στην ίδια συναλλαγή — και μόνο αν χωράει.
+    // Η θέση μετριέται ΤΩΡΑ, στην ίδια συναλλαγή — και μόνο αν χωράει και
+    // η εκδήλωση ΔΕΝ έχει ακυρωθεί (cancelled_at: null, ατομικά στο ίδιο
+    // updateMany: μια ακύρωση που σημειώθηκε μετά την επαλήθευση δεν αφήνει
+    // πληρωμένη θέση σε ακυρωμένη εκδήλωση).
     const event = await tx.event.findUnique({ where: { id: reg.event_id }, select: { capacity: true } })
     const counted = await tx.event.updateMany({
       where: event?.capacity
-        ? { id: reg.event_id, registered_count: { lte: event.capacity - partySize } }
-        : { id: reg.event_id },
+        ? { id: reg.event_id, cancelled_at: null, registered_count: { lte: event.capacity - partySize } }
+        : { id: reg.event_id, cancelled_at: null },
       data: { registered_count: { increment: partySize } },
     })
     if (counted.count > 0) return 'registered' as const
 
     await tx.eventRegistration.update({ where: { id: reg.id }, data: { status: 'refunding' } })
-    return 'full' as const
+    const now = await tx.event.findUnique({ where: { id: reg.event_id }, select: { cancelled_at: true } })
+    return now?.cancelled_at ? 'cancelled' as const : 'full' as const
   })
 
-  if (outcome === 'registered') return 'registered'
+  if (outcome === 'registered') {
+    // Η πληρωμένη δήλωση επιβεβαιώθηκε ΤΩΡΑ (μόνο αυτό το αίτημα κέρδισε τη
+    // διεκδίκηση): μία ειδοποίηση στον χρήστη, όποιος κι αν επιβεβαίωσε
+    // (webhook ή σελίδα επιβεβαίωσης).
+    await notifyRegistrationConfirmed(reg.user_email, reg.event_id, reg.amount_paid)
+    return 'registered'
+  }
 
   if (outcome === 'lost') {
     const fresh = await prisma.eventRegistration.findUnique({ where: { id: reg.id } })
@@ -346,8 +404,8 @@ export async function markEventRegistrationPaid(
     return fresh?.status === 'registered' ? 'registered' : 'ignored'
   }
 
-  // Γέμισε όσο ο χρήστης πλήρωνε: πλήρης επιστροφή.
-  const res = await refundOrphanPayment(reg.id, txn, 'event became full')
+  // Γέμισε (ή ακυρώθηκε) όσο ο χρήστης πλήρωνε: πλήρης επιστροφή.
+  const res = await refundOrphanPayment(reg.id, txn, outcome === 'cancelled' ? EVENT_CANCELLED_REASON : 'event became full')
   const final = res === 'failed' ? 'refund_failed' : 'refunded'
   await prisma.eventRegistration.updateMany({
     where: { id: reg.id, status: 'refunding', viva_transaction_id: txn },
@@ -437,7 +495,7 @@ function moneyAtStakeWhere(eventId: string, includeRefundFailed: boolean) {
 const REUSABLE_STATUSES = ['pending_payment', 'cancelled', 'refunded']
 
 class RegistrationConflict extends Error {
-  constructor(public kind: 'already' | 'full') { super(kind) }
+  constructor(public kind: 'already' | 'full' | 'cancelled') { super(kind) }
 }
 
 // ─── Ακύρωση εκδήλωσης από τον διοργανωτή ──────────────────────────────
@@ -502,6 +560,35 @@ async function cancelledEventIds(eventIds: string[]): Promise<Set<string>> {
  * διεκδίκησε έπεσε πριν τελειώσει) μετά από τόσο χρόνο.
  */
 const STALE_REFUNDING_MS = 10 * 60_000
+
+/**
+ * Ειδοποίηση (in-app + live + push) στον χρήστη ότι η πληρωμένη δήλωσή του
+ * επιβεβαιώθηκε. Καλείται μόνο από όποιον κέρδισε τη διεκδίκηση
+ * pending_payment → registered, άρα μία φορά. Ποτέ δεν πετά.
+ */
+async function notifyRegistrationConfirmed(email: string, eventId: string, amount: number | null) {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, title: true } })
+    if (!event) return
+    const nLang = await langOfUser(email)
+    const notification = await prisma.notification.create({
+      data: {
+        user_email: email,
+        title: notifyTitle('event_registration_confirmed', nLang),
+        message: notifyMsg.eventRegistrationConfirmed(nLang, event.title, Number(amount ?? 0).toFixed(2)),
+        type: 'event_registration_confirmed',
+        link: `/events/${event.id}`,
+      },
+    })
+    broadcastToUser(email, { type: 'notification', notification })
+    void sendPushToUser(email, {
+      title: notification.title, body: notification.message, url: notification.link ?? '/',
+      data: { type: 'event_registration_confirmed' },
+    })
+  } catch (err: any) {
+    console.error(`[events] registration confirmed notification to ${email} failed:`, err?.message)
+  }
+}
 
 /** Ειδοποίηση (in-app + live + push) ενός συμμετέχοντα για την ακύρωση. */
 async function notifyEventCancelled(
@@ -825,6 +912,176 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
   return report
 }
 
+// ─── Κολλημένες επιστροφές (`refunding`) ────────────────────────────────
+//
+// Μια εγγραφή μένει `refunding` για πάντα αν η διεργασία που διεκδίκησε την
+// επιστροφή πέσει πριν τελειώσει (αυτο-ακύρωση συμμετοχής, «γέμισε» όσο
+// πλήρωνε, ακύρωση εκδήλωσης). Ο χρήστης δεν μπορεί ούτε να ακυρώσει ούτε να
+// δηλώσει ξανά. Η εργασία του lib/cron.ts τις τακτοποιεί ΧΩΡΙΣ ποτέ νέα
+// επιστροφή στα τυφλά:
+//   1. Επιτυχής επιστροφή στο audit (ίδια συναλλαγή) → `refunded`.
+//   2. Αλλιώς ερώτηση στη Viva: statusId 'R' (η συναλλαγή επιστράφηκε) → `refunded`.
+//   3. Αλλιώς δεν κρίνεται με βεβαιότητα → `refund_failed` + audit για τον
+//      διαχειριστή (η επιστροφή ξαναδοκιμάζεται από την «Ολοκλήρωση
+//      επιστροφών» της ακυρωμένης εκδήλωσης ή γίνεται με το χέρι).
+//
+// «Κολλημένη»: η EventRegistration δεν έχει updated_at, οπότε η εργασία
+// γράφει σημάδι (audit EVENT_REFUNDING_SEEN_ACTION) την πρώτη φορά που τη
+// βλέπει, και ενεργεί μόνο αν το σημάδι είναι ακόμη η τελευταία καταγραφή της
+// εγγραφής μετά από STUCK_REFUND_MS. Επιπλέον, η τακτοποίηση γίνεται υπό το
+// ίδιο κλείδωμα βάσης με τις επιστροφές (withRefundLock): αν μια επιστροφή
+// της ίδιας συναλλαγής τρέχει εκείνη τη στιγμή, η εγγραφή παραλείπεται.
+//
+// Θέση: αφαιρείται μόνο αν η εκδήλωση δεν έχει ακυρωθεί και υπάρχει σημάδι
+// αυτο-ακύρωσης (EVENT_REFUND_CLAIM_ACTION, η θέση είχε μετρηθεί). Στο
+// «γέμισε» η θέση δεν μετρήθηκε ποτέ· στην ακυρωμένη εκδήλωση το
+// registered_count δεν έχει πια σημασία.
+
+const EVENT_REFUND_CLAIM_ACTION = 'event_registration_refund_claim'
+const EVENT_REFUNDING_SEEN_ACTION = 'event_registration_refunding_seen'
+const EVENT_REFUND_RESOLVED_ACTION = 'event_registration_refunding_resolved'
+export const STUCK_REFUND_MS = 15 * 60_000
+
+export async function resolveStuckEventRefunds(): Promise<{ refunded: number; failed: number }> {
+  const out = { refunded: 0, failed: 0 }
+  const regs = await prisma.eventRegistration.findMany({
+    where: { status: 'refunding', viva_transaction_id: { not: null } },
+    orderBy: { created_at: 'asc' },
+    take: 100,
+  })
+  for (const reg of regs) {
+    try {
+      const txn = String(reg.viva_transaction_id)
+      if (Date.now() - reg.created_at.getTime() < STUCK_REFUND_MS) continue
+      const last = await prisma.auditLog.findFirst({
+        where: { resource: 'event_registration', resource_id: reg.id },
+        orderBy: { created_at: 'desc' },
+        select: { action: true, metadata: true, created_at: true },
+      })
+      const seen = last?.action === EVENT_REFUNDING_SEEN_ACTION && (last.metadata as any)?.transaction_id === txn
+      if (!seen) {
+        await auditSystem({
+          action: EVENT_REFUNDING_SEEN_ACTION, resource: 'event_registration', resource_id: reg.id,
+          metadata: { transaction_id: txn },
+        })
+        continue
+      }
+      if (Date.now() - last!.created_at.getTime() < STUCK_REFUND_MS) continue
+
+      const lock = await withRefundLock(eventRefundLockKey(reg.id, txn), async () => {
+        const fresh = await prisma.eventRegistration.findUnique({ where: { id: reg.id } })
+        if (!fresh || fresh.status !== 'refunding' || fresh.viva_transaction_id !== txn) return null
+
+        let verdict: 'refunded' | 'refund_failed' = 'refund_failed'
+        let source = 'unresolved'
+        if (await alreadyRefunded(reg.id, txn)) {
+          verdict = 'refunded'; source = 'audit'
+        } else {
+          try {
+            const tx = await getVivaTransaction(txn)
+            if (tx?.statusId === 'R') { verdict = 'refunded'; source = 'viva_status_R' }
+            else source = `viva_status_${String(tx?.statusId ?? 'unknown')}`
+          } catch (err: any) {
+            source = `viva_error: ${String(err?.message ?? err).slice(0, 200)}`
+          }
+        }
+
+        const event = await prisma.event.findUnique({ where: { id: fresh.event_id }, select: { cancelled_at: true } })
+        const cancelled = !!event?.cancelled_at || !!(await legacyCancelledAt(fresh.event_id))
+        const claim = await prisma.auditLog.findFirst({
+          where: {
+            resource: 'event_registration', resource_id: reg.id, action: EVENT_REFUND_CLAIM_ACTION,
+            metadata: { path: ['transaction_id'], equals: txn },
+          },
+          select: { id: true },
+        })
+        const releaseSeat = !cancelled && !!claim
+
+        const changed = await prisma.$transaction(async (tx) => {
+          const r = await tx.eventRegistration.updateMany({
+            where: { id: reg.id, status: 'refunding', viva_transaction_id: txn }, data: { status: verdict },
+          })
+          if (r.count > 0 && releaseSeat) {
+            await tx.event.update({
+              where: { id: fresh.event_id },
+              data: { registered_count: { decrement: 1 + (fresh.guests ?? 0) } },
+            })
+          }
+          return r.count > 0
+        })
+        if (!changed) return null
+        if (releaseSeat) {
+          await prisma.event.updateMany({ where: { id: fresh.event_id, registered_count: { lt: 0 } }, data: { registered_count: 0 } })
+        }
+        await auditSystem({
+          action: EVENT_REFUND_RESOLVED_ACTION, resource: 'event_registration', resource_id: reg.id,
+          subject_email: fresh.user_email,
+          outcome: verdict === 'refunded' ? 'success' : 'failure',
+          error_message: verdict === 'refunded' ? null : 'Stuck refund could not be confirmed — needs manual review (no new refund was made)',
+          metadata: { transaction_id: txn, event_id: fresh.event_id, amount: fresh.amount_paid, result: verdict, source, seat_released: releaseSeat },
+        })
+        return verdict
+      })
+      if (lock.locked && lock.value === 'refunded') out.refunded++
+      if (lock.locked && lock.value === 'refund_failed') out.failed++
+    } catch (err: any) {
+      console.error(`[refunds] stuck event registration ${reg.id}:`, err?.message)
+    }
+  }
+  return out
+}
+
+/**
+ * Πληρωμή εκδήλωσης ΠΑΛΙΑΣ μορφής (merchantTrns = σκέτο id εγγραφής, πριν
+ * το `ev:`) για εγγραφή που δεν υπάρχει πια (π.χ. σβήστηκε η εκδήλωση):
+ * επαλήθευση στη Viva και αυτόματη επιστροφή — όπως ο κλάδος `ev:`.
+ *
+ * Επειδή το σκέτο id δεν λέει τι πληρώθηκε, επιστροφή γίνεται ΜΟΝΟ αν:
+ *   · το ref έχει μορφή UUID (όπως τα ids εγγραφών) και ΔΕΝ είναι id
+ *     παραγγελίας, κράτησης, τηλεϊατρικής ή (υπάρχουσας) εγγραφής εκδήλωσης,
+ *   · η Viva επιβεβαιώνει: statusId 'F', merchantTrns ακριβώς ίσο με το ref,
+ *     και περιγραφή πληρωμής εκδήλωσης (customerTrns «GlobiPet εκδήλωση:…»,
+ *     όπως τη στέλνει πάντα το POST /:id/register).
+ * Αλλιώς τίποτα (η πληρωμή μένει για έλεγχο από άνθρωπο).
+ *
+ *   'refunded' | 'already' | 'failed' — έγινε απόπειρα (refundOrphanPayment)
+ *   'skip'  — δεν είναι (βεβαίως) πληρωμή σβησμένης εγγραφής
+ *   'retry' — η Viva/βάση δεν απάντησε: το webhook απαντά 503
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const EVENT_PAYMENT_DESCRIPTION = 'GlobiPet εκδήλωση:'
+
+export async function refundLegacyOrphanEventPayment(
+  ref: string, transactionId: string,
+): Promise<'refunded' | 'already' | 'failed' | 'skip' | 'retry'> {
+  if (!UUID_RE.test(ref)) return 'skip'
+  const txn = String(transactionId)
+  try {
+    const [order, booking, consultation, registration] = await Promise.all([
+      prisma.order.findUnique({ where: { id: ref }, select: { id: true } }),
+      prisma.booking.findUnique({ where: { id: ref }, select: { id: true } }),
+      prisma.telehealthConsultation.findUnique({ where: { id: ref }, select: { id: true } }),
+      prisma.eventRegistration.findUnique({ where: { id: ref }, select: { id: true } }),
+    ])
+    if (order || booking || consultation || registration) return 'skip'
+  } catch (err: any) {
+    console.error(`[viva] legacy event payment ${ref}: lookup error`, err?.message)
+    return 'retry'
+  }
+  let tx: any
+  try {
+    tx = await getVivaTransaction(txn)
+  } catch (err: any) {
+    if (isVivaDefinitiveRejection(err)) return 'skip'
+    console.error(`[viva] legacy event payment ${ref}: verification error`, err?.message)
+    return 'retry'
+  }
+  const trns = String(tx?.merchantTrns ?? tx?.MerchantTrns ?? '')
+  const desc = String(tx?.customerTrns ?? tx?.CustomerTrns ?? '')
+  if (tx?.statusId !== 'F' || trns !== ref || !desc.startsWith(EVENT_PAYMENT_DESCRIPTION)) return 'skip'
+  return refundOrphanPayment(ref, txn, 'registration no longer exists (legacy reference)')
+}
+
 const eventsRoutes: FastifyPluginAsync = async (app) => {
 
   /**
@@ -907,8 +1164,9 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     if (mineEmail) where.organizer_email = mineEmail
     else where.cancelled_at = null
     if (upcoming === 'true') {
-      const today = new Date().toISOString().split('T')[0]
-      where.date = { gte: today }
+      // «Σήμερα» στην Ελλάδα, όχι σε UTC (μετά τα μεσάνυχτα Ελλάδας η UTC
+      // είναι ακόμη χθες και έδειχνε και τις χθεσινές).
+      where.date = { gte: athensToday() }
     }
     const take = Math.min(Math.max(Number(limit) || 20, 1), 100)
     const skip = (Math.max(Number(page) || 1, 1) - 1) * take
@@ -972,7 +1230,8 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         ...data,
         // Ownership is taken from the session, never from the request.
         organizer_email: email,
-        organizer: body.organizer || full_name || email.split('@')[0],
+        // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+        organizer: body.organizer || full_name || await fullNameOf(email),
         description: data.description ?? '',
         country: data.country ?? 'GR',
         event_type: data.event_type ?? 'meetup',
@@ -1144,8 +1403,10 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+    const userName = full_name || await fullNameOf(email)
     const data = {
-      user_name: full_name || email.split('@')[0],
+      user_name: userName,
       pet_id: pet_id || null,
       pet_name: pet_name || null,
       guests: partySize - 1,
@@ -1191,7 +1452,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
           amount,
           customerEmail: email,
-          customerName: full_name,
+          customerName: userName,
           // merchantTrns: νέο σε κάθε δημιουργία, ώστε μια παλιά συναλλαγή να
           // μην μπορεί ποτέ να ταυτιστεί με νέα πληρωμή της ίδιας γραμμής.
           orderId: eventMerchantTrns(pendingId),
@@ -1226,13 +1487,18 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         } else {
           await tx.eventRegistration.create({ data: { event_id: event.id, user_email: email, ...data } })
         }
+        // cancelled_at: null στο ίδιο ατομικό updateMany: ακύρωση που
+        // σημειώθηκε μετά τον έλεγχο παραπάνω δεν αφήνει νέα θέση.
         const counted = await tx.event.updateMany({
           where: event.capacity
-            ? { id: event.id, registered_count: { lte: event.capacity - partySize } }
-            : { id: event.id },
+            ? { id: event.id, cancelled_at: null, registered_count: { lte: event.capacity - partySize } }
+            : { id: event.id, cancelled_at: null },
           data: { registered_count: { increment: partySize } },
         })
-        if (counted.count === 0) throw new RegistrationConflict('full')
+        if (counted.count === 0) {
+          const now = await tx.event.findUnique({ where: { id: event.id }, select: { cancelled_at: true } })
+          throw new RegistrationConflict(now?.cancelled_at ? 'cancelled' : 'full')
+        }
         return tx.eventRegistration.findUnique({
           where: { event_id_user_email: { event_id: event.id, user_email: email } },
         })
@@ -1241,6 +1507,9 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     } catch (err: any) {
       if (err instanceof RegistrationConflict && err.kind === 'full') {
         return reply.code(409).send({ message: 'Δεν υπάρχουν αρκετές διαθέσιμες θέσεις' })
+      }
+      if (err instanceof RegistrationConflict && err.kind === 'cancelled') {
+        return reply.code(409).send({ message: 'Η εκδήλωση ακυρώθηκε από τον διοργανωτή' })
       }
       if (err instanceof RegistrationConflict || err?.code === 'P2002') {
         return reply.code(409).send({ message: 'Έχεις ήδη δηλώσει συμμετοχή' })
@@ -1332,12 +1601,22 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       if (claimed.count === 0) {
         return reply.code(409).send({ message: 'Η ακύρωση είναι ήδη σε εξέλιξη' })
       }
+      // Σημάδι διεκδίκησης: αν η διεργασία πέσει πριν τελειώσει, η εργασία
+      // των κολλημένων επιστροφών (lib/cron.ts → resolveStuckEventRefunds)
+      // ξέρει ότι η θέση είχε μετρηθεί και πρέπει να αφαιρεθεί.
+      await audit(req, {
+        action: EVENT_REFUND_CLAIM_ACTION, resource: 'event_registration', resource_id: existing.id,
+        metadata: { event_id: req.params.id, transaction_id: txn, seat_counted: true },
+      })
 
       // Η επιστροφή γίνεται ΠΡΙΝ μετρηθεί η ακύρωση: αν η Viva αρνηθεί, η
       // θέση επανέρχεται και ο χρήστης βλέπει σφάλμα — ποτέ «ακυρώθηκε» χωρίς χρήματα.
+      // Έλεγχος audit → επιστροφή → audit υπό διεκδίκηση στη βάση (lib/refundLock),
+      // με το ίδιο κλειδί όπως οι αυτόματες επιστροφές της ίδιας συναλλαγής.
       let refundTx: string | null = null
       try {
-        if (!(await alreadyRefunded(existing.id, txn))) {
+        const lock = await withRefundLock(eventRefundLockKey(existing.id, txn), async () => {
+          if (await alreadyRefunded(existing.id, txn)) return
           const r = await refundVivaTransaction(txn)
           refundTx = r.transactionId
           // Καταγραφή αμέσως μετά την επιτυχία: με αυτήν αναγνωρίζεται η
@@ -1346,6 +1625,11 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
             action: 'event_registration_refund', resource: 'event_registration', resource_id: existing.id,
             metadata: { event_id: req.params.id, amount: existing.amount_paid, transaction_id: txn, refund_tx: refundTx },
           })
+        })
+        // Η ίδια επιστροφή τρέχει αυτή τη στιγμή αλλού (π.χ. η εργασία των
+        // κολλημένων επιστροφών): η γραμμή μένει `refunding` και τακτοποιείται εκεί.
+        if (!lock.locked) {
+          return reply.code(409).send({ message: 'Η ακύρωση είναι ήδη σε εξέλιξη' })
         }
       } catch (err: any) {
         console.error('[viva] refund failed for event registration', existing.id, err?.message)
@@ -1359,18 +1643,22 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const partySize = 1 + (existing.guests ?? 0)
-      await prisma.$transaction([
+      // Ατομικά, μόνο από `refunding`: αν η εργασία των κολλημένων επιστροφών
+      // τακτοποίησε ήδη τη γραμμή, η θέση δεν αφαιρείται δεύτερη φορά.
+      await prisma.$transaction(async (tx) => {
         // Κρατιέται (refunded) για το ίχνος της πληρωμής· ξαναχρησιμοποιείται
         // αν ο χρήστης δηλώσει ξανά.
-        prisma.eventRegistration.update({
-          where: { id: existing.id },
+        const done = await tx.eventRegistration.updateMany({
+          where: { id: existing.id, status: 'refunding' },
           data: { status: 'refunded' },
-        }),
-        prisma.event.update({
-          where: { id: req.params.id },
-          data: { registered_count: { decrement: partySize } },
-        }),
-      ])
+        })
+        if (done.count > 0) {
+          await tx.event.update({
+            where: { id: req.params.id },
+            data: { registered_count: { decrement: partySize } },
+          })
+        }
+      })
       await prisma.event.updateMany({
         where: { id: req.params.id, registered_count: { lt: 0 } },
         data: { registered_count: 0 },

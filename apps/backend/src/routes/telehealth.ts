@@ -9,6 +9,10 @@ import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { getJaasConfig, signJaasJwt } from '../lib/jaas.js'
 import { bookingStart } from '../lib/cancellation.js'
+import { fullNameOf } from '../lib/userName.js'
+import { refundExtraVivaPayment } from '../lib/extraPaymentRefund.js'
+
+const TELEHEALTH_PAID_NO_CANCEL = 'Η συνεδρία έχει πληρωθεί· για ακύρωση επικοινώνησε με την υποστήριξη.'
 
 // Παράθυρο κλήσης: από 30 λεπτά πριν την ώρα της συνεδρίας έως 3 ώρες μετά.
 const CALL_OPENS_BEFORE_MS = 30 * 60_000
@@ -18,17 +22,40 @@ const CALL_CLOSES_AFTER_MS = 3 * 3_600_000
 // sends customer + provider emails, and notifies the provider in-app.
 // Exported (top-level) so orders.ts's shared Viva webhook can call it as a fallback
 // when a paid merchantTrns id doesn't match an Order (i.e. it's a telehealth payment).
+//
+// Καλείται ΜΟΝΟ μετά από verifyConsultationPayment === 'ok'. Μόνο απλήρωτη,
+// μη ακυρωμένη συνεδρία γίνεται πληρωμένη. Η ίδια συναλλαγή ξανά (payment_ref
+// === txn: πριν την πληρωμή το payment_ref κρατά τον orderCode) → τίποτα.
+// ΑΛΛΗ συναλλαγή για ήδη πληρωμένη/επιστραμμένη συνεδρία, ή πληρωμή που
+// φτάνει αφού ακυρώθηκε → αυτόματη πλήρης επιστροφή μία φορά
+// (lib/extraPaymentRefund). Πριν, η επιπλέον πληρωμή έβρισκε count 0 και
+// χανόταν, και η καθυστερημένη ξανάνοιγε την ακυρωμένη συνεδρία σε 'scheduled'.
 export async function markTelehealthPaid(consultationId: string, transactionId: string): Promise<boolean> {
+  const txn = String(transactionId)
   const updated = await prisma.telehealthConsultation.updateMany({
-    where: { id: consultationId, payment_status: { not: 'paid' } },
+    where: { id: consultationId, payment_status: 'unpaid', status: { not: 'cancelled' } },
     data: {
       payment_status: 'paid',
       status: 'scheduled',
-      payment_ref: String(transactionId),
+      payment_ref: txn,
       meeting_url: `globipet-th-${consultationId}`,
     },
   })
-  if (updated.count === 0) return false
+  if (updated.count === 0) {
+    const fresh = await prisma.telehealthConsultation.findUnique({
+      where: { id: consultationId }, select: { status: true, payment_status: true, payment_ref: true },
+    })
+    if (!fresh || fresh.payment_ref === txn) return false
+    if (fresh.payment_status === 'paid' && !fresh.payment_ref) {
+      console.error(`[viva] consultation ${consultationId} is paid without payment_ref; transaction ${txn} left for manual review`)
+      return false
+    }
+    const why = fresh.payment_status === 'paid'
+      ? 'duplicate payment of an already paid consultation'
+      : `consultation is ${fresh.status}/${fresh.payment_status}`
+    await refundExtraVivaPayment('telehealth', consultationId, txn, why)
+    return false
+  }
 
   const consultation = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
   if (!consultation) return true
@@ -95,18 +122,23 @@ export async function findTelehealthById(id: string) {
  * cheap one of their own, could mark a session paid.
  *
  *   'ok'        — επαληθεύτηκε
- *   'not_found' — δεν υπάρχει συνεδρία με αυτό το id (ή η βάση δεν απάντησε)
+ *   'not_found' — δεν υπάρχει συνεδρία με αυτό το id
  *   'invalid'   — η Viva απάντησε: η συναλλαγή δεν πληρώνει αυτή τη συνεδρία
- *   'error'     — η συνεδρία υπάρχει αλλά η επαλήθευση δεν ολοκληρώθηκε (Viva
+ *   'error'     — η βάση δεν απάντησε (πριν: 'not_found', και το webhook
+ *                 αγνοούσε την πληρωμή), ή η συνεδρία υπάρχει αλλά η
+ *                 επαλήθευση δεν ολοκληρώθηκε (Viva
  *                 5xx/429, timeout, δίκτυο, διαπιστευτήρια): πρέπει να ξαναγίνει
  *                 — το webhook απαντά 503 και το verify 503. Πριν ήταν «άκυρη»
  *                 και η πληρωμή χανόταν.
  */
 export async function verifyConsultationPayment(consultationId: string, transactionId: string): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
-  const c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } }).catch((err: any) => {
-    console.error('[viva] consultation lookup error:', err?.message)
-    return null
-  })
+  let c
+  try {
+    c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
+  } catch (err: any) {
+    console.error('[viva] consultation lookup error (will retry):', err?.message)
+    return 'error'
+  }
   if (!c) return 'not_found'
   try {
     const tx = await getVivaTransaction(transactionId)
@@ -305,12 +337,14 @@ const routes: FastifyPluginAsync = async (app) => {
 
     const sessionPrice = service.price ?? 0
     const { rate, platformFee, providerPayout } = await calculateCommission(sessionPrice, 'telehealth')
+    const clientName = full_name || await fullNameOf(email)
 
     const consultation = await prisma.telehealthConsultation.create({
       data: {
         provider_email,
         provider_name: service.provider_name || provider_email,
-        client_email: email, client_name: full_name || email.split('@')[0],
+        // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+        client_email: email, client_name: clientName,
         pet_id: pet_id || null, pet_name: pet_name || null,
         service_id: service.id,
         scheduled_date, scheduled_time,
@@ -330,7 +364,7 @@ const routes: FastifyPluginAsync = async (app) => {
       const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
         amount: sessionPrice,
         customerEmail: email,
-        customerName: full_name,
+        customerName: clientName,
         orderId: consultation.id,
         description: `GlobiPet τηλεϊατρική με ${service.provider_name || provider_email}`,
         successUrl: `${frontendUrl}/telehealth/${consultation.id}/confirmation`,
@@ -361,7 +395,11 @@ const routes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
       }
 
-      if (consultation.payment_status === 'paid') {
+      // Ήδη πληρωμένη με ΑΥΤΗ τη συναλλαγή (ή χωρίς συναλλαγή στο αίτημα):
+      // χωρίς ερώτηση στη Viva. Με ΑΛΛΗ συναλλαγή συνεχίζει στην επαλήθευση,
+      // ώστε η επιπλέον πληρωμή να επιστραφεί (markTelehealthPaid).
+      if (consultation.payment_status === 'paid'
+        && (!transaction_id || consultation.payment_ref === transaction_id)) {
         return { paid: true, data: consultation }
       }
       // Το transaction id της Viva είναι UUID· οτιδήποτε άλλο δεν φτάνει στη Viva.
@@ -378,7 +416,8 @@ const routes: FastifyPluginAsync = async (app) => {
         if (verdict === 'ok') {
           await markTelehealthPaid(id, transaction_id)
           const fresh = await prisma.telehealthConsultation.findUnique({ where: { id } })
-          return { paid: true, data: fresh }
+          // Επιστράφηκε (ακυρωμένη/επιστραμμένη συνεδρία) → paid: false.
+          return { paid: fresh?.payment_status === 'paid', data: fresh }
         }
       }
       return { paid: false, data: consultation }
@@ -418,6 +457,11 @@ const routes: FastifyPluginAsync = async (app) => {
     if (body.status !== undefined) {
       const paid = existing.payment_status === 'paid'
       if (body.status === 'cancelled') {
+        // Πληρωμένη συνεδρία δεν ακυρώνεται εδώ: δεν υπάρχει (ακόμη) πολιτική
+        // επιστροφής, και η ακύρωση θα κρατούσε τα χρήματα χωρίς υπηρεσία.
+        if (existing.payment_status !== 'unpaid') {
+          return reply.code(409).send({ message: TELEHEALTH_PAID_NO_CANCEL })
+        }
         data.status = 'cancelled'
       } else if (body.status === 'completed' && isProvider && paid) {
         data.status = 'completed'
@@ -428,6 +472,17 @@ const routes: FastifyPluginAsync = async (app) => {
 
     if (Object.keys(data).length === 0) {
       return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
+    }
+
+    // Ακύρωση: ατομικά, μόνο όσο είναι ακόμη απλήρωτη. Αν η πληρωμή φτάσει
+    // ταυτόχρονα, είτε προλαβαίνει (εδώ count 0 → 409) είτε βρίσκει την
+    // ακυρωμένη συνεδρία και επιστρέφεται αυτόματα (markTelehealthPaid).
+    if (data.status === 'cancelled') {
+      const r = await prisma.telehealthConsultation.updateMany({
+        where: { id: existing.id, payment_status: 'unpaid' }, data,
+      })
+      if (r.count === 0) return reply.code(409).send({ message: TELEHEALTH_PAID_NO_CANCEL })
+      return prisma.telehealthConsultation.findUnique({ where: { id: existing.id } })
     }
 
     return prisma.telehealthConsultation.update({ where: { id: existing.id }, data })
@@ -441,7 +496,7 @@ const routes: FastifyPluginAsync = async (app) => {
     // it, so the payment, commission and payout trail stay intact.
     if (existing.payment_status === 'paid') {
       return reply.code(400).send({
-        message: 'Η συνεδρία έχει πληρωθεί και δεν διαγράφεται. Χρησιμοποίησε ακύρωση.',
+        message: TELEHEALTH_PAID_NO_CANCEL,
       })
     }
     await prisma.telehealthConsultation.delete({ where: { id: existing.id } })

@@ -50,10 +50,11 @@ export default function PrivacyScreen() {
 
   const requestDelete = useMutation({
     mutationFn: () => api.post('/user-rights/delete-request', { reason: reason.trim() || undefined }),
-    onSuccess: (r: any) => {
+    // Μόνο το μεταφρασμένο κείμενο — όχι το ελληνικό message του server (όπως το web).
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['delete-status'] })
       setConfirming(false); setReason('')
-      Alert.alert(t('privacy.deleteRequested'), r?.data?.message || t('privacy.deleteRequestedHint'))
+      Alert.alert(t('privacy.deleteRequested'), t('privacy.deleteRequestedHint'))
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })

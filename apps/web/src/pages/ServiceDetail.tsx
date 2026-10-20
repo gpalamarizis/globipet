@@ -70,6 +70,21 @@ export default function ServiceDetail() {
     setTimeout(() => bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
+  // Το κουμπί κοινοποίησης δεν είχε onClick. Ίδια λογική με το ProductDetail:
+  // Web Share όπου υπάρχει, αλλιώς αντιγραφή συνδέσμου.
+  const shareService = async () => {
+    const url = `${window.location.origin}/services/${id}`
+    const title = service?.provider_name ?? ''
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); return }
+      catch (e: any) { if (e?.name === 'AbortError') return }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success(t('socialExtra.linkCopied'))
+    } catch { toast.error(t('common.error')) }
+  }
+
   const { data: service, isLoading } = useQuery({
     queryKey: ['service', id],
     queryFn: () => api.get(`/services/${id}`).then(r => r.data),
@@ -603,7 +618,7 @@ export default function ServiceDetail() {
               {t('services.bookNow')}
             </button>
 
-            <button className="btn-secondary w-full flex items-center justify-center gap-2" aria-label={t('serviceDetailExtra.shareAriaLabel')}>
+            <button onClick={shareService} className="btn-secondary w-full flex items-center justify-center gap-2" aria-label={t('serviceDetailExtra.shareAriaLabel')}>
               <Share2 size={16} />
               {t('serviceDetailExtra.share')}
             </button>

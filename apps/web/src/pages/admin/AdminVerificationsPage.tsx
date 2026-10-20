@@ -18,13 +18,13 @@ import toast from 'react-hot-toast'
  */
 
 const STATUS = {
-  pending:  { label: 'Εκκρεμεί',    cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Εγκρίθηκε',   cls: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Απορρίφθηκε', cls: 'bg-red-100 text-red-700' },
+  pending:  { label: 'adminVerif.st_pending',    cls: 'bg-amber-100 text-amber-700' },
+  approved: { label: 'adminVerif.st_approved',   cls: 'bg-green-100 text-green-700' },
+  rejected: { label: 'adminVerif.st_rejected', cls: 'bg-red-100 text-red-700' },
 } as const
 
 export default function AdminVerificationsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | ''>('pending')
   const [reviewing, setReviewing] = useState<any>(null)
@@ -44,9 +44,9 @@ export default function AdminVerificationsPage() {
       qc.invalidateQueries({ queryKey: ['admin-verifications'] })
       setReviewing(null)
       setNotes('')
-      toast.success(v.status === 'approved' ? 'Ο πάροχος επαληθεύτηκε' : 'Η αίτηση απορρίφθηκε')
+      toast.success(v.status === 'approved' ? t('adminVerif.approvedToast') : t('adminVerif.rejectedToast'))
     },
-    onError: (err: any) => toast.error(err?.message || 'Κάτι πήγε στραβά'),
+    onError: (err: any) => toast.error(err?.message || t('adminVerif.error')),
   })
 
   const rows = data?.data ?? []
@@ -64,20 +64,20 @@ export default function AdminVerificationsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
-              Επαληθεύσεις παρόχων
+              {t('adminVerif.title')}
             </h1>
             <p className="text-sm text-gray-500">
-              {data?.pending ?? 0} εκκρεμείς αιτήσεις
+              {t('adminVerif.pendingCount', { count: data?.pending ?? 0 })}
             </p>
           </div>
         </div>
 
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
           {[
-            { v: 'pending',  l: 'Εκκρεμείς' },
-            { v: 'approved', l: 'Εγκεκριμένες' },
-            { v: 'rejected', l: 'Απορριφθείσες' },
-            { v: '',         l: 'Όλες' },
+            { v: 'pending',  l: t('adminVerif.f_pending') },
+            { v: 'approved', l: t('adminVerif.f_approved') },
+            { v: 'rejected', l: t('adminVerif.f_rejected') },
+            { v: '',         l: t('adminVerif.f_all') },
           ].map(f => (
             <button key={f.v || 'all'} onClick={() => setFilter(f.v as any)}
               className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
@@ -93,7 +93,7 @@ export default function AdminVerificationsPage() {
       {rows.length === 0 ? (
         <div className="card p-12 text-center">
           <ShieldCheck size={40} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-gray-500">Καμία αίτηση σε αυτή την κατηγορία</p>
+          <p className="text-gray-500">{t('adminVerif.empty')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -106,7 +106,7 @@ export default function AdminVerificationsPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">{r.full_name}</h3>
                     <p className="text-sm text-gray-500">{r.user_email}</p>
                   </div>
-                  <span className={cn('badge text-xs shrink-0', st.cls)}>{st.label}</span>
+                  <span className={cn('badge text-xs shrink-0', st.cls)}>{t(st.label)}</span>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -117,7 +117,7 @@ export default function AdminVerificationsPage() {
                   )}
                   {r.tax_number && (
                     <span className="flex items-center gap-1.5">
-                      <Briefcase size={14} className="text-gray-400" />ΑΦΜ {r.tax_number}
+                      <Briefcase size={14} className="text-gray-400" />{t('adminVerif.taxNumber', { value: r.tax_number })}
                     </span>
                   )}
                   {r.city && (
@@ -132,13 +132,13 @@ export default function AdminVerificationsPage() {
                   )}
                   {r.years_experience != null && (
                     <span className="flex items-center gap-1.5">
-                      ⏳ {r.years_experience} χρόνια εμπειρίας
+                      {t('adminVerif.yearsExperience', { count: r.years_experience })}
                     </span>
                   )}
                   {r.website && (
                     <a href={r.website} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-brand-900 hover:underline">
-                      <Globe size={14} />Ιστοσελίδα
+                      <Globe size={14} />{t('adminVerif.website')}
                     </a>
                   )}
                 </div>
@@ -161,17 +161,17 @@ export default function AdminVerificationsPage() {
 
                 {r.review_notes && (
                   <p className="text-xs text-gray-500 border-l-2 border-gray-200 dark:border-gray-700 pl-3 mb-3">
-                    <strong>Σημείωση:</strong> {r.review_notes}
+                    <strong>{t('adminVerif.note')}</strong> {r.review_notes}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between gap-3 flex-wrap pt-3 border-t border-gray-100 dark:border-gray-800">
                   <span className="text-xs text-gray-400 flex items-center gap-1">
                     <Clock size={11} />
-                    {new Date(r.created_at).toLocaleDateString('el-GR', {
+                    {new Date(r.created_at).toLocaleDateString(i18n.language, {
                       day: '2-digit', month: 'short', year: 'numeric',
                     })}
-                    {r.reviewed_by && ` · έλεγχος από ${r.reviewed_by}`}
+                    {r.reviewed_by && t('adminVerif.reviewedBy', { name: r.reviewed_by })}
                   </span>
 
                   {r.status === 'pending' && (
@@ -179,13 +179,13 @@ export default function AdminVerificationsPage() {
                       <button
                         onClick={() => { setReviewing({ ...r, action: 'rejected' }); setNotes('') }}
                         className="btn-secondary text-sm text-red-600 border-red-200 hover:bg-red-50 inline-flex items-center gap-1.5">
-                        <X size={14} /> Απόρριψη
+                        <X size={14} /> {t('adminVerif.reject')}
                       </button>
                       <button
                         onClick={() => review.mutate({ id: r.id, status: 'approved' })}
                         disabled={review.isPending}
                         className="btn-primary text-sm inline-flex items-center gap-1.5">
-                        <Check size={14} /> Έγκριση
+                        <Check size={14} /> {t('adminVerif.approve')}
                       </button>
                     </div>
                   )}
@@ -204,26 +204,26 @@ export default function AdminVerificationsPage() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-5"
             onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-gray-900 dark:text-white mb-1">
-              Απόρριψη αίτησης
+              {t('adminVerif.rejectTitle')}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Ο λόγος στέλνεται στον {reviewing.full_name}.
+              {t('adminVerif.reasonSentTo', { name: reviewing.full_name })}
             </p>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={4}
-              placeholder="π.χ. Το ΑΦΜ δεν αντιστοιχεί στην επωνυμία"
+              placeholder={t('adminVerif.reasonPh')}
               className="input w-full" />
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setReviewing(null)} className="btn-secondary text-sm">
-                Άκυρο
+                {t('adminVerif.cancel')}
               </button>
               <button
                 onClick={() => review.mutate({ id: reviewing.id, status: 'rejected' })}
                 disabled={review.isPending}
                 className="btn-primary text-sm bg-red-600 hover:bg-red-700">
-                {review.isPending ? 'Αποστολή…' : 'Απόρριψη'}
+                {review.isPending ? t('adminVerif.sending') : t('adminVerif.reject')}
               </button>
             </div>
           </div>

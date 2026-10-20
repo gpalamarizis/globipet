@@ -285,26 +285,27 @@ export default function TelehealthScreen() {
                 </>
               )}
 
-              <View style={s.totalRow}>
-            {pets.length > 0 && (
-              <>
-                <Text style={s.label}>{t('serviceDetail.forPet')}</Text>
-                <View style={s.petChips}>
-                  {pets.map((p: any) => {
-                    const on = petId === p.id
-                    return (
-                      <TouchableOpacity key={p.id} activeOpacity={0.7}
-                        style={[s.petChip, on && s.petChipOn]}
-                        onPress={() => setPetId(on ? '' : p.id)}>
-                        <Text style={s.petEmoji}>{p.species === 'cat' ? '🐈' : '🐕'}</Text>
-                        <Text style={[s.petTxt, on && s.petTxtOn]}>{p.name}</Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              </>
-            )}
+              {/* Επιλογή κατοικιδίου έξω από τη γραμμή κόστους (row, space-between). */}
+              {pets.length > 0 && (
+                <>
+                  <Text style={s.label}>{t('serviceDetail.forPet')}</Text>
+                  <View style={s.petChips}>
+                    {pets.map((p: any) => {
+                      const on = petId === p.id
+                      return (
+                        <TouchableOpacity key={p.id} activeOpacity={0.7}
+                          style={[s.petChip, on && s.petChipOn]}
+                          onPress={() => setPetId(on ? '' : p.id)}>
+                          <Text style={s.petEmoji}>{p.species === 'cat' ? '🐈' : '🐕'}</Text>
+                          <Text style={[s.petTxt, on && s.petTxtOn]}>{p.name}</Text>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </>
+              )}
 
+              <View style={s.totalRow}>
                 <Text style={s.totalLabel}>{t('tele.session_cost')}</Text>
                 <Text style={s.total}>€{Number(selected?.price ?? 0).toFixed(2)}</Text>
               </View>

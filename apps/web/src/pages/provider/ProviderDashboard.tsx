@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { effectivePrice } from '@/lib/price'
+import { fmtYmd } from '@/lib/dates'
 import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -223,7 +224,7 @@ function ImportTab() {
  * ενώ η λίστα υπήρχε στο κινητό.
  */
 function BookingsTab() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<'active' | 'done' | 'cancelled' | 'all'>('active')
@@ -300,7 +301,7 @@ function BookingsTab() {
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{b.service?.title || t('providerDash.booking')}</p>
-                <p className="text-xs text-gray-500">{b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}</p>
+                <p className="text-xs text-gray-500">{b.customer_name} · {fmtYmd(b.booking_date, i18n.language)}{b.booking_time ? ` ${b.booking_time}` : ''}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-bold text-sm text-gray-900 dark:text-white">€{Number(b.total_price ?? 0).toFixed(2)}</p>
@@ -347,10 +348,14 @@ function BookingsTab() {
 }
 
 function CalendarTab() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [syncing, setSyncing] = useState(false)
+  // Μήνας που δείχνει το ημερολόγιο (‹ ›). Το /provider/bookings φέρνει όλες
+  // τις κρατήσεις, οπότε η αλλαγή μήνα φιλτράρει τοπικά — χωρίς νέο αίτημα.
+  const [view, setView] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
+  const shiftMonth = (delta: number) => setView(v => { const d = new Date(v.y, v.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() } })
 
   /**
    * Which calendars are attached to this account.
@@ -442,8 +447,8 @@ function CalendarTab() {
 
   // Simple calendar grid
   const today = new Date()
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay()
+  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate()
+  const firstDay = new Date(view.y, view.m, 1).getDay()
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
   return (
@@ -481,11 +486,11 @@ function CalendarTab() {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            {today.toLocaleDateString('el-GR', { month: 'long', year: 'numeric' })}
+            {new Date(view.y, view.m, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
           </h3>
           <div className="flex gap-2">
-            <button className="btn-ghost p-2">‹</button>
-            <button className="btn-ghost p-2">›</button>
+            <button type="button" className="btn-ghost p-2" onClick={() => shiftMonth(-1)} aria-label={t('common.previous')}>‹</button>
+            <button type="button" className="btn-ghost p-2" onClick={() => shiftMonth(1)} aria-label={t('common.next')}>›</button>
           </div>
         </div>
         <div className="grid grid-cols-7 gap-1 mb-2">
@@ -496,18 +501,15 @@ function CalendarTab() {
         <div className="grid grid-cols-7 gap-1">
           {Array.from({ length: firstDay }, (_, i) => <div key={`empty-${i}`} />)}
           {days.map(day => {
-            const isToday = day === today.getDate()
+            const isToday = view.y === today.getFullYear() && view.m === today.getMonth() && day === today.getDate()
             // Bookings store booking_date as a "YYYY-MM-DD" string. Reading
             // scheduled_at — a column that does not exist — gave Invalid Date,
             // so getDate() was NaN and no day ever showed a dot.
-            const hasBooking = bookings.some((b: any) => {
-              if (!b.booking_date) return false
-              const bd = new Date(b.booking_date)
-              return !isNaN(bd.getTime())
-                && bd.getDate() === day
-                && bd.getMonth() === today.getMonth()
-                && bd.getFullYear() === today.getFullYear()
-            })
+            // Σύγκριση του 'YYYY-MM-DD' ως κειμένου με την τοπική ημέρα — το
+            // new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω από το UTC έπεφτε στην προηγούμενη μέρα.
+            const dayYmd = `${view.y}-${String(view.m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const hasBooking = bookings.some((b: any) =>
+              !!b.booking_date && String(b.booking_date).slice(0, 10) === dayYmd)
             return (
               <div key={day} className={cn('aspect-square flex items-center justify-center rounded-xl text-sm cursor-pointer transition-all relative',
                 isToday ? 'bg-brand-900 text-white font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300')}>
@@ -535,7 +537,7 @@ function CalendarTab() {
                   is customer_name. Both rendered blank before. */}
               <p className="font-medium text-sm text-gray-900 dark:text-white">{b.service?.title || t('providerDash.booking')}</p>
               <p className="text-xs text-gray-500">
-                {b.customer_name} · {b.booking_date}{b.booking_time ? ` ${b.booking_time}` : ''}
+                {b.customer_name} · {fmtYmd(b.booking_date, i18n.language)}{b.booking_time ? ` ${b.booking_time}` : ''}
               </p>
             </div>
             {/* Αλλαγή γιατρού από τη γραμματεία. Εμφανίζεται μόνο όπου

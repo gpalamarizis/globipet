@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { identityOf } from '../lib/userName.js'
 
 const routes: FastifyPluginAsync = async (app) => {
 
@@ -103,7 +104,7 @@ const routes: FastifyPluginAsync = async (app) => {
    * να αποδεχτεί πρόσκληση που έστειλε ο εαυτός του.
    */
   app.post('/:eventId/join', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name } = req.user as any
+    const { email } = req.user as any
     const { eventId } = req.params as any
 
     const event = await prisma.playdateEvent.findUnique({ where: { id: eventId } })
@@ -123,13 +124,16 @@ const routes: FastifyPluginAsync = async (app) => {
     }
 
     const pets = await prisma.pet.findMany({ where: { owner_email: email }, take: 1 })
+    // Το JWT δεν έχει όνομα/φωτογραφία: από τη βάση (lib/userName).
+    const me = await identityOf(email)
 
     const inv = await prisma.playdateInvitation.upsert({
       where: { event_id_invitee_email: { event_id: eventId, invitee_email: email } },
       create: {
         event_id: eventId,
         invitee_email: email,
-        invitee_name: full_name || email.split('@')[0],
+        invitee_name: me.name,
+        invitee_photo: me.photo,
         pet_name: pets[0]?.name || null,
         status: 'accepted',
       },

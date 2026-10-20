@@ -346,7 +346,7 @@ export default function Communities() {
                     <input className={inputCls} value={form.address} onChange={e => setForm(f => ({...f, address: e.target.value}))} placeholder={t('pgCommunities.form.addressPlaceholder')} />
                     <button onClick={geocodeAddress} className="px-3 py-2 bg-purple-500 text-white rounded-xl text-xs whitespace-nowrap">{t('pgCommunities.form.find')}</button>
                   </div>
-                  {form.latitude && <p className="text-xs text-green-600 mt-1">✅ {form.latitude.toFixed(4)}, {form.longitude?.toFixed(4)}</p>}
+                  {form.latitude != null && <p className="text-xs text-green-600 mt-1">✅ {form.latitude.toFixed(4)}, {form.longitude?.toFixed(4)}</p>}
                 </div>
                 <div><label className={labelCls}>{t('pgCommunities.form.orUseGps')}</label>
                   <button onClick={() => {
@@ -366,7 +366,7 @@ export default function Communities() {
                   <div className="flex justify-between text-xs text-gray-400"><span>0.5km</span><span>5km</span></div>
                 </div>
               </div>
-              <button onClick={() => createCommunity.mutate()} disabled={!form.name || !form.city || (!form.latitude && !form.address) || createCommunity.isPending}
+              <button onClick={() => createCommunity.mutate()} disabled={!form.name || !form.city || (form.latitude == null && !form.address) || createCommunity.isPending}
                 className="w-full mt-4 py-3 bg-purple-500 text-white rounded-xl font-medium disabled:opacity-50">
                 {createCommunity.isPending ? t('pgCommunities.creating') : t('pgCommunities.createCommunity')}
               </button>

@@ -35,6 +35,9 @@ export default function OrderConfirmationScreen() {
   const { id, transactionId } = useLocalSearchParams<{ id: string; transactionId?: string }>()
   const verified = useRef(false)
   const verifying = useRef(false)
+  // Αποτέλεσμα του verify (orders.ts): 'refunded' / 'refund_failed' = η
+  // πληρωμή επιστράφηκε (ή η επιστροφή καθυστερεί) — όπως στο booking-confirmation.
+  const [result, setResult] = useState<string | null>(null)
   // Όπως στο web: αν ήρθαμε από την πληρωμή, ξαναρωτάμε κάθε 3″ για έως ένα
   // λεπτό, γιατί το webhook του Viva μπορεί να επιβεβαιώσει μετά την επιστροφή.
   const [pollUntil] = useState(() => transactionId ? Date.now() + 60_000 : 0)
@@ -59,8 +62,9 @@ export default function OrderConfirmationScreen() {
       if (st && st >= 400 && st < 500) verified.current = true
     },
     onSettled: () => { verifying.current = false },
-    onSuccess: () => {
+    onSuccess: (r: any) => {
       verified.current = true
+      setResult(r?.data?.result ?? null)
       qc.invalidateQueries({ queryKey: ['order', id] })
       // Το κλειδί της λίστας είναι 'my-orders' (orders.tsx)· το 'orders' δεν
       // ανανέωνε τίποτα.
@@ -80,6 +84,10 @@ export default function OrderConfirmationScreen() {
 
   const paid = order?.payment_status === 'paid'
   const failed = paymentFailed(order)
+  const refunded = result === 'refunded'
+  const refundFailed = result === 'refund_failed'
+  // Απλήρωτη αλλά η πληρωμή επιστράφηκε (π.χ. ακυρωμένη παραγγελία).
+  const notCharged = !paid && (refunded || refundFailed)
 
   return (
     <Screen title={t('orderConfirm.title')} scroll={false}>
@@ -91,11 +99,19 @@ export default function OrderConfirmationScreen() {
              : <Clock size={40} color={colors.warning} />}
           </View>
           <Text style={s.heroTitle}>
-            {paid ? t('orderConfirm.paid') : failed ? t('orderConfirm.failed') : t('orderConfirm.pending')}
+            {paid ? t('orderConfirm.paid') : failed ? t('orderConfirm.failed')
+              : notCharged ? t('orderConfirm.notChargedTitle') : t('orderConfirm.pending')}
           </Text>
           <Text style={s.heroTxt}>
-            {paid ? t('orderConfirm.paidHint') : failed ? t('orderConfirm.failedHint') : t('orderConfirm.pendingHint')}
+            {paid ? t('orderConfirm.paidHint') : failed ? t('orderConfirm.failedHint')
+              : notCharged ? (refunded ? t('orderConfirm.lateRefunded') : t('orderConfirm.lateRefundDelayed'))
+              : t('orderConfirm.pendingHint')}
           </Text>
+          {paid && (refunded || refundFailed) && (
+            <Text style={[s.heroTxt, { color: colors.warning }]}>
+              {refunded ? t('orderConfirm.duplicateRefunded') : t('orderConfirm.duplicateRefundDelayed')}
+            </Text>
+          )}
         </View>
 
         {!!order && (
@@ -120,7 +136,7 @@ export default function OrderConfirmationScreen() {
         )}
 
         <Button label={t('profile.menu.orders')} icon={<Package size={18} color={colors.textOnDark} />}
-          onPress={() => router.replace('/orders' as any)} full />
+          onPress={() => router.dismissTo('/orders' as any)} full />
         <Button label={t('cart.go_to_shop')} variant="secondary"
           onPress={() => router.replace('/(tabs)/marketplace' as any)} full />
       </ScrollView>

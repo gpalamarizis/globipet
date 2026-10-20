@@ -19,6 +19,11 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Ίδιο όριο με τον server (auth.ts) και το κινητό: τουλάχιστον 8 χαρακτήρες.
+    if (password.length < 8) {
+      toast.error(t('account.passwordMin'))
+      return
+    }
     if (password !== confirmPassword) {
       toast.error(t('authExtraLogin.passwordMismatch'))
       return
@@ -55,7 +60,7 @@ export default function ResetPassword() {
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('authExtraLogin.newPassword')}</label>
               <div className="relative">
-                <input type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                <input type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
               </div>
             </div>

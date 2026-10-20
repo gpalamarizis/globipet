@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake, Flame } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
+import { fmtYmd } from '@/lib/dates'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -54,7 +55,7 @@ const tint = (k: string) => (colors.category as any)[k] ?? colors.category.defau
 
 export default function DiscoverScreen() {
   const tabSpace = useTabSpace()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -114,7 +115,7 @@ export default function DiscoverScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.cardTitle} numberOfLines={1}>{e.title}</Text>
                 <Text style={s.cardSub} numberOfLines={1}>
-                  {e.date}{e.city ? ` · ${e.city}` : ''}
+                  {fmtYmd(e.date, i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })}{e.city ? ` · ${e.city}` : ''}
                 </Text>
               </View>
               <Text style={s.eventPrice}>

@@ -9,10 +9,11 @@ import { useAuthStore } from '@/store/auth'
 import { Chips } from '@/components/Chips'
 import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { fmtYmd } from '@/lib/dates'
 
 /** Εκδηλώσεις για κατοικίδια. */
 export default function EventsScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -52,7 +53,7 @@ export default function EventsScreen() {
             <Text style={s.title} numberOfLines={2}>{e.title}</Text>
             <View style={s.metaRow}>
               <CalendarDays size={icon.xs} color={colors.textLight} />
-              <Text style={s.meta}>{e.date}{e.time ? ` · ${e.time}` : ''}</Text>
+              <Text style={s.meta}>{fmtYmd(e.date, i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })}{e.time ? ` · ${e.time}` : ''}</Text>
             </View>
             {!!e.city && (
               <View style={s.metaRow}>

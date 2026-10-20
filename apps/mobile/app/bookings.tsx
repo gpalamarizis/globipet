@@ -91,8 +91,11 @@ export default function BookingsScreen() {
   const now = new Date()
   const bookings = (allBookings as any[]).filter(b => {
     const d = bookingDate(b)
-    if (tab === 'upcoming') return !!d && d >= now && b.status !== 'cancelled'
-    if (tab === 'past') return (!!d && d < now) || b.status === 'completed'
+    // Ολοκληρωμένη ή «δεν προσήλθε» δεν είναι επερχόμενη, ακόμα κι αν η ώρα της
+    // δεν έχει περάσει — πηγαίνει στα προηγούμενα (όπως στο web).
+    const closed = b.status === 'completed' || b.status === 'no_show'
+    if (tab === 'upcoming') return !!d && d >= now && b.status !== 'cancelled' && !closed
+    if (tab === 'past') return (!!d && d < now) || closed
     return true
   })
 
@@ -319,7 +322,8 @@ export default function BookingsScreen() {
                   )}
                   {/* Κριτική μόνο σε ολοκληρωμένη και μόνο μία φορά: ο server
                       απορρίπτει τη δεύτερη, αλλά δεν έχει νόημα να τη ζητήσουμε. */}
-                  {item.status === 'completed' && !item.has_review && (
+                  {/* Η κράτηση κρατά τη βαθμολογία της μετά την κριτική (όπως στο web). */}
+                  {item.status === 'completed' && item.rating == null && (
                     <TouchableOpacity style={s.reviewBtn} activeOpacity={0.7}
                       onPress={() => setReviewing(item)}>
                       <Star size={14} color={colors.warning} />

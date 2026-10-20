@@ -34,7 +34,9 @@ export default function MedicalCenterScreen() {
   const { t } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+  // Ο διαχειριστής έχει πάντα πρόσβαση στα AI (backend ai.ts, όπως AiGate).
+  const isAdmin = user?.role === 'admin'
 
   const { data: status } = useQuery({
     queryKey: ['ai-subscription-status'],
@@ -50,10 +52,10 @@ export default function MedicalCenterScreen() {
   })
 
   const st = status?.ai_subscription_status
-  const active = st === 'active' || st === 'trial'
+  const active = isAdmin || st === 'active' || st === 'trial'
   const expired = st === 'expired'
   // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
-  const canTrial = isAuthenticated && st === 'none'
+  const canTrial = isAuthenticated && !isAdmin && st === 'none'
 
   return (
     <Screen title={t('medical.title')} back>

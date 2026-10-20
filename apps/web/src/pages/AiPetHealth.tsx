@@ -210,10 +210,10 @@ export default function AiPetHealth() {
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-sm text-gray-500">
                       <strong className="text-gray-700 dark:text-gray-300">{t('pgAiHealth.tipsTitle')}</strong>
                       <ul className="mt-1 space-y-1 list-disc list-inside">
-                        {analysisType === 'skin'
+                        {(analysisType === 'skin'
                           ? [t('pgAiHealth.skinTip1'), t('pgAiHealth.skinTip2'), t('pgAiHealth.skinTip3')]
                           : [t('pgAiHealth.eyeTip1'), t('pgAiHealth.eyeTip2'), t('pgAiHealth.eyeTip3')]
-                        }
+                        ).map((tip, i) => <li key={i}>{tip}</li>)}
                       </ul>
                     </div>
                     <button onClick={handleAnalyze}

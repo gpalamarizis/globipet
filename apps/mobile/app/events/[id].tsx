@@ -9,6 +9,15 @@ import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
+// 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη (όπως στο
+// event-confirmation): το new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω
+// από το UTC έδειχνε την προηγούμενη μέρα. Άγνωστη μορφή μένει ως έχει.
+const fmtYmd = (d: string | undefined, lang: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d ?? '')
+  if (!m) return d ?? ''
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 /**
  * Λεπτομέρεια εκδήλωσης με εγγραφή.
  *
@@ -129,16 +138,19 @@ export default function EventDetailScreen() {
     } catch {
       fresh = cancelPreview
     }
+    const alreadyCancelled = !!(fresh?.already_cancelled ?? cancelPreview?.already_cancelled)
     const lines = [
       t('events.cancelEventParticipants', { count: fresh?.participants ?? 0 }),
       ...(fresh?.refunds
         ? [t('events.cancelEventRefunds', { count: fresh.refunds, amount: Number(fresh.refund_total ?? 0).toFixed(2) })]
         : []),
-      t('events.cancelEventQuestion'),
+      // Ήδη ακυρωμένη (κουμπί «Ολοκλήρωση επιστροφών»): η ερώτηση αφορά τις επιστροφές, όπως στο web.
+      alreadyCancelled ? t('events.completeRefundsQuestion') : t('events.cancelEventQuestion'),
     ]
-    Alert.alert(t('events.cancelEvent'), lines.join('\n'), [
+    const actionLabel = alreadyCancelled ? t('events.completeRefunds') : t('events.cancelEvent')
+    Alert.alert(actionLabel, lines.join('\n'), [
       { text: t('common.dismiss'), style: 'cancel', onPress: releaseCancelEvent },
-      { text: t('events.cancelEvent'), style: 'destructive',
+      { text: actionLabel, style: 'destructive',
         onPress: () => cancelEvent.mutate(undefined, { onSettled: releaseCancelEvent }) },
     ], { cancelable: true, onDismiss: releaseCancelEvent })
   }
@@ -195,7 +207,12 @@ export default function EventDetailScreen() {
 
           <View style={s.kvRow}>
             <CalendarDays size={icon.sm} color={colors.brand} />
-            <Text style={s.kv}>{event.date}{event.time ? ` · ${event.time}` : ''}</Text>
+            <Text style={s.kv}>
+              {fmtYmd(event.date, i18n.language)}
+              {/* Πολυήμερη: και η λήξη, όπως στο web (EventDetail). */}
+              {event.end_date && event.end_date !== event.date ? ` — ${fmtYmd(event.end_date, i18n.language)}` : ''}
+              {event.time ? ` · ${event.time}` : ''}
+            </Text>
           </View>
           {!!(event.location || event.city) && (
             <View style={s.kvRow}>

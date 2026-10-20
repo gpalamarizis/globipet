@@ -245,19 +245,6 @@ const s = StyleSheet.create({
   title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
   subtitle: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 
-  filterRow: { paddingVertical: space.lg, maxHeight: 68, flexGrow: 0 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg, height: touch.min,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
-  chipEmoji: { fontSize: 16 },
-  chipText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
-  chipTextActive: { color: colors.brand, fontWeight: weight.bold },
-
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

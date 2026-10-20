@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
+import { fullNameOf } from '../lib/userName.js'
 
 /**
  * Πελάτες παρόχου — διαχείριση, φίλτρα, επικοινωνία.
@@ -177,13 +178,15 @@ const customersRoutes: FastifyPluginAsync = async (app) => {
 
     const batch = uid()
     let sent = 0
+    // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+    const providerName = await fullNameOf(user.email)
     for (const email of allowed) {
       await prisma.$executeRaw`
         INSERT INTO provider_messages
           (id, provider_email, provider_name, customer_email, subject, body,
            campaign_id, batch_id, created_at)
         VALUES
-          (${uid()}, ${user.email}, ${user.full_name ?? null}, ${email},
+          (${uid()}, ${user.email}, ${providerName}, ${email},
            ${b.subject ?? null}, ${String(b.body).trim()}, ${campaignId}, ${batch}, now())`
       sent++
     }

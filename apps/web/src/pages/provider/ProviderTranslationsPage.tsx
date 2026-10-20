@@ -56,7 +56,11 @@ export default function ProviderTranslationsPage() {
 
   const { data: packages = [] } = useQuery({
     queryKey: ['my-packages'],
-    queryFn: () => api.get('/packages/my').then(r => r.data?.data ?? []),
+    // Το /packages/my επιστρέφει τις ΥΠΗΡΕΣΙΕΣ του παρόχου με τα πακέτα τους
+    // μέσα (backend/src/routes/packages.ts). Η μετάφραση αφορά το κάθε
+    // πακέτο (entity service_package, id του πακέτου, πεδία name/description).
+    queryFn: () => api.get('/packages/my').then(r =>
+      ((r.data?.data ?? []) as any[]).flatMap((s: any) => s?.packages ?? [])),
     enabled: tab === 'service_package',
   })
 

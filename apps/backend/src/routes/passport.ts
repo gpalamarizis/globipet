@@ -158,6 +158,26 @@ const routes: FastifyPluginAsync = async (app) => {
     const esc = (v: unknown) => v == null ? '' : String(v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    // Κωδικοί της βάσης → ελληνικές ετικέτες, ίδιες με τα el κείμενα του web
+    // (web/src/lib/i18n.ts: pgPassport.*, cmpAddPet.species.*, pets.male/female).
+    // Άγνωστη τιμή → η ωμή τιμή. Το αποτέλεσμα περνά πάντα από esc.
+    const EL_LABELS: Record<string, Record<string, string>> = {
+      species: { dog: 'Σκύλος', cat: 'Γάτα', bird: 'Πτηνό', rabbit: 'Κουνέλι', fish: 'Ψάρι', reptile: 'Ερπετό', horse: 'Άλογο', other: 'Άλλο' },
+      gender: { male: 'Αρσενικό', female: 'Θηλυκό' },
+      vacType: { core: 'Core', non_core: 'Non-Core', rabies: 'Λύσσα', other: 'Άλλο' },
+      labType: {
+        blood_count: 'Αιματολογικό', biochemistry: 'Βιοχημικός Έλεγχος', urine: 'Ούρων', fecal: 'Κοπράνων',
+        biopsy: 'Βιοψία', culture: 'Καλλιέργεια', hormone: 'Ορμόνες', serology: 'Ορολογία', other: 'Άλλο',
+      },
+      imgType: {
+        xray: 'Ακτινογραφία (X-Ray)', ultrasound: 'Υπερηχογράφημα', ct: 'CT Scan', mri: 'MRI',
+        endoscopy: 'Ενδοσκόπηση', echocardiogram: 'Ηχοκαρδιογράφημα', other: 'Άλλο',
+      },
+      severity: { mild: 'Ήπια', moderate: 'Μέτρια', severe: 'Σοβαρή', anaphylactic: 'Αναφυλακτική' },
+      dentalProc: { cleaning: 'Καθαρισμός', extraction: 'Εξαγωγή', xray: 'Ακτινογραφία Δοντιών', root_canal: 'Ριζοθεραπεία', other: 'Άλλο' },
+    }
+    const lbl = (group: string, v: unknown): unknown =>
+      v == null || v === '' ? v : (EL_LABELS[group]?.[String(v)] ?? v)
     const section = (title: string, rows: string) => rows ? `<h2>${title}</h2><table>${rows}</table>` : ''
     const row = (label: string, val: any) => val ? `<tr><td>${esc(label)}</td><td>${esc(val)}</td></tr>` : ''
 
@@ -183,10 +203,10 @@ const routes: FastifyPluginAsync = async (app) => {
   <div>
     <h1>🐾 Ιατρικός Φάκελος</h1>
     <div class="pet-info">
-      <strong>${esc(pet.name)}</strong> &nbsp;|&nbsp; ${esc(pet.species || '')} ${esc(pet.breed || '')}<br>
-      Ηλικία: ${pet.age != null ? esc(pet.age) + ' έτη' : 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${esc(pet.gender || '-')}<br>
+      <strong>${esc(pet.name)}</strong> &nbsp;|&nbsp; ${esc(lbl('species', pet.species) || '')} ${esc(pet.breed || '')}<br>
+      Ηλικία: ${pet.age != null ? esc(pet.age) + ' έτη' : 'Άγνωστη'} &nbsp;|&nbsp; Φύλο: ${esc(lbl('gender', pet.gender) || '-')}<br>
       Αρ. Μικροτσίπ: ${esc(pet.microchip_number || '-')}<br>
-      Ιδιοκτήτης: ${esc(email)}
+      Ιδιοκτήτης: ${esc(pet.owner_email)}
     </div>
   </div>
   <div style="text-align:right;font-size:10px;color:#999">
@@ -196,7 +216,7 @@ const routes: FastifyPluginAsync = async (app) => {
 </div>
 
 ${allergies.length ? `<div style="background:#fee2e2;border:2px solid #dc2626;border-radius:8px;padding:10px;margin-bottom:16px">
-  <strong>⚠️ ΑΛΛΕΡΓΙΕΣ:</strong> ${allergies.map(a => `${esc(a.allergen)} (${esc(a.severity)})`).join(', ')}
+  <strong>⚠️ ΑΛΛΕΡΓΙΕΣ:</strong> ${allergies.map(a => `${esc(a.allergen)} (${esc(lbl('severity', a.severity))})`).join(', ')}
 </div>` : ''}
 
 ${chronicConditions.length ? `<div style="background:#fef9c3;border:2px solid #ca8a04;border-radius:8px;padding:10px;margin-bottom:16px">
@@ -204,7 +224,7 @@ ${chronicConditions.length ? `<div style="background:#fef9c3;border:2px solid #c
 </div>` : ''}
 
 ${section('Εμβόλια', vaccinations.map(v => `<tr>
-  <td>${esc(v.date_administered)}</td><td>${esc(v.vaccine_name)}</td><td>${esc(v.vaccine_type)}</td>
+  <td>${esc(v.date_administered)}</td><td>${esc(v.vaccine_name)}</td><td>${esc(lbl('vacType', v.vaccine_type))}</td>
   <td>${esc(v.vet_name || '-')}</td><td>${esc(v.next_due_date || '-')}</td>
 </tr>`).join(''))}
 
@@ -219,12 +239,12 @@ ${section('Εξετάσεις', healthRecords.map(h => `<tr>
 </tr>`).join(''))}
 
 ${section('Εργαστηριακές Εξετάσεις', labResults.map(l => `<tr>
-  <td>${esc(l.date)}</td><td>${esc(l.title)}</td><td>${esc(l.result_type)}</td>
+  <td>${esc(l.date)}</td><td>${esc(l.title)}</td><td>${esc(lbl('labType', l.result_type))}</td>
   <td>${esc(l.vet_name || '-')}</td><td>${l.is_abnormal ? '⚠️ Παθολογικά' : '✅ Φυσιολογικά'}</td>
 </tr>`).join(''))}
 
 ${section('Απεικονιστικές Εξετάσεις', imaging.map(i => `<tr>
-  <td>${esc(i.date)}</td><td>${esc(i.imaging_type.toUpperCase())}</td><td>${esc(i.body_region || '-')}</td>
+  <td>${esc(i.date)}</td><td>${esc(EL_LABELS.imgType[i.imaging_type] ?? i.imaging_type.toUpperCase())}</td><td>${esc(i.body_region || '-')}</td>
   <td>${esc(i.vet_name || '-')}</td><td>${esc(i.findings?.slice(0, 100) || '-')}</td>
 </tr>`).join(''))}
 
@@ -234,7 +254,7 @@ ${section('Χειρουργεία', surgeries.map(s => `<tr>
 </tr>`).join(''))}
 
 ${section('Οδοντιατρικά', dentalRecords.map(d => `<tr>
-  <td>${esc(d.date)}</td><td>${esc(d.procedure)}</td><td>${esc(d.vet_name || '-')}</td>
+  <td>${esc(d.date)}</td><td>${esc(lbl('dentalProc', d.procedure))}</td><td>${esc(d.vet_name || '-')}</td>
   <td>${esc(d.findings || '-')}</td><td>${esc(d.next_due || '-')}</td>
 </tr>`).join(''))}
 

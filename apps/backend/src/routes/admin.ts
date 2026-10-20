@@ -315,6 +315,10 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     if (!email || !password) {
       return reply.code(400).send({ message: 'Email και κωδικός είναι υποχρεωτικά' })
     }
+    // Ίδιο ελάχιστο μήκος με την εγγραφή/αλλαγή κωδικού (auth.ts).
+    if (typeof password !== 'string' || password.length < 8) {
+      return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
+    }
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
       return reply.code(409).send({ message: 'Το email χρησιμοποιείται ήδη' })
@@ -336,14 +340,33 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return user
   })
 
-  app.patch('/users/:id', async (req: any) => {
-    const { password, phone, address, ...rest } = req.body as any
-    const data: any = { ...rest }
+  app.patch('/users/:id', async (req: any, reply) => {
+    // Μόνο τα πεδία που αλλάζει η διαχείριση (web AdminDashboard: role,
+    // is_verified· ChangePasswordModal: password) και όσα δεχόταν ήδη ρητά.
+    // Πριν περνούσε όλο το σώμα στη βάση (email, password_hash, reset_token…).
+    const { password, phone, address, full_name, role, is_verified } = (req.body ?? {}) as any
+    const data: any = {}
+    if (full_name !== undefined) data.full_name = full_name
+    if (role !== undefined) {
+      if (!['user', 'service_provider', 'admin'].includes(role)) return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
+      data.role = role
+    }
+    if (is_verified !== undefined) {
+      if (typeof is_verified !== "boolean") return reply.code(400).send({ message: 'Μη έγκυρη τιμή' })
+      data.is_verified = is_verified
+    }
     if (password) {
+      // Κενός κωδικός = καμία αλλαγή (όπως πριν)· νέος κωδικός: τουλάχιστον 8.
+      if (typeof password !== 'string' || password.length < 8) {
+        return reply.code(400).send({ message: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
+      }
       data.password_hash = await bcrypt.hash(password, 12)
     }
     if (phone   !== undefined) data.phone   = encryptField(phone)
     if (address !== undefined) data.address = encryptField(address)
+    if (Object.keys(data).length === 0) {
+      return reply.code(400).send({ message: 'Κανένα επιτρεπόμενο πεδίο' })
+    }
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data,

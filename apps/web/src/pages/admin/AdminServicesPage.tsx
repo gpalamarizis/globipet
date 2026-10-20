@@ -8,23 +8,25 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation, Trans } from 'react-i18next'
 
 const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  grooming: { label: 'Περιποίηση', emoji: '✂️' },
-  veterinary: { label: 'Κτηνίατρος', emoji: '🩺' },
-  clinic: { label: 'Κλινική', emoji: '🏥' },
-  walking: { label: 'Walking', emoji: '🚶' },
-  sitting: { label: 'Sitting', emoji: '🏡' },
-  boarding: { label: 'Boarding', emoji: '🏨' },
-  daycare: { label: 'Daycare', emoji: '☀️' },
-  training: { label: 'Εκπαίδευση', emoji: '🎓' },
-  transport: { label: 'Μεταφορά', emoji: '🚐' },
-  photography: { label: 'Φωτογράφιση', emoji: '📷' },
-  insurance: { label: 'Ασφάλιση', emoji: '🛡️' },
-  other: { label: 'Άλλο', emoji: '✨' },
+  grooming: { label: 'adminServices.cat_grooming', emoji: '✂️' },
+  veterinary: { label: 'adminServices.cat_veterinary', emoji: '🩺' },
+  clinic: { label: 'adminServices.cat_clinic', emoji: '🏥' },
+  walking: { label: 'adminServices.cat_walking', emoji: '🚶' },
+  sitting: { label: 'adminServices.cat_sitting', emoji: '🏡' },
+  boarding: { label: 'adminServices.cat_boarding', emoji: '🏨' },
+  daycare: { label: 'adminServices.cat_daycare', emoji: '☀️' },
+  training: { label: 'adminServices.cat_training', emoji: '🎓' },
+  transport: { label: 'adminServices.cat_transport', emoji: '🚐' },
+  photography: { label: 'adminServices.cat_photography', emoji: '📷' },
+  insurance: { label: 'adminServices.cat_insurance', emoji: '🛡️' },
+  other: { label: 'adminServices.cat_other', emoji: '✨' },
 }
 
 export default function AdminServicesPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -40,9 +42,9 @@ export default function AdminServicesPage() {
     mutationFn: (id: string) => api.delete(`/admin/catalog/services/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-services'] })
-      toast.success('Υπηρεσία διαγράφηκε')
+      toast.success(t('adminServices.deleted'))
     },
-    onError: () => toast.error('Σφάλμα'),
+    onError: () => toast.error(t('adminCatalog.error')),
   })
 
   const toggleActive = useMutation({
@@ -78,9 +80,9 @@ export default function AdminServicesPage() {
         <Link to="/admin" className="btn-ghost p-2"><ArrowLeft size={18}/></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Building2 size={22}/> Υπηρεσίες παρόχων
+            <Building2 size={22}/> {t('adminServices.title')}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Διαχείριση όλων των υπηρεσιών στην πλατφόρμα</p>
+          <p className="text-sm text-gray-500 mt-0.5">{t('adminServices.subtitle')}</p>
         </div>
       </div>
 
@@ -88,29 +90,28 @@ export default function AdminServicesPage() {
         <div className="flex items-center gap-2 flex-1 input">
           <Search size={14} className="text-gray-400 shrink-0"/>
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Αναζήτηση (όνομα, email, πόλη)..."
+            placeholder={t('adminServices.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm outline-none"/>
         </div>
         <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="input text-sm">
-          <option value="all">Όλες οι κατηγορίες</option>
+          <option value="all">{t('adminCatalog.allCategories')}</option>
           {Object.entries(CATEGORY_LABELS).map(([key, val]) => (
-            <option key={key} value={key}>{val.emoji} {val.label}</option>
+            <option key={key} value={key}>{val.emoji} {t(val.label)}</option>
           ))}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="input text-sm">
-          <option value="all">Όλα τα status</option>
-          <option value="active">Ενεργά</option>
-          <option value="inactive">Ανενεργά</option>
-          <option value="verified">Επιβεβαιωμένα</option>
-          <option value="unverified">Μη επιβεβαιωμένα</option>
+          <option value="all">{t('adminServices.allStatuses')}</option>
+          <option value="active">{t('adminPackages.activePl')}</option>
+          <option value="inactive">{t('adminPackages.inactivePl')}</option>
+          <option value="verified">{t('adminServices.verifiedPl')}</option>
+          <option value="unverified">{t('adminServices.unverifiedPl')}</option>
         </select>
       </div>
 
       <div className="card p-4 mb-4 bg-gradient-to-br from-brand-50 to-amber-50 dark:from-brand-900/20 dark:to-amber-900/20 border-brand-100">
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          <strong>{filtered.length}</strong> από <strong>{services.length}</strong> υπηρεσίες ·{' '}
-          {services.filter((s: any) => s.is_verified).length} επιβεβαιωμένες ·{' '}
-          {services.reduce((acc: number, s: any) => acc + (s.packages?.length ?? 0), 0)} συνολικά πακέτα
+          <Trans i18nKey="adminServices.summary" values={{ shown: filtered.length, total: services.length, verified: services.filter((s: any) => s.is_verified).length, packages: services.reduce((acc: number, s: any) => acc + (s.packages?.length ?? 0), 0) }}
+            components={{ b: <strong /> }} />
         </p>
       </div>
 
@@ -119,7 +120,7 @@ export default function AdminServicesPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <Building2 size={40} className="mx-auto text-gray-300 mb-3"/>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Δεν βρέθηκαν υπηρεσίες</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('adminServices.noServices')}</h3>
         </div>
       ) : (
         <div className="space-y-3">
@@ -136,40 +137,40 @@ export default function AdminServicesPage() {
                       <h3 className="font-bold text-gray-900 dark:text-white">{s.title}</h3>
                       {s.is_verified && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
-                          <BadgeCheck size={10}/> Επιβεβαιωμένη
+                          <BadgeCheck size={10}/> {t('adminServices.verified')}
                         </span>
                       )}
                       {!s.is_active && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">Ανενεργή</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">{t('adminServices.inactive')}</span>
                       )}
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">{cat.label}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">{t(cat.label)}</span>
                     </div>
                     {s.description && <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1 mt-1">{s.description}</p>}
                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
                       <span className="flex items-center gap-1"><Mail size={11}/> {s.provider_email}</span>
                       {s.city && <span className="flex items-center gap-1"><MapPin size={11}/> {s.city}</span>}
                       <span className="flex items-center gap-1">
-                        <Package size={11}/> {packagesCount} πακέτα
+                        <Package size={11}/> {t('adminServices.packagesCount', { count: packagesCount })}
                         {packagesWithoutPrice > 0 && (
-                          <span className="text-amber-600"> ({packagesWithoutPrice} χωρίς τιμή)</span>
+                          <span className="text-amber-600">{t('adminServices.withoutPrice', { count: packagesWithoutPrice })}</span>
                         )}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => toggleVerified.mutate({ id: s.id, is_verified: !s.is_verified })}
-                      className="btn-ghost p-1.5" title={s.is_verified ? 'Αφαίρεση επιβεβαίωσης' : 'Επιβεβαίωση'}>
+                      className="btn-ghost p-1.5" title={s.is_verified ? t('adminServices.unverify') : t('adminServices.verify')}>
                       <BadgeCheck size={14} className={s.is_verified ? 'text-green-600' : 'text-gray-400'}/>
                     </button>
                     <button onClick={() => toggleActive.mutate({ id: s.id, is_active: !s.is_active })}
-                      className="btn-ghost p-1.5" title={s.is_active ? 'Απενεργοποίηση' : 'Ενεργοποίηση'}>
+                      className="btn-ghost p-1.5" title={s.is_active ? t('adminServices.deactivate') : t('adminServices.activate')}>
                       {s.is_active ? <Check size={14} className="text-green-600"/> : <X size={14} className="text-gray-400"/>}
                     </button>
                     <button onClick={() => setEditingService(s)} className="btn-ghost p-1.5">
                       <Edit2 size={14} className="text-gray-500"/>
                     </button>
                     <button onClick={() => {
-                      if (confirm(`Διαγραφή "${s.title}" και ${packagesCount} πακέτων;`)) deleteMutation.mutate(s.id)
+                      if (confirm(t('adminServices.confirmDelete', { name: s.title, count: packagesCount }))) deleteMutation.mutate(s.id)
                     }} className="btn-ghost p-1.5 hover:bg-red-50">
                       <Trash2 size={14} className="text-red-500"/>
                     </button>
@@ -196,6 +197,7 @@ export default function AdminServicesPage() {
 
 // ═══════════════════════════════════════════════════════════════
 function ServiceEditModal({ open, onClose, service, onSaved }: any) {
+  const { t } = useTranslation()
   const [form, setForm] = useState<any>({})
 
   useEffect(() => {
@@ -221,8 +223,8 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
 
   const saveMutation = useMutation({
     mutationFn: () => api.patch(`/admin/catalog/services/${service.id}`, form),
-    onSuccess: () => { toast.success('Η υπηρεσία ενημερώθηκε'); onSaved() },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Σφάλμα'),
+    onSuccess: () => { toast.success(t('adminServices.updated')); onSaved() },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('adminCatalog.error')),
   })
 
   if (!open || !service) return null
@@ -236,70 +238,70 @@ function ServiceEditModal({ open, onClose, service, onSaved }: any) {
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-modal max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
             <div>
-              <h3 className="font-bold text-gray-900 dark:text-white">Επεξεργασία υπηρεσίας</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white">{t('adminServices.editService')}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{service.provider_email}</p>
             </div>
             <button onClick={onClose} className="btn-ghost p-2"><X size={18}/></button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα *</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.nameReq')}</label>
               <input className="input" value={form.title || ''} onChange={e => setForm({...form, title: e.target.value})}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Κατηγορία</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminServices.category')}</label>
                 <select className="input" value={form.category || ''} onChange={e => setForm({...form, category: e.target.value})}>
                   {Object.entries(CATEGORY_LABELS).map(([key, val]) => (
-                    <option key={key} value={key}>{val.emoji} {val.label}</option>
+                    <option key={key} value={key}>{val.emoji} {t(val.label)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Πόλη</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminServices.city')}</label>
                 <input className="input" value={form.city || ''} onChange={e => setForm({...form, city: e.target.value})}/>
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.description')}</label>
               <textarea rows={3} className="input" value={form.description || ''} onChange={e => setForm({...form, description: e.target.value})}/>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Διεύθυνση</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminServices.address')}</label>
               <input className="input" value={form.location || ''} onChange={e => setForm({...form, location: e.target.value})}/>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Έτη εμπειρίας</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminServices.yearsExperience')}</label>
               <input type="number" className="input" value={form.years_experience || 0}
                 onChange={e => setForm({...form, years_experience: parseInt(e.target.value) || 0})}/>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Εξειδικεύσεις (χωρισμένες με κόμμα)</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminServices.specializations')}</label>
               <input className="input" value={form.specializations || ''} onChange={e => setForm({...form, specializations: e.target.value})}/>
             </div>
             <div className="flex flex-wrap gap-4 pt-2">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.home_visits} onChange={e => setForm({...form, home_visits: e.target.checked})}/>
-                Κατ' οίκον
+                {t('adminServices.homeVisits')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.emergency_available} onChange={e => setForm({...form, emergency_available: e.target.checked})}/>
-                Έκτακτα
+                {t('adminServices.emergency')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_active} onChange={e => setForm({...form, is_active: e.target.checked})}/>
-                Ενεργή
+                {t('adminServices.active')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_verified} onChange={e => setForm({...form, is_verified: e.target.checked})}/>
-                Επιβεβαιωμένη
+                {t('adminServices.verified')}
               </label>
             </div>
           </div>
           <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-2 justify-end">
-            <button onClick={onClose} className="btn-secondary">Άκυρο</button>
+            <button onClick={onClose} className="btn-secondary">{t('adminCatalog.cancel')}</button>
             <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="btn-primary">
-              {saveMutation.isPending ? 'Αποθήκευση...' : 'Αποθήκευση'}
+              {saveMutation.isPending ? t('adminCatalog.saving') : t('common.save')}
             </button>
           </div>
         </motion.div>

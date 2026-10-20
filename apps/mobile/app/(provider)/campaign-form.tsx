@@ -14,7 +14,9 @@ import { colors, space, type } from '@/theme'
  * (τίτλος, περιγραφή, έκπτωση %/€ ή καμία, ελάχιστο ποσό, έναρξη/λήξη,
  * προτεραιότητα, ενεργή). Μετά τη δημιουργία ανοίγουν οι ρυθμίσεις.
  */
-const day = (d: Date) => d.toISOString().slice(0, 10)
+// 'YYYY-MM-DD' από τοπικά έτος/μήνα/ημέρα (το toISOString είναι UTC και κοντά στα μεσάνυχτα έδινε άλλη μέρα).
+const day = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const validDay = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(s).getTime())
 
 export default function CampaignFormScreen() {

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, PawPrint, Save } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -12,22 +13,23 @@ interface Props {
 }
 
 const SERVICE_TYPES = [
-  { value: 'veterinary',  label: 'Κτηνιατρείο 🩺' },
-  { value: 'grooming',    label: 'Περιποίηση ✂️' },
-  { value: 'training',    label: 'Εκπαίδευση 🎓' },
-  { value: 'pet_sitting', label: 'Φιλοξενία · Ιδιώτης 🏡' },
-  { value: 'walking',     label: 'Βόλτα 🚶' },
-  { value: 'boarding',    label: 'Φιλοξενία · Ξενοδοχείο 🏨' },
-  { value: 'pet_taxi',    label: 'Pet Taxi 🚕' },
-  { value: 'photography', label: 'Φωτογράφηση 📸' },
-  { value: 'pharmacy',    label: 'Φαρμακείο 💊' },
+  { value: 'veterinary',  label: 'adminServiceForm.type_veterinary' },
+  { value: 'grooming',    label: 'adminServiceForm.type_grooming' },
+  { value: 'training',    label: 'adminServiceForm.type_training' },
+  { value: 'pet_sitting', label: 'adminServiceForm.type_pet_sitting' },
+  { value: 'walking',     label: 'adminServiceForm.type_walking' },
+  { value: 'boarding',    label: 'adminServiceForm.type_boarding' },
+  { value: 'pet_taxi',    label: 'adminServiceForm.type_pet_taxi' },
+  { value: 'photography', label: 'adminServiceForm.type_photography' },
+  { value: 'pharmacy',    label: 'adminServiceForm.type_pharmacy' },
 ]
 
 const SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'fish', 'reptile', 'horse']
 const LANGUAGES = ['el', 'en', 'es', 'fr', 'zh']
-const DAYS = [{n:1,l:'Δευ'},{n:2,l:'Τρι'},{n:3,l:'Τετ'},{n:4,l:'Πεμ'},{n:5,l:'Παρ'},{n:6,l:'Σαβ'},{n:7,l:'Κυρ'}]
+const DAYS = [{n:1,l:'adminServiceForm.day1'},{n:2,l:'adminServiceForm.day2'},{n:3,l:'adminServiceForm.day3'},{n:4,l:'adminServiceForm.day4'},{n:5,l:'adminServiceForm.day5'},{n:6,l:'adminServiceForm.day6'},{n:7,l:'adminServiceForm.day7'}]
 
 export default function ServiceFormModal({ open, onClose, service }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const isEdit = !!service?.id
 
@@ -111,17 +113,17 @@ export default function ServiceFormModal({ open, onClose, service }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-services'] })
-      toast.success(isEdit ? 'Η υπηρεσία ενημερώθηκε' : 'Η υπηρεσία προστέθηκε')
+      toast.success(isEdit ? t('adminServiceForm.updated') : t('adminServiceForm.added'))
       onClose()
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('adminCatalog.error')),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.provider_name.trim()) return toast.error('Το όνομα παρόχου είναι υποχρεωτικό')
-    if (!form.provider_email.trim()) return toast.error('Το email παρόχου είναι υποχρεωτικό')
-    if (!form.city.trim()) return toast.error('Η πόλη είναι υποχρεωτική')
+    if (!form.provider_name.trim()) return toast.error(t('adminServiceForm.providerNameRequired'))
+    if (!form.provider_email.trim()) return toast.error(t('adminServiceForm.providerEmailRequired'))
+    if (!form.city.trim()) return toast.error(t('adminServiceForm.cityRequired'))
     save.mutate()
   }
 
@@ -149,7 +151,7 @@ export default function ServiceFormModal({ open, onClose, service }: Props) {
               <div className="flex items-center gap-2">
                 <PawPrint size={20} className="text-brand-900" />
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {isEdit ? 'Επεξεργασία Υπηρεσίας' : 'Νέα Υπηρεσία'}
+                  {isEdit ? t('adminServiceForm.editTitle') : t('adminServiceForm.newTitle')}
                 </h3>
               </div>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18}/></button>
@@ -158,69 +160,69 @@ export default function ServiceFormModal({ open, onClose, service }: Props) {
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Όνομα Παρόχου *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.providerName')}</label>
                   <input className="input" value={form.provider_name} onChange={e => setForm({...form, provider_name: e.target.value})} required autoFocus />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email Παρόχου *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.providerEmail')}</label>
                   <input type="email" className="input" value={form.provider_email} onChange={e => setForm({...form, provider_email: e.target.value})} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Τύπος Υπηρεσίας *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.serviceType')}</label>
                   <select className="input" value={form.service_type} onChange={e => setForm({...form, service_type: e.target.value})}>
-                    {SERVICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    {SERVICE_TYPES.map(st => <option key={st.value} value={st.value}>{t(st.label)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Τιμή (€)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.price')}</label>
                   <input type="number" step="0.01" className="input" value={form.price} onChange={e => setForm({...form, price: e.target.value})} />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Περιγραφή</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminCatalog.description')}</label>
                 <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Πόλη *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.cityReq')}</label>
                   <input className="input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} required />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Διεύθυνση</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServices.address')}</label>
                   <input className="input" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Τηλέφωνο</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.phone')}</label>
                   <input className="input" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email Επικοινωνίας</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.contactEmail')}</label>
                   <input type="email" className="input" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value})} />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Είδη ζώων</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.petTypes')}</label>
                 <div className="flex flex-wrap gap-2">
                   {SPECIES.map(s => (
                     <button key={s} type="button" onClick={() => toggle('pet_types', s)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                         form.pet_types.includes(s) ? 'bg-brand-900 text-white border-brand-900' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600'
-                      }`}>{s}</button>
+                      }`}>{t(`cmpAddPet.species.${s}`)}</button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Γλώσσες</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.languages')}</label>
                 <div className="flex flex-wrap gap-2">
                   {LANGUAGES.map(l => (
                     <button key={l} type="button" onClick={() => toggle('languages', l)}
@@ -232,52 +234,52 @@ export default function ServiceFormModal({ open, onClose, service }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ημέρες λειτουργίας</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.workingDays')}</label>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map(d => (
                     <button key={d.n} type="button" onClick={() => toggle('available_days', d.n)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                         form.available_days.includes(d.n) ? 'bg-brand-900 text-white border-brand-900' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600'
-                      }`}>{d.l}</button>
+                      }`}>{t(d.l)}</button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ειδικότητες (comma-separated)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.specialties')}</label>
                 <input className="input" placeholder="surgery, dental, cardiology" value={form.specializations} onChange={e => setForm({...form, specializations: e.target.value})} />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">URL Εικόνας</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.imageUrl')}</label>
                 <input className="input" placeholder="https://..." value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Έτη Εμπειρίας</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminServiceForm.yearsExperience')}</label>
                 <input type="number" className="input" value={form.years_experience} onChange={e => setForm({...form, years_experience: e.target.value})} />
               </div>
 
               <div className="flex flex-wrap gap-4 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="w-4 h-4" checked={form.home_visits} onChange={e => setForm({...form, home_visits: e.target.checked})} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Κατ' οίκον</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('adminServices.homeVisits')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="w-4 h-4" checked={form.emergency_available} onChange={e => setForm({...form, emergency_available: e.target.checked})} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Έκτακτα</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('adminServices.emergency')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="w-4 h-4" checked={form.is_verified} onChange={e => setForm({...form, is_verified: e.target.checked})} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Επαληθευμένος</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('adminServiceForm.verified')}</span>
                 </label>
               </div>
             </form>
 
             <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={onClose} className="btn-secondary">Ακύρωση</button>
+              <button onClick={onClose} className="btn-secondary">{t('common.cancel')}</button>
               <button onClick={handleSubmit} disabled={save.isPending} className="btn-primary flex items-center gap-2">
-                <Save size={16}/>{save.isPending ? 'Αποθήκευση...' : (isEdit ? 'Ενημέρωση' : 'Δημιουργία')}
+                <Save size={16}/>{save.isPending ? t('adminCatalog.saving') : (isEdit ? t('adminCatalog.update') : t('adminProductForm.create'))}
               </button>
             </div>
           </motion.div>

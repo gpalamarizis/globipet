@@ -18,7 +18,9 @@ import { colors, space, type, weight } from '@/theme'
 export default function LegalDocument({ kind }: { kind: 'terms' | 'privacy' }) {
   const { t, i18n } = useTranslation()
   const doc = getLegalDoc(kind, i18n.language)
-  const updated = new Date(LEGAL_UPDATED).toLocaleDateString(i18n.language || 'el')
+  // LEGAL_UPDATED είναι 'YYYY-MM-DD': τοπική ημερομηνία από τα μέρη της —
+  // το new Date('YYYY-MM-DD') είναι UTC (προηγούμενη μέρα δυτικά του UTC).
+  const updated = (([y, m, d]) => new Date(y, m - 1, d))(LEGAL_UPDATED.split('-').map(Number)).toLocaleDateString(i18n.language || 'el')
 
   return (
     <Screen title={doc.title} back>

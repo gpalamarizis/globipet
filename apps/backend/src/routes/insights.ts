@@ -176,7 +176,9 @@ const insightsRoutes: FastifyPluginAsync = async (app) => {
         // Skip lines for products outside this viewer's scope.
         if (!pid || !mine.has(pid)) continue
         const qty = Number(item.quantity) || 0
-        const line = (Number(item.price) || 0) * qty
+        // Έσοδα της γραμμής ΜΕΤΑ την έκπτωση καμπάνιας: το item.discount
+        // είναι ποσό για ΟΛΗ τη γραμμή (orders.ts), όχι ανά τεμάχιο.
+        const line = Math.max(0, (Number(item.price) || 0) * qty - (Number(item.discount) || 0))
 
         const a = agg.get(pid) ?? { units: 0, revenue: 0, orders: new Set<string>() }
         a.units += qty

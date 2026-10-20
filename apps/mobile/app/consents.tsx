@@ -25,7 +25,7 @@ type Key = 'analytics' | 'marketing' | 'functional'
 const KEYS: Key[] = ['analytics', 'marketing', 'functional']
 
 export default function ConsentsScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const isAuthenticated = useAuthStore(st => st.isAuthenticated)
@@ -96,7 +96,7 @@ export default function ConsentsScreen() {
 
           {!!current?.created_at && (
             <Text style={s.last}>
-              {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString()}
+              {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString(i18n.language)}
             </Text>
           )}
         </>

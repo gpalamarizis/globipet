@@ -68,21 +68,26 @@ const SLOTS = [
   { value: 'popup',   labelKey: 'providerMkt.slPopup' },
 ]
 
-const EMPTY = {
+// 'YYYY-MM-DD' από τοπικά έτος/μήνα/ημέρα (το toISOString είναι UTC και κοντά στα μεσάνυχτα έδινε άλλη μέρα).
+const ymd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// Συνάρτηση, ώστε οι προεπιλεγμένες ημερομηνίες να υπολογίζονται κάθε φορά που ανοίγει η φόρμα.
+const emptyForm = () => ({
   title: '', description: '',
   discount_type: '' as '' | 'percent' | 'amount',
   discount_value: '', min_order: '',
-  starts_at: new Date().toISOString().slice(0, 10),
-  ends_at: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
+  starts_at: ymd(new Date()),
+  ends_at: ymd(new Date(Date.now() + 30 * 864e5)),
   boost: '0', is_active: true,
-}
+})
 
 export default function ProviderMarketingPage() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Campaign | null>(null)
-  const [form, setForm] = useState<any>(EMPTY)
+  const [form, setForm] = useState<any>(emptyForm)
   const [detailFor, setDetailFor] = useState<Campaign | null>(null)
   const [tab, setTab] = useState<'targets' | 'placements' | 'audience'>('targets')
 
@@ -121,7 +126,7 @@ export default function ProviderMarketingPage() {
     onSuccess: () => {
       toast.success(editing ? t('providerMkt.saved') : t('providerMkt.created'))
       qc.invalidateQueries({ queryKey: ['my-campaigns'] })
-      setShowForm(false); setEditing(null); setForm(EMPTY)
+      setShowForm(false); setEditing(null); setForm(emptyForm())
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || t('providerMkt.errSave')),
   })
@@ -173,7 +178,7 @@ export default function ProviderMarketingPage() {
   })
 
   // ── Βοηθητικά ───────────────────────────────────────────────────────
-  const openNew = () => { setEditing(null); setForm(EMPTY); setShowForm(true) }
+  const openNew = () => { setEditing(null); setForm(emptyForm()); setShowForm(true) }
 
   const openEdit = (c: Campaign) => {
     setEditing(c)

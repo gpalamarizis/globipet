@@ -6,6 +6,28 @@ import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
 import { queryClient } from '../lib/queryClient'
+import { changeLanguage } from '../../lib/i18n'
+
+const SUPPORTED_LANGS = ['el', 'en', 'es', 'fr', 'zh']
+
+/**
+ * Μετά τη σύνδεση: αν ο χρήστης έχει διαλέξει ρητά γλώσσα σε αυτή τη συσκευή
+ * (globipet_language), αυτή κερδίζει και αποθηκεύεται στον λογαριασμό — οι
+ * παλιές εκδόσεις άλλαζαν γλώσσα μόνο τοπικά, οπότε ο server μπορεί να έχει
+ * ακόμα την προεπιλογή «el». Αλλιώς η εφαρμογή παίρνει τη γλώσσα του server.
+ */
+async function applyUserLanguage(user: User | null) {
+  const lang = user?.preferred_language
+  let saved: string | null = null
+  try { saved = await SecureStore.getItemAsync('globipet_language') } catch {}
+  if (saved && SUPPORTED_LANGS.includes(saved)) {
+    if (saved !== lang) api.patch('/auth/me', { preferred_language: saved }).catch(() => {})
+    return
+  }
+  if (lang && SUPPORTED_LANGS.includes(lang) && i18n.language !== lang) {
+    void changeLanguage(lang)
+  }
+}
 
 interface User {
   id: string
@@ -37,6 +59,13 @@ interface AuthState {
   loadToken: () => Promise<void>
   /** Συγχώνευση στοιχείων μετά από επεξεργασία προφίλ — και στη μνήμη και στο SecureStore, όπως το updateUser του web. */
   updateUser: (patch: Partial<User>) => Promise<void>
+  /**
+   * Αλλαγή γλώσσας από συνδεδεμένο χρήστη, όπως το updateLanguage του web:
+   * αλλάζει αμέσως τοπικά και στον user, και αποθηκεύεται στον server
+   * (PATCH /auth/me { preferred_language }). Αν ο server αποτύχει, η γλώσσα
+   * μένει αλλαγμένη τοπικά.
+   */
+  updateLanguage: (lang: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -73,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
       queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      void applyUserLanguage(data.user)
     } catch (err) {
       set({ isLoading: false })
       throw err
@@ -105,6 +135,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
       queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      void applyUserLanguage(data.user)
       return true
     } catch (err) {
       set({ isLoading: false })
@@ -136,6 +167,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Καμία cache από προηγούμενο χρήστη/επισκέπτη (βλ. lib/queryClient.ts).
       queryClient.clear()
       set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      void applyUserLanguage(data.user)
       return true
     } catch (err) {
       set({ isLoading: false })
@@ -173,6 +205,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = { ...current, ...patch }
     set({ user })
     try { await SecureStore.setItemAsync('user', JSON.stringify(user)) } catch {}
+  },
+
+  updateLanguage: async (lang) => {
+    await changeLanguage(lang)
+    if (!get().user) return
+    await get().updateUser({ preferred_language: lang })
+    try {
+      await api.patch('/auth/me', { preferred_language: lang })
+    } catch {
+      /* η γλώσσα έχει ήδη αλλάξει τοπικά */
+    }
   },
 
   logout: async () => {

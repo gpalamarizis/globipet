@@ -12,7 +12,9 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function PetMedicalCenter() {
   const { t, i18n } = useTranslation()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+  // Ο διαχειριστής έχει πάντα πρόσβαση στα AI (backend ai.ts, όπως AiFeatureGuard) — όχι «δοκίμασε δωρεάν».
+  const isAdmin = user?.role === 'admin'
   const queryClient = useQueryClient()
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
 
@@ -51,14 +53,14 @@ export default function PetMedicalCenter() {
         </Link>
       )
     }
-    if (status?.ai_subscription_status === 'trial') {
+    if (status?.ai_subscription_status === 'trial' && !isAdmin) {
       return (
         <div className="inline-flex items-center gap-2 bg-gray-800 border border-gray-700 text-amber-400 text-sm font-semibold px-5 py-3 rounded-xl">
           <Clock size={16} /> {t('pgMedical.trialDaysLeft', { count: status.trial_days_left })}
         </div>
       )
     }
-    if (status?.ai_subscription_status === 'active') {
+    if (isAdmin || status?.ai_subscription_status === 'active') {
       return (
         <div className="inline-flex items-center gap-2 bg-green-900/30 border border-green-700 text-green-400 text-sm font-semibold px-5 py-3 rounded-xl">
           <Check size={16} /> {t('pgMedical.activeSubscription')}

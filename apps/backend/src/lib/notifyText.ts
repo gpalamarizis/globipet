@@ -108,6 +108,10 @@ const TITLES: Record<string, Row> = {
     el: 'Εκκρεμούν επιστροφές χρημάτων', en: 'Refunds still pending', es: 'Reembolsos pendientes',
     fr: 'Remboursements en attente', zh: '退款尚未完成',
   },
+  event_registration_confirmed: {
+    el: 'Η συμμετοχή σου επιβεβαιώθηκε', en: 'Your registration is confirmed', es: 'Tu inscripción está confirmada',
+    fr: 'Votre inscription est confirmée', zh: '您的报名已确认',
+  },
 }
 
 // ─── Μηνύματα ────────────────────────────────────────────────────────
@@ -225,6 +229,15 @@ export const notifyMsg = {
     es: `El evento "${title}" se ha cancelado, pero ${count === 1 ? '1 reembolso no se ha completado' : `${count} reembolsos no se han completado`}. Abre el evento para completar${count === 1 ? 'lo' : 'los'}.`,
     fr: `L’événement « ${title} » a été annulé, mais ${count === 1 ? '1 remboursement n’a pas abouti' : `${count} remboursements n’ont pas abouti`}. Ouvrez l’événement pour ${count === 1 ? 'le' : 'les'} finaliser.`,
     zh: `活动“${title}”已取消，但有 ${count} 笔退款尚未完成。请打开该活动完成退款。`,
+  }),
+
+  /** Η πληρωμή της δήλωσης επιβεβαιώθηκε και η θέση κρατήθηκε. */
+  eventRegistrationConfirmed: (lang: Lang, title: string, amount: string) => p(lang, {
+    el: `Η πληρωμή σου (${amount}€) επιβεβαιώθηκε και η θέση σου στην εκδήλωση "${title}" είναι κλεισμένη.`,
+    en: `Your payment (${amount}€) has been confirmed and your place at the event "${title}" is booked.`,
+    es: `Tu pago (${amount}€) se ha confirmado y tu plaza en el evento "${title}" está reservada.`,
+    fr: `Votre paiement (${amount}€) a été confirmé et votre place à l’événement « ${title} » est réservée.`,
+    zh: `您的付款（${amount}€）已确认，您在活动“${title}”中的名额已预订。`,
   }),
 
   /**

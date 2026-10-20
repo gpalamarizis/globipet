@@ -46,6 +46,7 @@ export default function PlaydatesScreen() {
   const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
+  const { user, isAuthenticated } = useAuthStore()
   /**
    * Δημιουργία και διαγραφή βόλτας.
    *
@@ -62,7 +63,8 @@ export default function PlaydatesScreen() {
   })
   const [pTime, setPTime] = useState('18:00')
   const [pLocation, setPLocation] = useState('')
-  const [pCity, setPCity] = useState('')
+  // Προσυμπλήρωση με την πόλη του χρήστη, όπως το web.
+  const [pCity, setPCity] = useState(user?.city ?? '')
   const [pMax, setPMax] = useState('')
 
   const createPlaydate = useMutation({
@@ -79,7 +81,8 @@ export default function PlaydatesScreen() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['playdates'] })
-      setCreating(false); setPTitle(''); setPLocation(''); setPMax('')
+      qc.invalidateQueries({ queryKey: ['playdates-mine'] })
+      setCreating(false); setPTitle(''); setPLocation(''); setPMax(''); setPCity(user?.city ?? '')
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
@@ -89,8 +92,6 @@ export default function PlaydatesScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playdates'] }),
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
-
-  const { user, isAuthenticated } = useAuthStore()
 
   /**
    * Δικές μου βόλτες και προσκλήσεις.
@@ -195,7 +196,7 @@ export default function PlaydatesScreen() {
                   {inv.event?.title ?? inv.title ?? t('play.invitation')}
                 </Text>
                 <Text style={s.inviteMeta} numberOfLines={1}>
-                  {inv.event?.date ?? inv.date} {inv.event?.time ?? inv.time}
+                  {fmtDate(inv.event?.date ?? inv.date, i18n.language)} {inv.event?.time ?? inv.time}
                 </Text>
                 {!!inv.message && (
                   <Text style={s.inviteMsg} numberOfLines={3}>“{inv.message}”</Text>

@@ -174,6 +174,13 @@ export default function ProfileScreen() {
   const totalPoints: number = loyalty?.total_points ?? 0
   const nextTier = TIER_ORDER[TIER_ORDER.indexOf(tier) + 1]
   const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
+  // Το επίπεδο βγαίνει από τους πόντους όλων των εποχών (backend loyalty.ts), όχι από το
+  // τρέχον υπόλοιπο που μειώνεται στις εξαργυρώσεις· η πρόοδος μετράει από το όριο του τρέχοντος επιπέδου.
+  const lifetimePoints: number = loyalty?.lifetime_points ?? totalPoints
+  const curThreshold = TIER_THRESHOLDS[tier] ?? 0
+  const tierProgress = nextThreshold
+    ? Math.max(0, Math.min(100, ((lifetimePoints - curThreshold) / (nextThreshold - curThreshold)) * 100))
+    : 100
   const tierLabel = (k: string) => t(`profile.${k}`, { defaultValue: k })
 
   const ACHIEVEMENTS = [
@@ -274,10 +281,10 @@ export default function ProfileScreen() {
         <View style={s.tierCard}>
           <Text style={s.tierTitle}>{t('profile.tier')} — {tierLabel(tier)}</Text>
           <View style={s.track}>
-            <View style={[s.fill, { width: `${nextThreshold ? Math.min(100, (totalPoints / nextThreshold) * 100) : 100}%` }]} />
+            <View style={[s.fill, { width: `${tierProgress}%` }]} />
           </View>
           <View style={s.tierMeta}>
-            <Text style={s.statLabel}>{totalPoints} {t('profile.points')}</Text>
+            <Text style={s.statLabel}>{lifetimePoints} {t('profile.points')}</Text>
             <Text style={s.statLabel}>
               {nextThreshold ? t('profile.pointsForTier', { points: nextThreshold, tier: tierLabel(nextTier) }) : t('profile.maxTier')}
             </Text>

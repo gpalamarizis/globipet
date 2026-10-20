@@ -9,42 +9,50 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation, Trans } from 'react-i18next'
 
 const GROUP_META: Record<string, { label: string; emoji: string }> = {
-  bathing: { label: 'Μπάνιο', emoji: '🛁' },
-  haircut: { label: 'Κούρεμα', emoji: '✂️' },
-  addon: { label: 'Extras', emoji: '✨' },
-  consultation: { label: 'Επισκέψεις', emoji: '🩺' },
-  vaccination: { label: 'Εμβολιασμοί', emoji: '💉' },
-  surgery: { label: 'Χειρουργικές', emoji: '🏥' },
-  dental: { label: 'Οδοντιατρικά', emoji: '🦷' },
-  diagnostics: { label: 'Διαγνωστικά', emoji: '🔬' },
-  specialty: { label: 'Ειδικότητες', emoji: '👨‍⚕️' },
-  oncology: { label: 'Ογκολογία', emoji: '🎗️' },
-  service: { label: 'Υπηρεσίες', emoji: '🐕' },
-  emergency: { label: 'Έκτακτα', emoji: '🚨' },
-  other: { label: 'Άλλα', emoji: '📋' },
+  bathing: { label: 'adminCatalog.group_bathing', emoji: '🛁' },
+  haircut: { label: 'adminCatalog.group_haircut', emoji: '✂️' },
+  addon: { label: 'adminCatalog.group_addon', emoji: '✨' },
+  consultation: { label: 'adminCatalog.group_consultation', emoji: '🩺' },
+  vaccination: { label: 'adminCatalog.group_vaccination', emoji: '💉' },
+  surgery: { label: 'adminCatalog.group_surgery', emoji: '🏥' },
+  dental: { label: 'adminCatalog.group_dental', emoji: '🦷' },
+  diagnostics: { label: 'adminCatalog.group_diagnostics', emoji: '🔬' },
+  specialty: { label: 'adminCatalog.group_specialty', emoji: '👨‍⚕️' },
+  oncology: { label: 'adminCatalog.group_oncology', emoji: '🎗️' },
+  service: { label: 'adminCatalog.group_service', emoji: '🐕' },
+  emergency: { label: 'adminCatalog.group_emergency', emoji: '🚨' },
+  other: { label: 'adminCatalog.group_other', emoji: '📋' },
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  grooming: { label: 'Περιποίηση', emoji: '✂️' },
-  veterinary: { label: 'Κτηνίατρος', emoji: '🩺' },
-  clinic: { label: 'Κτηνιατρική κλινική', emoji: '🏥' },
-  walking: { label: 'Dog walking', emoji: '🚶' },
-  sitting: { label: 'Pet sitting', emoji: '🏡' },
-  boarding: { label: 'Boarding', emoji: '🏨' },
-  daycare: { label: 'Daycare', emoji: '☀️' },
-  training: { label: 'Εκπαίδευση', emoji: '🎓' },
-  transport: { label: 'Μεταφορά', emoji: '🚐' },
-  photography: { label: 'Φωτογράφιση', emoji: '📷' },
-  other: { label: 'Άλλο', emoji: '✨' },
+  grooming: { label: 'adminCatalog.cat_grooming', emoji: '✂️' },
+  veterinary: { label: 'adminCatalog.cat_veterinary', emoji: '🩺' },
+  clinic: { label: 'adminCatalog.cat_clinic', emoji: '🏥' },
+  walking: { label: 'adminCatalog.cat_walking', emoji: '🚶' },
+  sitting: { label: 'adminCatalog.cat_sitting', emoji: '🏡' },
+  boarding: { label: 'adminCatalog.cat_boarding', emoji: '🏨' },
+  daycare: { label: 'adminCatalog.cat_daycare', emoji: '☀️' },
+  training: { label: 'adminCatalog.cat_training', emoji: '🎓' },
+  transport: { label: 'adminCatalog.cat_transport', emoji: '🚐' },
+  photography: { label: 'adminCatalog.cat_photography', emoji: '📷' },
+  other: { label: 'adminCatalog.cat_other', emoji: '✨' },
 }
 
 const SIZE_LABELS: Record<string, string> = {
-  small: 'Μικρό', medium: 'Μεσαίο', large: 'Μεγάλο', xlarge: 'Πολύ μεγάλο'
+  small: 'adminCatalog.size_small', medium: 'adminCatalog.size_medium', large: 'adminCatalog.size_large', xlarge: 'adminCatalog.size_xlarge'
+}
+
+// Κωδικός modality → ετικέτα (ίδια με τις επιλογές της φόρμας)· άγνωστος → ως έχει.
+const MODALITY_KEYS: Record<string, string> = {
+  in_clinic: 'adminCatalog.inClinic', home_visit: 'adminCatalog.homeVisit',
+  telehealth: 'adminCatalog.telehealth', emergency: 'adminCatalog.emergencyMod',
 }
 
 export default function AdminCatalogPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [selectedCategory, setSelectedCategory] = useState<string>('grooming')
   const [search, setSearch] = useState('')
@@ -62,9 +70,9 @@ export default function AdminCatalogPage() {
     mutationFn: (id: string) => api.delete(`/admin/catalog/templates/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-catalog'] })
-      toast.success('Template διαγράφηκε')
+      toast.success(t('adminCatalog.deleted'))
     },
-    onError: () => toast.error('Σφάλμα διαγραφής'),
+    onError: () => toast.error(t('adminCatalog.deleteError')),
   })
 
   const toggleActive = useMutation({
@@ -106,15 +114,15 @@ export default function AdminCatalogPage() {
         <Link to="/admin" className="btn-ghost p-2"><ArrowLeft size={18}/></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <BookOpen size={22}/> Κατάλογος υπηρεσιών
+            <BookOpen size={22}/> {t('adminCatalog.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Διαχείριση των διαθέσιμων templates που μπορούν να χρησιμοποιήσουν οι πάροχοι
+            {t('adminCatalog.subtitle')}
           </p>
         </div>
         <button onClick={() => { setEditingTemplate(null); setShowModal(true) }}
           className="btn-primary flex items-center gap-2 text-sm">
-          <Plus size={15}/> Νέο template
+          <Plus size={15}/> {t('adminCatalog.newTemplate')}
         </button>
       </div>
 
@@ -127,7 +135,7 @@ export default function AdminCatalogPage() {
                 ? 'border-brand-900 bg-brand-50 text-brand-900'
                 : 'border-gray-200 hover:border-gray-300 text-gray-600')}>
             <span>{val.emoji}</span>
-            <span>{val.label}</span>
+            <span>{t(val.label)}</span>
           </button>
         ))}
       </div>
@@ -136,21 +144,20 @@ export default function AdminCatalogPage() {
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div className="flex items-center gap-2 flex-1 input">
           <Search size={14} className="text-gray-400 shrink-0"/>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Αναζήτηση..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('adminCatalog.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm outline-none"/>
         </div>
         <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)} className="input text-sm">
-          <option value="all">Όλες οι κατηγορίες</option>
-          {groups.map(g => <option key={g} value={g}>{GROUP_META[g]?.label || g}</option>)}
+          <option value="all">{t('adminCatalog.allCategories')}</option>
+          {groups.map(g => <option key={g} value={g}>{GROUP_META[g] ? t(GROUP_META[g].label) : g}</option>)}
         </select>
       </div>
 
       {/* Summary */}
       <div className="card p-4 mb-4 bg-gradient-to-br from-brand-50 to-amber-50 dark:from-brand-900/20 dark:to-amber-900/20 border-brand-100">
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          <strong>{filtered.length}</strong> templates στην κατηγορία{' '}
-          <strong>{CATEGORY_LABELS[selectedCategory]?.label}</strong>
-          {' · '}{Object.keys(grouped).length} ομάδες
+          <Trans i18nKey="adminCatalog.summary" values={{ count: filtered.length, category: CATEGORY_LABELS[selectedCategory] ? t(CATEGORY_LABELS[selectedCategory].label) : '', groups: Object.keys(grouped).length }}
+            components={{ b: <strong /> }} />
         </p>
       </div>
 
@@ -160,10 +167,10 @@ export default function AdminCatalogPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <BookOpen size={40} className="mx-auto text-gray-300 mb-3"/>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Δεν βρέθηκαν templates</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('adminCatalog.noTemplates')}</h3>
           <button onClick={() => { setEditingTemplate(null); setShowModal(true) }}
             className="btn-primary inline-flex items-center gap-2 mt-4">
-            <Plus size={15}/> Προσθήκη
+            <Plus size={15}/> {t('adminCatalog.add')}
           </button>
         </div>
       ) : (
@@ -178,8 +185,8 @@ export default function AdminCatalogPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{meta.emoji}</span>
                     <div className="text-left">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{meta.label}</h3>
-                      <p className="text-xs text-gray-500">{items.length} templates</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t(meta.label)}</h3>
+                      <p className="text-xs text-gray-500">{t('adminCatalog.templatesCount', { count: items.length })}</p>
                     </div>
                   </div>
                   {isCollapsed ? <ChevronRight size={18} className="text-gray-400"/> : <ChevronDown size={18} className="text-gray-400"/>}
@@ -194,15 +201,15 @@ export default function AdminCatalogPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium text-sm text-gray-900 dark:text-white">{tpl.name}</p>
-                                {tpl.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{SIZE_LABELS[tpl.size]}</span>}
-                                {tpl.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{tpl.modality}</span>}
+                                {tpl.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{SIZE_LABELS[tpl.size] ? t(SIZE_LABELS[tpl.size]) : null}</span>}
+                                {tpl.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{MODALITY_KEYS[tpl.modality] ? t(MODALITY_KEYS[tpl.modality]) : tpl.modality}</span>}
                                 {tpl.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700">{tpl.pet_type === 'dog' ? '🐕' : '🐈'}</span>}
-                                {tpl.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Add-on</span>}
-                                {!tpl.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Ανενεργό</span>}
+                                {tpl.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">{t('adminCatalog.addon')}</span>}
+                                {!tpl.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{t('adminCatalog.inactive')}</span>}
                               </div>
                               {tpl.description && <p className="text-xs text-gray-500 mt-1 line-clamp-1">{tpl.description}</p>}
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                <span className="flex items-center gap-1"><Clock size={11}/> {tpl.suggested_duration_minutes}΄</span>
+                                <span className="flex items-center gap-1"><Clock size={11}/> {t('adminCatalog.minutes', { count: tpl.suggested_duration_minutes })}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
@@ -212,7 +219,7 @@ export default function AdminCatalogPage() {
                               <button onClick={() => { setEditingTemplate(tpl); setShowModal(true) }} className="btn-ghost p-1.5">
                                 <Edit2 size={14} className="text-gray-500"/>
                               </button>
-                              <button onClick={() => { if (confirm(`Διαγραφή "${tpl.name}";`)) deleteMutation.mutate(tpl.id) }} className="btn-ghost p-1.5 hover:bg-red-50">
+                              <button onClick={() => { if (confirm(t('adminCatalog.confirmDelete', { name: tpl.name }))) deleteMutation.mutate(tpl.id) }} className="btn-ghost p-1.5 hover:bg-red-50">
                                 <Trash2 size={14} className="text-red-500"/>
                               </button>
                             </div>
@@ -245,6 +252,7 @@ export default function AdminCatalogPage() {
 
 // ═══════════════════════════════════════════════════════════════
 function TemplateModal({ open, onClose, editing, defaultCategory, onSaved }: any) {
+  const { t } = useTranslation()
   const [form, setForm] = useState<any>({})
 
   useEffect(() => {
@@ -268,10 +276,10 @@ function TemplateModal({ open, onClose, editing, defaultCategory, onSaved }: any
       ? api.patch(`/admin/catalog/templates/${editing.id}`, form)
       : api.post('/admin/catalog/templates', form),
     onSuccess: () => {
-      toast.success(editing ? 'Template ενημερώθηκε' : 'Template προστέθηκε')
+      toast.success(editing ? t('adminCatalog.updated') : t('adminCatalog.added'))
       onSaved()
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Σφάλμα'),
+    onError: (e: any) => toast.error(e.response?.data?.message || t('adminCatalog.error')),
   })
 
   if (!open) return null
@@ -284,98 +292,98 @@ function TemplateModal({ open, onClose, editing, defaultCategory, onSaved }: any
           onClick={e => e.stopPropagation()}
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-modal max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-            <h3 className="font-bold text-gray-900 dark:text-white">{editing ? 'Επεξεργασία template' : 'Νέο template'}</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white">{editing ? t('adminCatalog.editTemplate') : t('adminCatalog.newTemplate')}</h3>
             <button onClick={onClose} className="btn-ghost p-2"><X size={18}/></button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα *</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.nameReq')}</label>
               <input className="input" value={form.name || ''} onChange={e => setForm({...form, name: e.target.value})}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Κατηγορία *</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.categoryReq')}</label>
                 <select className="input" value={form.category || ''} onChange={e => setForm({...form, category: e.target.value})}>
                   {Object.entries(CATEGORY_LABELS).map(([key, val]) => (
-                    <option key={key} value={key}>{val.emoji} {val.label}</option>
+                    <option key={key} value={key}>{val.emoji} {t(val.label)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Ομάδα *</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.groupReq')}</label>
                 <select className="input" value={form.group || ''} onChange={e => setForm({...form, group: e.target.value})}>
                   {Object.entries(GROUP_META).map(([key, meta]) => (
-                    <option key={key} value={key}>{meta.emoji} {meta.label}</option>
+                    <option key={key} value={key}>{meta.emoji} {t(meta.label)}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.description')}</label>
               <textarea rows={2} className="input" value={form.description || ''} onChange={e => setForm({...form, description: e.target.value})}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Διάρκεια (λεπτά)</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.duration')}</label>
                 <input type="number" className="input" value={form.suggested_duration_minutes || 60}
                   onChange={e => setForm({...form, suggested_duration_minutes: parseInt(e.target.value) || 60})}/>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Σειρά</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.order')}</label>
                 <input type="number" className="input" value={form.display_order || 0}
                   onChange={e => setForm({...form, display_order: parseInt(e.target.value) || 0})}/>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Μέγεθος</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.size')}</label>
                 <select className="input" value={form.size || ''} onChange={e => setForm({...form, size: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="small">Μικρό</option>
-                  <option value="medium">Μεσαίο</option>
-                  <option value="large">Μεγάλο</option>
-                  <option value="xlarge">Πολύ μεγάλο</option>
+                  <option value="small">{t('adminCatalog.size_small')}</option>
+                  <option value="medium">{t('adminCatalog.size_medium')}</option>
+                  <option value="large">{t('adminCatalog.size_large')}</option>
+                  <option value="xlarge">{t('adminCatalog.size_xlarge')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Pet type</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.petType')}</label>
                 <select className="input" value={form.pet_type || ''} onChange={e => setForm({...form, pet_type: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="dog">🐕 Σκύλος</option>
-                  <option value="cat">🐈 Γάτα</option>
-                  <option value="rabbit">🐰 Κουνέλι</option>
-                  <option value="bird">🐦 Πτηνό</option>
+                  <option value="dog">{t('adminCatalog.dog')}</option>
+                  <option value="cat">{t('adminCatalog.cat')}</option>
+                  <option value="rabbit">{t('adminCatalog.rabbit')}</option>
+                  <option value="bird">{t('adminCatalog.bird')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Modality</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.modality')}</label>
                 <select className="input" value={form.modality || ''} onChange={e => setForm({...form, modality: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="in_clinic">Στο ιατρείο</option>
-                  <option value="home_visit">Κατ' οίκον</option>
-                  <option value="telehealth">Τηλεσυμβ.</option>
-                  <option value="emergency">Έκτακτο</option>
+                  <option value="in_clinic">{t('adminCatalog.inClinic')}</option>
+                  <option value="home_visit">{t('adminCatalog.homeVisit')}</option>
+                  <option value="telehealth">{t('adminCatalog.telehealth')}</option>
+                  <option value="emergency">{t('adminCatalog.emergencyMod')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Breed group</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.breedGroup')}</label>
                 <input className="input" value={form.breed_group || ''} onChange={e => setForm({...form, breed_group: e.target.value || null})}
-                  placeholder="π.χ. terrier"/>
+                  placeholder={t('adminCatalog.breedGroupPh')}/>
               </div>
             </div>
             <div className="flex flex-wrap gap-4 pt-2">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_addon} onChange={e => setForm({...form, is_addon: e.target.checked})}/>
-                Add-on
+                {t('adminCatalog.addon')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_active} onChange={e => setForm({...form, is_active: e.target.checked})}/>
-                Ενεργό
+                {t('adminCatalog.active')}
               </label>
             </div>
           </div>
           <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-2 justify-end">
-            <button onClick={onClose} className="btn-secondary">Άκυρο</button>
+            <button onClick={onClose} className="btn-secondary">{t('adminCatalog.cancel')}</button>
             <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.name || !form.category || !form.group} className="btn-primary">
-              {saveMutation.isPending ? 'Αποθήκευση...' : (editing ? 'Ενημέρωση' : 'Προσθήκη')}
+              {saveMutation.isPending ? t('adminCatalog.saving') : (editing ? t('adminCatalog.update') : t('adminCatalog.add'))}
             </button>
           </div>
         </motion.div>

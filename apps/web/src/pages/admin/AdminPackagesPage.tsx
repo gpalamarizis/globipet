@@ -8,27 +8,35 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useTranslation, Trans } from 'react-i18next'
 
 const GROUP_META: Record<string, { label: string; emoji: string }> = {
-  bathing: { label: 'Μπάνιο', emoji: '🛁' },
-  haircut: { label: 'Κούρεμα', emoji: '✂️' },
-  addon: { label: 'Extras', emoji: '✨' },
-  consultation: { label: 'Επισκέψεις', emoji: '🩺' },
-  vaccination: { label: 'Εμβολιασμοί', emoji: '💉' },
-  surgery: { label: 'Χειρουργικές', emoji: '🏥' },
-  dental: { label: 'Οδοντιατρικά', emoji: '🦷' },
-  diagnostics: { label: 'Διαγνωστικά', emoji: '🔬' },
-  specialty: { label: 'Ειδικότητες', emoji: '👨‍⚕️' },
-  oncology: { label: 'Ογκολογία', emoji: '🎗️' },
-  service: { label: 'Υπηρεσίες', emoji: '🐕' },
-  other: { label: 'Άλλα', emoji: '📋' },
+  bathing: { label: 'adminCatalog.group_bathing', emoji: '🛁' },
+  haircut: { label: 'adminCatalog.group_haircut', emoji: '✂️' },
+  addon: { label: 'adminCatalog.group_addon', emoji: '✨' },
+  consultation: { label: 'adminCatalog.group_consultation', emoji: '🩺' },
+  vaccination: { label: 'adminCatalog.group_vaccination', emoji: '💉' },
+  surgery: { label: 'adminCatalog.group_surgery', emoji: '🏥' },
+  dental: { label: 'adminCatalog.group_dental', emoji: '🦷' },
+  diagnostics: { label: 'adminCatalog.group_diagnostics', emoji: '🔬' },
+  specialty: { label: 'adminCatalog.group_specialty', emoji: '👨‍⚕️' },
+  oncology: { label: 'adminCatalog.group_oncology', emoji: '🎗️' },
+  service: { label: 'adminCatalog.group_service', emoji: '🐕' },
+  other: { label: 'adminCatalog.group_other', emoji: '📋' },
 }
 
 const SIZE_LABELS: Record<string, string> = {
-  small: 'Μικρό', medium: 'Μεσαίο', large: 'Μεγάλο', xlarge: 'Πολύ μεγάλο'
+  small: 'adminCatalog.size_small', medium: 'adminCatalog.size_medium', large: 'adminCatalog.size_large', xlarge: 'adminCatalog.size_xlarge'
+}
+
+// Κωδικός modality → ετικέτα (ίδια με τις επιλογές της φόρμας)· άγνωστος → ως έχει.
+const MODALITY_KEYS: Record<string, string> = {
+  in_clinic: 'adminCatalog.inClinic', home_visit: 'adminCatalog.homeVisit',
+  telehealth: 'adminCatalog.telehealth', emergency: 'adminCatalog.emergencyMod',
 }
 
 export default function AdminPackagesPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterGroup, setFilterGroup] = useState('all')
@@ -44,7 +52,7 @@ export default function AdminPackagesPage() {
     mutationFn: (id: string) => api.delete(`/admin/catalog/packages/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-packages'] })
-      toast.success('Πακέτο διαγράφηκε')
+      toast.success(t('adminPackages.deleted'))
     },
   })
 
@@ -79,9 +87,9 @@ export default function AdminPackagesPage() {
         <Link to="/admin" className="btn-ghost p-2"><ArrowLeft size={18}/></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Package size={22}/> Πακέτα παρόχων
+            <Package size={22}/> {t('adminPackages.title')}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Όλα τα πακέτα όλων των παρόχων στην πλατφόρμα</p>
+          <p className="text-sm text-gray-500 mt-0.5">{t('adminPackages.subtitle')}</p>
         </div>
       </div>
 
@@ -89,27 +97,27 @@ export default function AdminPackagesPage() {
         <div className="flex items-center gap-2 flex-1 input">
           <Search size={14} className="text-gray-400 shrink-0"/>
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Αναζήτηση (πακέτο, υπηρεσία, email)..."
+            placeholder={t('adminPackages.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm outline-none"/>
         </div>
         <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)} className="input text-sm">
-          <option value="all">Όλες οι ομάδες</option>
-          {groups.map(g => <option key={g} value={g}>{GROUP_META[g]?.label || g}</option>)}
+          <option value="all">{t('adminPackages.allGroups')}</option>
+          {groups.map(g => <option key={g} value={g}>{GROUP_META[g] ? t(GROUP_META[g].label) : g}</option>)}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="input text-sm">
-          <option value="all">Όλα</option>
-          <option value="active">Ενεργά</option>
-          <option value="inactive">Ανενεργά</option>
-          <option value="no_price">Χωρίς τιμή</option>
+          <option value="all">{t('adminPackages.all')}</option>
+          <option value="active">{t('adminPackages.activePl')}</option>
+          <option value="inactive">{t('adminPackages.inactivePl')}</option>
+          <option value="no_price">{t('adminPackages.noPrice')}</option>
         </select>
       </div>
 
       <div className="card p-4 mb-4 bg-gradient-to-br from-brand-50 to-amber-50 dark:from-brand-900/20 dark:to-amber-900/20 border-brand-100">
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          <strong>{filtered.length}</strong> από <strong>{packages.length}</strong> πακέτα
+          <Trans i18nKey="adminPackages.summary" values={{ shown: filtered.length, total: packages.length }} components={{ b: <strong /> }} />
           {noPriceCount > 0 && (
             <span className="text-amber-700 ml-2">
-              · ⚠️ {noPriceCount} χωρίς τιμή
+              {t('adminPackages.noPriceCount', { count: noPriceCount })}
             </span>
           )}
         </p>
@@ -120,7 +128,7 @@ export default function AdminPackagesPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <Package size={40} className="mx-auto text-gray-300 mb-3"/>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Δεν βρέθηκαν πακέτα</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('adminPackages.noPackages')}</h3>
         </div>
       ) : (
         <div className="space-y-2">
@@ -132,16 +140,16 @@ export default function AdminPackagesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-sm text-gray-900 dark:text-white">{pkg.name}</p>
-                    {pkg.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{SIZE_LABELS[pkg.size]}</span>}
-                    {pkg.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{pkg.modality}</span>}
+                    {pkg.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{SIZE_LABELS[pkg.size] ? t(SIZE_LABELS[pkg.size]) : null}</span>}
+                    {pkg.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{MODALITY_KEYS[pkg.modality] ? t(MODALITY_KEYS[pkg.modality]) : pkg.modality}</span>}
                     {pkg.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700">{pkg.pet_type === 'dog' ? '🐕' : '🐈'}</span>}
-                    {pkg.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Add-on</span>}
-                    {!pkg.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Ανενεργό</span>}
+                    {pkg.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">{t('adminCatalog.addon')}</span>}
+                    {!pkg.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{t('adminCatalog.inactive')}</span>}
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
                     <span className="flex items-center gap-1"><Building2 size={11}/> {pkg.service?.title || '—'}</span>
                     <span className="text-gray-400">{pkg.service?.provider_email}</span>
-                    <span className="flex items-center gap-1"><Clock size={11}/> {pkg.duration_minutes}΄</span>
+                    <span className="flex items-center gap-1"><Clock size={11}/> {t('adminCatalog.minutes', { count: pkg.duration_minutes })}</span>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
@@ -149,7 +157,7 @@ export default function AdminPackagesPage() {
                     <p className="font-bold text-lg text-gray-900 dark:text-white">€{pkg.price.toFixed(2)}</p>
                   ) : (
                     <p className="text-xs font-semibold text-amber-600 flex items-center gap-1">
-                      <AlertTriangle size={11}/> Χωρίς τιμή
+                      <AlertTriangle size={11}/> {t('adminPackages.noPrice')}
                     </p>
                   )}
                 </div>
@@ -160,7 +168,7 @@ export default function AdminPackagesPage() {
                   <button onClick={() => setEditingPkg(pkg)} className="btn-ghost p-1.5">
                     <Edit2 size={14} className="text-gray-500"/>
                   </button>
-                  <button onClick={() => { if (confirm(`Διαγραφή "${pkg.name}";`)) deleteMutation.mutate(pkg.id) }}
+                  <button onClick={() => { if (confirm(t('adminCatalog.confirmDelete', { name: pkg.name }))) deleteMutation.mutate(pkg.id) }}
                     className="btn-ghost p-1.5 hover:bg-red-50">
                     <Trash2 size={14} className="text-red-500"/>
                   </button>
@@ -186,6 +194,7 @@ export default function AdminPackagesPage() {
 
 // ═══════════════════════════════════════════════════════════════
 function PackageEditModal({ open, onClose, pkg, onSaved }: any) {
+  const { t } = useTranslation()
   const [form, setForm] = useState<any>({})
 
   useEffect(() => {
@@ -208,8 +217,8 @@ function PackageEditModal({ open, onClose, pkg, onSaved }: any) {
 
   const saveMutation = useMutation({
     mutationFn: () => api.patch(`/admin/catalog/packages/${pkg.id}`, form),
-    onSuccess: () => { toast.success('Πακέτο ενημερώθηκε'); onSaved() },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Σφάλμα'),
+    onSuccess: () => { toast.success(t('adminPackages.updated')); onSaved() },
+    onError: (e: any) => toast.error(e.response?.data?.message || t('adminCatalog.error')),
   })
 
   if (!open || !pkg) return null
@@ -223,82 +232,82 @@ function PackageEditModal({ open, onClose, pkg, onSaved }: any) {
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-modal max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
             <div>
-              <h3 className="font-bold text-gray-900 dark:text-white">Επεξεργασία πακέτου</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white">{t('adminPackages.editPackage')}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{pkg.service?.title} · {pkg.service?.provider_email}</p>
             </div>
             <button onClick={onClose} className="btn-ghost p-2"><X size={18}/></button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Όνομα *</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.nameReq')}</label>
               <input className="input" value={form.name} onChange={e => setForm({...form, name: e.target.value})}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Ομάδα</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminPackages.group')}</label>
                 <select className="input" value={form.group} onChange={e => setForm({...form, group: e.target.value})}>
                   {Object.entries(GROUP_META).map(([key, meta]) => (
-                    <option key={key} value={key}>{meta.emoji} {meta.label}</option>
+                    <option key={key} value={key}>{meta.emoji} {t(meta.label)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Τιμή (€) *</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminPackages.priceReq')}</label>
                 <input type="number" step="0.01" className="input" value={form.price} onChange={e => setForm({...form, price: e.target.value})}/>
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Περιγραφή</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.description')}</label>
               <textarea rows={2} className="input" value={form.description || ''} onChange={e => setForm({...form, description: e.target.value})}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Διάρκεια (λεπτά)</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.duration')}</label>
                 <input type="number" className="input" value={form.duration_minutes} onChange={e => setForm({...form, duration_minutes: parseInt(e.target.value) || 60})}/>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Μέγεθος</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.size')}</label>
                 <select className="input" value={form.size || ''} onChange={e => setForm({...form, size: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="small">Μικρό</option>
-                  <option value="medium">Μεσαίο</option>
-                  <option value="large">Μεγάλο</option>
-                  <option value="xlarge">Πολύ μεγάλο</option>
+                  <option value="small">{t('adminCatalog.size_small')}</option>
+                  <option value="medium">{t('adminCatalog.size_medium')}</option>
+                  <option value="large">{t('adminCatalog.size_large')}</option>
+                  <option value="xlarge">{t('adminCatalog.size_xlarge')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Pet type</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.petType')}</label>
                 <select className="input" value={form.pet_type || ''} onChange={e => setForm({...form, pet_type: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="dog">🐕 Σκύλος</option>
-                  <option value="cat">🐈 Γάτα</option>
+                  <option value="dog">{t('adminCatalog.dog')}</option>
+                  <option value="cat">{t('adminCatalog.cat')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Modality</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminCatalog.modality')}</label>
                 <select className="input" value={form.modality || ''} onChange={e => setForm({...form, modality: e.target.value || null})}>
                   <option value="">—</option>
-                  <option value="in_clinic">Στο ιατρείο</option>
-                  <option value="home_visit">Κατ' οίκον</option>
-                  <option value="telehealth">Τηλεσυμβ.</option>
+                  <option value="in_clinic">{t('adminCatalog.inClinic')}</option>
+                  <option value="home_visit">{t('adminCatalog.homeVisit')}</option>
+                  <option value="telehealth">{t('adminCatalog.telehealth')}</option>
                 </select>
               </div>
             </div>
             <div className="flex flex-wrap gap-4 pt-2">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_addon} onChange={e => setForm({...form, is_addon: e.target.checked})}/>
-                Add-on
+                {t('adminCatalog.addon')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!form.is_active} onChange={e => setForm({...form, is_active: e.target.checked})}/>
-                Ενεργό
+                {t('adminCatalog.active')}
               </label>
             </div>
           </div>
           <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-2 justify-end">
-            <button onClick={onClose} className="btn-secondary">Άκυρο</button>
+            <button onClick={onClose} className="btn-secondary">{t('adminCatalog.cancel')}</button>
             <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.name} className="btn-primary">
-              {saveMutation.isPending ? 'Αποθήκευση...' : 'Αποθήκευση'}
+              {saveMutation.isPending ? t('adminCatalog.saving') : t('common.save')}
             </button>
           </div>
         </motion.div>

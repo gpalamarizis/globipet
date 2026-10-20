@@ -44,8 +44,12 @@ const KNOWN_ACTIONS = [
   'read', 'permission_denied',
 ].sort()
 
+// Τιμές outcome του backend (AuditOutcome)· τα 4 πρώτα είναι οι επιλογές του φίλτρου.
+const OUTCOMES = ['success', 'failure', 'blocked', 'denied', 'error']
+const OUTCOME_FILTERS = OUTCOMES.slice(0, 4)
+
 export default function AdminAuditLogPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [filters, setFilters] = useState({
     action: '', resource: '', actor: '', subject: '', outcome: '', from: '', to: '',
   })
@@ -78,11 +82,12 @@ export default function AdminAuditLogPage() {
     setOffset(0)
   }
 
+  const outcomeLabel = (o: string) => (OUTCOMES.includes(o) ? t(`adminAudit.out_${o}`) : o)
   const outcomeBadge = (o: string) => {
-    if (o === 'success') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><Check size={12}/> {o}</span>
-    if (o === 'failure') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700"><X size={12}/> {o}</span>
-    if (o === 'blocked' || o === 'denied') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Ban size={12}/> {o}</span>
-    return <span className="text-xs text-gray-500">{o}</span>
+    if (o === 'success') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><Check size={12}/> {outcomeLabel(o)}</span>
+    if (o === 'failure') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700"><X size={12}/> {outcomeLabel(o)}</span>
+    if (o === 'blocked' || o === 'denied') return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Ban size={12}/> {outcomeLabel(o)}</span>
+    return <span className="text-xs text-gray-500">{outcomeLabel(o)}</span>
   }
 
   return (
@@ -116,10 +121,7 @@ export default function AdminAuditLogPage() {
           <input value={filters.subject}  onChange={e => applyFilter({ subject: e.target.value })}  placeholder={t('adminAudit.subjectEmail')} className="input text-sm" />
           <select value={filters.outcome} onChange={e => applyFilter({ outcome: e.target.value })}  className="input text-sm">
             <option value="">{t('adminAudit.outcome')}: {t('common.all')}</option>
-            <option value="success">success</option>
-            <option value="failure">failure</option>
-            <option value="blocked">blocked</option>
-            <option value="denied">denied</option>
+            {OUTCOME_FILTERS.map(o => <option key={o} value={o}>{outcomeLabel(o)}</option>)}
           </select>
           <input type="datetime-local" value={filters.from} onChange={e => applyFilter({ from: e.target.value })} className="input text-sm" title={t('adminAudit.from')}/>
           <input type="datetime-local" value={filters.to}   onChange={e => applyFilter({ to: e.target.value })}   className="input text-sm" title={t('adminAudit.to')}/>
@@ -150,7 +152,7 @@ export default function AdminAuditLogPage() {
               )}
               {rows.map(r => (
                 <tr key={r.id} onClick={() => setSelected(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer">
-                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleString(i18n.language)}</td>
                   <td className="px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">{r.action}</td>
                   <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{r.resource}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">{r.actor_email || <span className="text-gray-400">—</span>}</td>
@@ -186,7 +188,7 @@ export default function AdminAuditLogPage() {
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h2 className="font-bold text-gray-900 dark:text-white">{selected.action}</h2>
-                <p className="text-xs text-gray-500">{new Date(selected.created_at).toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{new Date(selected.created_at).toLocaleString(i18n.language)}</p>
               </div>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={18}/>
@@ -199,7 +201,7 @@ export default function AdminAuditLogPage() {
                 [t('adminAudit.resource'),   `${selected.resource}${selected.resource_id ? ' · ' + selected.resource_id : ''}`],
                 [t('adminAudit.actor'),      `${selected.actor_email || '—'}${selected.actor_role ? ' (' + selected.actor_role + ')' : ''}`],
                 [t('adminAudit.subject'),    selected.subject_email || '—'],
-                [t('adminAudit.outcome'),    selected.outcome],
+                [t('adminAudit.outcome'),    outcomeLabel(selected.outcome)],
                 [t('adminAudit.ip'),         selected.ip || '—'],
               ].map(([k, v]) => (
                 <div key={String(k)} className="grid grid-cols-3 gap-3 py-1 border-b border-gray-50 dark:border-gray-800/50">
@@ -209,7 +211,7 @@ export default function AdminAuditLogPage() {
               ))}
               {selected.metadata && (
                 <div className="pt-2">
-                  <div className="text-xs text-gray-500 mb-1">metadata</div>
+                  <div className="text-xs text-gray-500 mb-1">{t('adminAudit.metadata')}</div>
                   <pre className="bg-gray-50 dark:bg-gray-950 rounded-lg p-3 text-xs overflow-x-auto text-gray-800 dark:text-gray-200">{JSON.stringify(selected.metadata, null, 2)}</pre>
                 </div>
               )}

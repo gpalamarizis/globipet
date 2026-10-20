@@ -85,9 +85,12 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
       }]
     }
 
-    const orderBy: any = sort === 'rating' ? { rating: 'desc' }
-      : sort === 'newest' ? { created_at: 'desc' }
-      : { is_featured: 'desc' }  // 'featured' (default)
+    // Δεύτερο κριτήριο { id: 'asc' }: με ίσες τιμές (π.χ. πολλά προϊόντα με
+    // rating 0 ή is_featured false) η σειρά της βάσης δεν είναι σταθερή, και η
+    // σελιδοποίηση (skip/take) έδειχνε διπλά ή έχανε προϊόντα ανάμεσα σε σελίδες.
+    const orderBy: any = sort === 'rating' ? [{ rating: 'desc' }, { id: 'asc' }]
+      : sort === 'newest' ? [{ created_at: 'desc' }, { id: 'asc' }]
+      : [{ is_featured: 'desc' }, { id: 'asc' }]  // 'featured' (default)
 
     const skip = (Number(page) - 1) * Number(limit)
     let data: any[]

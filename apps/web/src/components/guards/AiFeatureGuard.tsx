@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Lock, Sparkles, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -86,10 +86,10 @@ export default function AiFeatureGuard({ children }: { children: ReactNode }) {
             ? t('aiFeatureGuard.expired')
             : t('aiFeatureGuard.upgrade')}
         </p>
-        <a href="/pricing" className="btn-primary inline-flex items-center gap-2">
+        <Link to="/pricing" className="btn-primary inline-flex items-center gap-2">
           <Sparkles size={16}/>
           {t('aiFeatureGuard.viewPlans')}
-        </a>
+        </Link>
       </div>
     </div>
   )

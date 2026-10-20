@@ -56,6 +56,8 @@ export default function BookingConfirmation() {
         const st = err?.response?.status ?? err?.statusCode
         // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
         if (st && st >= 400 && st < 500) verified.current = true
+        // 400 = μη έγκυρο transaction id στο URL: όπως το 'invalid', αποτέλεσμα αμέσως αντί για αναμονή 90".
+        if (st === 400) setResult('invalid')
       })
       .finally(() => { verifying.current = false; refetch() })
   }, [transactionId, id, refetch])

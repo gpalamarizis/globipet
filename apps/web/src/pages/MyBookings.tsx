@@ -80,7 +80,7 @@ export default function MyBookings() {
   })
 
   const submitReview = useMutation({
-    mutationFn: () => api.post('/reviews', { service_id: reviewBooking.service_id, rating, comment }),
+    mutationFn: () => api.post('/reviews', { service_id: reviewBooking.service_id, booking_id: reviewBooking.id, rating, comment }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-bookings'] }); setReviewBooking(null); toast.success(t('bookings.reviewSubmitted')) },
     // Το μήνυμα του server (π.χ. «Έχεις ήδη αξιολογήσει») — όπως στο κινητό.
     onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('common.error')),
@@ -102,8 +102,11 @@ export default function MyBookings() {
   const now = new Date()
   const filtered = bookings.filter((b: any) => {
     const date = bookingDate(b)
-    if (activeTab === 'upcoming') return !!date && date >= now && b.status !== 'cancelled'
-    if (activeTab === 'past') return (!!date && date < now) || b.status === 'completed'
+    // Ολοκληρωμένη ή «δεν προσήλθε» δεν είναι επερχόμενη, ακόμα κι αν η ώρα της
+    // δεν έχει περάσει — πηγαίνει στις προηγούμενες.
+    const closed = b.status === 'completed' || b.status === 'no_show'
+    if (activeTab === 'upcoming') return !!date && date >= now && b.status !== 'cancelled' && !closed
+    if (activeTab === 'past') return (!!date && date < now) || closed
     return true
   })
 

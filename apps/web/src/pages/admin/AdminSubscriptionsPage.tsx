@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation, Trans } from 'react-i18next'
 import { Layers, Brain, Package, Shield, Settings2, Check, X, Edit2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { localName } from '@/lib/localName'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 const TABS = [
-  { id: 'overview',  label: 'Επισκόπηση', icon: Layers },
-  { id: 'ai',         label: 'AI Υγεία',    icon: Brain },
-  { id: 'food',       label: 'Τροφή',       icon: Package },
-  { id: 'insurance',  label: 'Ασφάλιση',    icon: Shield },
+  { id: 'overview',  icon: Layers },
+  { id: 'ai',         icon: Brain },
+  { id: 'food',       icon: Package },
+  { id: 'insurance',  icon: Shield },
 ]
 
-const STATUS_LABELS: Record<string, string> = {
-  none: 'Κανένα', trial: 'Trial', active: 'Ενεργό', expired: 'Έληξε',
-  cancelled: 'Ακυρωμένο', payment_failed: 'Αποτυχία πληρωμής', paused: 'Σε παύση',
-}
+// Κωδικοί κατάστασης με ετικέτα (adminSubs.st_*)· άγνωστος κωδικός → ως έχει.
+const STATUS_KEYS = ['none', 'trial', 'active', 'expired', 'cancelled', 'payment_failed', 'paused', 'completed']
 
 const STATUS_COLORS: Record<string, string> = {
   trial: 'bg-amber-50 text-amber-700', active: 'bg-green-50 text-green-700',
@@ -25,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function AdminSubscriptionsPage() {
+  const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState('overview')
   const queryClient = useQueryClient()
   const [discountInput, setDiscountInput] = useState<string>('')
@@ -38,10 +39,10 @@ export default function AdminSubscriptionsPage() {
   const updateDiscount = useMutation({
     mutationFn: (discount_percent: number) => api.patch('/settings/admin/food-subscription-discount', { discount_percent }),
     onSuccess: () => {
-      toast.success('Η έκπτωση ενημερώθηκε')
+      toast.success(t('adminSubs.discountUpdated'))
       queryClient.invalidateQueries({ queryKey: ['food-subscription-discount'] })
     },
-    onError: () => toast.error('Σφάλμα ενημέρωσης'),
+    onError: () => toast.error(t('adminSubs.updateError')),
   })
 
   const { data: overview, isLoading: loadingOverview } = useQuery({
@@ -78,7 +79,13 @@ export default function AdminSubscriptionsPage() {
   const updateFoodStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/admin/subscriptions/food/${id}`, { status }),
     onSuccess: () => {
-      toast.success('Ενημερώθηκε')
+      toast.success(t('adminSubs.updated'))
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-food'] })
+    },
+    // Η παύση/επανενεργοποίηση γίνεται πρώτα στο Stripe: σε αποτυχία (502) ή
+    // αλλαγή στο μεταξύ (409) ο διακομιστής δεν αλλάζει τίποτα — το μήνυμά του.
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || t('common.error'))
       queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-food'] })
     },
   })
@@ -87,17 +94,29 @@ export default function AdminSubscriptionsPage() {
     mutationFn: ({ user_id, ai_subscription_status, ai_subscription_plan_id }: any) =>
       api.patch(`/admin/subscriptions/ai/${user_id}`, { ai_subscription_status, ai_subscription_plan_id }),
     onSuccess: () => {
-      toast.success('Ενημερώθηκε')
+      toast.success(t('adminSubs.updated'))
       queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-ai'] })
       queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-overview'] })
       setEditingAiUser(null)
     },
-    onError: () => toast.error('Σφάλμα ενημέρωσης'),
+    onError: () => toast.error(t('adminSubs.updateError')),
   })
+
+  // Όνομα πλάνου στη γλώσσα του admin από τα ωμά πεδία του /overview·
+  // παλιός backend χωρίς αυτά → το έτοιμο plan_name.
+  const overviewPlanName = (row: any): string => {
+    if (row.type === 'food' && row.product_name != null) return t('adminSubs.foodPlan', { name: row.product_name })
+    if ((row.type === 'ai' || row.type === 'insurance') && 'plan_name_el' in row) {
+      const n = localName({ name: row.plan_name_en, name_el: row.plan_name_el }, i18n.language)
+      if (n) return n
+      if (row.type === 'ai') return t('adminSubs.tab_ai')
+    }
+    return row.plan_name
+  }
 
   const StatusBadge = ({ status }: { status: string }) => (
     <span className={cn('text-xs font-medium px-2 py-1 rounded-full', STATUS_COLORS[status] || 'bg-gray-100 text-gray-600')}>
-      {STATUS_LABELS[status] || status}
+      {STATUS_KEYS.includes(status) ? t(`adminSubs.st_${status}`) : status}
     </span>
   )
 
@@ -108,8 +127,8 @@ export default function AdminSubscriptionsPage() {
           <Layers size={20} className="text-purple-600" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Συνδρομές</h1>
-          <p className="text-sm text-gray-500">Διαχείριση AI, τροφής και ασφαλιστικών συνδρομών</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('adminSubs.title')}</h1>
+          <p className="text-sm text-gray-500">{t('adminSubs.subtitle')}</p>
         </div>
       </div>
 
@@ -118,12 +137,12 @@ export default function AdminSubscriptionsPage() {
         <div className="flex items-center gap-2">
           <Settings2 size={16} className="text-gray-400" />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Global έκπτωση 12μηνης συνδρομής τροφής: <strong>{discountSetting?.discount_percent ?? 0}%</strong>
+            <Trans i18nKey="adminSubs.globalDiscount" values={{ percent: discountSetting?.discount_percent ?? 0 }} components={{ b: <strong /> }} />
           </span>
         </div>
         <div className="flex items-center gap-2">
           <input
-            type="number" min={0} max={100} placeholder="π.χ. 15"
+            type="number" min={0} max={100} placeholder={t('adminSubs.discountPh')}
             value={discountInput}
             onChange={e => setDiscountInput(e.target.value)}
             className="input w-24 text-sm"
@@ -133,7 +152,7 @@ export default function AdminSubscriptionsPage() {
             disabled={updateDiscount.isPending || discountInput === ''}
             className="btn-primary px-3 py-2 text-xs"
           >
-            Ενημέρωση %
+            {t('adminSubs.updatePercent')}
           </button>
         </div>
       </div>
@@ -144,7 +163,7 @@ export default function AdminSubscriptionsPage() {
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={cn('flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-all',
               activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-            <tab.icon size={14} />{tab.label}
+            <tab.icon size={14} />{t(`adminSubs.tab_${tab.id}`)}
           </button>
         ))}
       </div>
@@ -156,25 +175,25 @@ export default function AdminSubscriptionsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800 text-left text-xs text-gray-500">
                 <tr>
-                  <th className="p-3">Τύπος</th><th className="p-3">Χρήστης</th><th className="p-3">Πλάνο</th>
-                  <th className="p-3">Κατάσταση</th><th className="p-3">Έναρξη</th>
+                  <th className="p-3">{t('adminSubs.type')}</th><th className="p-3">{t('adminSubs.user')}</th><th className="p-3">{t('adminSubs.plan')}</th>
+                  <th className="p-3">{t('adminSubs.status')}</th><th className="p-3">{t('adminSubs.start')}</th>
                 </tr>
               </thead>
               <tbody>
                 {overview?.map((row: any, i: number) => (
                   <tr key={i} className="border-t border-gray-100 dark:border-gray-800">
-                    <td className="p-3 capitalize text-gray-500">{row.type}</td>
+                    <td className="p-3 capitalize text-gray-500">{TABS.some(tb => tb.id === row.type) ? t(`adminSubs.tab_${row.type}`) : row.type}</td>
                     <td className="p-3">
                       <p className="font-medium text-gray-900 dark:text-white">{row.user_name}</p>
                       <p className="text-xs text-gray-500">{row.user_email}</p>
                     </td>
-                    <td className="p-3">{row.plan_name}{row.price ? ` — €${row.price}/μήνα` : ''}</td>
+                    <td className="p-3">{overviewPlanName(row)}{row.price ? t('adminSubs.perMonthSuffix', { price: row.price }) : ''}</td>
                     <td className="p-3"><StatusBadge status={row.status} /></td>
-                    <td className="p-3 text-gray-500">{row.started_at ? new Date(row.started_at).toLocaleDateString('el-GR') : '—'}</td>
+                    <td className="p-3 text-gray-500">{row.started_at ? new Date(row.started_at).toLocaleDateString(i18n.language) : '—'}</td>
                   </tr>
                 ))}
                 {overview?.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-500">Δεν υπάρχουν συνδρομές ακόμα</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-gray-500">{t('adminSubs.noSubs')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -189,12 +208,12 @@ export default function AdminSubscriptionsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800 text-left text-xs text-gray-500">
                 <tr>
-                  <th className="p-3">Χρήστης</th>
-                  <th className="p-3">Πλάνο</th>
-                  <th className="p-3">Κατάσταση</th>
-                  <th className="p-3">Trial από</th>
-                  <th className="p-3">Ημέρες trial</th>
-                  <th className="p-3">Ενέργειες</th>
+                  <th className="p-3">{t('adminSubs.user')}</th>
+                  <th className="p-3">{t('adminSubs.plan')}</th>
+                  <th className="p-3">{t('adminSubs.status')}</th>
+                  <th className="p-3">{t('adminSubs.trialFrom')}</th>
+                  <th className="p-3">{t('adminSubs.trialDays')}</th>
+                  <th className="p-3">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,34 +226,34 @@ export default function AdminSubscriptionsPage() {
                     <td className="p-3">
                       {u.plan ? (
                         <div>
-                          <p className="font-medium">{u.plan.name_el || u.plan.name}</p>
-                          <p className="text-xs text-gray-400">€{u.plan.price_monthly}/μήνα</p>
+                          <p className="font-medium">{localName(u.plan, i18n.language)}</p>
+                          <p className="text-xs text-gray-400">{t('adminSubs.perMonth', { price: u.plan.price_monthly })}</p>
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
                     <td className="p-3"><StatusBadge status={u.ai_subscription_status} /></td>
-                    <td className="p-3 text-gray-500">{u.ai_trial_started_at ? new Date(u.ai_trial_started_at).toLocaleDateString('el-GR') : '—'}</td>
+                    <td className="p-3 text-gray-500">{u.ai_trial_started_at ? new Date(u.ai_trial_started_at).toLocaleDateString(i18n.language) : '—'}</td>
                     <td className="p-3">
                       {u.trial_days_left !== null && u.ai_subscription_status === 'trial' ? (
                         <span className={cn('text-xs font-semibold',
                           u.trial_days_left > 7 ? 'text-green-600' :
                           u.trial_days_left > 0 ? 'text-amber-600' : 'text-red-600')}>
-                          {u.trial_days_left} μέρες
+                          {t('adminSubs.daysLeft', { count: u.trial_days_left })}
                         </span>
                       ) : <span className="text-xs text-gray-400">—</span>}
                     </td>
                     <td className="p-3">
                       <button onClick={() => setEditingAiUser(u)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Επεξεργασία">
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title={t('common.edit')}>
                         <Edit2 size={13} className="text-gray-500" />
                       </button>
                     </td>
                   </tr>
                 ))}
                 {aiUsers?.length === 0 && (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">Κανένας χρήστης δεν έχει ενεργοποιήσει AI trial/συνδρομή</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">{t('adminSubs.noAiUsers')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -249,8 +268,8 @@ export default function AdminSubscriptionsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800 text-left text-xs text-gray-500">
                 <tr>
-                  <th className="p-3">Χρήστης</th><th className="p-3">Προϊόν</th><th className="p-3">Τιμή/μήνα</th>
-                  <th className="p-3">Παραδόσεις</th><th className="p-3">Κατάσταση</th><th className="p-3">Ενέργειες</th>
+                  <th className="p-3">{t('adminSubs.user')}</th><th className="p-3">{t('adminSubs.product')}</th><th className="p-3">{t('adminSubs.pricePerMonth')}</th>
+                  <th className="p-3">{t('adminSubs.deliveries')}</th><th className="p-3">{t('adminSubs.status')}</th><th className="p-3">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,14 +285,14 @@ export default function AdminSubscriptionsPage() {
                     <td className="p-3"><StatusBadge status={s.status} /></td>
                     <td className="p-3 flex gap-1.5">
                       {s.status === 'active' && (
-                        <button onClick={() => updateFoodStatus.mutate({ id: s.id, status: 'paused' })}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Παύση">
+                        <button onClick={() => updateFoodStatus.mutate({ id: s.id, status: 'paused' })} disabled={updateFoodStatus.isPending}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title={t('adminSubs.pause')}>
                           <X size={14} className="text-gray-500" />
                         </button>
                       )}
                       {s.status === 'paused' && (
-                        <button onClick={() => updateFoodStatus.mutate({ id: s.id, status: 'active' })}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Επανενεργοποίηση">
+                        <button onClick={() => updateFoodStatus.mutate({ id: s.id, status: 'active' })} disabled={updateFoodStatus.isPending}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title={t('adminSubs.reactivate')}>
                           <Check size={14} className="text-green-600" />
                         </button>
                       )}
@@ -281,7 +300,7 @@ export default function AdminSubscriptionsPage() {
                   </tr>
                 ))}
                 {foodSubs?.length === 0 && (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">Δεν υπάρχουν συνδρομές τροφής ακόμα</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">{t('adminSubs.noFoodSubs')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -295,7 +314,7 @@ export default function AdminSubscriptionsPage() {
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800 text-left text-xs text-gray-500">
-                <tr><th className="p-3">Χρήστης</th><th className="p-3">Πλάνο</th><th className="p-3">Κατάσταση</th><th className="p-3">Από</th></tr>
+                <tr><th className="p-3">{t('adminSubs.user')}</th><th className="p-3">{t('adminSubs.plan')}</th><th className="p-3">{t('adminSubs.status')}</th><th className="p-3">{t('adminSubs.from')}</th></tr>
               </thead>
               <tbody>
                 {insuranceSubs?.map((s: any) => (
@@ -304,13 +323,13 @@ export default function AdminSubscriptionsPage() {
                       <p className="font-medium text-gray-900 dark:text-white">{s.user?.full_name}</p>
                       <p className="text-xs text-gray-500">{s.user?.email}</p>
                     </td>
-                    <td className="p-3">{s.plan?.name_el || s.plan?.name} ({s.plan?.provider?.name})</td>
+                    <td className="p-3">{localName(s.plan, i18n.language)} ({s.plan?.provider?.name})</td>
                     <td className="p-3"><StatusBadge status={s.status} /></td>
-                    <td className="p-3 text-gray-500">{new Date(s.started_at).toLocaleDateString('el-GR')}</td>
+                    <td className="p-3 text-gray-500">{new Date(s.started_at).toLocaleDateString(i18n.language)}</td>
                   </tr>
                 ))}
                 {insuranceSubs?.length === 0 && (
-                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">Δεν έχει καταχωρηθεί καμία ασφάλιση χρήστη ακόμα</td></tr>
+                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">{t('adminSubs.noInsurance')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -324,7 +343,7 @@ export default function AdminSubscriptionsPage() {
           onClick={() => setEditingAiUser(null)}>
           <div className="w-full max-w-md card p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Επεξεργασία AI Συνδρομής</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('adminSubs.editAiTitle')}</h2>
               <button onClick={() => setEditingAiUser(null)} className="btn-ghost p-2"><X size={18} /></button>
             </div>
 
@@ -335,24 +354,24 @@ export default function AdminSubscriptionsPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Κατάσταση</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminSubs.status')}</label>
                 <select className="input text-sm" value={editingAiUser.ai_subscription_status}
                   onChange={e => setEditingAiUser({ ...editingAiUser, ai_subscription_status: e.target.value })}>
-                  <option value="none">Κανένα</option>
-                  <option value="trial">Trial (30 μέρες)</option>
-                  <option value="active">Ενεργό</option>
-                  <option value="expired">Έληξε</option>
+                  <option value="none">{t('adminSubs.st_none')}</option>
+                  <option value="trial">{t('adminSubs.trial30')}</option>
+                  <option value="active">{t('adminSubs.st_active')}</option>
+                  <option value="expired">{t('adminSubs.st_expired')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Πλάνο</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminSubs.plan')}</label>
                 <select className="input text-sm" value={editingAiUser.ai_subscription_plan_id || ''}
                   onChange={e => setEditingAiUser({ ...editingAiUser, ai_subscription_plan_id: e.target.value || null })}>
-                  <option value="">— Χωρίς πλάνο —</option>
+                  <option value="">{t('adminSubs.noPlan')}</option>
                   {aiPlans.map((p: any) => (
                     <option key={p.id} value={p.id}>
-                      {p.name_el || p.name} — €{p.price_monthly}/μήνα
+                      {t('adminSubs.planOption', { name: localName(p, i18n.language), price: p.price_monthly })}
                     </option>
                   ))}
                 </select>
@@ -360,7 +379,7 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setEditingAiUser(null)} className="btn-secondary flex-1">Ακύρωση</button>
+              <button onClick={() => setEditingAiUser(null)} className="btn-secondary flex-1">{t('common.cancel')}</button>
               <button onClick={() => updateAiUser.mutate({
                   user_id: editingAiUser.id,
                   ai_subscription_status: editingAiUser.ai_subscription_status,
@@ -368,7 +387,7 @@ export default function AdminSubscriptionsPage() {
                 })}
                 disabled={updateAiUser.isPending}
                 className="btn-primary flex-1">
-                {updateAiUser.isPending ? '...' : 'Αποθήκευση'}
+                {updateAiUser.isPending ? '...' : t('common.save')}
               </button>
             </div>
           </div>

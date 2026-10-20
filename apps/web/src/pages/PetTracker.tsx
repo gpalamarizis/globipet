@@ -52,14 +52,16 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
   const mapInstance = useRef<any>(null)
   const markersRef = useRef<any[]>([])
   const [ready, setReady] = useState(false)
+  const [failed, setFailed] = useState(false)
 
-  // Load Mapbox once.
+  // Load Mapbox once (μόνο αν υπάρχει κλειδί)· καθαρισμός του χάρτη στο unmount.
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return
+    if (!MAPBOX_TOKEN || !mapRef.current || mapInstance.current) return
+    let cancelled = false
 
     const init = () => {
       const mapboxgl = (window as any).mapboxgl
-      if (!mapboxgl) return
+      if (!mapboxgl || !mapRef.current) return
       mapboxgl.accessToken = MAPBOX_TOKEN
       const map = new mapboxgl.Map({
         container: mapRef.current,
@@ -72,11 +74,25 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
       map.addControl(new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true }, trackUserLocation: true,
       }), 'top-right')
-      map.on('load', () => setReady(true))
+      let loaded = false
+      map.on('load', () => { loaded = true; if (!cancelled) setReady(true) })
+      // Π.χ. άκυρο κλειδί: το στυλ δεν φορτώνει ποτέ → μήνυμα αντί για κενό κουτί (όπως ServicesMap).
+      // Μόνο σφάλμα κλειδιού/στυλ (401/403/404) — όχι ένα πλακίδιο που απέτυχε.
+      map.on('error', (e: any) => {
+        const st = Number(e?.error?.status)
+        if (!cancelled && !loaded && (st === 401 || st === 403 || st === 404)) setFailed(true)
+      })
     }
 
     // Κοινή φόρτωση με τον χάρτη υπηρεσιών (ίδιο script, ξαναδοκιμή μετά από αποτυχία).
-    loadMapbox().then(() => { if (!mapInstance.current) init() }).catch(() => { /* ο χάρτης μένει κενός, όπως πριν */ })
+    loadMapbox().then(() => { if (!cancelled && !mapInstance.current) init() }).catch(() => { if (!cancelled) setFailed(true) })
+    return () => {
+      cancelled = true
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+      mapInstance.current?.remove()
+      mapInstance.current = null
+    }
   }, [])
 
   /**
@@ -116,7 +132,7 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
     if (located.length && !selected) {
       map.flyTo({ center: [located[0].location!.longitude, located[0].location!.latitude], zoom: 14, duration: 800 })
     }
-  }, [rows, ready])
+  }, [rows, ready, t])
 
   useEffect(() => {
     if (selected?.location && mapInstance.current) {
@@ -126,6 +142,16 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
       })
     }
   }, [selected])
+
+  // Χωρίς κλειδί Mapbox ή αν απέτυχε η φόρτωση: καθαρό μήνυμα, όχι κενό κουτί (όπως ServicesMap).
+  if (!MAPBOX_TOKEN || failed) {
+    return (
+      <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-2xl flex flex-col items-center justify-center gap-3 p-6">
+        <MapPin size={40} className="text-gray-400" />
+        <p className="text-sm text-gray-500 text-center max-w-xs">{t('tracker.mapUnavailable')}</p>
+      </div>
+    )
+  }
 
   return <div ref={mapRef} className="w-full h-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800" />
 }

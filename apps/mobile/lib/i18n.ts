@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import * as Localization from 'expo-localization'
 import * as SecureStore from 'expo-secure-store'
+import { queryClient } from '../src/lib/queryClient'
 
 import el from '../locales/el.json'
 import en from '../locales/en.json'
@@ -55,6 +56,10 @@ export async function changeLanguage(lang: string) {
     await SecureStore.setItemAsync(LANGUAGE_KEY, lang)
   } catch {}
   await i18n.changeLanguage(lang)
+  // Τα δεδομένα του server (υπηρεσίες, κατηγορίες κ.λπ.) έρχονται
+  // μεταφρασμένα στη γλώσσα του Accept-Language: ξαναφορτώνονται στη νέα,
+  // όπως στο web (App.tsx, languageChanged → invalidateQueries).
+  void queryClient.invalidateQueries()
 }
 
 export default i18n

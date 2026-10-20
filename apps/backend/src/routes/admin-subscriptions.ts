@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
+import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
+import { audit } from '../lib/audit.js'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 
 const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
 
@@ -97,12 +101,65 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: subs })
   })
 
+  /**
+   * Παύση / επανενεργοποίηση συνδρομής τροφής από τον διαχειριστή.
+   *
+   * Πριν άλλαζε ΜΟΝΟ τη στήλη status: η «Παύση» έδειχνε «Σε παύση» αλλά το
+   * Stripe συνέχιζε να χρεώνει κάθε μήνα (και το webhook την ξαναέκανε
+   * active με νέα παράδοση). Τώρα:
+   *   · Μόνο active → paused και paused → active (καμία άλλη κατάσταση —
+   *     ακύρωση/ολοκλήρωση/αποτυχία πληρωμής δεν αλλάζουν από εδώ).
+   *   · ΠΡΩΤΑ το Stripe (pause_collection: void = δεν εκδίδονται χρεώσεις
+   *     όσο διαρκεί η παύση· '' = συνέχιση), ΜΕΤΑ η βάση. Αν το Stripe
+   *     αποτύχει → 502 και καμία αλλαγή στη βάση.
+   *   · Η βάση αλλάζει ατομικά, μόνο από την αναμενόμενη κατάσταση.
+   */
   app.patch('/food/:id', async (req: any, reply) => {
-    const { status } = req.body as { status: string }
-    const updated = await prisma.productSubscription.update({
-      where: { id: req.params.id },
+    const { status } = (req.body ?? {}) as { status?: string }
+    const FROM: Record<string, string> = { paused: 'active', active: 'paused' }
+    if (typeof status !== 'string' || !FROM[status]) {
+      return reply.code(400).send({ message: 'Μη έγκυρη κατάσταση' })
+    }
+    const sub = await prisma.productSubscription.findUnique({ where: { id: String(req.params.id) } })
+    if (!sub) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    if (sub.status === status) return reply.send({ data: sub })
+    if (sub.status !== FROM[status]) {
+      return reply.code(409).send({ message: 'Μη έγκυρη αλλαγή κατάστασης' })
+    }
+
+    if (sub.stripe_subscription_id) {
+      try {
+        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          pause_collection: status === 'paused' ? { behavior: 'void' } : '',
+        })
+      } catch (err: any) {
+        console.error(`[stripe] admin ${status} of product subscription ${sub.id} failed:`, err?.message)
+        return reply.code(502).send({ message: 'Η αλλαγή δεν ολοκληρώθηκε στον πάροχο πληρωμών. Δεν έγινε καμία αλλαγή — δοκίμασε ξανά σε λίγο.' })
+      }
+    }
+
+    const r = await prisma.productSubscription.updateMany({
+      where: { id: sub.id, status: FROM[status] },
       data: { status },
     })
+    if (r.count === 0) {
+      // Άλλαξε στο μεταξύ (π.χ. ακυρώθηκε από τον πελάτη ή έγινε
+      // payment_failed): η αλλαγή στο Stripe αναιρείται, ώστε Stripe και βάση
+      // να μη διαφωνούν (π.χ. χρεώσεις σε παύση ενώ η βάση δεν το ξέρει).
+      // Best-effort· σε ακυρωμένη συνδρομή του Stripe απλώς αποτυγχάνει.
+      if (sub.stripe_subscription_id) {
+        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          pause_collection: status === 'paused' ? '' : { behavior: 'void' },
+        }).catch((err: any) => console.error(`[stripe] revert of admin ${status} for product subscription ${sub.id} failed — check in Stripe:`, err?.message))
+      }
+      return reply.code(409).send({ message: 'Μη έγκυρη αλλαγή κατάστασης' })
+    }
+    await audit(req, {
+      action: status === 'paused' ? 'subscription_pause' : 'subscription_resume',
+      resource: 'product_subscription', resource_id: sub.id,
+      metadata: { stripe_subscription_id: sub.stripe_subscription_id },
+    })
+    const updated = await prisma.productSubscription.findUnique({ where: { id: sub.id } })
     return reply.send({ data: updated })
   })
 
@@ -175,6 +232,10 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
           user_name: u.full_name,
           user_email: u.email,
           plan_name: plan?.name_el || plan?.name || 'AI Health',
+          // Ωμά πεδία (προσθετικά) για ονομασία στη γλώσσα του admin
+          // (web: localName). Το plan_name μένει για συμβατότητα.
+          plan_name_el: plan?.name_el ?? null,
+          plan_name_en: plan?.name ?? null,
           status: u.ai_subscription_status,
           started_at: u.ai_trial_started_at,
         }
@@ -184,6 +245,8 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
         user_name: s.user.full_name,
         user_email: s.user.email,
         plan_name: `Τροφή: ${s.product.name}`,
+        // Ωμό όνομα προϊόντος: το web βάζει μεταφρασμένο πρόθεμα.
+        product_name: s.product.name,
         status: s.status,
         started_at: s.start_date,
         price: s.monthly_price,
@@ -193,6 +256,8 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
         user_name: s.user.full_name,
         user_email: s.user.email,
         plan_name: s.plan.name_el || s.plan.name,
+        plan_name_el: s.plan.name_el ?? null,
+        plan_name_en: s.plan.name,
         status: s.status,
         started_at: s.started_at,
       })),

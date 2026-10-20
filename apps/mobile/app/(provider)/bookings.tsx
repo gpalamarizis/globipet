@@ -7,6 +7,7 @@ import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { Chips } from '@/components/Chips'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { fmtYmd } from '@/lib/dates'
 
 /**
  * Οι κρατήσεις του παρόχου — ίδιες ενέργειες με το web: επιβεβαίωση,
@@ -17,7 +18,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
 type Filter = 'active' | 'done' | 'cancelled' | 'all'
 
 export default function ProviderBookings() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -88,7 +89,7 @@ export default function ProviderBookings() {
             <Text style={s.title} numberOfLines={1}>{b.service?.title || t('providerDash.booking')}</Text>
             <Badge label={t(`status.${b.status}`, { defaultValue: b.status })} tone={tone(b.status) as any} />
           </View>
-          <Text style={s.meta}>{b.customer_name} · {b.booking_date} {b.booking_time}</Text>
+          <Text style={s.meta}>{b.customer_name} · {fmtYmd(b.booking_date, i18n.language)} {b.booking_time}</Text>
           {!!b.staff_name && <Text style={s.meta}>{t('serviceDetail.choosePractitioner')}: {b.staff_name}</Text>}
           <View style={s.priceRow}>
             <Text style={s.price}>€{Number(b.total_price ?? 0).toFixed(2)}</Text>

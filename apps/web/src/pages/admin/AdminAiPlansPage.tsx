@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localName } from '@/lib/localName'
 import { Brain, Plus, Edit2, Trash2, X, Check, Package, Users, Sparkles, Video, Activity, Heart } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -46,7 +47,7 @@ const FEATURE_META = [
 ] as const
 
 export default function AdminAiPlansPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const [editingPlan, setEditingPlan] = useState<Partial<AiPlan> | null>(null)
   const [isNew, setIsNew] = useState(false)
@@ -135,7 +136,7 @@ export default function AdminAiPlansPage() {
 
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">{plan.name_el || plan.name}</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{localName(plan, i18n.language)}</h3>
                     <span className="text-xs text-gray-400 uppercase tracking-wider">{plan.tier}</span>
                   </div>
                   <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full',
@@ -183,7 +184,7 @@ export default function AdminAiPlansPage() {
                       <Edit2 size={13} className="text-gray-500" />
                     </button>
                     <button onClick={() => {
-                        if (confirm(t('adminAiPlans.confirmDelete', { name: plan.name_el || plan.name }))) {
+                        if (confirm(t('adminAiPlans.confirmDelete', { name: localName(plan, i18n.language) }))) {
                           deletePlan.mutate(plan.id)
                         }
                       }}

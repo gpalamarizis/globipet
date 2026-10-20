@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { fmtYmd } from '@/lib/dates'
 import toast from 'react-hot-toast'
 
 /**
@@ -344,7 +345,7 @@ export default function ProviderCustomersPage() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pending }: any) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [note, setNote] = useState<string | null>(null)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[] | null>(null)
@@ -451,7 +452,7 @@ function CustomerDetail({ customer, detail, onClose, onSaveNote, onMessage, pend
             {(detail?.bookings ?? []).map((b: any) => (
               <div key={b.id} className="flex items-center gap-3 p-2.5 text-sm">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium">{b.booking_date} · {b.booking_time}</p>
+                  <p className="font-medium">{fmtYmd(b.booking_date, i18n.language)} · {b.booking_time}</p>
                   {b.staff_name && <p className="text-xs text-gray-500">{b.staff_name}</p>}
                 </div>
                 {b.rating && (

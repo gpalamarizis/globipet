@@ -54,6 +54,8 @@ export default function BookingConfirmationScreen() {
         const st = err?.response?.status
         // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
         if (st && st >= 400 && st < 500) verified.current = true
+        // 400 = μη έγκυρο transaction id: όπως το 'invalid', αποτέλεσμα αμέσως αντί για αναμονή 90" (όπως το web).
+        if (st === 400) setResult('invalid')
       })
       .finally(() => { verifying.current = false; refetch() })
   }, [transactionId, id, refetch])
@@ -116,11 +118,15 @@ export default function BookingConfirmationScreen() {
     return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   })()
 
-  // Πίσω στη λίστα χωρίς να στοιβάζονται οθόνες· από deep link (χωρίς
-  // προηγούμενη οθόνη) αντικατάσταση με τη λίστα.
+  // «Οι κρατήσεις μου» → η λίστα κρατήσεων χωρίς να στοιβάζονται οθόνες:
+  // το dismissTo γυρνά στη λίστα αν είναι ήδη στη στοίβα (άνοιξε από
+  // «Πληρωμή»), αλλιώς αντικαθιστά αυτή την οθόνη με τη λίστα (άνοιξε από
+  // την υπηρεσία ή από deep link). Πριν, από την υπηρεσία το back γύριζε στην
+  // υπηρεσία. Και το «Δοκίμασε ξανά» πάει στη λίστα (όπως το web → /bookings):
+  // η κράτηση υπάρχει ήδη και πληρώνεται με «Πληρωμή» εκεί — το back στην
+  // υπηρεσία οδηγούσε σε ΔΕΥΤΕΡΗ κράτηση για το ίδιο ραντεβού.
   const backToBookings = () => {
-    if (router.canGoBack()) router.back()
-    else router.replace('/bookings' as any)
+    router.dismissTo('/bookings' as any)
   }
 
   return (

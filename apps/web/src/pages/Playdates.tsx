@@ -19,8 +19,18 @@ const eventTypes = [
 const petTypeOptions = ['dog', 'cat', 'rabbit', 'bird', 'other']
 const petTypeEmoji: Record<string, string> = { dog: '🐶', cat: '🐱', rabbit: '🐰', bird: '🐦', other: '🐾' }
 
+// 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη (όπως το κινητό):
+// το new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω από το UTC έδειχνε την προηγούμενη μέρα.
+const fmtDate = (d: string | undefined, lang: string) => {
+  if (!d) return '—'
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
+  const x = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(d)
+  return isNaN(x.getTime()) ? d
+    : x.toLocaleDateString(lang, { weekday: 'short', day: '2-digit', month: 'short' })
+}
+
 export default function Playdates() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const [tab, setTab] = useState<'discover' | 'my'>('discover')
@@ -85,12 +95,18 @@ export default function Playdates() {
   const respondInvite = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/playdates/invitation/${id}`, { status }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success(t('pgPlaydates.responseSaved')) },
+    onError: (e: any) => toast.error(e?.message || t('pgPlaydates.responseFailed')),
   })
 
   const deleteEvent = useMutation({
     mutationFn: (id: string) => api.delete(`/playdates/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); toast.success(t('common.deleted')) },
+    onError: (e: any) => toast.error(e?.message || t('pgPlaydates.deleteFailed')),
   })
+  // Επιβεβαίωση πριν τη διαγραφή (όπως το κινητό).
+  const confirmDelete = (ev: any) => {
+    if (window.confirm(t('pgPlaydates.deleteQ', { title: ev.title }))) deleteEvent.mutate(ev.id)
+  }
 
   const togglePetType = (pt: string) => setForm(f => ({ ...f, pet_types: f.pet_types.includes(pt) ? f.pet_types.filter(p => p !== pt) : [...f.pet_types, pt] }))
 
@@ -168,7 +184,7 @@ export default function Playdates() {
                               </div>
                               {ev.description && <p className="text-sm text-gray-500 mb-2">{ev.description}</p>}
                               <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-                                <span className="flex items-center gap-1"><Calendar size={12} />{ev.date} {ev.time}</span>
+                                <span className="flex items-center gap-1"><Calendar size={12} />{fmtDate(ev.date, i18n.language)} {ev.time}</span>
                                 <span className="flex items-center gap-1"><MapPin size={12} />{ev.location}, {ev.city}</span>
                                 <span className="flex items-center gap-1"><Users size={12} />{ev.invitations?.length || 0}/{ev.max_participants}</span>
                               </div>
@@ -176,7 +192,7 @@ export default function Playdates() {
                             {ev.creator_email === user?.email && (
                               <div className="flex gap-1">
                                 <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">{t('pgPlaydates.invite')}</button>
-                                <button onClick={() => deleteEvent.mutate(ev.id)} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
+                                <button onClick={() => confirmDelete(ev)} disabled={deleteEvent.isPending} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                               </div>
                             )}
                             {ev.creator_email !== user?.email && (() => {
@@ -260,10 +276,10 @@ export default function Playdates() {
                       <h3 className="font-semibold text-gray-900 dark:text-white">{ev.title}</h3>
                       <div className="flex gap-2">
                         <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">{t('pgPlaydates.addInvite')}</button>
-                        <button onClick={() => deleteEvent.mutate(ev.id)} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
+                        <button onClick={() => confirmDelete(ev)} disabled={deleteEvent.isPending} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{ev.date} {ev.time} · {ev.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">{fmtDate(ev.date, i18n.language)} {ev.time} · {ev.location}</p>
                     <p className="text-xs text-gray-400">{t('pgPlaydates.acceptedCount', { count: ev.invitations?.filter((i: any) => i.status === 'accepted').length })}</p>
                   </div>
                 ))}
@@ -278,7 +294,7 @@ export default function Playdates() {
                 {myData?.invitations?.map((inv: any) => (
                   <div key={inv.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
                     <h3 className="font-semibold text-gray-900 dark:text-white">{inv.event.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">{inv.event.date} {inv.event.time} · {inv.event.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">{fmtDate(inv.event.date, i18n.language)} {inv.event.time} · {inv.event.location}</p>
                     {inv.message && <p className="text-sm text-gray-500 mt-1 italic">"{inv.message}"</p>}
                     {inv.status === 'pending' ? (
                       <div className="flex gap-2 mt-3">

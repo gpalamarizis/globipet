@@ -26,18 +26,29 @@ const SPECIES_EMOJI: Record<string, string> = {
 }
 const emojiFor = (s?: string) => SPECIES_EMOJI[String(s).toLowerCase()] ?? '🐾'
 
-/** Dates are stored as plain strings ("2026-09-04"), not timestamps. */
+/** Σημερινή τοπική ημερομηνία ως YYYY-MM-DD (όπως στο PetPassport). */
+function localToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Dates are stored as plain strings ("2026-09-04"), not timestamps.
+ * Το new Date('YYYY-MM-DD') διαβάζεται ως UTC (λάθος μέρα δυτικά του Γκρίνουιτς),
+ * οπότε η ημερομηνία χτίζεται από τοπικά έτος/μήνα/μέρα.
+ */
 function fmtDate(value?: string | null, locale = 'el-GR') {
   if (!value) return '—'
-  const d = new Date(value)
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).slice(0, 10))
+  const d = m && String(value).length === 10 ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value)
   return isNaN(d.getTime()) ? value : d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-/** A vaccination is due when its next date has passed. */
+/** A vaccination is due when its next date has passed (σύγκριση YYYY-MM-DD, χωρίς UTC). */
 function isOverdue(nextDue?: string | null) {
   if (!nextDue) return false
-  const d = new Date(nextDue)
-  return !isNaN(d.getTime()) && d < new Date()
+  const s = String(nextDue).slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && s < localToday()
 }
 
 function Empty({ icon: Icon, text }: { icon: any; text: string }) {
@@ -73,6 +84,12 @@ export default function PetDetail() {
   const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
   const locale = localeMap[i18n.language] || 'el-GR'
   const d = (v?: string | null) => fmtDate(v, locale)
+  // Κωδικοί της βάσης → κείμενο (ίδια κλειδιά με το PetPassport)· άγνωστη τιμή μένει ως έχει.
+  const code = (group: string, v?: string | null) => v && /^[a-z][a-z0-9_]*$/.test(v)
+    ? t(`${group}.${v.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`, { defaultValue: v === 'other' ? t('pgPassport.other') : v })
+    : v
+  const FREQ_KEYS = ['onceDaily', 'twiceDaily', 'threeDaily', 'weekly', 'monthly', 'asNeeded']
+  const freqLabel = (v?: string | null) => { const k = FREQ_KEYS.find(x => t(`pgPassport.freq.${x}`, { lng: 'el' }) === v); return k ? t(`pgPassport.freq.${k}`) : v }
 
   const { data: passport, isLoading, isError } = useQuery({
     queryKey: ['pet-passport', id],
@@ -152,7 +169,7 @@ export default function PetDetail() {
           </div>
           <h1 className="text-xl font-display font-bold text-gray-900 dark:text-white mt-3">{pet.name}</h1>
           <p className="text-sm text-gray-500">
-            {[pet.breed || pet.species, pet.age && `${pet.age} ${t('pets.years')}`, pet.color]
+            {[pet.breed || code('cmpAddPet.species', pet.species), pet.age && `${pet.age} ${t('pets.years')}`, pet.color]
               .filter(Boolean).join(' · ')}
           </p>
 
@@ -213,7 +230,7 @@ export default function PetDetail() {
                 {t('pgPetDetail.details')}
               </h3>
               {[
-                [t('pgPetDetail.species'), pet.species],
+                [t('pgPetDetail.species'), code('cmpAddPet.species', pet.species)],
                 [t('pgPetDetail.breed'), pet.breed],
                 [t('pgPetDetail.gender'), pet.gender === 'male' ? '♂' : pet.gender === 'female' ? '♀' : null],
                 [t('pgPetDetail.microchip'), pet.microchip_number],
@@ -232,7 +249,7 @@ export default function PetDetail() {
                 </h3>
                 {chronicConditions.map((c: any) => (
                   <Row key={c.id} title={c.condition}
-                    subtitle={[c.status, c.treatment_plan].filter(Boolean).join(' · ')}
+                    subtitle={[code('pgPassport.chronicStatus', c.status), c.treatment_plan].filter(Boolean).join(' · ')}
                     right={d(c.diagnosed_date)}
                     tone={c.status === 'active' ? 'warn' : undefined} />
                 ))}
@@ -251,7 +268,7 @@ export default function PetDetail() {
                 {allergies.map((a: any) => (
                   <Row key={a.id} title={a.allergen}
                     subtitle={[a.reaction, a.treatment].filter(Boolean).join(' · ')}
-                    right={a.severity}
+                    right={code('pgPassport.severityOpt', a.severity) ?? undefined}
                     tone={a.severity === 'severe' ? 'danger' : 'warn'} />
                 ))}
               </div>
@@ -264,7 +281,7 @@ export default function PetDetail() {
                 </h3>
                 {activeMeds.map((m: any) => (
                   <Row key={m.id} title={m.name}
-                    subtitle={[m.dosage, m.frequency].filter(Boolean).join(' · ')}
+                    subtitle={[m.dosage, freqLabel(m.frequency)].filter(Boolean).join(' · ')}
                     right={d(m.start_date)} />
                 ))}
               </div>
@@ -278,7 +295,7 @@ export default function PetDetail() {
                 ? <Empty icon={Stethoscope} text={t('pgPetDetail.noRecords')} />
                 : healthRecords.map((r: any) => (
                     <Row key={r.id} title={r.title}
-                      subtitle={[r.record_type, r.vet_name, r.clinic_name].filter(Boolean).join(' · ')}
+                      subtitle={[code('pgPassport.recordType', r.record_type), r.vet_name, r.clinic_name].filter(Boolean).join(' · ')}
                       right={d(r.date)} />
                   ))}
             </div>

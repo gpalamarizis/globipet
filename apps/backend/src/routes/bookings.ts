@@ -3,6 +3,7 @@ import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
 import prisma from '../lib/prisma.js'
+import { fullNameOf } from '../lib/userName.js'
 import { calculateCommission } from '../lib/commission.js'
 import { bestDiscount } from '../lib/campaignDiscount.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
@@ -168,7 +169,7 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
    *   always starts 'pending'. Only the payment flow moves those forward.
    */
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email, full_name } = req.user as any
+    const { email } = req.user as any
     const body = (req.body ?? {}) as any
 
     if (!body.service_id || !body.booking_date || !body.booking_time) {
@@ -273,7 +274,8 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       data: {
         service_id: service.id,
         customer_email: email,
-        customer_name: full_name || email.split('@')[0],
+        // Το JWT δεν έχει full_name: το όνομα από τη βάση (lib/userName).
+        customer_name: await fullNameOf(email),
         provider_email: service.provider_email,
         provider_name: service.provider_name,
         booking_date: String(body.booking_date),
@@ -436,7 +438,8 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         // Το ποσό της βάσης, ποτέ του πελάτη.
         amount: booking.total_price,
         customerEmail: user.email,
-        customerName: user.full_name,
+        // Το JWT δεν έχει full_name (lib/userName).
+        customerName: await fullNameOf(user.email),
         orderId: booking_id,
         description: `GlobiPet κράτηση #${booking_id.slice(0, 8)}`,
         successUrl: `${frontendUrl}/bookings/${booking_id}/confirmation`,

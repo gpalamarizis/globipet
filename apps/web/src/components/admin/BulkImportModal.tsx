@@ -5,6 +5,7 @@ import { X, FileSpreadsheet, Upload, Download, CheckCircle, AlertCircle, Loader2
 import * as XLSX from 'xlsx'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -12,9 +13,11 @@ interface Props {
   type: 'products' | 'services'
 }
 
+type ParseError = { key: string; params?: Record<string, unknown> }
+
 const CONFIG = {
   products: {
-    title: 'Μαζική Εισαγωγή Προϊόντων',
+    title: 'adminBulk.titleProducts',
     endpoint: '/admin/bulk-import/products',
     queryKey: 'admin-products',
     templateUrl: '/templates/products_template.xlsx',
@@ -22,7 +25,7 @@ const CONFIG = {
     required: ['name', 'price', 'category'],
   },
   services: {
-    title: 'Μαζική Εισαγωγή Υπηρεσιών',
+    title: 'adminBulk.titleServices',
     endpoint: '/admin/bulk-import/services',
     queryKey: 'admin-services',
     templateUrl: '/templates/services_template.xlsx',
@@ -32,11 +35,13 @@ const CONFIG = {
 }
 
 export default function BulkImportModal({ open, onClose, type }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const cfg = CONFIG[type]
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<any[]>([])
-  const [parseErrors, setParseErrors] = useState<string[]>([])
+  // Κλειδί + παράμετροι· η μετάφραση γίνεται στο render (αλλαγή γλώσσας → σωστό κείμενο).
+  const [parseErrors, setParseErrors] = useState<ParseError[]>([])
   const [result, setResult] = useState<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -67,7 +72,7 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
       // Row 1 = keys (machine-readable), Row 2 = labels (skip), Row 3+ = data
       const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as any[][]
       if (rows.length < 3) {
-        setParseErrors(['Το αρχείο δεν περιέχει δεδομένα. Συμπληρώστε γραμμές από τη γραμμή 3.'])
+        setParseErrors([{ key: 'adminBulk.noData' }])
         return
       }
 
@@ -75,7 +80,7 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
       const dataRows = rows.slice(2)  // Skip header (row 1) and label (row 2)
 
       const items: any[] = []
-      const errors: string[] = []
+      const errors: ParseError[] = []
 
       dataRows.forEach((row, idx) => {
         // Skip empty rows
@@ -92,7 +97,7 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
         // Validate required
         const missing = cfg.required.filter(r => !obj[r] && obj[r] !== 0)
         if (missing.length > 0) {
-          errors.push(`Γραμμή ${idx + 3}: Λείπουν τα πεδία: ${missing.join(', ')}`)
+          errors.push({ key: 'adminBulk.rowMissing', params: { row: idx + 3, fields: missing.join(', ') } })
         } else {
           items.push(obj)
         }
@@ -102,10 +107,10 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
       setParseErrors(errors)
 
       if (items.length === 0 && errors.length === 0) {
-        setParseErrors(['Δεν βρέθηκαν δεδομένα στο αρχείο'])
+        setParseErrors([{ key: 'adminBulk.noRows' }])
       }
     } catch (err: any) {
-      setParseErrors(['Δεν μπόρεσα να διαβάσω το αρχείο: ' + err.message])
+      setParseErrors([{ key: 'adminBulk.readError', params: { error: err.message } }])
     }
   }
 
@@ -115,12 +120,12 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
       setResult(data)
       queryClient.invalidateQueries({ queryKey: [cfg.queryKey] })
       if (data.failed === 0) {
-        toast.success(`Εισήχθησαν ${data.created} εγγραφές επιτυχώς!`)
+        toast.success(t('adminBulk.importedAll', { count: data.created }))
       } else {
-        toast.success(`Εισήχθησαν ${data.created} εγγραφές, ${data.failed} απέτυχαν`)
+        toast.success(t('adminBulk.importedSome', { created: data.created, failed: data.failed }))
       }
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα κατά την εισαγωγή'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('adminBulk.importError')),
   })
 
   const downloadTemplate = () => {
@@ -150,7 +155,7 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet size={20} className="text-brand-900" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{cfg.title}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t(cfg.title)}</h3>
               </div>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18}/></button>
             </div>
@@ -160,12 +165,12 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">1</div>
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Κατεβάστε το template</p>
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{t('adminBulk.step1Title')}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    Συμπληρώστε το Excel αρχείο με τα δεδομένα σας. Δείτε τις οδηγίες στο 2ο sheet.
+                    {t('adminBulk.step1Text')}
                   </p>
                   <button onClick={downloadTemplate} className="btn-secondary text-xs flex items-center gap-1.5">
-                    <Download size={14}/> Κατέβασμα Template
+                    <Download size={14}/> {t('adminBulk.downloadTemplate')}
                   </button>
                 </div>
               </div>
@@ -175,8 +180,8 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-brand-900 text-white flex items-center justify-center font-bold text-sm shrink-0">2</div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Ανέβασμα συμπληρωμένου Excel</p>
-                    <p className="text-xs text-gray-500 mb-3">.xlsx, .xls, ή .csv</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{t('adminBulk.step2Title')}</p>
+                    <p className="text-xs text-gray-500 mb-3">{t('adminBulk.formats')}</p>
 
                     <input
                       ref={fileRef}
@@ -186,7 +191,7 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
                     />
                     <button onClick={() => fileRef.current?.click()} className="btn-primary text-xs flex items-center gap-1.5">
-                      <Upload size={14}/> {file ? 'Αλλαγή αρχείου' : 'Επιλογή αρχείου'}
+                      <Upload size={14}/> {file ? t('adminBulk.changeFile') : t('adminBulk.chooseFile')}
                     </button>
                     {file && (
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
@@ -202,11 +207,11 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle size={16} className="text-red-600"/>
-                    <p className="font-semibold text-red-700 dark:text-red-400 text-sm">Σφάλματα στο αρχείο</p>
+                    <p className="font-semibold text-red-700 dark:text-red-400 text-sm">{t('adminBulk.fileErrors')}</p>
                   </div>
                   <ul className="text-xs text-red-600 dark:text-red-400 space-y-1 list-disc list-inside">
-                    {parseErrors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-                    {parseErrors.length > 10 && <li>...και άλλα {parseErrors.length - 10}</li>}
+                    {parseErrors.slice(0, 10).map((e, i) => <li key={i}>{t(e.key, e.params)}</li>)}
+                    {parseErrors.length > 10 && <li>{t('adminBulk.andMore', { count: parseErrors.length - 10 })}</li>}
                   </ul>
                 </div>
               )}
@@ -217,11 +222,11 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle size={16} className="text-green-600"/>
                     <p className="font-semibold text-green-700 dark:text-green-400 text-sm">
-                      Βρέθηκαν {parsed.length} εγγραφές έτοιμες για εισαγωγή
+                      {t('adminBulk.found', { count: parsed.length })}
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Πατήστε "Εισαγωγή" για να τις προσθέσετε στη βάση.
+                    {t('adminBulk.pressImport')}
                   </p>
                 </div>
               )}
@@ -232,19 +237,19 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
                   <div className="grid grid-cols-2 gap-4 mb-3">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-green-600">{result.created}</p>
-                      <p className="text-xs text-gray-500">Επιτυχείς</p>
+                      <p className="text-xs text-gray-500">{t('adminBulk.succeeded')}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-red-600">{result.failed}</p>
-                      <p className="text-xs text-gray-500">Αποτυχίες</p>
+                      <p className="text-xs text-gray-500">{t('adminBulk.failures')}</p>
                     </div>
                   </div>
                   {result.errors?.length > 0 && (
                     <div className="mt-3 max-h-40 overflow-y-auto">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Σφάλματα:</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('adminBulk.errors')}</p>
                       <ul className="text-xs text-red-600 space-y-1">
                         {result.errors.map((e: any, i: number) => (
-                          <li key={i}>• Γραμμή {e.row}: {e.error}</li>
+                          <li key={i}>{t('adminBulk.rowError', { row: e.row, error: e.error })}</li>
                         ))}
                       </ul>
                     </div>
@@ -255,11 +260,11 @@ export default function BulkImportModal({ open, onClose, type }: Props) {
 
             <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100 dark:border-gray-800">
               <button onClick={onClose} className="btn-secondary">
-                {result ? 'Κλείσιμο' : 'Ακύρωση'}
+                {result ? t('common.close') : t('common.cancel')}
               </button>
               {!result && parsed.length > 0 && (
                 <button onClick={() => importData.mutate()} disabled={importData.isPending} className="btn-primary flex items-center gap-2">
-                  {importData.isPending ? <><Loader2 size={16} className="animate-spin"/>Εισαγωγή...</> : <><Upload size={16}/>Εισαγωγή {parsed.length} εγγραφών</>}
+                  {importData.isPending ? <><Loader2 size={16} className="animate-spin"/>{t('adminBulk.importing')}</> : <><Upload size={16}/>{t('adminBulk.importN', { count: parsed.length })}</>}
                 </button>
               )}
             </div>

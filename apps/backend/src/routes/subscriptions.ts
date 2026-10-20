@@ -22,15 +22,20 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
     // One live subscription per product per user. Without this the checkout
     // could be opened twice and the customer charged monthly on two parallel
     // Stripe subscriptions for the same food plan.
+    // Κάθε μη-τερματική κατάσταση (active, payment_failed, paused): μια
+    // συνδρομή σε παύση συνεχίζει με επαναφορά, άρα δεύτερη θα χρέωνε διπλά.
     const active = await prisma.productSubscription.findFirst({
       where: {
         user_id: user.id,
         product_id: product.id,
-        status: { in: ['active', 'payment_failed'] },
+        status: { notIn: ['cancelled', 'completed'] },
       },
-      select: { id: true },
+      select: { id: true, status: true },
     })
     if (active) {
+      if (active.status === 'paused') {
+        return reply.code(409).send({ message: 'Έχεις ήδη συνδρομή σε παύση για αυτό το προϊόν' })
+      }
       return reply.code(409).send({ message: 'Έχεις ήδη ενεργή συνδρομή για αυτό το προϊόν' })
     }
 

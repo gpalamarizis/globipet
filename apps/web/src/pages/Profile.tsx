@@ -81,6 +81,13 @@ export default function Profile() {
   const tierIdx = TIER_ORDER.indexOf(tier)
   const nextTier = TIER_ORDER[tierIdx + 1]
   const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
+  // Το επίπεδο βγαίνει από τους πόντους όλων των εποχών (backend loyalty.ts), όχι από το
+  // τρέχον υπόλοιπο που μειώνεται στις εξαργυρώσεις· η πρόοδος μετράει από το όριο του τρέχοντος επιπέδου.
+  const lifetimePoints: number = loyalty?.lifetime_points ?? totalPoints
+  const curThreshold = TIER_THRESHOLDS[tier] ?? 0
+  const tierProgress = nextThreshold
+    ? Math.max(0, Math.min(100, ((lifetimePoints - curThreshold) / (nextThreshold - curThreshold)) * 100))
+    : 100
 
   const saveProfile = useMutation({
     mutationFn: () => api.patch('/users/me', form),
@@ -217,7 +224,7 @@ export default function Profile() {
             {(user as any)?.bio && <p className="text-sm text-gray-600 dark:text-gray-400 w-full">{(user as any).bio}</p>}
             {(user as any)?.city && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin size={12}/>{(user as any).city}</span>}
             {(user as any)?.phone && <span className="flex items-center gap-1 text-xs text-gray-500"><Phone size={12}/>{(user as any).phone}</span>}
-            {(user as any)?.website && <a href={(user as any).website} target="_blank" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>}
+            {(user as any)?.website && <a href={(user as any).website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>}
           </div>
         )}
       </div>
@@ -255,10 +262,10 @@ export default function Profile() {
           <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — {TIER_LABEL_KEYS[tier] ? t(TIER_LABEL_KEYS[tier]) : tier}</h3>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
             <div className="bg-orange-500 h-3 rounded-full"
-              style={{ width: nextThreshold ? `${Math.min(100, (totalPoints / nextThreshold) * 100)}%` : '100%' }} />
+              style={{ width: `${tierProgress}%` }} />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{totalPoints} {t('loyalty.points')}</span>
+            <span>{lifetimePoints} {t('loyalty.points')}</span>
             <span>{nextThreshold ? t('pgProfile.pointsForTier', { points: nextThreshold, tier: t(TIER_LABEL_KEYS[nextTier]) }) : t('pgProfile.maxTier')}</span>
           </div>
         </div>

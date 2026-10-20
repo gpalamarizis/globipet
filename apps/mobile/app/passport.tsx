@@ -23,7 +23,15 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   και κάνει την προσθήκη νέας κατηγορίας μία γραμμή.
  */
 
-type FieldSpec = { key: string; labelKey: string }
+type FieldSpec = {
+  key: string
+  labelKey: string
+  /** Μόνο στη φόρμα (η τιμή φαίνεται ήδη ως σήμα στην κάρτα). */
+  formOnly?: boolean
+}
+/** Επιλογή: η τιμή που αποθηκεύεται και το κλειδί του κειμένου της.
+ *  `el`: η τιμή είναι το ελληνικό κείμενο (όπως τη γράφει το web, π.χ. συχνότητα). */
+type Opt = { value: string; labelKey: string; el?: boolean }
 type TabSpec = {
   id: string
   /** Τμήμα διαδρομής για προσθήκη και διαγραφή· χωρίς αυτό η καρτέλα
@@ -35,37 +43,81 @@ type TabSpec = {
   data?: string
   /** Πεδίο που γίνεται τίτλος της εγγραφής. */
   title?: string
+  /** Ετικέτα του πεδίου τίτλου στη φόρμα (αλλιώς το όνομα της καρτέλας). */
+  titleLabelKey?: string
   /** Πεδίο ημερομηνίας. */
   date?: string
   /** Πεδία που εμφανίζονται ως ζεύγη. */
   fields?: FieldSpec[]
   /** Πεδίο που γίνεται σήμα, με τόνο. */
   badge?: { key: string; danger?: string[] }
+  /** Πεδία με σταθερές τιμές (ίδιες με τα <select> του web): επιλογή στη
+   *  φόρμα, μεταφρασμένο κείμενο στην κάρτα. */
+  opts?: Record<string, Opt[]>
+  /** Υποχρεωτικά πεδία (schema.prisma / passport.ts). */
+  required?: string[]
+  /** Προεπιλογές της φόρμας — ίδιες με το «Νέο …» του web. */
+  defaults?: () => Record<string, string>
+  /** Ο server δεν αποθηκεύει σημειώσεις (HealthRecord δεν έχει notes). */
+  noNotes?: boolean
 }
+
+// Επιλογές με κλειδί κειμένου `prefix + τιμή`· το «other» δείχνει «Άλλο».
+const opt = (prefix: string, values: string[], otherKey = 'passport.vt_other'): Opt[] =>
+  values.map(v => ({ value: v, labelKey: v === 'other' ? otherKey : prefix + v }))
+
+// Τύπος εμβολίου — ίδιες τιμές με το web. Χωρίς επιλογή δεν στέλνεται και
+// ο server βάζει 'other' (ίδιο default με το web, όπου το πεδίο ξεκινά «—»).
+// Χωρίς αυτό το πεδίο η κάρτα «Κατάσταση εγγράφων» δεν έβρισκε ποτέ λύσσα
+// για εμβόλια που περάστηκαν από το κινητό.
+const VACCINE_TYPES = [
+  { value: 'core', labelKey: 'passport.vt_core' },
+  { value: 'non_core', labelKey: 'passport.vt_non_core' },
+  { value: 'rabies', labelKey: 'passport.vt_rabies' },
+  { value: 'other', labelKey: 'passport.vt_other' },
+]
+
+// Συχνότητα: το web αποθηκεύει το ελληνικό κείμενο της επιλογής.
+const FREQUENCY: Opt[] = ['onceDaily', 'twiceDaily', 'threeDaily', 'weekly', 'monthly', 'asNeeded']
+  .map(k => ({ value: k, labelKey: `passport.fq_${k}`, el: true }))
 
 const TABS: TabSpec[] = [
   { id: 'identity', Icon: BookOpen, labelKey: 'passport.identity' },
 
+  // Το batch_number δεν έχει στήλη στο Vaccination (ο server το αγνοεί).
   { id: 'vaccines', api: 'vaccination', Icon: Syringe, labelKey: 'passport.vaccines',
     data: 'vaccinations', title: 'vaccine_name', date: 'date_administered',
+    badge: { key: 'vaccine_type' },
+    opts: { vaccine_type: VACCINE_TYPES },
+    required: ['vaccine_name', 'date_administered'],
+    defaults: () => ({ date_administered: localToday() }),
     fields: [
       { key: 'next_due_date', labelKey: 'passport.nextDue' },
       { key: 'vet_name', labelKey: 'passport.vet' },
-      { key: 'batch_number', labelKey: 'passport.batch' },
     ] },
 
+  // Ίδια πεδία με το web· το /health δεν αποθηκεύει diagnosis/treatment/notes.
   { id: 'health', api: 'health', Icon: Stethoscope, labelKey: 'passport.visits',
     data: 'healthRecords', title: 'title', date: 'date',
+    opts: { record_type: opt('passport.rt_', ['examination', 'diagnosis', 'follow_up', 'specialist', 'emergency', 'other']) },
+    required: ['title', 'date'],
+    defaults: () => ({ date: localToday(), record_type: 'examination' }),
+    noNotes: true,
     fields: [
+      { key: 'record_type', labelKey: 'passport.recordType' },
       { key: 'vet_name', labelKey: 'passport.vet' },
       { key: 'clinic_name', labelKey: 'passport.clinic' },
-      { key: 'diagnosis', labelKey: 'passport.diagnosis' },
-      { key: 'treatment', labelKey: 'passport.treatment' },
+      { key: 'description', labelKey: 'providerDash.description' },
+      { key: 'cost', labelKey: 'passport.cost' },
+      { key: 'next_appointment', labelKey: 'passport.nextAppointment' },
     ] },
 
   { id: 'meds', api: 'medication', Icon: Pill, labelKey: 'passport.medications',
     data: 'medications', title: 'name', date: 'start_date',
     badge: { key: 'is_active' },
+    opts: { frequency: FREQUENCY, route: opt('passport.ro_', ['oral', 'injection', 'topical', 'eye_drops', 'ear_drops']) },
+    required: ['name', 'dosage', 'frequency', 'start_date'],
+    defaults: () => ({ start_date: localToday(), frequency: 'onceDaily' }),
     fields: [
       { key: 'active_ingredient', labelKey: 'passport.ingredient' },
       { key: 'dosage', labelKey: 'passport.dosage' },
@@ -77,6 +129,9 @@ const TABS: TabSpec[] = [
   { id: 'lab', api: 'lab', Icon: FlaskConical, labelKey: 'passport.lab',
     data: 'labResults', title: 'title', date: 'date',
     badge: { key: 'is_abnormal' },
+    opts: { result_type: opt('passport.lt_', ['blood_count', 'biochemistry', 'urine', 'fecal', 'biopsy', 'culture', 'hormone', 'serology', 'other']) },
+    required: ['title', 'result_type', 'date'],
+    defaults: () => ({ date: localToday(), result_type: 'blood_count' }),
     fields: [
       { key: 'result_type', labelKey: 'passport.resultType' },
       { key: 'lab_name', labelKey: 'passport.labName' },
@@ -86,6 +141,9 @@ const TABS: TabSpec[] = [
 
   { id: 'imaging', api: 'imaging', Icon: ScanLine, labelKey: 'passport.imaging',
     data: 'imaging', title: 'imaging_type', date: 'date',
+    opts: { imaging_type: opt('passport.it_', ['xray', 'ultrasound', 'ct', 'mri', 'endoscopy', 'echocardiogram', 'other']) },
+    required: ['imaging_type', 'date'],
+    defaults: () => ({ date: localToday(), imaging_type: 'xray' }),
     fields: [
       { key: 'body_region', labelKey: 'passport.bodyRegion' },
       { key: 'vet_name', labelKey: 'passport.vet' },
@@ -95,19 +153,36 @@ const TABS: TabSpec[] = [
 
   { id: 'surgery', api: 'surgery', Icon: Scissors, labelKey: 'passport.surgeries',
     data: 'surgeries', title: 'procedure', date: 'date',
+    opts: {
+      category: opt('passport.sc_', ['orthopedic', 'soft_tissue', 'dental', 'ophthalmic', 'neurological', 'reproductive', 'other'], 'passport.sc_other'),
+      anesthesia: opt('passport.an_', ['general', 'local', 'sedation']),
+    },
+    required: ['procedure', 'date'],
+    defaults: () => ({ date: localToday() }),
     fields: [
       { key: 'category', labelKey: 'providerDash.category' },
       { key: 'surgeon_name', labelKey: 'passport.surgeon' },
       { key: 'clinic_name', labelKey: 'passport.clinic' },
       { key: 'anesthesia', labelKey: 'passport.anesthesia' },
+      { key: 'duration_min', labelKey: 'passport.durationMin' },
       { key: 'complications', labelKey: 'passport.complications' },
+      { key: 'outcome', labelKey: 'passport.outcome' },
+      { key: 'follow_up', labelKey: 'passport.followUp' },
+      { key: 'cost', labelKey: 'passport.cost' },
     ] },
 
   { id: 'allergies', api: 'allergy', Icon: TriangleAlert, labelKey: 'passport.allergies',
     data: 'allergies', title: 'allergen', date: 'diagnosed_date',
-    badge: { key: 'severity', danger: ['severe', 'high'] },
+    badge: { key: 'severity', danger: ['severe', 'anaphylactic', 'high'] },
+    opts: {
+      allergen_type: opt('passport.at_', ['food', 'medication', 'environmental', 'insect', 'contact', 'other']),
+      severity: opt('passport.st_', ['mild', 'moderate', 'severe', 'anaphylactic']),
+    },
+    required: ['allergen', 'allergen_type'],
+    defaults: () => ({ allergen_type: 'food', severity: 'moderate' }),
     fields: [
       { key: 'allergen_type', labelKey: 'passport.allergenType' },
+      { key: 'severity', labelKey: 'ai.severity', formOnly: true },
       { key: 'reaction', labelKey: 'passport.reaction' },
       { key: 'treatment', labelKey: 'passport.treatment' },
     ] },
@@ -115,7 +190,11 @@ const TABS: TabSpec[] = [
   { id: 'chronic', api: 'chronic', Icon: Heart, labelKey: 'passport.chronic',
     data: 'chronicConditions', title: 'condition', date: 'diagnosed_date',
     badge: { key: 'status' },
+    opts: { status: opt('passport.cs_', ['active', 'managed', 'resolved']) },
+    required: ['condition'],
+    defaults: () => ({ status: 'active' }),
     fields: [
+      { key: 'status', labelKey: 'passport.status', formOnly: true },
       { key: 'diagnosed_by', labelKey: 'passport.diagnosedBy' },
       { key: 'clinic_name', labelKey: 'passport.clinic' },
       { key: 'treatment_plan', labelKey: 'passport.treatmentPlan' },
@@ -124,23 +203,35 @@ const TABS: TabSpec[] = [
 
   { id: 'dental', api: 'dental', Icon: Smile, labelKey: 'passport.dental',
     data: 'dentalRecords', title: 'procedure', date: 'date',
+    opts: {
+      procedure: opt('passport.dp_', ['cleaning', 'extraction', 'xray', 'root_canal', 'other']),
+      // Το web αποθηκεύει «Stage N».
+      grade: [1, 2, 3, 4].map(n => ({ value: `Stage ${n}`, labelKey: `passport.stage_${n}` })),
+    },
+    required: ['procedure', 'date'],
+    defaults: () => ({ date: localToday(), procedure: 'cleaning' }),
     fields: [
       { key: 'vet_name', labelKey: 'passport.vet' },
       { key: 'teeth_treated', labelKey: 'passport.teeth' },
       { key: 'grade', labelKey: 'passport.grade' },
       { key: 'next_due', labelKey: 'passport.nextDue' },
+      { key: 'cost', labelKey: 'passport.cost' },
     ] },
 
+  // Οι σημειώσεις έχουν δικό τους πεδίο στη φόρμα (όχι δεύτερη φορά εδώ).
   { id: 'weight', api: 'weight', Icon: Scale, labelKey: 'passport.weight',
     data: 'weightRecords', title: 'weight_kg', date: 'date',
+    required: ['weight_kg', 'date'],
+    defaults: () => ({ date: localToday() }),
     fields: [
       { key: 'bcs', labelKey: 'passport.bcs' },
       { key: 'vet_name', labelKey: 'passport.vet' },
-      { key: 'notes', labelKey: 'serviceDetail.note' },
     ] },
 
   { id: 'genetic', api: 'genetic', Icon: Dna, labelKey: 'passport.genetic',
     data: 'geneticTests', title: 'test_name', date: 'date',
+    required: ['test_name', 'date'],
+    defaults: () => ({ date: localToday() }),
     fields: [
       { key: 'provider', labelKey: 'passport.provider' },
       { key: 'results', labelKey: 'passport.results' },
@@ -148,19 +239,33 @@ const TABS: TabSpec[] = [
       { key: 'conditions_found', labelKey: 'passport.conditionsFound' },
     ] },
 
+  // Η στήλη είναι temperature_c (όχι temperature).
   { id: 'vitals', api: 'vitals', Icon: Activity, labelKey: 'passport.vitals',
     data: 'vitalSigns', title: 'date', date: 'date',
+    // Ίδιες τιμές με το <select> του web.
+    opts: { capillary_refill: [
+      { value: '<2sec', labelKey: 'passport.crt_normal' },
+      { value: '2-3sec', labelKey: 'passport.crt_prolonged' },
+      { value: '>3sec', labelKey: 'passport.crt_critical' },
+    ] },
+    required: ['date'],
+    defaults: () => ({ date: localToday() }),
     fields: [
-      { key: 'temperature', labelKey: 'passport.temperature' },
+      { key: 'temperature_c', labelKey: 'passport.temperature' },
       { key: 'heart_rate', labelKey: 'passport.heartRate' },
       { key: 'respiratory_rate', labelKey: 'passport.respiratory' },
+      { key: 'blood_pressure', labelKey: 'passport.bloodPressure' },
+      { key: 'capillary_refill', labelKey: 'passport.crt' },
       { key: 'vet_name', labelKey: 'passport.vet' },
     ] },
 
   { id: 'pedigree', Icon: Award, labelKey: 'passport.pedigree' },
 
   { id: 'travel', api: 'travel', Icon: Plane, labelKey: 'passport.travel',
-    data: 'travelDocs', title: 'destination_country', date: 'departure_date',
+    data: 'travelDocs', title: 'destination_country', titleLabelKey: 'passport.destCountry', date: 'departure_date',
+    opts: { travel_type: opt('passport.tt_', ['flight', 'ferry', 'train', 'road', 'international']) },
+    required: ['travel_type', 'destination_city', 'departure_date'],
+    defaults: () => ({ travel_type: 'flight' }),
     fields: [
       { key: 'travel_type', labelKey: 'passport.travelType' },
       { key: 'origin_city', labelKey: 'passport.from' },
@@ -175,6 +280,7 @@ const TABS: TabSpec[] = [
   { id: 'access', api: 'access', Icon: Users, labelKey: 'passport.access',
     data: 'accessList', title: 'provider_email', date: 'granted_at',
     badge: { key: 'status' },
+    required: ['provider_email'],
     fields: [
       { key: 'provider_name', labelKey: 'passport.acc_vetName' },
       { key: 'reason', labelKey: 'passport.acc_reasonComment' },
@@ -182,16 +288,13 @@ const TABS: TabSpec[] = [
     ] },
 ]
 
-// Τύπος εμβολίου — ίδιες τιμές με το web. Χωρίς επιλογή δεν στέλνεται και
-// ο server βάζει 'other' (ίδιο default με το web, όπου το πεδίο ξεκινά «—»).
-// Χωρίς αυτό το πεδίο η κάρτα «Κατάσταση εγγράφων» δεν έβρισκε ποτέ λύσσα
-// για εμβόλια που περάστηκαν από το κινητό.
-const VACCINE_TYPES = [
-  { value: 'core', labelKey: 'passport.vt_core' },
-  { value: 'non_core', labelKey: 'passport.vt_non_core' },
-  { value: 'rabies', labelKey: 'passport.vt_rabies' },
-  { value: 'other', labelKey: 'passport.vt_other' },
-]
+// Αριθμητικά πεδία (Int / Float στο schema) και λίστες (String[]): η φόρμα
+// δίνει κείμενο, που το Prisma απορρίπτει — μετατρέπονται πριν την αποστολή.
+const NUM_INT = new Set(['bcs', 'heart_rate', 'respiratory_rate', 'duration_min'])
+const NUM_FLOAT = new Set(['weight_kg', 'temperature_c', 'cost'])
+const LIST_KEYS = new Set(['breeds_detected', 'conditions_found'])
+// Boolean στο schema (π.χ. PetLabResult.is_abnormal): στη φόρμα 'true'/'', στον server true/false.
+const BOOL_KEYS = new Set(['is_abnormal'])
 
 // Πεδία ημερομηνίας της φόρμας — τα ίδια που στο web είναι <input type="date">,
 // και το expires_at της πρόσβασης. Στο κινητό γράφονται ως κείμενο, οπότε
@@ -254,17 +357,7 @@ export default function PassportScreen() {
   const [form, setForm] = useState<Record<string, string>>({})
 
   const addRecord = useMutation({
-    mutationFn: () => api.post(`/passport/${spec.api}/${petId}`, {
-      ...Object.fromEntries(
-        Object.entries(form)
-          .filter(([, v]) => v !== '' && v != null)
-          // Το email του κτηνιάτρου όπως το αποθηκεύει ο λογαριασμός του:
-          // με κενά ή κεφαλαία η πρόσβαση δεν θα ταίριαζε ποτέ με το login του.
-          .map(([k, v]) => [k, k === 'provider_email' ? v.trim().toLowerCase() : DATE_KEYS.has(k) ? v.trim() : v])
-          .map(([k, v]) => [k, /^\d+([.,]\d+)?$/.test(v) && (k.includes('weight') || k.includes('rate') || k.includes('temp'))
-            ? parseFloat(v.replace(',', '.')) : v]),
-      ),
-    }),
+    mutationFn: (body: Record<string, any>) => api.post(`/passport/${spec.api}/${petId}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['passport', petId] })
       setAdding(false); setForm({})
@@ -300,11 +393,34 @@ export default function PassportScreen() {
     ])
   }
 
-  // Έλεγχος ημερομηνιών πριν την αποστολή (βλ. DATE_KEYS).
+  /**
+   * Έλεγχος και μετατροπή πριν την αποστολή — ίδιο σώμα με αυτό του web:
+   * υποχρεωτικά πεδία, ημερομηνίες (βλ. DATE_KEYS), αριθμοί ως Number,
+   * λίστες ως πίνακας, και η συχνότητα ως το ελληνικό κείμενο της επιλογής.
+   */
   const submitRecord = () => {
-    const bad = Object.entries(form).some(([k, v]) => DATE_KEYS.has(k) && !!v?.trim() && !isValidYmd(v.trim()))
-    if (bad) return Alert.alert(t('common.error'), t('passport.invalidDate'))
-    addRecord.mutate()
+    if (addRecord.isPending) return
+    const body: Record<string, any> = {}
+    for (const [k, raw] of Object.entries(form)) {
+      const v = typeof raw === 'string' ? raw.trim() : raw
+      if (v === '' || v == null) continue
+      const o = spec.opts?.[k]?.find(x => x.value === v)
+      if (o?.el) body[k] = t(o.labelKey, { lng: 'el' })
+      else if (BOOL_KEYS.has(k)) body[k] = v === 'true'
+      else if (NUM_INT.has(k) || NUM_FLOAT.has(k)) {
+        const n = v.replace(',', '.')
+        if (!/^\d+(\.\d+)?$/.test(n)) return Alert.alert(t('common.error'), t('passport.invalidNumber'))
+        body[k] = NUM_INT.has(k) ? Math.round(parseFloat(n)) : parseFloat(n)
+      } else if (LIST_KEYS.has(k)) body[k] = v.split(',').map(x => x.trim()).filter(Boolean)
+      // Το email του κτηνιάτρου όπως το αποθηκεύει ο λογαριασμός του:
+      // με κενά ή κεφαλαία η πρόσβαση δεν θα ταίριαζε ποτέ με το login του.
+      else body[k] = k === 'provider_email' ? v.toLowerCase() : v
+    }
+    if ((spec.required ?? []).some(k => body[k] == null)) return Alert.alert(t('common.error'), t('passport.requiredMissing'))
+    // BCS: κλίμακα 1–9 (στο web επιλογή 1–9).
+    if (body.bcs != null && (body.bcs < 1 || body.bcs > 9)) return Alert.alert(t('common.error'), t('passport.bcsRange'))
+    if (Object.keys(body).some(k => DATE_KEYS.has(k) && !isValidYmd(body[k]))) return Alert.alert(t('common.error'), t('passport.invalidDate'))
+    addRecord.mutate(body)
   }
 
   const exportPdf = async () => {
@@ -360,10 +476,25 @@ export default function PassportScreen() {
     return String(v)
   }
 
+  // Τιμή πεδίου με επιλογές → μεταφρασμένο κείμενο (άγνωστη/ελεύθερη τιμή μένει ως έχει).
+  const optLabel = (key: string, v: any) => {
+    const o = spec.opts?.[key]?.find(x => (x.el ? t(x.labelKey, { lng: 'el' }) : x.value) === v)
+    return o ? t(o.labelKey) : fmt(v)
+  }
+
   const badgeFor = (r: any) => {
     if (!spec.badge) return null
     const v = r[spec.badge.key]
     if (v == null || v === '') return null
+    if (spec.opts?.[spec.badge.key]) {
+      return <Badge label={optLabel(spec.badge.key, v) ?? String(v)}
+        tone={spec.badge.danger?.includes(String(v).toLowerCase()) ? 'danger' : 'neutral'} />
+    }
+    // Εργαστηριακά: παθολογικά / φυσιολογικά (όπως στο web), όχι «Ενεργό».
+    if (spec.badge.key === 'is_abnormal' && typeof v === 'boolean') {
+      return <Badge label={v ? t('passport.abnormal') : t('passport.normal')}
+        tone={v ? 'danger' : 'success'} />
+    }
     if (typeof v === 'boolean') {
       return <Badge label={v ? t('passport.active') : t('passport.inactive')}
         tone={v ? 'success' : 'neutral'} />
@@ -371,6 +502,37 @@ export default function PassportScreen() {
     const danger = spec.badge.danger?.includes(String(v).toLowerCase())
     return <Badge label={t(`passport.st_${v}`, { defaultValue: String(v) })}
       tone={danger ? 'danger' : 'neutral'} />
+  }
+
+  // Πεδίο φόρμας: επιλογή (όπως τα <select> του web) ή κείμενο, με το
+  // κατάλληλο πληκτρολόγιο για αριθμούς. Τα υποχρεωτικά σημειώνονται με *.
+  const renderField = (key: string, labelKey: string) => {
+    const req = !!spec.required?.includes(key)
+    const label = req ? `${t(labelKey)} *` : t(labelKey)
+    const options = spec.opts?.[key]
+    if (options) return (
+      <View key={key} style={{ gap: space.xs }}>
+        <Text style={s.k}>{label}</Text>
+        <View style={s.tabs}>
+          {options.map(o => {
+            const on = form[key] === o.value
+            return (
+              <TouchableOpacity key={o.value} activeOpacity={0.7}
+                style={[s.tab, on && s.tabOn]}
+                onPress={() => setForm(f => ({ ...f, [key]: on && !req ? '' : o.value }))}>
+                <Text style={[s.tabTxt, on && s.tabTxtOn]}>{t(o.labelKey)}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      </View>
+    )
+    return (
+      <Input key={key} label={label} value={form[key] ?? ''}
+        onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
+        placeholder={DATE_KEYS.has(key) ? 'YYYY-MM-DD' : LIST_KEYS.has(key) ? t('passport.commaHint') : undefined}
+        keyboardType={NUM_INT.has(key) || NUM_FLOAT.has(key) ? 'decimal-pad' : undefined} />
+    )
   }
 
   return (
@@ -425,7 +587,7 @@ export default function PassportScreen() {
         {!!spec.api && (
           <Button label={tab === 'access' ? t('passport.acc_grantAccess') : t('passport.addRecord')}
             icon={<Plus size={18} color={colors.textOnDark} />}
-            onPress={() => { setForm({}); setAdding(true) }} full />
+            onPress={() => { setForm(spec.defaults?.() ?? {}); setAdding(true) }} full />
         )}
 
         {isLoading ? <SkeletonRows count={4} /> : (
@@ -444,8 +606,8 @@ export default function PassportScreen() {
                   </View>
                 </View>
                 {([
-                  ['passport.species', fmt(pet.species)],
-                  ['pets.gender', pet.gender === 'female' ? t('passport.female') : t('passport.male')],
+                  ['passport.species', pet.species ? t(`pets.kind_${pet.species}`, { defaultValue: pet.species }) : null],
+                  ['pets.gender', pet.gender === 'female' ? t('passport.female') : pet.gender === 'male' ? t('passport.male') : null],
                   ['passport.age', pet.age != null ? t('passport.age_years', { count: pet.age }) : null],
                   ['pets.weight', pet.weight ? `${pet.weight} kg` : null],
                   ['pets.color', fmt(pet.color)],
@@ -489,12 +651,16 @@ export default function PassportScreen() {
                   ['pets.microchip', !!pet?.microchip_number],
                   ['passport.rabiesVaccine', (data.vaccinations ?? []).some((v: any) =>
                     v.vaccine_type === 'rabies' && (!v.next_due_date || String(v.next_due_date).slice(0, 10) >= localToday()))],
-                  ['passport.snapTest', (data.healthRecords ?? []).length > 0],
+                  // Δεν υπάρχει πεδίο «SNAP» στη βάση: «Ναι» μόνο αν κάποια εργαστηριακή ή
+                  // εξέταση το αναφέρει ρητά στον τίτλο, αλλιώς ουδέτερο «έλεγξε» (όπως στο web).
+                  ['passport.snapTest', [...(data.labResults ?? []), ...(data.healthRecords ?? [])]
+                    .some((r: any) => /\bsnap\b/i.test(String(r.title ?? ''))) ? true : null],
                   ['passport.travelDocs', (data.travelDocs ?? []).length > 0],
                 ] as const).map(([k, ok]) => (
                   <View key={k} style={[s.kv, { alignItems: 'center' }]}>
                     <Text style={s.k}>{t(k)}</Text>
-                    <Badge label={ok ? t('common.yes') : t('common.no')} tone={ok ? 'success' : 'danger'} />
+                    <Badge label={ok === null ? t('passport.verifyManually') : ok ? t('common.yes') : t('common.no')}
+                      tone={ok === null ? 'neutral' : ok ? 'success' : 'danger'} />
                   </View>
                 ))}
               </Card>
@@ -508,7 +674,7 @@ export default function PassportScreen() {
                     <Card key={r.id ?? i}>
                       <View style={s.recHead}>
                         <Text style={s.recTitle} numberOfLines={2}>
-                          {fmt(r[spec.title ?? 'title']) ?? t(spec.labelKey)}
+                          {optLabel(spec.title ?? 'title', r[spec.title ?? 'title']) ?? t(spec.labelKey)}
                         </Text>
                         {badgeFor(r)}
                         {!!spec.api && !!r.id && (spec.id !== 'access' || r.status === 'approved') && (
@@ -521,7 +687,8 @@ export default function PassportScreen() {
                         <Text style={s.recDate}>{fmt(r[spec.date])}</Text>
                       )}
                       {spec.fields?.map(f => {
-                        const v = fmt(r[f.key])
+                        if (f.formOnly) return null
+                        const v = optLabel(f.key, r[f.key])
                         if (!v) return null
                         return (
                           <View key={f.key} style={s.kv}>
@@ -530,7 +697,7 @@ export default function PassportScreen() {
                           </View>
                         )
                       })}
-                      {!!r.notes && spec.id !== 'weight' && (
+                      {!!r.notes && (
                         <Text style={s.notes}>{r.notes}</Text>
                       )}
                     </Card>
@@ -584,15 +751,9 @@ export default function PassportScreen() {
               {tab !== 'pedigree' && tab !== 'access' && (<>
               {/* Ο τίτλος και η ημερομηνία πρώτα: είναι τα πεδία που
                   ταυτοποιούν την εγγραφή σε κάθε κατηγορία. */}
-              {!!spec.title && (
-                <Input label={t(spec.labelKey)} value={form[spec.title] ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, [spec.title!]: v }))} />
-              )}
-              {!!spec.date && (
-                <Input label={t('serviceDetail.date')} value={form[spec.date] ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, [spec.date!]: v }))}
-                  placeholder="YYYY-MM-DD" />
-              )}
+              {/* Στα ζωτικά ο τίτλος είναι η ίδια η ημερομηνία: ένα πεδίο, όχι δύο. */}
+              {!!spec.title && spec.title !== spec.date && renderField(spec.title, spec.titleLabelKey ?? spec.labelKey)}
+              {!!spec.date && renderField(spec.date, 'serviceDetail.date')}
               {tab === 'vaccines' && (
                 <View style={{ gap: space.xs }}>
                   <Text style={s.k}>{t('passport.vaccineType')}</Text>
@@ -610,19 +771,30 @@ export default function PassportScreen() {
                   </View>
                 </View>
               )}
-              {spec.fields?.map(f => (
-                <Input key={f.key} label={t(f.labelKey)} value={form[f.key] ?? ''}
-                  onChangeText={v => setForm(x => ({ ...x, [f.key]: v }))}
-                  placeholder={DATE_KEYS.has(f.key) ? 'YYYY-MM-DD' : undefined} />
-              ))}
-              <Input label={t('serviceDetail.note')} value={form.notes ?? ''}
-                onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline />
+              {spec.fields?.map(f => renderField(f.key, f.labelKey))}
+              {/* Εργαστηριακά: «Παθολογικά αποτελέσματα» (checkbox στο web). */}
+              {tab === 'lab' && (
+                <View style={s.tabs}>
+                  <TouchableOpacity activeOpacity={0.7}
+                    style={[s.tab, form.is_abnormal === 'true' && s.tabOn]}
+                    onPress={() => setForm(f => ({ ...f, is_abnormal: f.is_abnormal === 'true' ? '' : 'true' }))}>
+                    <Text style={[s.tabTxt, form.is_abnormal === 'true' && s.tabTxtOn]}>{t('passport.abnormalResults')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!spec.noNotes && (
+                <Input label={t('serviceDetail.note')} value={form.notes ?? ''}
+                  onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline />
+              )}
               </>)}
             </ScrollView>
             <Button label={t('common.save')}
               disabled={tab === 'pedigree'
                 ? savePedigree.isPending
-                : (addRecord.isPending || !(spec.title && form[spec.title]?.trim()))}
+                // Ενεργό όταν είναι συμπληρωμένα τα ΥΠΟΧΡΕΩΤΙΚΑ πεδία του τύπου
+                // (spec.required, ίδια με το submitRecord και το web) — όχι ο
+                // τίτλος: στο ταξίδι η χώρα προορισμού δεν είναι υποχρεωτική.
+                : (addRecord.isPending || (spec.required ?? []).some(k => !String(form[k] ?? '').trim()))}
               loading={addRecord.isPending || savePedigree.isPending}
               onPress={() => (tab === 'pedigree' ? savePedigree.mutate() : submitRecord())} full />
           </View>

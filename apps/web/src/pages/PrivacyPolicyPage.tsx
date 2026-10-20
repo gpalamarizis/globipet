@@ -15,7 +15,9 @@ import { getLegalDoc, LEGAL_UPDATED } from '@/lib/legal'
 export default function PrivacyPolicyPage() {
   const { t, i18n } = useTranslation()
   const doc = getLegalDoc('privacy', i18n.language)
-  const updated = new Date(LEGAL_UPDATED).toLocaleDateString(i18n.language || 'el')
+  // LEGAL_UPDATED είναι 'YYYY-MM-DD': τοπική ημερομηνία από τα μέρη της —
+  // το new Date('YYYY-MM-DD') είναι UTC (προηγούμενη μέρα δυτικά του UTC).
+  const updated = (([y, m, d]) => new Date(y, m - 1, d))(LEGAL_UPDATED.split('-').map(Number)).toLocaleDateString(i18n.language || 'el')
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4">

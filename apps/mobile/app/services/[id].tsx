@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share, Platform } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star, Tag, Phone } from 'lucide-react-native'
+import { Calendar, Clock, PawPrint, Package, Stethoscope, MapPin, Star, Tag, Phone, Share2 } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input, Badge } from '@/components/ui'
@@ -148,6 +148,14 @@ export default function ServiceDetailScreen() {
   })
   const finalTotal = quote?.discount > 0 ? Number(quote.final) : Number(total)
 
+  // Κοινοποίηση με το σύστημα — ίδιος σύνδεσμος με το web (/services/:id), όπως στο προϊόν.
+  const shareService = () => {
+    const url = `https://globipet.com/services/${id}`
+    const text = String(service?.title || service?.provider_name || '')
+    // iOS: το url πάει ξεχωριστά· Android: αγνοεί το url, οπότε μπαίνει στο μήνυμα.
+    Share.share(Platform.OS === 'ios' ? { message: text, url } : { message: `${text}\n${url}` }).catch(() => {})
+  }
+
   if (isLoading) return <Screen title={t('services.title')} back><SkeletonRows count={3} /></Screen>
 
   if (!service) return (
@@ -162,7 +170,12 @@ export default function ServiceDetailScreen() {
 
         {/* Κεφαλίδα υπηρεσίας */}
         <Card>
-          <Text style={s.title}>{service.title || service.provider_name}</Text>
+          <View style={s.titleRow}>
+            <Text style={[s.title, { flex: 1 }]}>{service.title || service.provider_name}</Text>
+            <TouchableOpacity onPress={shareService} hitSlop={8} accessibilityLabel={t('social.share')}>
+              <Share2 size={icon.md} color={colors.textLight} />
+            </TouchableOpacity>
+          </View>
           <View style={s.metaRow}>
             {!!service.city && (
               <>
@@ -423,6 +436,7 @@ const s = StyleSheet.create({
   body: { padding: space.lg, gap: space.lg, paddingBottom: space.xxxl },
 
   title: { ...type.section, color: colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginTop: space.sm },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs, flexWrap: 'wrap' },
   meta: { ...type.caption, color: colors.textLight, marginRight: space.sm },

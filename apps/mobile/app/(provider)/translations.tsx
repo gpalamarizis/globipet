@@ -42,7 +42,15 @@ export default function ProviderTranslations() {
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['trn-rows', tab],
-    queryFn: () => api.get(SOURCE[tab]).then(r => r.data?.data ?? r.data ?? []),
+    queryFn: () => api.get(SOURCE[tab]).then(r => {
+      const list = r.data?.data ?? r.data ?? []
+      // Το /packages/my επιστρέφει τις ΥΠΗΡΕΣΙΕΣ με τα πακέτα τους μέσα
+      // (backend/src/routes/packages.ts): η μετάφραση αφορά το κάθε πακέτο
+      // (entity service_package, id του πακέτου) — όπως στο web.
+      return tab === 'service_package'
+        ? (list as any[]).flatMap((s: any) => s?.packages ?? [])
+        : list
+    }),
   })
 
   // Ποια έχουν ήδη αγγλικά: ένα ερώτημα για όλα, όχι ένα ανά γραμμή.

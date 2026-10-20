@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react-native'
 import { SUPPORTED_LANGUAGES, changeLanguage } from '../lib/i18n'
 import { Screen, Card } from '@/components/ui'
+import { useAuthStore } from '@/store/auth'
 import { colors, space, type, weight, icon } from '@/theme'
 
 /**
@@ -19,7 +20,13 @@ export default function LanguageScreen() {
   const current = i18n.language
 
   const select = async (code: string) => {
-    await changeLanguage(code)
+    // Συνδεδεμένος χρήστης: αποθήκευση και στον server (όπως στο web).
+    // Η γλώσσα αλλάζει αμέσως· η αποθήκευση στον server γίνεται στο παρασκήνιο
+    // (χωρίς σήμα η οθόνη δεν περιμένει έως 30″).
+    if (useAuthStore.getState().user) {
+      await changeLanguage(code)
+      void useAuthStore.getState().updateLanguage(code)
+    } else await changeLanguage(code)
     router.back()
   }
 

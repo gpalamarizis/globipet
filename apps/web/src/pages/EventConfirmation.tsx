@@ -38,11 +38,14 @@ export default function EventConfirmation() {
     enabled: !!id,
   })
 
-  const { data: reg, refetch, isLoading } = useQuery({
+  const { data: reg, refetch, isLoading, error: regError } = useQuery({
     queryKey: ['event-registration', id],
     queryFn: () => api.get(`/events/${id}/registration`).then(r => r.data?.data),
     enabled: !!id && isAuthenticated,
+    // 404 = η εκδήλωση δεν υπάρχει πια· οριστική απάντηση, χωρίς νέα απόπειρα.
+    retry: (n, e: any) => (e?.response?.status ?? e?.statusCode) !== 404 && n < 1,
   })
+  const gone = ((regError as any)?.response?.status ?? (regError as any)?.statusCode) === 404
 
   const status: string | undefined = reg?.registration?.status
   const regId: string | undefined = reg?.registration?.id
@@ -104,7 +107,6 @@ export default function EventConfirmation() {
   const confirmed = status === 'registered'
   const refunded = status === 'refunded'
   const refundFailed = status === 'refund_failed' || status === 'refunding'
-  const waiting = isLoading || ((status === 'pending_payment' || status === 'refunding') && !timedOut)
   // Πέρασε ο χρόνος αναμονής με πληρωμή που ξεκίνησε (υπάρχει transaction
   // id): εκκρεμότητα, όχι αποτυχία — το webhook μπορεί να έρθει αργότερα.
   const stillPending = status === 'pending_payment' && timedOut && !!transactionId
@@ -118,10 +120,21 @@ export default function EventConfirmation() {
   const eventCancelled = (refundReason === 'event_cancelled' && (refunded || status === 'refund_failed'))
     || (cancelledFlag && (status === 'cancelled' || refunding
       || ((refunded || status === 'refund_failed') && refundReason !== 'cancelled' && refundReason !== 'full')))
+  // Αναμονή μόνο όταν η έκβαση είναι άγνωστη: εκκρεμής πληρωμή, ή `refunding`
+  // χωρίς λόγο (ή «full») και χωρίς ακύρωση εκδήλωσης (αυτόματη επιστροφή, γέμισε).
+  // Με γνωστό λόγο (ακύρωσες / ακύρωσε ο διοργανωτής) το κείμενο φαίνεται
+  // αμέσως· το polling συνεχίζει μέχρι `refunded` / `refund_failed`.
+  const waiting = isLoading || ((status === 'pending_payment' || (refunding && (!refundReason || refundReason === 'full') && !cancelledFlag)) && !timedOut)
 
   return (
     <div className="page-container py-16 max-w-md mx-auto text-center">
-      {confirmed ? (
+      {gone ? (
+        <>
+          <XCircle size={56} className="mx-auto text-gray-400 mb-4" />
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.goneTitle')}</h1>
+          <p className="text-sm text-gray-500 mb-6">{t('pgEventConfirm.goneDesc')}</p>
+        </>
+      ) : confirmed ? (
         <>
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.confirmedTitle')}</h1>
@@ -157,6 +170,17 @@ export default function EventConfirmation() {
               : t('events.cancelledByOrganizerRefundDelayed')}
           </p>
         </>
+      ) : refundFailed && refundReason === 'cancelled' ? (
+        <>
+          {/* Ο χρήστης ακύρωσε ο ίδιος — όχι «γέμισε». */}
+          {refunding
+            ? <Clock size={56} className="mx-auto text-amber-500 mb-4" />
+            : <XCircle size={56} className="mx-auto text-red-500 mb-4" />}
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('events.cancelled')}</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            {refunding ? t('events.cancelledRefundInProgress') : t('pgEventConfirm.cancelledRefundDelayedDesc')}
+          </p>
+        </>
       ) : refundFailed || (refunded && refundReason === 'full') ? (
         <>
           <XCircle size={56} className="mx-auto text-red-500 mb-4" />
@@ -168,7 +192,8 @@ export default function EventConfirmation() {
       ) : refunded ? (
         <>
           <CheckCircle size={56} className="mx-auto text-gray-400 mb-4" />
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.refundedTitle')}</h1>
+          {/* Επιστροφή λόγω δικής σου ακύρωσης: «Η συμμετοχή ακυρώθηκε», όπως στο κινητό. */}
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{refundReason === 'cancelled' ? t('events.cancelled') : t('pgEventConfirm.refundedTitle')}</h1>
           <p className="text-sm text-gray-500 mb-6">{t('pgEventConfirm.refundedDesc')}</p>
         </>
       ) : (
@@ -179,7 +204,9 @@ export default function EventConfirmation() {
         </>
       )}
       {!waiting && (
-        <Link to={`/events/${id}`} className="btn-primary w-full justify-center">{t('pgEventConfirm.backToEvent')}</Link>
+        gone
+          ? <Link to="/events" className="btn-primary w-full justify-center">{t('nav.events')}</Link>
+          : <Link to={`/events/${id}`} className="btn-primary w-full justify-center">{t('pgEventConfirm.backToEvent')}</Link>
       )}
     </div>
   )

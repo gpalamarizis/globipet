@@ -9,13 +9,14 @@ import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, EmptyState, Button } from '@/components/ui'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { fmtYmd } from '@/lib/dates'
 
 /**
  * Επισκόπηση παρόχου — ίδια με την καρτέλα «Επισκόπηση» του web.
  * Τέσσερις αριθμοί, οι επόμενες κρατήσεις, και έξοδος.
  */
 export default function ProviderOverview() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { user, logout } = useAuthStore()
@@ -169,7 +170,7 @@ export default function ProviderOverview() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.bookingTitle} numberOfLines={1}>{b.service?.title || t('providerDash.booking')}</Text>
               <Text style={s.bookingMeta} numberOfLines={1}>
-                {b.customer_name} · {b.booking_date} {b.booking_time}
+                {b.customer_name} · {fmtYmd(b.booking_date, i18n.language)} {b.booking_time}
                 {b.staff_name ? ` · ${b.staff_name}` : ''}
               </Text>
             </View>

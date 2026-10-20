@@ -122,7 +122,9 @@ export default function EventDetail() {
       ...(fresh?.refunds
         ? [t('events.cancelEventRefunds', { count: fresh.refunds, amount: Number(fresh.refund_total ?? 0).toFixed(2) })]
         : []),
-      t('events.cancelEventQuestion'),
+      // Ήδη ακυρωμένη (κουμπί «Ολοκλήρωση επιστροφών»): η ερώτηση αφορά τις επιστροφές.
+      (fresh?.already_cancelled ?? cancelPreview?.already_cancelled)
+        ? t('events.completeRefundsQuestion') : t('events.cancelEventQuestion'),
     ]
     if (!confirm(lines.join('\n'))) return
     cancelEvent.mutate()

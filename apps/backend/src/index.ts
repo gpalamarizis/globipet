@@ -5,6 +5,7 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import cookie from '@fastify/cookie'
+import { Prisma } from '@prisma/client'
 import adminCatalogRoutes from './routes/admin-catalog.js'
 import insuranceRoutes from './routes/insurance.js'
 
@@ -52,7 +53,7 @@ import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import registryRoutes from './routes/registry.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
-import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron } from './lib/cron.js'
+import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron, startStuckRefundsCron } from './lib/cron.js'
 import { registerMessageTranslation } from './lib/apiMessages.js'
 import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
@@ -179,6 +180,8 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   // εφαρμογή. Και οι δύο μορφές URL (με/χωρίς τελική κάθετο).
   '/api/geocode':              { max: 20, window: '1 minute' },
   '/api/geocode/':             { max: 20, window: '1 minute' },
+  // Ίδια πηγή (lib/geocode → Nominatim) για τις κοινότητες: ίδιο όριο.
+  '/api/communities/geocode':  { max: 20, window: '1 minute' },
   // Δημόσιο: κάθε κλήση ρωτά τη Viva.
   '/api/payments/return':      { max: 30, window: '1 minute' },
 }
@@ -277,6 +280,46 @@ const routes = [
 // τίποτα και η αποτυχία είναι σιωπηλή.
 registerMessageTranslation(app)
 
+/**
+ * Σφάλματα Prisma που ΔΕΝ πιάστηκαν στο route.
+ *
+ * Χωρίς αυτό, κάθε λάθος δεδομένο του πελάτη που έφτανε στη βάση (π.χ.
+ * κείμενο σε αριθμητικό πεδίο, null σε υποχρεωτική στήλη, ανύπαρκτο id σε
+ * findUniqueOrThrow) γινόταν 500 «σφάλμα διακομιστή». Εδώ:
+ *   PrismaClientValidationError (λάθος τύπος/λείπει πεδίο) → 400
+ *   P2000 (τιμή πολύ μεγάλη για τη στήλη), P2003 (ανύπαρκτη αναφορά) → 400
+ *   P2025 (η εγγραφή δεν βρέθηκε) → 404
+ * με γενικό μεταφρασμένο μήνυμα (lib/apiMessages) — ποτέ το μήνυμα του Prisma,
+ * που περιέχει ονόματα πινάκων/στηλών. Το πλήρες σφάλμα πάει στα logs.
+ * ΟΛΑ τα υπόλοιπα (429 του rate limit, 400 του validation του Fastify, 401,
+ * πραγματικά 500, P2002 κ.λπ.) περνούν αυτούσια στον προεπιλεγμένο χειριστή
+ * του Fastify — η συμπεριφορά τους δεν αλλάζει.
+ * ΠΡΕΠΕΙ να μπει πριν τα routes (οι υπο-εφαρμογές κληρονομούν τον χειριστή
+ * τη στιγμή της εγγραφής τους).
+ */
+app.setErrorHandler((err: any, req, reply) => {
+  const prismaStatus =
+    err instanceof Prisma.PrismaClientValidationError ? 400
+      : err instanceof Prisma.PrismaClientKnownRequestError
+        ? (err.code === 'P2000' || err.code === 'P2003' ? 400 : err.code === 'P2025' ? 404 : 0)
+        : 0
+  if (!prismaStatus) {
+    // Αμετάβλητη συμπεριφορά: ο επόμενος (προεπιλεγμένος) χειριστής.
+    // ΠΡΟΣΟΧΗ: το reply.send() ενός ΜΗ-Error αντικειμένου (π.χ. τα 429 του
+    // rate limit ή τα throw { statusCode, message }) στέλνεται ως κανονική
+    // απάντηση με status 200 — κρατάμε ρητά τον κωδικό του.
+    if (!(err instanceof Error)) {
+      const sc = Number(err?.statusCode ?? err?.status)
+      reply.code(sc >= 400 && sc < 600 ? sc : 500).send(err)
+      return
+    }
+    reply.send(err)
+    return
+  }
+  console.error(`[prisma ${err?.code ?? 'validation'}] ${req.method} ${req.url}:`, String(err?.message ?? err).slice(-600))
+  reply.code(prismaStatus).send({ message: prismaStatus === 404 ? 'Δεν βρέθηκε' : 'Μη έγκυρα δεδομένα' })
+})
+
 for (const { prefix, handler } of routes) {
   await app.register(handler, { prefix })
 }
@@ -284,6 +327,7 @@ for (const { prefix, handler } of routes) {
 startAiTrialExpiryCron()
 startAccountDeletionCron()   // GDPR Άρθρο 17 — εκτέλεση αιτημάτων διαγραφής
 startRetentionCron()         // GDPR Άρθρο 5 §1 ε΄ — επιβολή χρόνων διατήρησης
+startStuckRefundsCron()      // Κολλημένες επιστροφές (`refunding`) — κάθε 15'
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

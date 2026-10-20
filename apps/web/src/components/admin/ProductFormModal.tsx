@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Package, Save } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -12,14 +13,15 @@ interface Props {
 }
 
 const CATEGORIES = [
-  { value: 'food',        label: 'Τροφές 🦴' },
-  { value: 'toys',        label: 'Παιχνίδια 🎾' },
-  { value: 'accessories', label: 'Αξεσουάρ 🎀' },
+  { value: 'food',        label: 'adminProductForm.cat_food' },
+  { value: 'toys',        label: 'adminProductForm.cat_toys' },
+  { value: 'accessories', label: 'adminProductForm.cat_accessories' },
 ]
 
 const SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'fish', 'reptile', 'horse']
 
 export default function ProductFormModal({ open, onClose, product }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const isEdit = !!product?.id
 
@@ -80,16 +82,16 @@ export default function ProductFormModal({ open, onClose, product }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] })
-      toast.success(isEdit ? 'Το προϊόν ενημερώθηκε' : 'Το προϊόν προστέθηκε')
+      toast.success(isEdit ? t('adminProductForm.updated') : t('adminProductForm.added'))
       onClose()
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Σφάλμα'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || t('adminCatalog.error')),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) return toast.error('Το όνομα είναι υποχρεωτικό')
-    if (!form.price || isNaN(parseFloat(form.price))) return toast.error('Μη έγκυρη τιμή')
+    if (!form.name.trim()) return toast.error(t('adminProductForm.nameRequired'))
+    if (!form.price || isNaN(parseFloat(form.price))) return toast.error(t('adminProductForm.invalidPrice'))
     save.mutate()
   }
 
@@ -121,7 +123,7 @@ export default function ProductFormModal({ open, onClose, product }: Props) {
               <div className="flex items-center gap-2">
                 <Package size={20} className="text-brand-900" />
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {isEdit ? 'Επεξεργασία Προϊόντος' : 'Νέο Προϊόν'}
+                  {isEdit ? t('adminProductForm.editTitle') : t('adminProductForm.newTitle')}
                 </h3>
               </div>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18}/></button>
@@ -129,43 +131,43 @@ export default function ProductFormModal({ open, onClose, product }: Props) {
 
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Όνομα *</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminCatalog.nameReq')}</label>
                 <input className="input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required autoFocus />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Περιγραφή</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminCatalog.description')}</label>
                 <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Τιμή (€) *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminPackages.priceReq')}</label>
                   <input type="number" step="0.01" className="input" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Κατηγορία *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminCatalog.categoryReq')}</label>
                   <select className="input" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{t(c.label)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Μάρκα</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.brand')}</label>
                   <input className="input" value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Απόθεμα</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.stock')}</label>
                   <input type="number" className="input" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">URL Εικόνας</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.imageUrl')}</label>
                 <input className="input" placeholder="https://..." value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Είδος ζώου (multiple)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.species')}</label>
                 <div className="flex flex-wrap gap-2">
                   {SPECIES.map(s => (
                     <button key={s} type="button" onClick={() => toggleSpecies(s)}
@@ -173,32 +175,32 @@ export default function ProductFormModal({ open, onClose, product }: Props) {
                         form.target_species.includes(s)
                           ? 'bg-brand-900 text-white border-brand-900'
                           : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600'
-                      }`}>{s}</button>
+                      }`}>{t(`cmpAddPet.species.${s}`)}</button>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Έκπτωση %</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.discount')}</label>
                   <input type="number" min="0" max="100" className="input" value={form.discount_percentage} onChange={e => setForm({...form, discount_percentage: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Τιμή Προσφοράς (€)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminProductForm.salePrice')}</label>
                   <input type="number" step="0.01" className="input" value={form.sale_price} onChange={e => setForm({...form, sale_price: e.target.value})} />
                 </div>
               </div>
 
               <label className="flex items-center gap-2 mt-2 cursor-pointer">
                 <input type="checkbox" className="w-4 h-4" checked={form.is_featured} onChange={e => setForm({...form, is_featured: e.target.checked})} />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Προτεινόμενο προϊόν (Featured)</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('adminProductForm.featured')}</span>
               </label>
             </form>
 
             <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={onClose} className="btn-secondary">Ακύρωση</button>
+              <button onClick={onClose} className="btn-secondary">{t('common.cancel')}</button>
               <button onClick={handleSubmit} disabled={save.isPending} className="btn-primary flex items-center gap-2">
-                <Save size={16}/>{save.isPending ? 'Αποθήκευση...' : (isEdit ? 'Ενημέρωση' : 'Δημιουργία')}
+                <Save size={16}/>{save.isPending ? t('adminCatalog.saving') : (isEdit ? t('adminCatalog.update') : t('adminProductForm.create'))}
               </button>
             </div>
           </motion.div>

@@ -56,27 +56,31 @@ interface BreachIncident {
   attachments_url: string | null
 }
 
-const dpaStatusBadge = (s: string) => {
+// Ετικέτα κωδικού (adminGovernance.<prefix>_<κωδικός>)· άγνωστος κωδικός → ως έχει.
+const codeLabel = (t: any, prefix: string, codes: Record<string, string>, s: string) =>
+  Object.prototype.hasOwnProperty.call(codes, s) ? t(`adminGovernance.${prefix}_${s}`) : s
+
+const dpaStatusBadge = (s: string, t: any) => {
   const map: Record<string, string> = {
     signed:       'bg-emerald-100 text-emerald-700',
     pending:      'bg-amber-100 text-amber-700',
     not_required: 'bg-gray-100 text-gray-700',
     expired:      'bg-rose-100 text-rose-700',
   }
-  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${map[s] || 'bg-gray-100 text-gray-700'}`}>{s}</span>
+  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${map[s] || 'bg-gray-100 text-gray-700'}`}>{codeLabel(t, 'dpa', map, s)}</span>
 }
 
-const severityBadge = (s: string) => {
+const severityBadge = (s: string, t: any) => {
   const map: Record<string, string> = {
     low:      'bg-emerald-100 text-emerald-700',
     medium:   'bg-amber-100 text-amber-700',
     high:     'bg-orange-100 text-orange-700',
     critical: 'bg-rose-100 text-rose-700',
   }
-  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold ${map[s] || 'bg-gray-100 text-gray-700'}`}>{s}</span>
+  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold ${map[s] || 'bg-gray-100 text-gray-700'}`}>{codeLabel(t, 'sev', map, s)}</span>
 }
 
-const statusBadge = (s: string) => {
+const statusBadge = (s: string, t: any) => {
   const map: Record<string, string> = {
     open:          'bg-rose-100 text-rose-700',
     investigating: 'bg-amber-100 text-amber-700',
@@ -84,11 +88,11 @@ const statusBadge = (s: string) => {
     notified:      'bg-purple-100 text-purple-700',
     closed:        'bg-emerald-100 text-emerald-700',
   }
-  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${map[s] || 'bg-gray-100 text-gray-700'}`}><CircleDot size={10}/> {s}</span>
+  return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${map[s] || 'bg-gray-100 text-gray-700'}`}><CircleDot size={10}/> {codeLabel(t, 'st', map, s)}</span>
 }
 
 export default function AdminGovernancePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [tab, setTab] = useState<Tab>('subprocessors')
   const [editingSubproc,   setEditingSubproc]   = useState<Partial<Subprocessor> | null>(null)
   const [editingBreach,    setEditingBreach]    = useState<Partial<BreachIncident> | null>(null)
@@ -195,7 +199,7 @@ export default function AdminGovernancePage() {
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{s.name}</td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.purpose}</td>
                       <td className="px-3 py-2 text-gray-500">{s.region || '—'}</td>
-                      <td className="px-3 py-2">{dpaStatusBadge(s.dpa_status)}</td>
+                      <td className="px-3 py-2">{dpaStatusBadge(s.dpa_status, t)}</td>
                       <td className="px-3 py-2">{s.is_active ? <Check size={16} className="text-emerald-600"/> : <X size={16} className="text-gray-400"/>}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => setEditingSubproc(s)} className="text-gray-500 hover:text-brand-900 p-1"><Edit3 size={14}/></button>
@@ -223,7 +227,7 @@ export default function AdminGovernancePage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 text-xs uppercase">
                   <tr>
-                    <th className="px-3 py-2 text-left">Ref</th>
+                    <th className="px-3 py-2 text-left">{t('adminGovernance.ref')}</th>
                     <th className="px-3 py-2 text-left">{t('adminGovernance.title2')}</th>
                     <th className="px-3 py-2 text-left">{t('adminGovernance.severity')}</th>
                     <th className="px-3 py-2 text-left">{t('adminGovernance.status')}</th>
@@ -239,9 +243,9 @@ export default function AdminGovernancePage() {
                     <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                       <td className="px-3 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">{b.reference}</td>
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{b.title}</td>
-                      <td className="px-3 py-2">{severityBadge(b.severity)}</td>
-                      <td className="px-3 py-2">{statusBadge(b.status)}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(b.detected_at).toLocaleString()}</td>
+                      <td className="px-3 py-2">{severityBadge(b.severity, t)}</td>
+                      <td className="px-3 py-2">{statusBadge(b.status, t)}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(b.detected_at).toLocaleString(i18n.language)}</td>
                       <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">{b.affected_user_count ?? '—'}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => setEditingBreach(b)} className="text-gray-500 hover:text-brand-900 p-1"><Edit3 size={14}/></button>
@@ -293,24 +297,24 @@ function SubprocessorEditor({ value, onCancel, onSave, t }: any) {
         <div className="p-4 space-y-3">
           <input placeholder={t('adminGovernance.name')}    value={f.name || ''}    onChange={e => set({ name: e.target.value })}    className="input w-full"/>
           <input placeholder={t('adminGovernance.purpose')} value={f.purpose || ''} onChange={e => set({ purpose: e.target.value })} className="input w-full"/>
-          <input placeholder={t('adminGovernance.dataCategories') + ' (comma-separated)'} value={(f.data_categories || []).join(', ')} onChange={e => set({ data_categories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="input w-full"/>
+          <input placeholder={t('adminGovernance.commaSeparated', { label: t('adminGovernance.dataCategories') })} value={(f.data_categories || []).join(', ')} onChange={e => set({ data_categories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="input w-full"/>
           <div className="grid grid-cols-2 gap-2">
             <input placeholder={t('adminGovernance.region')} value={f.region || ''}             onChange={e => set({ region: e.target.value })}             className="input"/>
-            <input placeholder="SCC / DPF / N/A"             value={f.transfer_mechanism || ''} onChange={e => set({ transfer_mechanism: e.target.value })} className="input"/>
+            <input placeholder={t('adminGovernance.transferPh')} value={f.transfer_mechanism || ''} onChange={e => set({ transfer_mechanism: e.target.value })} className="input"/>
           </div>
           <select value={f.dpa_status || 'pending'} onChange={e => set({ dpa_status: e.target.value as any })} className="input w-full">
-            <option value="pending">pending</option>
-            <option value="signed">signed</option>
-            <option value="not_required">not_required</option>
-            <option value="expired">expired</option>
+            <option value="pending">{t('adminGovernance.dpa_pending')}</option>
+            <option value="signed">{t('adminGovernance.dpa_signed')}</option>
+            <option value="not_required">{t('adminGovernance.dpa_not_required')}</option>
+            <option value="expired">{t('adminGovernance.dpa_expired')}</option>
           </select>
           <div className="grid grid-cols-2 gap-2">
-            <input type="date" placeholder="DPA signed" value={f.dpa_signed_at?.slice(0,10)  || ''} onChange={e => set({ dpa_signed_at:  e.target.value || null })} className="input"/>
-            <input type="date" placeholder="DPA expires" value={f.dpa_expires_at?.slice(0,10) || ''} onChange={e => set({ dpa_expires_at: e.target.value || null })} className="input"/>
+            <input type="date" placeholder={t('adminGovernance.dpaSigned')} value={f.dpa_signed_at?.slice(0,10)  || ''} onChange={e => set({ dpa_signed_at:  e.target.value || null })} className="input"/>
+            <input type="date" placeholder={t('adminGovernance.dpaExpires')} value={f.dpa_expires_at?.slice(0,10) || ''} onChange={e => set({ dpa_expires_at: e.target.value || null })} className="input"/>
           </div>
-          <input placeholder="DPA URL"       value={f.dpa_url || ''}       onChange={e => set({ dpa_url: e.target.value })}       className="input w-full"/>
-          <input placeholder="Contact email" value={f.contact_email || ''} onChange={e => set({ contact_email: e.target.value })} className="input w-full"/>
-          <input placeholder="Website"       value={f.website || ''}       onChange={e => set({ website: e.target.value })}       className="input w-full"/>
+          <input placeholder={t('adminGovernance.dpaUrl')} value={f.dpa_url || ''}       onChange={e => set({ dpa_url: e.target.value })}       className="input w-full"/>
+          <input placeholder={t('adminGovernance.contactEmail')} value={f.contact_email || ''} onChange={e => set({ contact_email: e.target.value })} className="input w-full"/>
+          <input placeholder={t('adminGovernance.website')} value={f.website || ''}       onChange={e => set({ website: e.target.value })}       className="input w-full"/>
           <textarea placeholder={t('adminGovernance.notes')} value={f.notes || ''} onChange={e => set({ notes: e.target.value })} className="input w-full h-20"/>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!f.is_active} onChange={e => set({ is_active: e.target.checked })}/>
@@ -338,31 +342,31 @@ function BreachEditor({ value, onCancel, onSave, t }: any) {
         </div>
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <input placeholder="Reference (e.g. GP-2026-001)" value={f.reference || ''} onChange={e => set({ reference: e.target.value })} className="input"/>
+            <input placeholder={t('adminGovernance.referencePh')} value={f.reference || ''} onChange={e => set({ reference: e.target.value })} className="input"/>
             <input placeholder={t('adminGovernance.reporterEmail')} value={f.reporter_email || ''} onChange={e => set({ reporter_email: e.target.value })} className="input"/>
           </div>
           <input placeholder={t('adminGovernance.title2')} value={f.title || ''} onChange={e => set({ title: e.target.value })} className="input w-full"/>
           <textarea placeholder={t('adminGovernance.description')} value={f.description || ''} onChange={e => set({ description: e.target.value })} className="input w-full h-24"/>
           <div className="grid grid-cols-2 gap-2">
             <select value={f.severity || 'low'} onChange={e => set({ severity: e.target.value as any })} className="input">
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-              <option value="critical">critical</option>
+              <option value="low">{t('adminGovernance.sev_low')}</option>
+              <option value="medium">{t('adminGovernance.sev_medium')}</option>
+              <option value="high">{t('adminGovernance.sev_high')}</option>
+              <option value="critical">{t('adminGovernance.sev_critical')}</option>
             </select>
             <select value={f.status || 'open'} onChange={e => set({ status: e.target.value as any })} className="input">
-              <option value="open">open</option>
-              <option value="investigating">investigating</option>
-              <option value="contained">contained</option>
-              <option value="notified">notified</option>
-              <option value="closed">closed</option>
+              <option value="open">{t('adminGovernance.st_open')}</option>
+              <option value="investigating">{t('adminGovernance.st_investigating')}</option>
+              <option value="contained">{t('adminGovernance.st_contained')}</option>
+              <option value="notified">{t('adminGovernance.st_notified')}</option>
+              <option value="closed">{t('adminGovernance.st_closed')}</option>
             </select>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <label className="text-xs text-gray-500 col-span-3 -mb-1">{t('adminGovernance.timeline')}</label>
-            <input type="datetime-local" title="Detected"  value={f.detected_at?.slice(0,16)  || ''} onChange={e => set({ detected_at: e.target.value })} className="input"/>
-            <input type="datetime-local" title="Confirmed" value={f.confirmed_at?.slice(0,16) || ''} onChange={e => set({ confirmed_at: e.target.value || null })} className="input"/>
-            <input type="datetime-local" title="Contained" value={f.contained_at?.slice(0,16) || ''} onChange={e => set({ contained_at: e.target.value || null })} className="input"/>
+            <input type="datetime-local" title={t('adminGovernance.detected')} value={f.detected_at?.slice(0,16)  || ''} onChange={e => set({ detected_at: e.target.value })} className="input"/>
+            <input type="datetime-local" title={t('adminGovernance.confirmed')} value={f.confirmed_at?.slice(0,16) || ''} onChange={e => set({ confirmed_at: e.target.value || null })} className="input"/>
+            <input type="datetime-local" title={t('adminGovernance.contained')} value={f.contained_at?.slice(0,16) || ''} onChange={e => set({ contained_at: e.target.value || null })} className="input"/>
           </div>
           <textarea placeholder={t('adminGovernance.rootCause')} value={f.root_cause || ''} onChange={e => set({ root_cause: e.target.value })} className="input w-full h-16"/>
           <input placeholder={t('adminGovernance.affectedCategories') + ' (comma-separated)'} value={(f.affected_data_categories || []).join(', ')} onChange={e => set({ affected_data_categories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="input w-full"/>

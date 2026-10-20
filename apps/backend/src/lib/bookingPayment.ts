@@ -7,6 +7,7 @@ import { sendBookingConfirmedEmail, sendProviderNewBookingEmail } from './email.
 import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import { sendPushToUser } from './push.js'
 import { broadcastToUser } from '../routes/notifications.js'
+import { withRefundLock } from './refundLock.js'
 
 /**
  * Πληρωμή κράτησης υπηρεσίας μέσω Viva — επιβεβαίωση και προστασία από
@@ -61,7 +62,11 @@ async function alreadyRefunded(bookingId: string, transactionId: string): Promis
   return !!row
 }
 
-/** Επιστροφές σε εξέλιξη σε αυτή τη διεργασία (ίδια συναλλαγή δύο φορές ταυτόχρονα). */
+/**
+ * Επιστροφές σε εξέλιξη σε αυτή τη διεργασία (ίδια συναλλαγή δύο φορές
+ * ταυτόχρονα). Πρώτο, φθηνό φίλτρο· η πραγματική διεκδίκηση, που ισχύει και
+ * ανάμεσα σε πολλά instances, είναι το κλείδωμα της βάσης (withRefundLock).
+ */
 const refundsInFlight = new Set<string>()
 
 /** Πλήρης επιστροφή μιας συναλλαγής που δεν πληρώνει (πια) την κράτηση. */
@@ -71,6 +76,24 @@ async function refundExtraPayment(
   const key = `${bookingId}|${transactionId}`
   if (refundsInFlight.has(key)) return 'already'
   refundsInFlight.add(key)
+  try {
+    // Διεκδίκηση στη βάση γύρω από έλεγχο audit → επιστροφή → audit: δεύτερο
+    // instance με την ίδια συναλλαγή παίρνει 'already' και δεν καλεί τη Viva.
+    const r = await withRefundLock(`booking|${key}`, () => refundExtraPaymentLocked(bookingId, transactionId, why))
+    return r.locked ? r.value : 'already'
+  } catch (err: any) {
+    // Η διεκδίκηση στη βάση δεν έγινε (σφάλμα σύνδεσης): καμία κλήση στη Viva.
+    // Πετιέται, ώστε το webhook να απαντήσει 503 και η Viva να ξαναστείλει.
+    console.error(`[viva] booking ${bookingId}: refund claim failed for ${transactionId} (${why}):`, err?.message)
+    throw err
+  } finally {
+    refundsInFlight.delete(key)
+  }
+}
+
+async function refundExtraPaymentLocked(
+  bookingId: string, transactionId: string, why: string,
+): Promise<'refunded' | 'already' | 'failed'> {
   try {
     if (await alreadyRefunded(bookingId, transactionId)) return 'already'
     const r = await refundVivaTransaction(transactionId)
@@ -89,8 +112,6 @@ async function refundExtraPayment(
       metadata: { transaction_id: transactionId, reason: why },
     })
     return 'failed'
-  } finally {
-    refundsInFlight.delete(key)
   }
 }
 

@@ -4,13 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Eye, EyeOff, Key } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   user: { id: string; email: string; full_name?: string } | null
   onClose: () => void
 }
 
+const MIN_PASSWORD = 8
+
 export default function ChangePasswordModal({ user, onClose }: Props) {
+  const { t } = useTranslation()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -37,23 +41,24 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
   const changePassword = useMutation({
     mutationFn: () => api.patch(`/admin/users/${user!.id}`, { password }),
     onSuccess: () => {
-      toast.success('Ο κωδικός άλλαξε επιτυχώς')
+      toast.success(t('adminPwdModal.success'))
       setPassword(''); setConfirm('')
       onClose()
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Σφάλμα κατά την αλλαγή κωδικού')
+      toast.error(err?.response?.data?.message || t('adminPwdModal.error'))
     }
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) {
-      toast.error('Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες')
+    // Ίδιο ελάχιστο με το backend (auth: 8 χαρακτήρες) και τη φόρμα νέου χρήστη.
+    if (password.length < MIN_PASSWORD) {
+      toast.error(t('account.passwordMin'))
       return
     }
     if (password !== confirm) {
-      toast.error('Οι κωδικοί δεν ταιριάζουν')
+      toast.error(t('adminPwdModal.mismatch'))
       return
     }
     changePassword.mutate()
@@ -80,7 +85,7 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Key size={20} className="text-brand-900" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Αλλαγή κωδικού</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('adminPwdModal.title')}</h3>
               </div>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <X size={18} />
@@ -88,14 +93,14 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
             </div>
 
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4">
-              <p className="text-xs text-gray-500 mb-1">Χρήστης</p>
+              <p className="text-xs text-gray-500 mb-1">{t('adminPwdModal.user')}</p>
               <p className="font-medium text-gray-900 dark:text-white text-sm">{user.full_name || user.email}</p>
               <p className="text-xs text-gray-500">{user.email}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Νέος κωδικός</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminPwdModal.newPassword')}</label>
                 <div className="relative">
                   <input
                     type={showPass ? 'text' : 'password'}
@@ -104,7 +109,7 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={MIN_PASSWORD}
                     autoFocus
                   />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -114,7 +119,7 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Επιβεβαίωση</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('adminPwdModal.confirm')}</label>
                 <input
                   type={showPass ? 'text' : 'password'}
                   className="input"
@@ -126,19 +131,19 @@ export default function ChangePasswordModal({ user, onClose }: Props) {
               </div>
 
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 text-xs text-yellow-800 dark:text-yellow-300">
-                ⚠️ Ο χρήστης θα πρέπει να συνδεθεί ξανά με τον νέο κωδικό.
+                {t('adminPwdModal.reloginWarning')}
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={onClose} className="btn-secondary flex-1">
-                  Ακύρωση
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
-                  disabled={changePassword.isPending || password.length < 6 || password !== confirm}
+                  disabled={changePassword.isPending || password.length < MIN_PASSWORD || password !== confirm}
                   className="btn-primary flex-1"
                 >
-                  {changePassword.isPending ? 'Αλλαγή...' : 'Αλλαγή κωδικού'}
+                  {changePassword.isPending ? t('adminPwdModal.changing') : t('adminPwdModal.title')}
                 </button>
               </div>
             </form>

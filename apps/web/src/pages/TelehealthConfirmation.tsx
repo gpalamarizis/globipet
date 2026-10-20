@@ -8,7 +8,7 @@ import JitsiCall from '@/components/features/telehealth/JitsiCall'
 import { useTranslation } from 'react-i18next'
 
 export default function TelehealthConfirmation() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -84,6 +84,13 @@ export default function TelehealthConfirmation() {
     return <JitsiCall consultationId={consultation.id} vetName={consultation.provider_name} onEnd={() => setActiveCall(false)} />
   }
 
+  // scheduled_date (YYYY-MM-DD) ως τοπική ημερομηνία στη γλώσσα του χρήστη — όχι new Date('YYYY-MM-DD') (UTC).
+  const dateLabel = (() => {
+    const [y, m, d] = String(consultation?.scheduled_date ?? '').split('-').map(Number)
+    if (!y || !m || !d) return consultation?.scheduled_date ?? '—'
+    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+  })()
+
   return (
     <div className="page-container py-16 max-w-md mx-auto text-center">
       {isPaid ? (
@@ -93,7 +100,7 @@ export default function TelehealthConfirmation() {
           <p className="text-sm text-gray-500 mb-6">{t('pgTeleConfirm.paidDesc', { name: consultation.provider_name })}</p>
           <div className="card p-4 mb-6 text-left space-y-2">
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <Calendar size={14} className="text-gray-400" /> {consultation.scheduled_date}
+              <Calendar size={14} className="text-gray-400" /> {dateLabel}
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <Clock size={14} className="text-gray-400" /> {consultation.scheduled_time}

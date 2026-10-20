@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, Check } from 'lucide-react-native'
+import { CalendarDays, Check, ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -19,10 +19,21 @@ const PROVIDERS = [
   { id: 'outlook', labelKey: 'providerDash.connectMicrosoft' },
 ]
 
+const DAY_KEYS = ['dSun', 'dMon', 'dTue', 'dWed', 'dThu', 'dFri', 'dSat']
+
 export default function ProviderCalendar() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
+  // Μηνιαίο ημερολόγιο κρατήσεων, όπως στο web (‹ › αλλάζουν μήνα). Το
+  // /provider/bookings φέρνει όλες τις κρατήσεις· το φιλτράρισμα είναι τοπικό.
+  const [view, setView] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
+  const shiftMonth = (delta: number) => setView(v => { const d = new Date(v.y, v.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() } })
+
+  const { data: bookings = [] } = useQuery({
+    queryKey: ['provider-bookings'],
+    queryFn: () => api.get('/provider/bookings').then(r => r.data?.data ?? []),
+  })
 
   const { data: connections = [], isLoading } = useQuery({
     queryKey: ['calendar-connections'],
@@ -57,7 +68,12 @@ export default function ProviderCalendar() {
   }
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true); await qc.invalidateQueries({ queryKey: ['calendar-connections'] }); setRefreshing(false)
+    setRefreshing(true)
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['calendar-connections'] }),
+      qc.invalidateQueries({ queryKey: ['provider-bookings'] }),
+    ])
+    setRefreshing(false)
   }, [qc])
 
   return (
@@ -90,6 +106,42 @@ export default function ProviderCalendar() {
       })}
 
       <Text style={s.note}>{t('providerCal.browserNote')}</Text>
+
+      {/* Ημερολόγιο μήνα: τελεία στις μέρες με κράτηση (booking_date 'YYYY-MM-DD',
+          σύγκριση ως κείμενο — χωρίς new Date('YYYY-MM-DD'), που είναι UTC). */}
+      <Card style={{ marginTop: space.lg }}>
+        <View style={s.calHead}>
+          <Text style={s.name}>{new Date(view.y, view.m, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}</Text>
+          <View style={s.row}>
+            <TouchableOpacity onPress={() => shiftMonth(-1)} hitSlop={8}>
+              <ChevronLeft size={icon.md} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => shiftMonth(1)} hitSlop={8}>
+              <ChevronRight size={icon.md} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={s.grid}>
+          {DAY_KEYS.map(k => (
+            <View key={k} style={s.cell}><Text style={s.dow}>{t(`providerDash.${k}`)}</Text></View>
+          ))}
+          {Array.from({ length: new Date(view.y, view.m, 1).getDay() }, (_, i) => <View key={`e${i}`} style={s.cell} />)}
+          {Array.from({ length: new Date(view.y, view.m + 1, 0).getDate() }, (_, i) => i + 1).map(day => {
+            const now = new Date()
+            const isToday = view.y === now.getFullYear() && view.m === now.getMonth() && day === now.getDate()
+            const ymd = `${view.y}-${String(view.m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const has = bookings.some((b: any) => !!b.booking_date && String(b.booking_date).slice(0, 10) === ymd)
+            return (
+              <View key={day} style={s.cell}>
+                <View style={[s.day, isToday && s.dayToday]}>
+                  <Text style={[s.dayTxt, isToday && s.dayTxtToday]}>{day}</Text>
+                  {has && <View style={s.dot} />}
+                </View>
+              </View>
+            )
+          })}
+        </View>
+      </Card>
     </Screen>
   )
 }
@@ -105,4 +157,13 @@ const s = StyleSheet.create({
   btnTxt: { ...type.caption, color: colors.textOnDark, fontWeight: weight.bold },
   btnTxtOff: { color: colors.textMuted },
   note: { ...type.caption, color: colors.textLight, textAlign: 'center', marginTop: space.lg },
+  calHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
+  dow: { ...type.caption, color: colors.textLight, fontWeight: weight.medium },
+  day: { width: '86%', height: '86%', borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  dayToday: { backgroundColor: colors.brand },
+  dayTxt: { ...type.caption, color: colors.text },
+  dayTxtToday: { color: colors.textOnDark, fontWeight: weight.bold },
+  dot: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: colors.warning },
 })

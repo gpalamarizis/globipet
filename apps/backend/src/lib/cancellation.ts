@@ -1,6 +1,7 @@
 import prisma from './prisma.js'
-import { refundVivaTransaction } from './viva.js'
-import { audit } from './audit.js'
+import { refundVivaTransaction, getVivaTransaction } from './viva.js'
+import { audit, auditSystem } from './audit.js'
+import { withRefundLock } from './refundLock.js'
 
 /**
  * Πολιτική ακύρωσης κρατήσεων.
@@ -108,8 +109,25 @@ export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
   let refundTx: string | null = null
   if (terms.refund > 0) {
     try {
-      const r = await refundVivaTransaction(String(b.payment_ref), terms.refund)
-      refundTx = r.transactionId
+      // Υπό διεκδίκηση στη βάση (lib/refundLock), με το ίδιο κλειδί που
+      // χρησιμοποιεί η εργασία των κολλημένων επιστροφών· αμέσως μετά την
+      // επιτυχία καταγράφεται (BOOKING_CANCEL_REFUND_ACTION) με τους όρους,
+      // ώστε αν η διεργασία πέσει πριν σημειωθεί η ακύρωση, η εργασία του
+      // lib/cron.ts να την ολοκληρώσει χωρίς νέα επιστροφή.
+      const lock = await withRefundLock(bookingCancelLockKey(b.id, String(b.payment_ref)), async () => {
+        const r = await refundVivaTransaction(String(b.payment_ref), terms.refund)
+        await auditSystem({
+          action: BOOKING_CANCEL_REFUND_ACTION, resource: 'booking', resource_id: b.id,
+          subject_email: b.customer_email,
+          metadata: {
+            transaction_id: String(b.payment_ref), refund_tx: r.transactionId, by,
+            late: terms.late, refund: terms.refund, fee: terms.fee, total: terms.total,
+          },
+        })
+        return r.transactionId
+      })
+      if (!lock.locked) throw new Error('refund claim held elsewhere')
+      refundTx = lock.value
     } catch (err: any) {
       console.error('[viva] refund failed for booking', b.id, err?.message)
       // Η επιστροφή απέτυχε: η κράτηση επανέρχεται πληρωμένη, όπως ήταν.
@@ -149,4 +167,114 @@ export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
     metadata: { by, late: terms.late, refund: terms.refund, fee: terms.fee, refund_tx: refundTx },
   })
   return { booking: updated, terms, refund_tx: refundTx }
+}
+
+// ─── Κολλημένες ακυρώσεις (`refunding`) ─────────────────────────────────
+//
+// Η ακύρωση πληρωμένης κράτησης περνά paid → refunding → (επιστροφή) →
+// cancelled + refunded/partially_refunded. Αν η διεργασία πέσει στη μέση, η
+// κράτηση μένει `refunding` για πάντα (καμία νέα ακύρωση: 409). Η εργασία
+// του lib/cron.ts (κάθε 15') τις τακτοποιεί ΧΩΡΙΣ ποτέ νέα επιστροφή:
+//   · Επιτυχής επιστροφή στο audit (BOOKING_CANCEL_REFUND_ACTION, ίδια
+//     συναλλαγή) → ολοκληρώνεται η ακύρωση με τους όρους που καταγράφηκαν.
+//   · Αλλιώς δεν κρίνεται με βεβαιότητα (και η Viva δεν λέει το ποσό μιας
+//     επιστροφής που ίσως έγινε): η κράτηση ΜΕΝΕΙ `refunding` — δεν υπάρχει
+//     κατάσταση «αποτυχημένη επιστροφή» για κρατήσεις — και γράφεται ΜΙΑ
+//     καταγραφή για τον διαχειριστή (BOOKING_REFUND_UNRESOLVED_ACTION, με την
+//     κατάσταση της συναλλαγής στη Viva).
+// «Κολλημένη»: updated_at παλαιότερο από 15' (η διεκδίκηση το ανανεώνει) και
+// κανένα κλείδωμα επιστροφής (withRefundLock) εκείνη τη στιγμή.
+
+export const BOOKING_CANCEL_REFUND_ACTION = 'booking_cancel_refund'
+const BOOKING_REFUND_UNRESOLVED_ACTION = 'booking_refund_unresolved'
+const STUCK_BOOKING_REFUND_MS = 15 * 60_000
+
+export const bookingCancelLockKey = (bookingId: string, transactionId: string) =>
+  `booking_cancel|${bookingId}|${transactionId}`
+
+export async function resolveStuckBookingRefunds(): Promise<{ completed: number; flagged: number }> {
+  const out = { completed: 0, flagged: 0 }
+  const stuck = await prisma.booking.findMany({
+    where: { payment_status: 'refunding', updated_at: { lt: new Date(Date.now() - STUCK_BOOKING_REFUND_MS) } },
+    orderBy: { updated_at: 'asc' },
+    take: 1000,
+  })
+  // Οι ήδη σημειωμένες για τον admin μένουν refunding για πάντα και είναι
+  // πάντα οι παλαιότερες — δεν μετράνε στο όριο, ώστε οι νέες να εξετάζονται.
+  let examined = 0
+  for (const s of stuck) {
+    if (examined >= 100) break
+    try {
+      const txn = String(s.payment_ref ?? '')
+      if (!txn) continue
+      const flagged = await prisma.auditLog.findFirst({
+        where: {
+          resource: 'booking', resource_id: s.id, action: BOOKING_REFUND_UNRESOLVED_ACTION,
+          metadata: { path: ['transaction_id'], equals: txn },
+          created_at: { gte: s.updated_at },
+        },
+        select: { id: true },
+      })
+      if (flagged) continue
+      examined++
+
+      const lock = await withRefundLock(bookingCancelLockKey(s.id, txn), async () => {
+        const b = await prisma.booking.findUnique({ where: { id: s.id } })
+        if (!b || b.payment_status !== 'refunding' || b.payment_ref !== txn) return null
+        if (Date.now() - b.updated_at.getTime() < STUCK_BOOKING_REFUND_MS) return null
+
+        const done = await prisma.auditLog.findFirst({
+          where: {
+            resource: 'booking', resource_id: b.id, action: BOOKING_CANCEL_REFUND_ACTION, outcome: 'success',
+            metadata: { path: ['transaction_id'], equals: txn },
+          },
+          orderBy: { created_at: 'desc' },
+          select: { metadata: true },
+        })
+        if (done) {
+          // Η επιστροφή έγινε: ολοκλήρωση της ακύρωσης ακριβώς όπως η cancelBooking.
+          const m = (done.metadata ?? {}) as any
+          const total = Number(m.total) || Number(b.total_price) || 0
+          const refund = Number(m.refund) || 0
+          const fee = Number(m.fee) || round2(total - refund)
+          const keep = total > 0 ? fee / total : 0
+          const data: any = {
+            status: 'cancelled',
+            payment_status: refund >= total ? 'refunded' : 'partially_refunded',
+          }
+          if (b.provider_payout_amount != null) data.provider_payout_amount = round2(b.provider_payout_amount * keep)
+          if (b.platform_fee_amount != null) data.platform_fee_amount = round2(b.platform_fee_amount * keep)
+          const r = await prisma.booking.updateMany({ where: { id: b.id, payment_status: 'refunding', payment_ref: txn }, data })
+          if (r.count === 0) return null
+          await auditSystem({
+            action: 'booking_cancel', resource: 'booking', resource_id: b.id, subject_email: b.customer_email,
+            metadata: { by: m.by ?? null, late: !!m.late, refund, fee, refund_tx: m.refund_tx ?? null, resolved_by: 'stuck_refund_job' },
+          })
+          return 'completed' as const
+        }
+
+        // Δεν κρίνεται με βεβαιότητα: καμία επιστροφή, καμία αλλαγή — μία
+        // καταγραφή για τον διαχειριστή με ό,τι λέει η Viva.
+        let viva = 'unknown'
+        try {
+          const tx = await getVivaTransaction(txn)
+          viva = String(tx?.statusId ?? 'unknown')
+        } catch (err: any) {
+          viva = `error: ${String(err?.message ?? err).slice(0, 200)}`
+        }
+        await auditSystem({
+          action: BOOKING_REFUND_UNRESOLVED_ACTION, resource: 'booking', resource_id: b.id, subject_email: b.customer_email,
+          outcome: 'failure',
+          error_message: 'Cancellation stuck in refunding; refund not confirmed — needs manual review (no new refund was made)',
+          metadata: { transaction_id: txn, viva_status: viva, total: b.total_price },
+        })
+        return 'flagged' as const
+      })
+      if (lock.locked && lock.value === 'completed') out.completed++
+      if (lock.locked && lock.value === 'flagged') out.flagged++
+    } catch (err: any) {
+      console.error(`[refunds] stuck booking ${s.id}:`, err?.message)
+    }
+  }
+  return out
 }

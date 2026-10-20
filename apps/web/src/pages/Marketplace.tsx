@@ -34,18 +34,15 @@ export default function Marketplace() {
   const [category, setCategory] = useState<string>(searchParams.get('category') || 'all')
   const [sort, setSort] = useState('featured')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [priceRange, setPriceRange] = useState([0, 500])
   const [page, setPage] = useState(1)
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products', { search, category, sort, priceRange, page }],
+    queryKey: ['products', { search, category, sort, page }],
     queryFn: () => api.get('/products', {
       params: {
         q: search || undefined,
         category: category !== 'all' ? category : undefined,
         sort,
-        min_price: priceRange[0] || undefined,
-        max_price: priceRange[1] < 500 ? priceRange[1] : undefined,
         page,
         limit: 24,
       }
