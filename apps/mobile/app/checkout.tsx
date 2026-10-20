@@ -103,7 +103,7 @@ export default function CheckoutScreen() {
       const { data: pay } = await api.post('/orders/viva/checkout', { order_id: orderId })
       return { orderId, url: pay?.checkoutUrl }
     },
-    onSuccess: async ({ url }) => {
+    onSuccess: async ({ url, orderId }) => {
       qc.invalidateQueries({ queryKey: ['cart'] })
       qc.invalidateQueries({ queryKey: ['my-orders'] })
       if (!url) {
@@ -114,9 +114,9 @@ export default function CheckoutScreen() {
       const ok = await Linking.canOpenURL(url)
       if (ok) {
         Linking.openURL(url)
-        // Επιστροφή στις παραγγελίες, ώστε γυρίζοντας από το Viva να δει
-        // την κατάστασή της αντί για άδειο καλάθι.
-        router.replace('/orders' as any)
+        // Οθόνη επιβεβαίωσης της παραγγελίας: γυρίζοντας από τη Viva βλέπει
+        // αν πληρώθηκε (ίδιο μοτίβο με κρατήσεις, εκδηλώσεις, τηλεϊατρική).
+        router.replace(`/order-confirmation?id=${encodeURIComponent(orderId)}` as any)
       } else {
         Alert.alert(t('common.error'), t('checkout.err_open_page'))
       }

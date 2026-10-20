@@ -53,6 +53,7 @@ const Wishlist          = lazy(() => import('@/pages/Wishlist'))
 const Checkout          = lazy(() => import('@/pages/Checkout'))
 const MyOrders          = lazy(() => import('@/pages/MyOrders'))
 const OrderConfirmation = lazy(() => import('@/pages/OrderConfirmation'))
+const PaymentReturn = lazy(() => import('@/pages/PaymentReturn'))
 const MarketInsights    = lazy(() => import('@/pages/MarketInsights'))
 const Login             = lazy(() => import('@/pages/auth/Login'))
 const Register          = lazy(() => import('@/pages/auth/Register'))
@@ -260,7 +261,11 @@ export default function App() {
                 {/* Viva redirects here after a card payment — see successUrl in
                     lib/viva.ts. The route did not exist, so a customer who had
                     just been charged landed on the 404 page. */}
-                <Route path="/orders/:id/confirmation" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
+                {/* Χωρίς PrivateRoute: όποιος πλήρωσε από το κινητό γυρίζει εδώ
+                    χωρίς σύνδεση στο web και παίρνει σύνδεσμο πίσω στην εφαρμογή. */}
+                <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
+                {/* Κοινή Success/Failure URL της πηγής πληρωμής στη Viva. */}
+                <Route path="/payment/return" element={<PaymentReturn />} />
                 <Route path="/market-insights" element={<PrivateRoute><MarketInsights /></PrivateRoute>} />
               </Route>
 

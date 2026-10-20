@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle, XCircle, Loader2, Package } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Package, Smartphone } from 'lucide-react'
+import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 
@@ -19,7 +20,7 @@ import { useTranslation } from 'react-i18next'
  *   browser redirect; when the single verify call raced it, the page stayed
  *   on "pending" until the customer reloaded by hand.
  */
-export default function OrderConfirmation() {
+function OrderConfirmationInner() {
   const { t } = useTranslation()
   const { id } = useParams()
   const [params] = useSearchParams()
@@ -146,6 +147,30 @@ export default function OrderConfirmation() {
           {shopButton}
         </>
       )}
+    </div>
+  )
+}
+
+/**
+ * Χωρίς σύνδεση (π.χ. πλήρωσε από την εφαρμογή και η Viva άνοιξε τον browser):
+ * σύνδεσμος πίσω στην εφαρμογή — ίδιο μοτίβο με κρατήσεις/εκδηλώσεις.
+ */
+export default function OrderConfirmation() {
+  const { t } = useTranslation()
+  const { id } = useParams()
+  const [params] = useSearchParams()
+  const { isAuthenticated } = useAuthStore()
+  if (isAuthenticated) return <OrderConfirmationInner />
+  const transactionId = params.get('t') || params.get('transactionId')
+  const appLink = `globipet://order-confirmation?id=${encodeURIComponent(String(id ?? ''))}`
+    + (transactionId ? `&transactionId=${encodeURIComponent(transactionId)}` : '')
+  return (
+    <div className="page-container py-16 max-w-md mx-auto text-center">
+      <Smartphone size={56} className="mx-auto text-brand-900 dark:text-yellow-400 mb-4" />
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgEventConfirm.returnToAppTitle')}</h1>
+      <p className="text-sm text-gray-500 mb-6">{t('pgOrderConfirm.returnToAppDesc')}</p>
+      <a href={appLink} className="btn-primary w-full justify-center">{t('pgEventConfirm.openInApp')}</a>
+      <Link to="/login" className="btn-secondary w-full justify-center mt-3">{t('auth.login')}</Link>
     </div>
   )
 }

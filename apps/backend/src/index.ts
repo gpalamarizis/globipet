@@ -46,6 +46,7 @@ import passportRoutes from './routes/passport.js'
 import playdatesRoutes from './routes/playdates.js'
 import communitiesRoutes from './routes/communities.js'
 import geocodeRoutes from './routes/geocode.js'
+import paymentsRoutes from './routes/payments.js'
 import bulkImportRoutes from './routes/bulk-import.js'
 import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
@@ -178,6 +179,8 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   // εφαρμογή. Και οι δύο μορφές URL (με/χωρίς τελική κάθετο).
   '/api/geocode':              { max: 20, window: '1 minute' },
   '/api/geocode/':             { max: 20, window: '1 minute' },
+  // Δημόσιο: κάθε κλήση ρωτά τη Viva.
+  '/api/payments/return':      { max: 30, window: '1 minute' },
 }
 
 app.addHook('onRoute', (route) => {
@@ -250,6 +253,7 @@ const routes = [
   { prefix: '/api/playdates', handler: playdatesRoutes },
   { prefix: '/api/communities', handler: communitiesRoutes },
   { prefix: '/api/geocode', handler: geocodeRoutes },
+  { prefix: '/api/payments', handler: paymentsRoutes },
   { prefix: '/api/packages', handler: packagesRoutes },
   { prefix: '/api/catalog', handler: catalogRoutes },
   { prefix: '/api/registry', handler: registryRoutes },

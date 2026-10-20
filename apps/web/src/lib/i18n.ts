@@ -1282,6 +1282,7 @@ const el = {
     paidDesc: 'Η παραγγελία σας επιβεβαιώθηκε και θα την επεξεργαστούμε σύντομα.',
     pendingTitle: 'Εκκρεμεί πληρωμή',
     pendingDesc: 'Η παραγγελία δημιουργήθηκε αλλά η πληρωμή δεν έχει επιβεβαιωθεί ακόμα. Αν χρεώθηκες, επικοινώνησε μαζί μας με τον αριθμό #{{id}}.',
+    returnToAppDesc: 'Αν πλήρωσες από την εφαρμογή GlobiPet, άνοιξέ τη ξανά — η παραγγελία σου θα επιβεβαιωθεί εκεί.',
   },
   pgTeleConfirm: {
     paidTitle: 'Η πληρωμή επιβεβαιώθηκε!',
@@ -1502,6 +1503,12 @@ const el = {
     duplicateRefundDelayed: 'Η κράτηση είχε ήδη πληρωθεί. Η αυτόματη επιστροφή της επιπλέον χρέωσης καθυστερεί — θα ολοκληρωθεί από εμάς· αν χρειαστείς κάτι, επικοινώνησε μαζί μας.',
     backToBookings: 'Στις κρατήσεις μου',
     retry: 'Δοκίμασε ξανά',
+  },
+  pgPaymentReturn: {
+    checking: 'Έλεγχος πληρωμής…',
+    notFoundTitle: 'Δεν βρέθηκε η πληρωμή',
+    notFoundDesc: 'Δες την κατάσταση στις παραγγελίες ή στις κρατήσεις σου.',
+    home: 'Αρχική',
   },
   nav: {
     orders: 'Παραγγελίες', wishlist: 'Λίστα επιθυμιών', more: 'Περισσότερα', account: 'Λογαριασμός', popular: 'Δημοφιλή', mainNav: 'Κύρια πλοήγηση', mobileNav: 'Πλοήγηση κινητού', moreOptions: 'Περισσότερες επιλογές', search: 'Αναζήτηση', notifications: 'Ειδοποιήσεις', unread: '{{count}} μη αναγνωσμένες', cart: 'Καλάθι', cartItems: '{{count}} αντικείμενα', userMenu: 'Μενού χρήστη', skipToContent: 'Μετάβαση στο περιεχόμενο',
@@ -4048,6 +4055,7 @@ const en: typeof el = {
     paidDesc: 'Your order is confirmed and we will process it shortly.',
     pendingTitle: 'Payment pending',
     pendingDesc: 'The order was created but the payment has not been confirmed yet. If you were charged, contact us with number #{{id}}.',
+    returnToAppDesc: 'If you paid from the GlobiPet app, open it again — your order will be confirmed there.',
   },
   pgTeleConfirm: {
     paidTitle: 'Payment confirmed!',
@@ -4268,6 +4276,12 @@ const en: typeof el = {
     duplicateRefundDelayed: 'The booking had already been paid. The automatic refund of the extra charge is delayed — we will complete it; if you need anything, contact us.',
     backToBookings: 'Go to my bookings',
     retry: 'Try again',
+  },
+  pgPaymentReturn: {
+    checking: 'Checking payment…',
+    notFoundTitle: 'Payment not found',
+    notFoundDesc: 'Check the status in your orders or bookings.',
+    home: 'Home',
   },
   nav: {
     orders: 'Orders', wishlist: 'Wishlist', more: 'More', account: 'Account', popular: 'Popular', mainNav: 'Main navigation', mobileNav: 'Mobile navigation', moreOptions: 'More options', search: 'Search', notifications: 'Notifications', unread: '{{count}} unread', cart: 'Cart', cartItems: '{{count}} items', userMenu: 'User menu', skipToContent: 'Skip to content',
@@ -6766,6 +6780,7 @@ const es: typeof el = {
     paidDesc: 'Tu pedido está confirmado y lo procesaremos en breve.',
     pendingTitle: 'Pago pendiente',
     pendingDesc: 'El pedido se ha creado pero el pago aún no se ha confirmado. Si se te ha cobrado, contáctanos con el número #{{id}}.',
+    returnToAppDesc: 'Si pagaste desde la app GlobiPet, ábrela de nuevo: tu pedido se confirmará allí.',
   },
   pgTeleConfirm: {
     paidTitle: '¡Pago confirmado!',
@@ -6986,6 +7001,12 @@ const es: typeof el = {
     duplicateRefundDelayed: 'La reserva ya estaba pagada. La devolución automática del cargo adicional se está retrasando; la completaremos nosotros. Si necesitas algo, contáctanos.',
     backToBookings: 'Ir a mis reservas',
     retry: 'Inténtalo de nuevo',
+  },
+  pgPaymentReturn: {
+    checking: 'Comprobando el pago…',
+    notFoundTitle: 'Pago no encontrado',
+    notFoundDesc: 'Consulta el estado en tus pedidos o reservas.',
+    home: 'Inicio',
   },
   nav: {
     orders: 'Pedidos', wishlist: 'Lista de deseos', more: 'Más', account: 'Cuenta', popular: 'Populares', mainNav: 'Navegación principal', mobileNav: 'Navegación móvil', moreOptions: 'Más opciones', search: 'Buscar', notifications: 'Notificaciones', unread: '{{count}} sin leer', cart: 'Carrito', cartItems: '{{count}} artículos', userMenu: 'Menú de usuario', skipToContent: 'Ir al contenido',
@@ -9484,6 +9505,7 @@ const fr: typeof el = {
     paidDesc: 'Votre commande est confirmée et sera traitée sous peu.',
     pendingTitle: 'Paiement en attente',
     pendingDesc: 'La commande a été créée mais le paiement n\'est pas encore confirmé. Si vous avez été débité, contactez-nous avec le numéro #{{id}}.',
+    returnToAppDesc: 'Si vous avez payé depuis l\'application GlobiPet, rouvrez-la — votre commande y sera confirmée.',
   },
   pgTeleConfirm: {
     paidTitle: 'Paiement confirmé !',
@@ -9704,6 +9726,12 @@ const fr: typeof el = {
     duplicateRefundDelayed: 'La réservation était déjà payée. Le remboursement automatique du débit supplémentaire est retardé — nous nous en chargerons ; si besoin, contactez-nous.',
     backToBookings: 'Vers mes réservations',
     retry: 'Réessayer',
+  },
+  pgPaymentReturn: {
+    checking: 'Vérification du paiement…',
+    notFoundTitle: 'Paiement introuvable',
+    notFoundDesc: 'Vérifiez le statut dans vos commandes ou réservations.',
+    home: 'Accueil',
   },
   nav: {
     orders: 'Commandes', wishlist: 'Liste d’envies', more: 'Plus', account: 'Compte', popular: 'Populaires', mainNav: 'Navigation principale', mobileNav: 'Navigation mobile', moreOptions: 'Plus d’options', search: 'Rechercher', notifications: 'Notifications', unread: '{{count}} non lues', cart: 'Panier', cartItems: '{{count}} articles', userMenu: 'Menu utilisateur', skipToContent: 'Aller au contenu',
@@ -12202,6 +12230,7 @@ const zh: typeof el = {
     paidDesc: '您的订单已确认，我们将尽快处理。',
     pendingTitle: '付款待确认',
     pendingDesc: '订单已创建，但付款尚未确认。如已扣款，请凭编号 #{{id}} 联系我们。',
+    returnToAppDesc: '如果您在 GlobiPet 应用中付款，请重新打开应用——您的订单将在那里确认。',
   },
   pgTeleConfirm: {
     paidTitle: '付款已确认！',
@@ -12422,6 +12451,12 @@ const zh: typeof el = {
     duplicateRefundDelayed: '该预约此前已付款。多收款项的自动退款有所延迟——我们会处理完成；如有需要，请联系我们。',
     backToBookings: '前往我的预约',
     retry: '重试',
+  },
+  pgPaymentReturn: {
+    checking: '正在核对付款…',
+    notFoundTitle: '未找到付款',
+    notFoundDesc: '请在您的订单或预订中查看状态。',
+    home: '首页',
   },
   nav: {
     orders: '订单', wishlist: '心愿单', more: '更多', account: '账户', popular: '热门', mainNav: '主导航', mobileNav: '移动端导航', moreOptions: '更多选项', search: '搜索', notifications: '通知', unread: '{{count}} 条未读', cart: '购物车', cartItems: '{{count}} 件商品', userMenu: '用户菜单', skipToContent: '跳到内容',
