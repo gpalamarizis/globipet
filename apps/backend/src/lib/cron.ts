@@ -326,6 +326,10 @@ export function startAccountDeletionCron() {
   cron.schedule('0 3 * * *', async () => {
     const started = Date.now()
     try {
+      // Μόνο 'pending'. Γραμμή που έμεινε 'executing' (η διεργασία έπεσε στη
+      // μέση της διαγραφής) ΔΕΝ ξαναπιάνεται αυτόματα — ώστε δύο εκτελέσεις να
+      // μη σβήνουν ταυτόχρονα — εμφανίζεται στον admin (Διαγραφές λογαριασμών)
+      // και ο λογαριασμός μένει κλειστός (auth.ts isUnderAgeClosed).
       const due = await prisma.accountDeletionRequest.findMany({
         where: { status: 'pending', scheduled_for: { lte: new Date() } },
         include: { user: { select: { id: true, email: true } } },
@@ -345,6 +349,15 @@ export function startAccountDeletionCron() {
           })
           continue
         }
+
+        // Ε15: ατομική διεκδίκηση πριν τη διαγραφή. Ο διαχειριστής (ή ο
+        // χρήστης) ακυρώνει μόνο από 'pending' — αν ακύρωσε μετά την ανάγνωση
+        // της λίστας, η διεκδίκηση δεν περνά· αν η διεκδίκηση πέρασε πρώτα, η
+        // ακύρωση απαντά «δεν είναι πλέον ενεργό».
+        const claimed = await prisma.accountDeletionRequest.updateMany({
+          where: { id: req.id, status: 'pending' }, data: { status: 'executing' },
+        })
+        if (claimed.count !== 1) continue
 
         try {
           const counts = await eraseUserAccount(userId, email)
@@ -366,7 +379,12 @@ export function startAccountDeletionCron() {
           // το αίτημα μένει 'pending' και ξαναδοκιμάζεται στην επόμενη
           // εκτέλεση (το cron διαλέγει μόνο pending). Τα 'failed' δεν
           // ξαναπιάνονται ποτέ — εκεί πήγαινε πριν και αυτή η περίπτωση.
-          if (err instanceof StripeCancelError) continue
+          if (err instanceof StripeCancelError) {
+            await prisma.accountDeletionRequest.updateMany({
+              where: { id: req.id, status: 'executing' }, data: { status: 'pending' },
+            }).catch(() => {})
+            continue
+          }
           await prisma.accountDeletionRequest.update({
             where: { id: req.id },
             data: { status: 'failed' },
@@ -432,6 +450,7 @@ export const AUDIT_STATE_ACTIONS: readonly string[] = [
   'event_registration_refunding_seen', 'event_registration_refunding_resolved',        // routes/events.ts
   'event_cancel',                             // routes/events.ts legacyCancelledAt
   'subscription_paid_while_paused',           // routes/admin-refunds.ts FAILURE_ACTIONS
+  'external_refund',                          // lib/externalRefund.ts (ήδη εφαρμοσμένη, σύνολο επιστροφών), admin.ts έσοδα
 ]
 
 const sqlList = (xs: readonly string[]) => xs.map(x => `'${x.replace(/'/g, "''")}'`).join(',')

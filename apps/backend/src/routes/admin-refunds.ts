@@ -220,6 +220,11 @@ const STATE_FLAG_ACTIONS = [
 
 /** Ποιες επιτυχίες «κλείνουν» μια αποτυχία αυτής της action. */
 function successActionsFor(action: string): string[] {
+  // Ε15: η εξωτερική επιστροφή που εφαρμόστηκε αυτόματα γράφεται ως επιτυχία
+  // με το ίδιο transaction_id (την αρχική πληρωμή). ΔΕΝ «κλείνει» άλλη, μη
+  // εφαρμοσμένη εξωτερική επιστροφή της ίδιας πληρωμής — αυτή λύνεται μόνο
+  // με «Σήμανση ως λυμένο».
+  if (action === EXTERNAL_REFUND_ACTION) return []
   if (action.startsWith('event_registration_')) {
     return ['event_registration_auto_refund', 'event_registration_refund', 'event_registration_refunding_resolved']
   }
@@ -466,10 +471,17 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
         const key = groupKey(f.action, f.resource, f.resource_id, groupTxnOf(f.action, f.metadata))
         // Σημάδι «λύθηκε» (για αυτή ή για νεότερη αποτυχία της ίδιας ομάδας) ή
         // μεταγενέστερη επιτυχία για την ίδια συναλλαγή.
+        const resNorm = (r: string) => r === 'telehealth_consultation' ? 'telehealth' : r
         const resolved = successes.some(s =>
-          s.resource === f.resource && s.resource_id === f.resource_id && s.created_at > f.created_at && (
+          resNorm(s.resource) === resNorm(f.resource) && s.resource_id === f.resource_id && s.created_at > f.created_at && (
             (s.action === RESOLVED_MARKER_ACTION && ((s.metadata as any)?.audit_id === f.id || (s.metadata as any)?.group === key)) ||
-            (successActionsFor(f.action).includes(s.action) && (txn === null || txnOf(s.metadata) === txn))
+            (successActionsFor(f.action).includes(s.action) && (txn === null || txnOf(s.metadata) === txn)) ||
+            // Ε15: ΠΛΗΡΗΣ εξωτερική επιστροφή (Viva panel) που εφαρμόστηκε
+            // αυτόματα για την ίδια πληρωμή κλείνει τις παλαιότερες αποτυχίες
+            // επιστροφής της — όχι όμως άλλη εξωτερική.
+            (f.action !== EXTERNAL_REFUND_ACTION && s.action === EXTERNAL_REFUND_ACTION
+              && (s.metadata as any)?.applied === true && (s.metadata as any)?.new_status === 'refunded'
+              && txn !== null && txnOf(s.metadata) === txn)
           ))
         if (resolved) continue
         const resKey = f.resource === 'telehealth_consultation' ? 'telehealth' : f.resource

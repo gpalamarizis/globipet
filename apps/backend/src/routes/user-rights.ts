@@ -262,13 +262,15 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
     const request = await prisma.accountDeletionRequest.create({
       data: {
         user_id: userId,
-        reason: reason?.slice(0, 500) || null,
+        // Ε15: η τιμή 'under_age' είναι εσωτερική (auth.ts — κλείνει τον
+        // λογαριασμό)· ελεύθερο κείμενο του χρήστη δεν την παίρνει ποτέ.
+        reason: typeof reason === 'string' && reason.trim() !== '' && reason.trim() !== 'under_age' ? reason.slice(0, 500) : null,
         status: 'pending',
         scheduled_for: scheduledFor,
       },
     })
 
-    await audit(req, { action: 'delete_request', resource: 'user', resource_id: userId, metadata: { scheduled_for: scheduledFor.toISOString() } })
+    await audit(req, { action: 'delete_request', resource: 'user', resource_id: userId, metadata: { scheduled_for: scheduledFor.toISOString(), request_id: request.id } })
 
     return {
       data: {

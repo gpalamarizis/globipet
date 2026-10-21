@@ -305,6 +305,101 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     return { data: users }
   })
 
+  /**
+   * Ε15 — Αιτήματα διαγραφής λογαριασμού (εκκρεμή + αποτυχημένα).
+   *
+   * Λογαριασμός που δήλωσε ηλικία κάτω των 15 κλείνει και σβήνεται σε 14
+   * ημέρες (auth.ts PATCH /me/birth-date, reason 'under_age'). Αν η δήλωση
+   * ήταν λάθος (π.χ. 2015 αντί 1985), ο διαχειριστής ακυρώνει το αίτημα εδώ —
+   * πριν, μόνο από τη βάση. Ο χρήστης ξανασυνδέεται και ξαναδηλώνει ημερομηνία
+   * (η λάθος ημερομηνία δεν αποθηκεύτηκε ποτέ).
+   *
+   * Αίτημα που έκανε ο ΙΔΙΟΣ ο χρήστης (Άρθρο 17) εμφανίζεται για ενημέρωση
+   * αλλά δεν ακυρώνεται από τον διαχειριστή — μόνο από τον χρήστη. 'failed'
+   * (το cron απέτυχε στη μέση — ίσως σβήστηκαν ήδη δεδομένα) ούτε αυτό.
+   */
+  // Το auth.ts (PATCH /me/birth-date) μετατρέπει σε under_age και ένα ΗΔΗ
+  // εκκρεμές αίτημα του ίδιου του χρήστη (ίδια γραμμή, ίδιο created_at). Αυτό
+  // ΔΕΝ ακυρώνεται από τον διαχειριστή — ο χρήστης ζήτησε διαγραφή. Αναγνώριση:
+  // καταγραφή 'delete_request' (user-rights.ts) με metadata.request_id = η
+  // γραμμή (η μετατροπή κρατά το id). Παλαιότερες καταγραφές χωρίς request_id:
+  // ίδια στιγμή με τη δημιουργία της γραμμής (±5′).
+  const DELETE_REQUEST_MATCH_MS = 5 * 60_000
+  const ownRequestKeys = async (rows: { id: string; user_id: string; created_at: Date }[]): Promise<Set<string>> => {
+    const out = new Set<string>()
+    if (rows.length === 0) return out
+    const audits = await prisma.auditLog.findMany({
+      where: { action: 'delete_request', resource: 'user', resource_id: { in: [...new Set(rows.map(r => r.user_id))] } },
+      select: { resource_id: true, created_at: true, metadata: true },
+      take: 5000,
+    })
+    for (const r of rows) {
+      const t = r.created_at.getTime()
+      if (audits.some(a => {
+        if (a.resource_id !== r.user_id) return false
+        const rid = (a.metadata as any)?.request_id
+        if (rid !== undefined && rid !== null) return String(rid) === r.id
+        return Math.abs(a.created_at.getTime() - t) <= DELETE_REQUEST_MATCH_MS
+      })) {
+        out.add(`${r.user_id}|${t}`)
+      }
+    }
+    return out
+  }
+
+  app.get('/deletion-requests', async () => {
+    const rows = await prisma.accountDeletionRequest.findMany({
+      where: { status: { in: ['pending', 'failed', 'executing'] } },
+      orderBy: { scheduled_for: 'asc' },
+      take: 500,
+      select: {
+        id: true, user_id: true, reason: true, status: true, scheduled_for: true, created_at: true,
+        user: { select: { id: true, email: true, full_name: true, role: true } },
+      },
+    })
+    const own = await ownRequestKeys(rows.filter(r => r.reason === 'under_age'))
+    return {
+      data: rows.map(r => ({
+        id: r.id,
+        kind: r.reason === 'under_age' ? 'under_age' : 'user_request',
+        also_user_request: r.reason === 'under_age' && own.has(`${r.user_id}|${r.created_at.getTime()}`),
+        status: r.status,
+        scheduled_for: r.scheduled_for,
+        created_at: r.created_at,
+        user_id: r.user?.id ?? null,
+        email: r.user?.email ?? null,
+        full_name: r.user?.full_name ?? null,
+        role: r.user?.role ?? null,
+        can_cancel: r.reason === 'under_age' && r.status === 'pending' && !own.has(`${r.user_id}|${r.created_at.getTime()}`),
+      })),
+    }
+  })
+
+  app.post('/deletion-requests/:id/cancel', async (req: any, reply) => {
+    const id = String(req.params?.id ?? '')
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) : ''
+    if (!id || id.length > 64) return reply.code(400).send({ message: 'Λείπει το αναγνωριστικό' })
+    if (note.length < 3) return reply.code(400).send({ message: 'Γράψε μια σύντομη σημείωση (τουλάχιστον 3 χαρακτήρες).' })
+
+    const reqRow = await prisma.accountDeletionRequest.findUnique({ where: { id }, select: { id: true, user_id: true, reason: true, status: true, created_at: true } })
+    if (!reqRow) return reply.code(404).send({ message: 'Το αίτημα δεν βρέθηκε' })
+    if (reqRow.reason !== 'under_age' || (await ownRequestKeys([reqRow])).size > 0) {
+      return reply.code(409).send({ message: 'Το αίτημα το έκανε ο ίδιος ο χρήστης — μόνο εκείνος μπορεί να το ακυρώσει.' })
+    }
+    // Ατομικά, μόνο από 'pending': αν το cron το εκτέλεσε (ή απέτυχε) στο
+    // μεταξύ, τίποτα δεν αλλάζει.
+    const done = await prisma.accountDeletionRequest.updateMany({
+      where: { id, reason: 'under_age', status: 'pending' },
+      data: { status: 'cancelled', cancelled_at: new Date() },
+    })
+    if (done.count === 0) return reply.code(409).send({ message: 'Το αίτημα δεν είναι πλέον ενεργό' })
+    await audit(req, {
+      action: 'admin_cancel_delete_request', resource: 'user', resource_id: reqRow.user_id,
+      metadata: { request_id: id, reason: 'under_age', note },
+    })
+    return { success: true }
+  })
+
   app.post('/users', async (req: any, reply) => {
     const { full_name, email, password, role, phone } = req.body as any
     if (!email || !password) {
@@ -834,7 +929,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
       const email = String(to_email).trim().toLowerCase()
       const u = await prisma.user.findUnique({ where: { email }, select: { id: true, preferred_language: true } })
       const pendingDeletion = u
-        ? await prisma.accountDeletionRequest.count({ where: { user_id: u.id, status: 'pending' } })
+        ? await prisma.accountDeletionRequest.count({ where: { user_id: u.id, status: { in: ['pending', 'executing'] } } })
         : 0
       if (!pendingDeletion) recipients = [{ email, lang: u?.preferred_language || 'el' }]
     } else if (to_role) {
@@ -854,7 +949,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
                 OR (lc.marketing IS TRUE AND lc.created_at >= ${NEWSLETTER_CONSENT_SINCE}))
            AND NOT EXISTS (
              SELECT 1 FROM account_deletion_requests d
-              WHERE d.user_id = u.id AND d.status = 'pending')`
+              WHERE d.user_id = u.id AND d.status IN ('pending', 'executing'))`
       recipients = rows.map(r => ({ email: r.email, lang: r.preferred_language || 'el' }))
     }
 

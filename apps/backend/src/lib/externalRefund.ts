@@ -1,8 +1,8 @@
 import prisma from './prisma.js'
 import { getVivaTransaction, isVivaDefinitiveRejection, VivaHttpError } from './viva.js'
 import { withRefundLock } from './refundLock.js'
-import { bookingCancelLockKey, telehealthCancelLockKey } from './cancellation.js'
-import { eventRefundLockKey } from '../routes/events.js'
+import { bookingCancelLockKey, telehealthCancelLockKey, notifyCancelRefundCompleted } from './cancellation.js'
+import { eventRefundLockKey, notifyRegistrationRefunded } from '../routes/events.js'
 
 /**
  * Viva webhook EventTypeId 1797 «Transaction Reversal Created».
@@ -33,17 +33,29 @@ import { eventRefundLockKey } from '../routes/events.js'
  *        · καταγραφή επιτυχίας με refund_tx / viva_refund_transaction = αυτή
  *          η επιστροφή → 'ours', καμία ενέργεια
  *        · ήδη καταγεγραμμένη (EXTERNAL_REFUND_ACTION, ίδιο refund_tx) → 'already'
- *        · αλλιώς ΕΞΩΤΕΡΙΚΗ: payment_status → refunded (σύνολο επιστροφών ≥
- *          πληρωμένου) ή partially_refunded, αναλογική μείωση αμοιβής παρόχου
- *          και προμήθειας (όπως το /admin/refund), ΧΩΡΙΣ ακύρωση. Μετάβαση και
- *          καταγραφή στην ΙΔΙΑ συναλλαγή βάσης (ιδεμποτικό στην επανάληψη).
- *          Η καταγραφή έχει outcome 'failure' ώστε να εμφανίζεται στις
- *          «Αποτυχημένες επιστροφές» ως «Εξωτερική επιστροφή — έλεγξε».
- *   «Αμφίβολη» περίπτωση (υπάρχει δική μας επιστροφή της ίδιας πληρωμής χωρίς
- *   γνωστό refund tx — π.χ. άγνωστη έκβαση που έκλεισε η εργασία των
- *   κολλημένων ή «Σήμανση ως λυμένο»), ποσό που η Viva δεν έδωσε, ή εγγραφή
- *   εκδήλωσης (δεν έχει payment_status/αμοιβές): ΜΟΝΟ καταγραφή για τον
- *   διαχειριστή, καμία αλλαγή στην εγγραφή — ώστε να μη μετρηθεί διπλά.
+ *        · αλλιώς ΕΞΩΤΕΡΙΚΗ — εφαρμόζεται ΑΥΤΟΜΑΤΑ (Ε15):
+ *          Παραγγελία/κράτηση/τηλεϊατρική: payment_status → refunded (σύνολο
+ *          επιστροφών ≥ πληρωμένου) ή partially_refunded, αναλογική μείωση
+ *          αμοιβής παρόχου και προμήθειας (όπως το /admin/refund — τα έσοδα
+ *          του admin ακολουθούν). ΠΛΗΡΗΣ επιστροφή ακυρώνει επίσης ό,τι δεν
+ *          έχει ολοκληρωθεί: κράτηση/συνεδρία όχι completed/no_show/cancelled
+ *          → cancelled· παραγγελία pending/confirmed/processing → cancelled
+ *          με επαναφορά του δεσμευμένου αποθέματος (όπως η πλήρης επιστροφή
+ *          του admin). Απεσταλμένη/παραδομένη παραγγελία μένει ως έχει
+ *          (επιστροφή μετά την παράδοση).
+ *          Εγγραφή εκδήλωσης: ΠΛΗΡΗΣ επιστροφή → refunded (από registered:
+ *          ελευθερώνεται και η θέση· από refund_failed: η αποτυχημένη
+ *          επιστροφή που ο admin έκανε στη Viva κλείνει μόνη της). Μερική
+ *          επιστροφή εγγραφής δεν έχει κατάσταση → μόνο καταγραφή.
+ *          Μετάβαση και καταγραφή στην ΙΔΙΑ συναλλαγή βάσης (ιδεμποτικό στην
+ *          επανάληψη). Η καταγραφή έχει outcome 'success' — δεν χρειάζεται
+ *          ενέργεια, φαίνεται στο αρχείο καταγραφής.
+ *   ΜΟΝΟ καταγραφή (outcome 'failure' → «Αποτυχημένες επιστροφές» ως
+ *   «Εξωτερική επιστροφή — έλεγξε»), καμία αλλαγή στην εγγραφή ώστε να μη
+ *   μετρηθεί διπλά: «αμφίβολη» περίπτωση (υπάρχει δική μας επιστροφή της ίδιας
+ *   πληρωμής χωρίς γνωστό refund tx — π.χ. άγνωστη έκβαση που έκλεισε η
+ *   εργασία των κολλημένων ή «Σήμανση ως λυμένο»), ποσό που η Viva δεν έδωσε,
+ *   απρόσμενη κατάσταση, μερική επιστροφή εγγραφής εκδήλωσης.
  */
 
 export const EXTERNAL_REFUND_ACTION = 'external_refund'
@@ -52,7 +64,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 type ResType = 'order' | 'booking' | 'telehealth' | 'event_registration'
-export type ReversalOutcome = 'external' | 'ours' | 'already' | 'ignored' | 'retry'
+export type ReversalOutcome = 'applied' | 'external' | 'ours' | 'already' | 'ignored' | 'retry'
 
 /** Ονόματα resource στο audit ανά τύπο (η τηλεϊατρική γράφεται και με τα δύο). */
 const AUDIT_RESOURCES: Record<ResType, string[]> = {
@@ -87,7 +99,16 @@ type Rec = {
   type: ResType; id: string; email: string | null; paid: number
   state: string                    // payment_status (εγγραφή εκδήλωσης: status)
   payout: number | null; fee: number | null
+  status: string                   // κατάσταση ζωής (status) — εκδήλωση: ίδιο με state
+  party: number                    // εκδήλωση: 1 + guests (θέσεις)
+  eventId: string | null
 }
+
+/** Ίδιο με routes/orders.ts ORDER_STOCK_RESERVED_ACTION (χωρίς κυκλική εισαγωγή). */
+const ORDER_STOCK_RESERVED = 'order_stock_reserved'
+/** Πλήρης επιστροφή ακυρώνει μόνο ό,τι δεν έχει ολοκληρωθεί. */
+const ORDER_CANCELLABLE = ['pending', 'confirmed', 'processing']
+const SESSION_FINAL = ['completed', 'no_show', 'cancelled']
 
 async function findByParent(parent: string): Promise<Rec | null> {
   const [o, b, c, r] = await Promise.all([
@@ -96,10 +117,10 @@ async function findByParent(parent: string): Promise<Rec | null> {
     prisma.telehealthConsultation.findFirst({ where: { payment_ref: parent } }),
     prisma.eventRegistration.findFirst({ where: { viva_transaction_id: parent } }),
   ])
-  if (o) return { type: 'order', id: o.id, email: o.user_email, paid: Number(o.total_amount) || 0, state: o.payment_status, payout: o.provider_payout_amount, fee: o.platform_fee_amount }
-  if (b) return { type: 'booking', id: b.id, email: b.customer_email, paid: Number(b.total_price) || 0, state: b.payment_status, payout: b.provider_payout_amount, fee: b.platform_fee_amount }
-  if (c) return { type: 'telehealth', id: c.id, email: c.client_email, paid: Number(c.price) || 0, state: c.payment_status, payout: c.provider_payout_amount, fee: c.platform_fee_amount }
-  if (r) return { type: 'event_registration', id: r.id, email: r.user_email, paid: Number(r.amount_paid ?? 0) || 0, state: r.status, payout: null, fee: null }
+  if (o) return { type: 'order', id: o.id, email: o.user_email, paid: Number(o.total_amount) || 0, state: o.payment_status, payout: o.provider_payout_amount, fee: o.platform_fee_amount, status: o.status, party: 0, eventId: null }
+  if (b) return { type: 'booking', id: b.id, email: b.customer_email, paid: Number(b.total_price) || 0, state: b.payment_status, payout: b.provider_payout_amount, fee: b.platform_fee_amount, status: b.status, party: 0, eventId: null }
+  if (c) return { type: 'telehealth', id: c.id, email: c.client_email, paid: Number(c.price) || 0, state: c.payment_status, payout: c.provider_payout_amount, fee: c.platform_fee_amount, status: c.status, party: 0, eventId: null }
+  if (r) return { type: 'event_registration', id: r.id, email: r.user_email, paid: Number(r.amount_paid ?? 0) || 0, state: r.status, payout: null, fee: null, status: r.status, party: 1 + Math.max(0, Number(r.guests ?? 0) || 0), eventId: r.event_id }
   return null
 }
 
@@ -188,6 +209,9 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
     return 'retry'
   }
 
+  // Ειδοποίηση του πελάτη για την επιστροφή που εφαρμόστηκε — ΜΕΤΑ το κλείδωμα,
+  // μόνο αν η μετάβαση έγινε τώρα (όχι στην επανάληψη· ποτέ δεν πετάει).
+  let notifyAfter: (() => Promise<void>) | null = null
   const lock = await withRefundLock(lockKeyOf(found.type, found.id, parent), async (): Promise<ReversalOutcome> => {
     const rec = await findByParent(parent)
     if (!rec || rec.type !== found.type || rec.id !== found.id) return 'ignored'
@@ -236,32 +260,40 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
     const ourRefunded = [...byRefundTx.values()].reduce((s, v) => s + v, 0)
     const prev = round2(ourRefunded + priorExternal)
 
-    const canApply = rec.type !== 'event_registration' && amount !== null && !ambiguous
-      && ['paid', 'partially_refunded'].includes(rec.state) && rec.paid > 0
-    const why = rec.type === 'event_registration' ? 'event_registration'
-      : ambiguous ? 'ambiguous' : amount === null ? 'amount_unknown'
-      : !['paid', 'partially_refunded'].includes(rec.state) ? `state_${rec.state}` : null
-
+    const isEvent = rec.type === 'event_registration'
+    const okStates = isEvent ? ['registered', 'refund_failed'] : ['paid', 'partially_refunded']
     const total = round2(prev + (amount ?? 0))
-    const newStatus = canApply ? (total >= rec.paid - 0.005 ? 'refunded' : 'partially_refunded') : null
+    const full = rec.paid > 0 && total >= rec.paid - 0.005
+    const why = ambiguous ? 'ambiguous' : amount === null ? 'amount_unknown'
+      : !okStates.includes(rec.state) ? `state_${rec.state}`
+      : !(rec.paid > 0) ? 'paid_unknown'
+      : isEvent && !full ? 'event_partial' : null
+    const canApply = why === null
+
+    const newStatus = !canApply ? null : isEvent ? 'refunded' : full ? 'refunded' : 'partially_refunded'
     const before = Math.max(0, rec.paid - prev)
     const after = Math.max(0, before - (amount ?? 0))
     const ratio = before > 0.005 ? Math.min(1, after / before) : 0
+    // Πλήρης επιστροφή: ακύρωση ό,τι δεν έχει ολοκληρωθεί (βλ. σχόλιο αρχής).
+    const cancelLife = canApply && full && !isEvent && (rec.type === 'order'
+      ? ORDER_CANCELLABLE.includes(rec.status)
+      : !SESSION_FINAL.includes(rec.status))
 
-    const auditRow = (applied: boolean) => ({
+    const auditRow = (applied: boolean, extra: Record<string, unknown> = {}) => ({
       action: EXTERNAL_REFUND_ACTION, resource: rec.type, resource_id: rec.id,
       actor_id: null, actor_email: 'system@globipet', actor_role: 'system',
       subject_email: rec.email,
-      // 'failure': εμφανίζεται στις «Αποτυχημένες επιστροφές» για έλεγχο.
-      outcome: 'failure',
+      // Εφαρμόστηκε αυτόματα → 'success' (καμία ενέργεια). Όχι → 'failure':
+      // εμφανίζεται στις «Αποτυχημένες επιστροφές» για έλεγχο.
+      outcome: applied ? 'success' : 'failure',
       error_message: applied
-        ? 'Refund made outside the app (Viva panel) — payment status updated, booking/order NOT cancelled. Check.'
+        ? null
         : `Refund made outside the app (Viva panel) — not applied automatically (${why}). Check.`,
       metadata: {
         transaction_id: parent, refund_tx: refundTx, amount, paid: rec.paid,
         previously_refunded: prev, total_refunded: total, applied,
         previous_status: rec.state, new_status: newStatus, order_code: orderCode,
-        reason: EXTERNAL_REFUND_ACTION, ...(why ? { not_applied: why } : {}),
+        reason: EXTERNAL_REFUND_ACTION, ...(why ? { not_applied: why } : {}), ...extra,
       } as any,
     })
 
@@ -269,27 +301,98 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
       await prisma.auditLog.create({ data: auditRow(false) })
       return 'external'
     }
-    const data: any = { payment_status: newStatus }
-    if (rec.payout != null) data.provider_payout_amount = round2(Number(rec.payout) * ratio)
-    if (rec.fee != null) data.platform_fee_amount = round2(Number(rec.fee) * ratio)
     try {
       // Ατομικά: μετάβαση υπό συνθήκη (ίδια κατάσταση, ίδια πληρωμή) και
       // καταγραφή στην ίδια συναλλαγή — η επανάληψη βρίσκει 'already'.
       await prisma.$transaction(async (tx) => {
+        if (isEvent) {
+          // Εγγραφή εκδήλωσης, πλήρης επιστροφή → refunded. Από registered
+          // ελευθερώνεται και η θέση (όπως η ακύρωση συμμετοχής, events.ts).
+          const r = await tx.eventRegistration.updateMany({
+            where: { id: rec.id, status: rec.state, viva_transaction_id: parent },
+            data: { status: 'refunded' },
+          })
+          if (r.count !== 1) throw new ChangedError()
+          let seatsFreed = 0
+          if (rec.state === 'registered' && rec.eventId) {
+            await tx.event.update({ where: { id: rec.eventId }, data: { registered_count: { decrement: rec.party } } })
+            await tx.event.updateMany({ where: { id: rec.eventId, registered_count: { lt: 0 } }, data: { registered_count: 0 } })
+            seatsFreed = rec.party
+          }
+          await tx.auditLog.create({ data: auditRow(true, { seats_freed: seatsFreed }) })
+          if (rec.email && rec.eventId) {
+            const email = rec.email, eventId = rec.eventId, amt = amount
+            notifyAfter = () => notifyRegistrationRefunded(email, eventId, amt)
+          }
+          return
+        }
+
+        const data: any = { payment_status: newStatus }
+        if (rec.payout != null) data.provider_payout_amount = round2(Number(rec.payout) * ratio)
+        if (rec.fee != null) data.platform_fee_amount = round2(Number(rec.fee) * ratio)
         const where = { id: rec.id, payment_status: rec.state, payment_ref: parent }
         const r = rec.type === 'order' ? await tx.order.updateMany({ where, data })
           : rec.type === 'booking' ? await tx.booking.updateMany({ where, data })
           : await tx.telehealthConsultation.updateMany({ where, data })
         if (r.count !== 1) throw new ChangedError()
-        await tx.auditLog.create({ data: auditRow(true) })
+
+        // Πλήρης επιστροφή: ακύρωση ό,τι δεν έχει ολοκληρωθεί — υπό συνθήκη
+        // (ίδια κατάσταση ζωής), ώστε μια ταυτόχρονη αλλαγή (π.χ. «Ολοκληρώθηκε»)
+        // να μην αντικατασταθεί.
+        let cancelled = false
+        let stockRestored = false
+        if (cancelLife) {
+          const lw = { id: rec.id, status: rec.status, payment_ref: parent }
+          const c = rec.type === 'order' ? await tx.order.updateMany({ where: lw, data: { status: 'cancelled' } })
+            : rec.type === 'booking' ? await tx.booking.updateMany({ where: lw, data: { status: 'cancelled' } })
+            : await tx.telehealthConsultation.updateMany({ where: lw, data: { status: 'cancelled' } })
+          cancelled = c.count === 1
+          // Παραγγελία: επαναφορά του αποθέματος που δεσμεύτηκε για ΑΥΤΗ την
+          // πληρωμή — μία φορά (η μετάβαση σε cancelled περνά μόνο μία φορά).
+          if (cancelled && rec.type === 'order') {
+            const reservedRow = await tx.auditLog.findFirst({
+              where: {
+                action: ORDER_STOCK_RESERVED, resource: 'order', resource_id: rec.id,
+                metadata: { path: ['transaction_id'], equals: parent },
+              },
+              select: { metadata: true },
+            })
+            const items = ((reservedRow?.metadata ?? {}) as any).items ?? {}
+            for (const [pid, q] of Object.entries(items)) {
+              const qty = Math.floor(Number(q))
+              if (!pid || !Number.isFinite(qty) || qty <= 0) continue
+              await tx.product.updateMany({ where: { id: pid }, data: { stock: { increment: qty } } })
+              stockRestored = true
+            }
+          }
+        }
+        await tx.auditLog.create({
+          data: auditRow(true, {
+            previous_life_status: rec.status, cancelled, stock_restored: stockRestored,
+          }),
+        })
+        // Το μήνυμα λέει «η ακύρωση ολοκληρώθηκε» — μόνο αν ακυρώθηκε τώρα.
+        if (cancelled && (rec.type === 'booking' || rec.type === 'telehealth')) {
+          const kind = rec.type, id = rec.id, amt = amount ?? 0
+          notifyAfter = async () => {
+            const full = kind === 'booking'
+              ? await prisma.booking.findUnique({ where: { id } })
+              : await prisma.telehealthConsultation.findUnique({ where: { id } })
+            if (full) await notifyCancelRefundCompleted(kind, full, amt)
+          }
+        }
       })
     } catch (err) {
       if (err instanceof ChangedError) return 'retry'
       throw err
     }
-    return 'external'
+    return 'applied'
   })
   if (!lock.locked) return 'retry'
+  if (lock.value === 'applied' && notifyAfter) {
+    try { await (notifyAfter as () => Promise<void>)() } catch (err: any) { console.error('[viva] external refund notification failed:', err?.message) }
+  }
   if (lock.value === 'external') console.error(`[viva] EXTERNAL refund ${refundTx} of ${found.type} ${found.id} (parent ${parent}) recorded — admin check needed`)
+  if (lock.value === 'applied') console.log(`[viva] external refund ${refundTx} of ${found.type} ${found.id} (parent ${parent}) applied automatically`)
   return lock.value
 }

@@ -194,11 +194,12 @@ const UNDER_AGE_GRACE_MS = 14 * 24 * 3600_000
  * Ε13: λογαριασμός που έκλεισε επειδή ο χρήστης δήλωσε ηλικία κάτω των 15.
  * Μέχρι να τον σβήσει το cron (lib/cron, 03:00) καμία νέα σύνδεση: αλλιώς θα
  * έπαιρνε τοκεν και θα ακύρωνε το αίτημα από το /user-rights/cancel-delete.
- * Και το 'failed' (το cron απέτυχε) μετράει — ο λογαριασμός υπάρχει ακόμα.
+ * Και το 'failed' (το cron απέτυχε) μετράει — ο λογαριασμός υπάρχει ακόμα —
+ * όπως και το 'executing' (Ε15: η διαγραφή εκτελείται τώρα).
  */
 async function isUnderAgeClosed(userId: string): Promise<boolean> {
   const n = await prisma.accountDeletionRequest.count({
-    where: { user_id: userId, reason: UNDER_AGE_REASON, status: { in: ['pending', 'failed'] } },
+    where: { user_id: userId, reason: UNDER_AGE_REASON, status: { in: ['pending', 'failed', 'executing'] } },
   })
   return n > 0
 }
