@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.globipet.app",
+      "sha256_cert_fingerprints": [
+        "19:51:B4:85:49:DD:39:95:89:A5:3F:7F:1D:D3:61:ED:C4:9E:1A:83:23:EF:D2:A9:E5:B1:2E:3E:66:0E:9A:49"
+      ]
+    }
+  }
+]
