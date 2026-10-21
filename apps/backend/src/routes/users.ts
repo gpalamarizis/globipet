@@ -53,6 +53,17 @@ export const profileSchema = z.object({
 }).strict()
 
 /**
+ * Ε13: οι επαγγελματικοί λογαριασμοί (admin, service_provider) δεν περνούν
+ * από την πύλη ημερομηνίας γέννησης. Ο ρόλος `both` είναι και ιδιώτης
+ * χρήστης → ζητείται κανονικά. Κοινό με το auth.ts (toSafeUser).
+ */
+export const BIRTH_DATE_EXEMPT_ROLES = ['admin', 'service_provider']
+export function needsBirthDate(user: { birth_date?: unknown; role?: unknown }): boolean {
+  if (user.birth_date) return false
+  return !BIRTH_DATE_EXEMPT_ROLES.includes(String(user.role ?? ''))
+}
+
+/**
  * Ε12: ο χρήστης προς τον client ΧΩΡΙΣ μυστικά (κωδικός, hash reset/επαλήθευσης,
  * token_version) και με `email_verified` — όπως το toSafeUser του auth.ts.
  */
@@ -64,6 +75,9 @@ function safeUser(user: any) {
   } = user
   decryptUserFields(safe)
   safe.email_verified = !!user.email_verified_at
+  // Ε13: όπως το toSafeUser — λείπει η ημερομηνία γέννησης (PATCH /auth/me/birth-date)·
+  // όχι για επαγγελματικούς λογαριασμούς (admin, service_provider).
+  safe.needs_birth_date = needsBirthDate(user)
   return safe
 }
 

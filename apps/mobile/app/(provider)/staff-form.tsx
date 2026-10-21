@@ -17,7 +17,7 @@ import { colors, space, type } from '@/theme'
  * ονοματεπώνυμο, email, τίτλος, αρ. αδείας, τηλέφωνο, ειδικότητες, ενεργός)
  * συν την τηλεσυμβουλευτική που είχε ήδη το κινητό.
  *
- * Το email συνδέει αυτόματα τον υπάλληλο με την ομάδα μόλις εγγραφεί.
+ * Το email στέλνει πρόσκληση· ο υπάλληλος συνδέεται μόνο όταν την αποδεχθεί (Ε13).
  * Διαγραφή: οι κρατήσεις μένουν, χάνουν μόνο τη σύνδεση με το μέλος.
  */
 export default function StaffFormScreen() {
@@ -108,7 +108,7 @@ export default function StaffFormScreen() {
 
         <Input label={t('providerStaff.nameLabel')} value={form.full_name} onChangeText={v => set('full_name', v)} autoCapitalize="words" />
         <Input label={t('providerStaff.emailLabel')} value={form.email} onChangeText={v => set('email', v)}
-          keyboardType="email-address" autoCapitalize="none" hint={t('providerStaff.emailHint')} />
+          keyboardType="email-address" autoCapitalize="none" hint={t('providerStaff.emailHintInvite')} />
         <Chips label={t('providerStaff.titleLabel')} value={form.title} onChange={v => set('title', v)}
           options={STAFF_TITLE_OPTIONS.map(o => ({ value: o.value, label: t(o.key) }))} />
         <Input label={t('providerStaff.licenseLabel')} value={form.license_number} onChangeText={v => set('license_number', v)} />

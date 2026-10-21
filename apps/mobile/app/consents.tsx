@@ -3,33 +3,34 @@ import { View, Text, StyleSheet, Switch, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { SlidersHorizontal } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
-import { Screen, Card, Button, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Button, Badge, SkeletonRows } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
 
 /**
  * Συγκαταθέσεις — αντίστοιχο της σελίδας /cookies του web.
  *
- * Ίδιες τέσσερις κατηγορίες, ίδιο endpoint (/user-consents). Κάθε αλλαγή
- * γράφεται ως ΝΕΑ εγγραφή — το ιστορικό δεν αλλοιώνεται, ώστε να φαίνεται
- * πότε δόθηκε και πότε ανακλήθηκε κάθε συγκατάθεση (GDPR άρθρο 7§3: η
- * ανάκληση πρέπει να είναι τόσο εύκολη όσο η παροχή).
+ * Ε13 (απόφαση ιδιοκτήτη): χωρίς «Στατιστικά» και «Marketing» (διαφήμιση) —
+ * δεν χρησιμοποιούμε τέτοια εργαλεία. Ούτε «Λειτουργικά» ως διακόπτη: γλώσσα
+ * και θέμα αποθηκεύονται πάντα (τα ζητά ο χρήστης) και η πολιτική απορρήτου
+ * §11 τα κατατάσσει στα απαραίτητα. Τα κλειδιά consents.analytics/marketing/
+ * functional μένουν στα locales αλλά δεν χρησιμοποιούνται.
+ *
+ * Μένει ένας διακόπτης, «Ενημερωτικά email» = `marketing` στο backend: το
+ * διαβάζει η μαζική αποστολή email του admin (admin.ts). Ίδιο endpoint
+ * (/user-consents), κάθε αλλαγή ΝΕΑ εγγραφή (GDPR άρθρο 7§3).
  *
  * Δεν στέλνουμε terms_accepted / privacy_accepted: ο server τα κρατά από την
  * προηγούμενη εγγραφή, ώστε μια αλλαγή προτιμήσεων να μη «σβήνει» την
  * αποδοχή όρων της εγγραφής.
  */
-type Key = 'analytics' | 'marketing' | 'functional'
-const KEYS: Key[] = ['analytics', 'marketing', 'functional']
-
 export default function ConsentsScreen() {
   const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const isAuthenticated = useAuthStore(st => st.isAuthenticated)
-  const [prefs, setPrefs] = useState<Record<Key, boolean>>({ analytics: false, marketing: false, functional: false })
+  const [newsletter, setNewsletter] = useState(false)
 
   const { data: current, isLoading } = useQuery({
     queryKey: ['consents-current'],
@@ -38,13 +39,11 @@ export default function ConsentsScreen() {
   })
 
   useEffect(() => {
-    if (current) setPrefs({
-      analytics: !!current.analytics, marketing: !!current.marketing, functional: !!current.functional,
-    })
+    if (current) setNewsletter(!!current.marketing)
   }, [current])
 
   const save = useMutation({
-    mutationFn: () => api.post('/user-consents', { ...prefs, source: 'mobile_preferences' }),
+    mutationFn: () => api.post('/user-consents', { marketing: newsletter, source: 'mobile_preferences' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consents-current'] })
       Alert.alert(t('consents.saved'))
@@ -52,18 +51,11 @@ export default function ConsentsScreen() {
     onError: () => Alert.alert(t('common.error'), t('consents.errorSave')),
   })
 
-  if (!isAuthenticated) return (
-    <Screen title={t('consents.title')} back>
-      <EmptyState icon={SlidersHorizontal} title={t('consents.loginPrompt')}
-        action={<Button label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} />} />
-    </Screen>
-  )
-
   return (
     <Screen title={t('consents.title')} back>
-      <Text style={s.intro}>{t('consents.subtitle')}</Text>
+      <Text style={s.intro}>{t('consents.subtitleInfo')}</Text>
 
-      {isLoading ? <SkeletonRows count={4} /> : (
+      {isAuthenticated && isLoading ? <SkeletonRows count={2} /> : (
         <>
           <Card>
             <View style={s.row}>
@@ -75,29 +67,39 @@ export default function ConsentsScreen() {
             </View>
           </Card>
 
-          {KEYS.map(k => (
-            <Card key={k}>
-              <View style={s.row}>
-                <View style={s.textCol}>
-                  <Text style={s.title}>{t(`consents.${k}.title`)}</Text>
-                  <Text style={s.desc}>{t(`consents.${k}.desc`)}</Text>
-                </View>
-                <Switch value={prefs[k]}
-                  onValueChange={v => setPrefs(p => ({ ...p, [k]: v }))}
-                  trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.surface} />
+          <Card>
+            <View style={s.row}>
+              <View style={s.textCol}>
+                <Text style={s.title}>{t('consents.newsletter.title')}</Text>
+                <Text style={s.desc}>{t('consents.newsletter.desc')}</Text>
               </View>
-            </Card>
-          ))}
+              {isAuthenticated ? (
+                <Switch value={newsletter}
+                  onValueChange={setNewsletter}
+                  accessibilityLabel={t('consents.newsletter.title')}
+                  trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.surface} />
+              ) : null}
+            </View>
+          </Card>
 
-          <Text style={s.note}>{t('consents.scopeNote')}</Text>
+          <Text style={s.note}>{t('consents.noTracking')}</Text>
 
-          <Button full label={t('consents.save')} loading={save.isPending}
-            onPress={() => save.mutate()} />
-
-          {!!current?.created_at && (
-            <Text style={s.last}>
-              {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString(i18n.language)}
-            </Text>
+          {isAuthenticated ? (
+            <>
+              <Text style={s.note}>{t('consents.scopeNote')}</Text>
+              <Button full label={t('consents.save')} loading={save.isPending}
+                onPress={() => save.mutate()} />
+              {!!current?.created_at && (
+                <Text style={s.last}>
+                  {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString(i18n.language)}
+                </Text>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={s.note}>{t('consents.loginForNewsletter')}</Text>
+              <Button full label={t('auth.login')} onPress={() => router.push('/auth/login' as any)} />
+            </>
           )}
         </>
       )}

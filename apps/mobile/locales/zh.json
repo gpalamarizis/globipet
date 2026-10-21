@@ -1109,7 +1109,10 @@
       "nurse": "护士",
       "tech": "技师",
       "other": "其他"
-    }
+    },
+    "awaitingAcceptance": "等待接受",
+    "noInvite": "未邀请",
+    "emailHintInvite": "系统将向使用该邮箱的账户发送邀请。员工接受后才会加入您的团队。"
   },
   "providerMobile": {
     "manageOnWeb": "如需添加或编辑，请在电脑上使用 globipet.com。",
@@ -1853,6 +1856,13 @@
     "functional": {
       "title": "功能",
       "desc": "记住语言、主题和最近搜索等选择，无需每次重新设置。"
+    },
+    "subtitleInfo": "我们在您设备上存储的内容，以及您接收的邮件。",
+    "noTracking": "我们不使用任何统计分析或广告工具。如将来添加，会先征得您的同意。",
+    "loginForNewsletter": "登录后可选择是否接收资讯邮件。",
+    "newsletter": {
+      "title": "资讯邮件",
+      "desc": "通过邮件接收 GlobiPet 的新闻和优惠。有关预订、订单和账号安全的邮件始终会发送。"
     }
   },
   "account": {
@@ -2423,5 +2433,27 @@
   "orderOos": {
     "refunded": "商品已售罄——款项已退还",
     "refundDelayed": "商品已售罄——退款有所延迟，我们的团队会完成退款"
+  },
+  "staffInvite": {
+    "title": "邀请",
+    "subtitle": "有服务商将您添加为其员工。接受后，您的账户将与该商家关联，并可查看分配给您的预约。",
+    "accept": "接受",
+    "decline": "拒绝",
+    "accepted": "已接受邀请，您的账户已关联。",
+    "declined": "已拒绝邀请。",
+    "asMember": "身份：{{name}}",
+    "unknownBusiness": "服务商"
+  },
+  "birthGate": {
+    "title": "请填写您的出生日期",
+    "body": "继续使用 GlobiPet 需要您的出生日期。根据希腊的规定，平台仅向年满 15 岁的用户开放。此信息只需填写一次，之后无法更改。",
+    "submit": "继续",
+    "underConfirm": "您填写的日期表明您未满 15 岁。如果继续，您的账号将被关闭并删除。如填写有误，请更正日期。",
+    "confirmUnder": "确认并关闭账号",
+    "closedTitle": "账号已关闭",
+    "closedLogin": "此账号已关闭：GlobiPet 仅向年满 15 岁的用户开放。",
+    "terms": "使用条款",
+    "privacy": "隐私政策",
+    "changeDate": "修改日期"
   }
 }

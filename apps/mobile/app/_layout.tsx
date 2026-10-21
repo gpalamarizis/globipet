@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Stack, useSegments, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -74,6 +74,13 @@ const PROVIDER_SHARED = new Set([
   'verification',
 ])
 
+/**
+ * Ε13: όσο λείπει η ημερομηνία γέννησης (`needs_birth_date`), αυτές είναι οι
+ * μόνες οθόνες που ανοίγουν χωρίς την auth/birth-date — τα νομικά κείμενα,
+ * όπως οι εξαιρέσεις της πύλης του web (BirthDateGate.tsx).
+ */
+const BIRTH_DATE_EXEMPT = new Set(['terms', 'privacy-policy', 'consents'])
+
 const MODAL_ROUTES = [
   'auth/forgot-password',
   'auth/login',
@@ -126,7 +133,12 @@ export default function RootLayout() {
       // αίτημα φεύγει χωρίς ταυτοποίηση. Δεν περιμένουμε το αποτέλεσμα: αν
       // ο χρήστης αρνηθεί την άδεια ή πέσει το δίκτυο, η εφαρμογή ανοίγει
       // κανονικά.
-      if (useAuthStore.getState().isAuthenticated) void registerPushToken()
+      if (useAuthStore.getState().isAuthenticated) {
+        void registerPushToken()
+        // Ε13: ο αποθηκευμένος χρήστης μπορεί να είναι από προηγούμενη έκδοση
+        // (χωρίς needs_birth_date) — μία ανάγνωση του /auth/me στο άνοιγμα.
+        void useAuthStore.getState().refreshUser()
+      }
     })
   }, [])
 
@@ -150,14 +162,38 @@ export default function RootLayout() {
    */
   const role = useAuthStore(st => st.user?.role)
   const isAuthenticated = useAuthStore(st => st.isAuthenticated)
+  const needsBirthDate = useAuthStore(st => (st.user as any)?.needs_birth_date === true)
   const segments = useSegments()
   const router = useRouter()
+  // Ε13: ένα push της auth/birth-date τη φορά — μέχρι να φανεί στα segments.
+  const gatePushed = useRef<string | null>(null)
   useEffect(() => {
-    if (!authReady) return
+    // Πριν αποδοθεί το Stack (γραμματοσειρές + μεταφράσεις + σύνδεση, ίδια
+    // συνθήκη με το `return null` πιο κάτω) δεν υπάρχει navigator: ένα push
+    // τότε χάνεται ή πετάει σφάλμα και η πύλη ημερομηνίας δεν ανοίγει.
+    if (!fontsReady || !authReady || !i18nReady) return
     // Ως string επίτηδες: οι παραγόμενοι τύποι διαδρομών του expo-router
     // ανανεώνονται μόνο στο επόμενο «expo start», οπότε μια νέα ομάδα
     // οθονών θα έσπαγε τη μεταγλώττιση μέχρι τότε.
     const first = segments[0] as string | undefined
+    /**
+     * Ε13: λείπει η ημερομηνία γέννησης (Google/Facebook) → auth/birth-date,
+     * μετά το login/OAuth και στο άνοιγμα. Χωρίς loop: μόνο αν ΔΕΝ είμαστε
+     * ήδη εκεί (ή σε νομικό κείμενο)· όταν οριστεί, το needsBirthDate γίνεται
+     * false και η οθόνη πηγαίνει μόνη της στην εφαρμογή.
+     */
+    const onGate = first === 'auth' && (segments as string[])[1] === 'birth-date'
+    const path = segments.join('/')
+    if (onGate || !needsBirthDate) gatePushed.current = null
+    if (isAuthenticated && needsBirthDate) {
+      // Δεύτερο push μόνο αν άλλαξε η διαδρομή (π.χ. το login έκανε replace
+      // πάνω από την οθόνη) — όχι ξανά από την ίδια, πριν φανεί η πρώτη.
+      if (!onGate && gatePushed.current !== path && !(first && BIRTH_DATE_EXEMPT.has(first))) {
+        gatePushed.current = path
+        router.push('/auth/birth-date' as any)
+      }
+      return
+    }
     const inProvider = first === '(provider)'
     const inAuth = first === 'auth'
     const shared = !!first && PROVIDER_SHARED.has(first)
@@ -167,7 +203,7 @@ export default function RootLayout() {
     if ((!isAuthenticated || role !== 'service_provider') && inProvider && role !== 'both') {
       router.replace('/(tabs)' as any)
     }
-  }, [authReady, isAuthenticated, role, segments, router])
+  }, [fontsReady, authReady, i18nReady, isAuthenticated, needsBirthDate, role, segments, router])
 
   // Το return έρχεται ΜΕΤΑ από όλα τα hooks.
   if (!fontsReady || !authReady || !i18nReady) return null
@@ -187,6 +223,8 @@ export default function RootLayout() {
           {MODAL_ROUTES.map(name => (
             <Stack.Screen key={name} name={name} options={{ presentation: 'modal' }} />
           ))}
+          {/* Ε13: δεν κλείνει με σύρσιμο — η ημερομηνία γέννησης είναι υποχρεωτική. */}
+          <Stack.Screen name="auth/birth-date" options={{ presentation: 'modal', gestureEnabled: false }} />
 
           {CARD_ROUTES.map(name => (
             <Stack.Screen key={name} name={name} options={{ presentation: 'card' }} />

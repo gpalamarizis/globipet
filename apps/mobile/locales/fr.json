@@ -1109,7 +1109,10 @@
       "nurse": "Infirmier/ière",
       "tech": "Technicien",
       "other": "Autre"
-    }
+    },
+    "awaitingAcceptance": "En attente d’acceptation",
+    "noInvite": "Aucune invitation",
+    "emailHintInvite": "Une invitation sera envoyée au compte associé à cet e-mail. L’employé ne rejoint votre équipe qu’après l’avoir acceptée."
   },
   "providerMobile": {
     "manageOnWeb": "Pour ajouter ou modifier, utilisez globipet.com sur un ordinateur.",
@@ -1853,6 +1856,13 @@
     "functional": {
       "title": "Fonctionnels",
       "desc": "Mémorisent des choix comme la langue, le thème et les recherches récentes, pour ne pas avoir à les refaire à chaque fois."
+    },
+    "subtitleInfo": "Ce que nous enregistrons sur votre appareil et les emails que vous recevez.",
+    "noTracking": "Nous n’utilisons aucun outil de statistiques ou de publicité. Si nous en ajoutons un jour, nous vous demanderons d’abord votre consentement.",
+    "loginForNewsletter": "Connectez-vous pour choisir si vous souhaitez recevoir la newsletter par email.",
+    "newsletter": {
+      "title": "Newsletter par email",
+      "desc": "Les nouveautés et offres de GlobiPet dans votre boîte mail. Les emails concernant vos réservations, vos commandes et la sécurité de votre compte sont toujours envoyés."
     }
   },
   "account": {
@@ -2423,5 +2433,27 @@
   "orderOos": {
     "refunded": "Le produit est épuisé — vous avez été remboursé",
     "refundDelayed": "Le produit est épuisé — le remboursement est retardé et sera finalisé par notre équipe"
+  },
+  "staffInvite": {
+    "title": "Invitations",
+    "subtitle": "Un prestataire vous a ajouté à son équipe. Si vous acceptez, votre compte sera lié à l’établissement et vous verrez les rendez-vous qui vous sont attribués.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "accepted": "Invitation acceptée — votre compte est désormais lié.",
+    "declined": "Invitation refusée.",
+    "asMember": "En tant que : {{name}}",
+    "unknownBusiness": "Prestataire"
+  },
+  "birthGate": {
+    "title": "Indiquez votre date de naissance",
+    "body": "Pour continuer sur GlobiPet, nous avons besoin de votre date de naissance. La plateforme est accessible à partir de 15 ans, conformément au seuil en vigueur en Grèce. Nous la demandons une seule fois et elle ne peut plus être modifiée ensuite.",
+    "submit": "Continuer",
+    "underConfirm": "La date saisie indique que vous avez moins de 15 ans. Si vous continuez, votre compte sera fermé et supprimé. En cas d'erreur, corrigez la date.",
+    "confirmUnder": "Confirmer et fermer le compte",
+    "closedTitle": "Compte fermé",
+    "closedLogin": "Ce compte a été fermé : GlobiPet est accessible à partir de 15 ans.",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "changeDate": "Modifier la date"
   }
 }

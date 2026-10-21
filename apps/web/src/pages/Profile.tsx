@@ -12,10 +12,13 @@ import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 import NotificationSettingsCard from '@/components/NotificationSettingsCard'
 import MyDataCard from '@/components/MyDataCard'
 import MySubscriptionsCard from '@/components/MySubscriptionsCard'
+import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
 const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
 const TIER_LABEL_KEYS: Record<string, string> = { bronze: 'loyalty.bronze', silver: 'loyalty.silver', gold: 'loyalty.gold', platinum: 'loyalty.platinum' }
 const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
+/** Ε13: μόνο αυτές οι ιστοσελίδες γίνονται σύνδεσμος (ίδιος κανόνας με το κινητό). */
+const WEB_URL_RE = /^https?:\/\//i
 
 export default function Profile() {
   const { t } = useTranslation()
@@ -238,7 +241,10 @@ export default function Profile() {
             {(user as any)?.bio && <p className="text-sm text-gray-600 dark:text-gray-400 w-full">{(user as any).bio}</p>}
             {(user as any)?.city && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin size={12}/>{(user as any).city}</span>}
             {(user as any)?.phone && <span className="flex items-center gap-1 text-xs text-gray-500"><Phone size={12}/>{(user as any).phone}</span>}
-            {(user as any)?.website && <a href={(user as any).website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>}
+            {/* Ε13: σύνδεσμος ΜΟΝΟ για http(s) — μια παλιά τιμή javascript:/data: δεν γίνεται εκτελέσιμη. */}
+            {(user as any)?.website && (WEB_URL_RE.test(String((user as any).website).trim())
+              ? <a href={String((user as any).website).trim()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-900 hover:underline"><Globe size={12}/>{(user as any).website}</a>
+              : <span className="flex items-center gap-1 text-xs text-gray-500"><Globe size={12}/>{(user as any).website}</span>)}
           </div>
         )}
       </div>
@@ -314,6 +320,11 @@ export default function Profile() {
           }
         </div>
       )}
+
+      {/* Προσκλήσεις στο προσωπικό παρόχου — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
+      <div id="staff-invitations" className="mt-6 scroll-mt-20 empty:hidden">
+        <StaffInvitationsCard />
+      </div>
 
       {/* Συνδρομές τροφής — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
       <div className="mt-6 empty:hidden">

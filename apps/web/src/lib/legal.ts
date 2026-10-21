@@ -80,7 +80,7 @@ const privacyEl: LegalDoc = {
         'Εκτέλεση σύμβασης — άρθρο 6 παρ. 1 στοιχ. β΄: λογαριασμός, κρατήσεις, παραγγελίες, ' +
         'ιατρικός φάκελος, τηλεϊατρική.\n\n' +
         'Συγκατάθεση — άρθρο 6 παρ. 1 στοιχ. α΄: υπηρεσίες τεχνητής νοημοσύνης, εντοπισμός ' +
-        'τοποθεσίας, εμπορική επικοινωνία, προαιρετικά cookies. Μπορείς να την ανακαλέσεις ' +
+        'τοποθεσίας, εμπορική επικοινωνία (ενημερωτικά email). Μπορείς να την ανακαλέσεις ' +
         'ανά πάσα στιγμή.\n\n' +
         'Νομική υποχρέωση — άρθρο 6 παρ. 1 στοιχ. γ΄: τήρηση φορολογικών παραστατικών.\n\n' +
         'Έννομο συμφέρον — άρθρο 6 παρ. 1 στοιχ. στ΄: ασφάλεια συστημάτων, λειτουργία της ' +
@@ -121,9 +121,8 @@ const privacyEl: LegalDoc = {
         'Google — σύνδεση με λογαριασμό Google, αν την επιλέξεις (λαμβάνουμε όνομα, email και ' +
         'φωτογραφία προφίλ)· συγχρονισμός κρατήσεων με το Google Calendar του παρόχου, αν τον ' +
         'ενεργοποιήσει (τίτλος υπηρεσίας, όνομα πελάτη, σημειώσεις, ημερομηνία, ώρα και ' +
-        'τοποθεσία της κράτησης)· γραμματοσειρές του ιστότοπου (Google Fonts — λαμβάνει τη ' +
-        'διεύθυνση IP σου)· παράδοση ειδοποιήσεων push σε συσκευές Android (Firebase Cloud ' +
-        'Messaging). ΗΠΑ.\n\n' +
+        'τοποθεσία της κράτησης)· παράδοση ειδοποιήσεων push σε συσκευές Android (Firebase ' +
+        'Cloud Messaging). ΗΠΑ.\n\n' +
         'Meta (Facebook) — σύνδεση με λογαριασμό Facebook, αν την επιλέξεις. Λαμβάνουμε όνομα, ' +
         'email και φωτογραφία προφίλ. ΗΠΑ.\n\n' +
         'Microsoft — συγχρονισμός κρατήσεων με το Outlook Calendar του παρόχου, αν τον ' +
@@ -199,22 +198,23 @@ const privacyEl: LegalDoc = {
       title: '11. Cookies',
       body:
         'Χρησιμοποιούμε μόνο ό,τι είναι απαραίτητο για τη λειτουργία της πλατφόρμας: σύνδεση, ' +
-        'γλώσσα, θέμα και τις επιλογές σου για τα cookies, αποθηκευμένα στον browser σου, και ' +
-        'ένα προσωρινό cookie ασφαλείας, δέκα λεπτών, κατά τη σύνδεση με Google ή Facebook. ' +
-        'Αυτά δεν απαιτούν συγκατάθεση.\n\n' +
-        'Για κάθε άλλη κατηγορία ζητάμε τη συγκατάθεσή σου κατά την πρώτη επίσκεψη. Σήμερα ' +
-        'δεν χρησιμοποιούμε cookies ή εργαλεία στατιστικών και διαφήμισης.\n\n' +
-        'Ο ιστότοπος φορτώνει γραμματοσειρές από τη Google (Google Fonts) και, όταν ανοίγεις ' +
-        'έναν χάρτη, χάρτες από τη Mapbox. Και οι δύο λαμβάνουν τη διεύθυνση IP σου.\n\n' +
-        'Μπορείς να αλλάξεις τις επιλογές σου οποτεδήποτε από τη σελίδα προτιμήσεων cookies.',
+        'γλώσσα και θέμα, αποθηκευμένα στον browser σου, και ένα προσωρινό cookie ασφαλείας, ' +
+        'δέκα λεπτών, κατά τη σύνδεση με Google ή Facebook. Αυτά δεν απαιτούν συγκατάθεση.\n\n' +
+        'Δεν χρησιμοποιούμε cookies ή εργαλεία στατιστικών και διαφήμισης. Αν προστεθούν, θα ' +
+        'ζητηθεί πρώτα η συγκατάθεσή σου.\n\n' +
+        'Όταν ανοίγεις έναν χάρτη, ο ιστότοπος φορτώνει χάρτες από τη Mapbox, που λαμβάνει τη ' +
+        'διεύθυνση IP σου.\n\n' +
+        'Στη σελίδα «Cookies» (σύνδεσμος στο κάτω μέρος του ιστότοπου· στην εφαρμογή, ' +
+        '«Συγκαταθέσεις») επιλέγεις αν θέλεις να λαμβάνεις ενημερωτικά email.',
     },
     {
       title: '12. Ηλικία',
       body:
         'Η εγγραφή επιτρέπεται από τα 15 έτη και άνω, σύμφωνα με το όριο που ισχύει στην ' +
         'Ελλάδα για τη συγκατάθεση ανηλίκου σε υπηρεσίες της κοινωνίας της πληροφορίας.\n\n' +
-        'Κατά την εγγραφή με email και κωδικό ζητείται ημερομηνία γέννησης και ο έλεγχος ' +
-        'γίνεται αυτόματα.\n\n' +
+        'Η ημερομηνία γέννησης ζητείται κατά την εγγραφή με email και κωδικό, και στην πρώτη ' +
+        'σύνδεση με Google ή Facebook· ο έλεγχος γίνεται αυτόματα. Αν δηλωθεί ηλικία κάτω ' +
+        'των 15, ο λογαριασμός κλείνει και διαγράφεται.\n\n' +
         'Για συναλλαγές και πληρωμές ενδέχεται να απαιτείται ενηλικίωση ή συναίνεση ' +
         'κηδεμόνα, κατά τις διατάξεις περί δικαιοπρακτικής ικανότητας.\n\n' +
         'Αν διαπιστώσουμε λογαριασμό κάτω των 15, τον διαγράφουμε.',
@@ -445,8 +445,8 @@ const privacyEn: LegalDoc = {
       title: '4. Legal basis',
       body:
         'Contract — Article 6(1)(b): account, bookings, orders, medical records, telehealth.\n\n' +
-        'Consent — Article 6(1)(a): AI services, location tracking, marketing, optional ' +
-        'cookies. You may withdraw at any time.\n\n' +
+        'Consent — Article 6(1)(a): AI services, location tracking, marketing communications ' +
+        '(newsletter emails). You may withdraw at any time.\n\n' +
         'Legal obligation — Article 6(1)(c): tax records.\n\n' +
         'Legitimate interest — Article 6(1)(f): security, community operation. You may object.',
     },
@@ -483,9 +483,8 @@ const privacyEn: LegalDoc = {
         'Foundation, United Kingdom.\n\n' +
         'Google — Google sign-in, if you choose it (we receive name, email and profile photo); ' +
         'syncing bookings to a provider’s Google Calendar, if the provider enables it (service ' +
-        'title, customer name, notes, date, time and location of the booking); the website’s ' +
-        'fonts (Google Fonts — receives your IP address); delivery of push notifications to ' +
-        'Android devices (Firebase Cloud Messaging). United States.\n\n' +
+        'title, customer name, notes, date, time and location of the booking); delivery of push ' +
+        'notifications to Android devices (Firebase Cloud Messaging). United States.\n\n' +
         'Meta (Facebook) — Facebook sign-in, if you choose it. We receive name, email and ' +
         'profile photo. United States.\n\n' +
         'Microsoft — syncing bookings to a provider’s Outlook Calendar, if the provider enables ' +
@@ -555,21 +554,24 @@ const privacyEn: LegalDoc = {
     {
       title: '11. Cookies',
       body:
-        'We use only what the platform needs to work: sign-in, language, theme and your cookie ' +
-        'choices, stored in your browser, plus a temporary ten-minute security cookie during ' +
-        'Google or Facebook sign-in. These do not require consent.\n\n' +
-        'For every other category we ask for your consent on first visit. We currently use no ' +
-        'analytics or advertising cookies or tools.\n\n' +
-        'The website loads fonts from Google (Google Fonts) and, when you open a map, maps ' +
-        'from Mapbox. Both receive your IP address.\n\n' +
-        'You can change your choices at any time from the cookie preferences page.',
+        'We use only what the platform needs to work: sign-in, language and theme, stored in ' +
+        'your browser, plus a temporary ten-minute security cookie during Google or Facebook ' +
+        'sign-in. These do not require consent.\n\n' +
+        'We do not use analytics or advertising cookies or tools. If any are added, we will ' +
+        'ask for your consent first.\n\n' +
+        'When you open a map, the website loads maps from Mapbox, which receives your IP ' +
+        'address.\n\n' +
+        'On the “Cookies” page (linked at the bottom of the website; in the app, “Consents”) ' +
+        'you choose whether to receive newsletter emails.',
     },
     {
       title: '12. Age',
       body:
         'Registration is permitted from age 15, in line with the Greek threshold for a ' +
         'minor’s consent to information society services.\n\n' +
-        'Date of birth is requested at email-and-password sign-up and checked automatically.\n\n' +
+        'Date of birth is requested at email-and-password sign-up and at the first Google or ' +
+        'Facebook sign-in, and checked automatically. If an age under 15 is entered, the ' +
+        'account is closed and deleted.\n\n' +
         'Transactions and payments may require legal capacity or guardian consent.\n\n' +
         'If we find an account belonging to someone under 15, we delete it.',
     },

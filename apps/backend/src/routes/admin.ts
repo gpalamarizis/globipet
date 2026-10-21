@@ -1,4 +1,5 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
+import { PrismaClient } from '@prisma/client'
 import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import bcrypt from 'bcryptjs'
@@ -16,6 +17,27 @@ import { StripeCancelError } from '../lib/stripeSubscriptions.js'
 /** Οι ρόλοι που ορίζει η διαχείριση (ίδιοι με το PATCH /users/:id). */
 const ADMIN_ASSIGNABLE_ROLES = ['user', 'service_provider', 'admin']
 const round2 = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * Σύνδεση ΜΟΝΟ ΑΝΑΓΝΩΣΗΣ για το εργαλείο SQL (POST /admin/query).
+ *
+ *   Με DATABASE_URL_READONLY (ρόλος globipet_readonly —
+ *   backend/scripts/sql/readonly-role.sql: SELECT μόνο, χωρίς τις ευαίσθητες
+ *   στήλες) τα ερωτήματα τρέχουν με αυτόν τον ρόλο: η ίδια η Postgres
+ *   αρνείται κάθε εγγραφή και κάθε προστατευμένη στήλη, όποιο κόλπο κι αν
+ *   περάσει τους ελέγχους κειμένου. Χωρίς τη μεταβλητή → η κύρια σύνδεση,
+ *   όπως πριν (οι έλεγχοι κειμένου + READ ONLY συναλλαγή).
+ *   Ένα instance, δημιουργείται στην πρώτη χρήση (lazy).
+ */
+let readonlyClient: PrismaClient | null = null
+function queryClient(): PrismaClient {
+  const url = process.env.DATABASE_URL_READONLY
+  if (!url) return prisma
+  if (!readonlyClient) {
+    readonlyClient = new PrismaClient({ datasources: { db: { url } }, log: ['error'] })
+  }
+  return readonlyClient
+}
 
 /** Διαφυγή HTML για κείμενο του διαχειριστή μέσα σε email. */
 const escHtml = (v: string) => String(v)
@@ -35,7 +57,9 @@ const UNSUB = {
  * Έσοδα παραγγελιών: ΜΟΝΟ πληρωμένες (payment_status), όχι «delivered» —
  * παραγγελία παραδοτέα αλλά απλήρωτη ή επιστραμμένη δεν είναι έσοδο, ενώ
  * πληρωμένη που δεν παραδόθηκε ακόμα είναι. Στις μερικώς επιστραμμένες
- * αφαιρείται ό,τι επιστράφηκε (καταγραφή 'refund' του /admin/refund).
+ * αφαιρείται ό,τι επιστράφηκε (καταγραφή 'refund' του /admin/refund, και
+ * εξωτερική επιστροφή από τον πίνακα της Viva που εφαρμόστηκε — 'external_refund'
+ * με applied, lib/externalRefund).
  * ΠΕΡΙΟΡΙΣΜΟΣ: το audit κρατά 180 μέρες· για παλαιότερη μερική επιστροφή
  * μετρά ολόκληρο το ποσό (δεν υπάρχει στήλη «επιστραμμένο ποσό» στο Order).
  */
@@ -49,8 +73,9 @@ async function orderRevenue(): Promise<{ count: number; revenue: number }> {
                         THEN (a.metadata->>'amount')::float8 ELSE 0 END) AS refunded
           FROM audit_logs a
          WHERE o.payment_status = 'partially_refunded'
-           AND a.action = 'refund' AND a.resource = 'order'
-           AND a.resource_id = o.id AND a.outcome = 'success'
+           AND a.resource = 'order' AND a.resource_id = o.id
+           AND ((a.action = 'refund' AND a.outcome = 'success')
+                OR (a.action = 'external_refund' AND a.metadata->>'applied' = 'true'))
       ) rf ON true
      WHERE o.payment_status IN ('paid', 'partially_refunded')`
   return { count: Number(r?.n ?? 0), revenue: round2(Number(r?.revenue ?? 0)) }
@@ -735,7 +760,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
       // `WITH x AS (DELETE … RETURNING …) SELECT …` ή μια συνάρτηση που γράφει
       // απορρίπτονται από την ίδια την Postgres. Και όριο χρόνου, ώστε ένα
       // βαρύ ερώτημα να μην κρατά τη βάση.
-      const rows = await prisma.$transaction(async (tx) => {
+      const rows = await queryClient().$transaction(async (tx) => {
         await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
         await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '10s'")
         return tx.$queryRawUnsafe(limited)
@@ -776,6 +801,11 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   //     · ποτέ σε λογαριασμό με εκκρεμές αίτημα διαγραφής.
   //     · αποστολή σε παρτίδες (Resend /emails/batch) με μικρή παύση, ώστε να
   //       μη χτυπά το όριο ρυθμού και να μη χάνονται παραλήπτες.
+  // Συγκατάθεση «Ενημερωτικά email»: μετρά ΜΟΝΟ εγγραφή marketing = true που
+  // δημιουργήθηκε από αυτή τη στιγμή και μετά. ΠΡΙΝ, το πεδίο `marketing` του
+  // user_consents σήμαινε «cookies διαφήμισης» (banner cookies), όχι
+  // συγκατάθεση για email — δεν αποτελεί έγκυρη συγκατάθεση για newsletter.
+  const NEWSLETTER_CONSENT_SINCE = new Date('2026-10-21T00:00:00Z')
   app.post('/email', async (req: any, reply) => {
     const { to_email, to_role, subject, body } = req.body as any
     const transactional = (req.body as any)?.transactional === true
@@ -814,13 +844,14 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         SELECT u.email, u.preferred_language
           FROM users u
           LEFT JOIN LATERAL (
-            SELECT c.marketing FROM user_consents c
+            SELECT c.marketing, c.created_at FROM user_consents c
              WHERE c.user_id = u.id
              ORDER BY c.created_at DESC
              LIMIT 1
           ) lc ON true
          WHERE (${role}::text IS NULL OR u.role = ${role})
-           AND (${transactional}::boolean OR lc.marketing IS TRUE)
+           AND (${transactional}::boolean
+                OR (lc.marketing IS TRUE AND lc.created_at >= ${NEWSLETTER_CONSENT_SINCE}))
            AND NOT EXISTS (
              SELECT 1 FROM account_deletion_requests d
               WHERE d.user_id = u.id AND d.status = 'pending')`

@@ -16,6 +16,17 @@ import { audit } from '../lib/audit.js'
  *   - marketing   → advertising, remarketing, personalized content
  *   - functional  → non-essential UX enhancements (chat widget, language preference caching)
  *
+ * Ε13 (απόφαση ιδιοκτήτη): ΔΕΝ χρησιμοποιούμε cookies/εργαλεία στατιστικών ή
+ * διαφήμισης. Web (/cookies) και κινητό (Συγκαταθέσεις) δεν προσφέρουν πια
+ * «Στατιστικά» και «Διαφήμιση». Ούτε «Λειτουργικά» ως επιλογή: γλώσσα και
+ * θέμα αποθηκεύονται πάντα, επειδή τα ζητά ο ίδιος ο χρήστης, και η πολιτική
+ * απορρήτου (§11) τα κατατάσσει στα απαραίτητα — κανένας κώδικας δεν
+ * εξαρτιόταν από αυτόν τον διακόπτη. Εμφανίζονται μέσα στα «Απαραίτητα».
+ * Ο μόνος διακόπτης είναι το `marketing` με τη σημασία «Ενημερωτικά email»:
+ * το διαβάζει η μαζική αποστολή του admin (admin.ts POST /email).
+ * Το endpoint δέχεται ΑΚΟΜΑ όλα τα πεδία, όπως πριν — οι ήδη εγκατεστημένες
+ * εκδόσεις της εφαρμογής τα στέλνουν και δεν πρέπει να παίρνουν σφάλμα.
+ *
  * Endpoints:
  *   GET  /user-consents/current    — latest consent state for the caller (or anonymous by cookie id)
  *   POST /user-consents           — record a new consent event

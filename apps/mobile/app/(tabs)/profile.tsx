@@ -9,6 +9,7 @@ import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, C
 import { useAuthStore } from '../../src/store/auth'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -277,8 +278,11 @@ export default function ProfileScreen() {
             {profile.phone ? (
               <View style={s.infoItem}><Phone size={icon.xs} color={colors.textMuted} /><Text style={s.infoTxt}>{profile.phone}</Text></View>
             ) : null}
-            {profile.website ? (
-              <TouchableOpacity style={s.infoItem} onPress={() => Linking.openURL(profile.website).catch(() => {})}>
+            {/* Ε13: ανοίγει ΜΟΝΟ http(s) — μια παλιά τιμή javascript:/tel:/intent: μένει απλό κείμενο. */}
+            {profile.website && !/^https?:\/\//i.test(String(profile.website).trim()) ? (
+              <View style={s.infoItem}><Globe size={icon.xs} color={colors.textMuted} /><Text style={s.infoTxt} numberOfLines={1}>{profile.website}</Text></View>
+            ) : profile.website ? (
+              <TouchableOpacity style={s.infoItem} onPress={() => Linking.openURL(String(profile.website).trim()).catch(() => {})}>
                 <Globe size={icon.xs} color={colors.brand} /><Text style={[s.infoTxt, { color: colors.brand }]} numberOfLines={1}>{profile.website}</Text>
               </TouchableOpacity>
             ) : null}
@@ -313,6 +317,9 @@ export default function ProfileScreen() {
           ))}
         </View>
       </View>
+
+      {/* Προσκλήσεις στο προσωπικό παρόχου — ίδια κάρτα με το web· κρύβεται όταν δεν υπάρχει καμία. */}
+      <StaffInvitationsCard style={s.invitations} />
 
       <View style={s.menu}>
         {/* Ο «both» είναι και πάροχος: του δίνουμε την είσοδο στον χώρο
@@ -441,6 +448,7 @@ const s = StyleSheet.create({
   infoItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs, maxWidth: '100%' },
   infoTxt: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   loyaltyWrap: { marginTop: space.xl, marginHorizontal: space.lg },
+  invitations: { marginTop: space.xl, marginHorizontal: space.lg },
   tierCard: {
     padding: space.md, marginBottom: space.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,

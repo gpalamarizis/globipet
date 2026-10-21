@@ -130,6 +130,21 @@ const TITLES: Record<string, Row> = {
     el: 'Η επιστροφή χρημάτων ολοκληρώθηκε', en: 'Your refund is complete', es: 'Tu reembolso se ha completado',
     fr: 'Votre remboursement est effectué', zh: '退款已完成',
   },
+  /** Πρόσκληση μέλους προσωπικού (staff.ts): προς τον γιατρό· ανοίγει το /profile. */
+  staff_invitation: {
+    el: 'Πρόσκληση στο προσωπικό', en: 'Staff invitation', es: 'Invitación al equipo',
+    fr: 'Invitation à rejoindre l\u2019équipe', zh: '员工邀请',
+  },
+  /** Προς τον πάροχο: το μέλος αποδέχθηκε· ανοίγει το /provider/staff. */
+  staff_invitation_accepted: {
+    el: 'Η πρόσκληση έγινε δεκτή', en: 'Invitation accepted', es: 'Invitación aceptada',
+    fr: 'Invitation acceptée', zh: '邀请已接受',
+  },
+  /** Προς τον πάροχο: το μέλος απέρριψε. */
+  staff_invitation_declined: {
+    el: 'Η πρόσκληση απορρίφθηκε', en: 'Invitation declined', es: 'Invitación rechazada',
+    fr: 'Invitation refusée', zh: '邀请已被拒绝',
+  },
 }
 
 // ─── Μηνύματα ────────────────────────────────────────────────────────
@@ -343,4 +358,30 @@ export const notifyMsg = {
     fr: `L’annulation de la séance de télémédecine du ${date} à ${time} est terminée. ${amount}€ ont été remboursés sur votre moyen de paiement.`,
     zh: `${date} ${time} 的远程问诊已取消完成。${amount}€ 已退回原支付方式。`,
   }),
+
+  /** Πρόσκληση: «Η Κλινική Χ σε πρόσθεσε στο προσωπικό της ως Όνομα.» */
+  staffInvitation: (lang: Lang, business: string, name: string) => p(lang, {
+    el: `Η επιχείρηση "${business}" σε πρόσθεσε στο προσωπικό της ως "${name}". Άνοιξε το προφίλ σου για να αποδεχθείς ή να απορρίψεις την πρόσκληση.`,
+    en: `"${business}" added you to its staff as "${name}". Open your profile to accept or decline the invitation.`,
+    es: `"${business}" te ha añadido a su equipo como "${name}". Abre tu perfil para aceptar o rechazar la invitación.`,
+    fr: `« ${business} » vous a ajouté à son équipe en tant que « ${name} ». Ouvrez votre profil pour accepter ou refuser l\u2019invitation.`,
+    zh: `“${business}”已将您添加为其员工“${name}”。请打开您的个人资料接受或拒绝邀请。`,
+  }),
+
+  /** Προς τον πάροχο: «Ο/Η Όνομα αποδέχθηκε / απέρριψε την πρόσκληση.» */
+  staffInvitationAnswered: (lang: Lang, name: string, accepted: boolean) => p(lang, accepted
+    ? {
+        el: `Ο/Η ${name} αποδέχθηκε την πρόσκληση και ο λογαριασμός του/της συνδέθηκε με το προσωπικό σου.`,
+        en: `${name} accepted the invitation and their account is now linked to your staff.`,
+        es: `${name} ha aceptado la invitación y su cuenta ya está vinculada a tu equipo.`,
+        fr: `${name} a accepté l\u2019invitation et son compte est désormais lié à votre équipe.`,
+        zh: `${name} 已接受邀请，其账户已与您的员工关联。`,
+      }
+    : {
+        el: `Ο/Η ${name} απέρριψε την πρόσκληση. Το email αφαιρέθηκε από το μέλος του προσωπικού.`,
+        en: `${name} declined the invitation. The email has been removed from the staff member.`,
+        es: `${name} ha rechazado la invitación. Se ha quitado el email del miembro del equipo.`,
+        fr: `${name} a refusé l\u2019invitation. L\u2019e-mail a été retiré du membre de l\u2019équipe.`,
+        zh: `${name} 已拒绝邀请。该邮箱已从员工信息中移除。`,
+      }),
 }

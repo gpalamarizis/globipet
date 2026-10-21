@@ -21,7 +21,10 @@ export default function Login() {
   const oauthError = params.get('error')
   useEffect(() => {
     if (!oauthError) return
-    toast.error(oauthError === 'google_unverified' ? t('emailVerify.googleUnverified') : t('emailVerify.oauthFailed'))
+    toast.error(oauthError === 'google_unverified' ? t('emailVerify.googleUnverified')
+      // Ε13: λογαριασμός που έκλεισε λόγω ηλικίας κάτω των 15 (routes/auth.ts).
+      : oauthError === 'under_age' ? t('birthGate.closedLogin')
+      : t('emailVerify.oauthFailed'))
   }, [oauthError, t])
 
   const handleSubmit = async (e: React.FormEvent) => {

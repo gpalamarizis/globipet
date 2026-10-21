@@ -7,59 +7,24 @@ import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { sendEmailVerificationEmail } from '../lib/email.js'
-import { profileSchema } from './users.js'
+import { profileSchema, needsBirthDate } from './users.js'
 
 /**
- * Auto-link any provider_staff records that were pre-created by an employer
- * for this email address but have not yet been linked to a user account.
+ * ΑΥΤΟΜΑΤΗ ΣΥΝΔΕΣΗ ΠΡΟΣΩΠΙΚΟΥ — ΚΑΤΑΡΓΗΘΗΚΕ (Ε13).
  *
- * Flow:
- *   1. Provider adds their employee by email (creates a ProviderStaff row
- *      with `email` set but `user_id` = null).
- *   2. Employee later signs up on GlobiPet (via password / Google / Facebook).
- *   3. This function runs and fills in `user_id` on every matching staff row,
- *      so the employee lands with the staff dashboard ready.
+ * Πριν: σε κάθε είσοδο / επιβεβαίωση email / OAuth / επαναφορά κωδικού, κάθε
+ * μέλος προσωπικού (provider_staff) με το email του χρήστη και user_id null
+ * συνδεόταν αυτόματα με τον λογαριασμό — ο πάροχος έβαζε στο προσωπικό του
+ * οποιονδήποτε χωρίς να ερωτηθεί.
  *
- * Case-insensitive email match. Safe to call on every login too — a no-op
- * when there is nothing to link.
- *
- * ΜΟΝΟ ΓΙΑ ΕΠΑΛΗΘΕΥΜΕΝΟ EMAIL (Ε12). Πριν, οποιοσδήποτε έγραφε λογαριασμό με
- * το email ενός υπαλλήλου (χωρίς να έχει το γραμματοκιβώτιό του) αποκτούσε
- * αμέσως τον πίνακα προσωπικού του εργοδότη — πελάτες, κρατήσεις, ραντεβού.
- * Καλείται ξανά τη στιγμή της επαλήθευσης.
+ * Τώρα η σύνδεση γίνεται ΜΟΝΟ με αποδοχή πρόσκλησης από τον ίδιο τον χρήστη
+ * (routes/staff.ts: GET /staff/invitations, POST /staff/:id/accept|decline).
+ * Οι ήδη συνδεδεμένοι λογαριασμοί ΔΕΝ αγγίζονται. Η συνάρτηση μένει ως
+ * no-op ώστε οι κλήσεις της (είσοδος, OAuth, επιβεβαίωση, επαναφορά) να μην
+ * αλλάξουν σε αυτό το βήμα.
  */
-async function autoLinkProviderStaff(user: { id: string; email: string; email_verified_at?: Date | null }, req: any) {
-  if (!user.email_verified_at) return 0
-  const userId = user.id
-  const email = user.email.trim().toLowerCase()
-  const unlinked = await (prisma as any).providerStaff.findMany({
-    where: {
-      user_id: null,
-      email: { equals: email, mode: 'insensitive' },
-    },
-    select: { id: true, service_id: true, provider_email: true, full_name: true },
-  })
-  if (!unlinked.length) return 0
-
-  await (prisma as any).providerStaff.updateMany({
-    where: { id: { in: unlinked.map((s: any) => s.id) } },
-    data: { user_id: userId, updated_at: new Date() },
-  })
-
-  // One audit line per linked record so employers can see who was auto-linked
-  for (const s of unlinked) {
-    await audit(req, {
-      action: 'staff_auto_link',
-      resource: 'provider_staff',
-      resource_id: s.id,
-      metadata: {
-        service_id: s.service_id,
-        provider_email: s.provider_email,
-        staff_name: s.full_name,
-      },
-    })
-  }
-  return unlinked.length
+async function autoLinkProviderStaff(_user: { id: string; email: string; email_verified_at?: Date | null }, _req: any) {
+  return 0
 }
 
 /**
@@ -150,6 +115,12 @@ const loginSchema = z.object({
 
 const forgotSchema = z.object({ email: emailField })
 
+/** Ε13: PATCH /auth/me/birth-date — μόνο YYYY-MM-DD (το <input type="date"> και το κινητό στέλνουν αυτό). */
+const birthDateSchema = z.object({
+  birth_date: z.string({ required_error: 'Η ημερομηνία γέννησης είναι υποχρεωτική' })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Μη έγκυρη ημερομηνία γέννησης'),
+})
+
 const resetSchema = z.object({
   // Το τοκεν παράγεται από εμάς με 32 τυχαία bytes σε δεκαεξαδικό.
   token: z.string().regex(/^[a-f0-9]{64}$/i, 'Μη έγκυρος σύνδεσμος επαναφοράς'),
@@ -195,7 +166,41 @@ function toSafeUser(user: any) {
   } = user
   decryptUserFields(safe)
   safe.email_verified = !!user.email_verified_at
+  // Ε13: λογαριασμός χωρίς ημερομηνία γέννησης (Google/Facebook, παλιοί
+  // λογαριασμοί) → ο client ζητά την ημερομηνία πριν από οτιδήποτε άλλο
+  // (PATCH /auth/me/birth-date). Προσθετικό πεδίο.
+  safe.needs_birth_date = needsBirthDate(user)
   return safe
+}
+
+/** Ελάχιστη ηλικία εγγραφής — βλ. το σχόλιο στο POST /register. */
+const MIN_AGE = 15
+
+/** Συμπληρωμένα έτη στις `now` (ίδιος υπολογισμός σε εγγραφή και σε PATCH /me/birth-date). */
+function ageInYears(dob: Date, now: Date = new Date()): number {
+  let age = now.getFullYear() - dob.getFullYear()
+  const monthDiff = now.getMonth() - dob.getMonth()
+  // Αν δεν έχουν κλείσει ακόμα τα γενέθλια φέτος, ο χρόνος δεν μετράει.
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age--
+  return age
+}
+
+const UNDER_AGE_MESSAGE = 'Πρέπει να είσαι τουλάχιστον 15 ετών για να χρησιμοποιήσεις το GlobiPet. Ο λογαριασμός σου κλείνει και θα διαγραφεί.'
+const UNDER_AGE_REASON = 'under_age'
+/** Περιθώριο πριν τη διαγραφή λογαριασμού κάτω των 15 (διόρθωση από διαχειριστή). */
+const UNDER_AGE_GRACE_MS = 14 * 24 * 3600_000
+
+/**
+ * Ε13: λογαριασμός που έκλεισε επειδή ο χρήστης δήλωσε ηλικία κάτω των 15.
+ * Μέχρι να τον σβήσει το cron (lib/cron, 03:00) καμία νέα σύνδεση: αλλιώς θα
+ * έπαιρνε τοκεν και θα ακύρωνε το αίτημα από το /user-rights/cancel-delete.
+ * Και το 'failed' (το cron απέτυχε) μετράει — ο λογαριασμός υπάρχει ακόμα.
+ */
+async function isUnderAgeClosed(userId: string): Promise<boolean> {
+  const n = await prisma.accountDeletionRequest.count({
+    where: { user_id: userId, reason: UNDER_AGE_REASON, status: { in: ['pending', 'failed'] } },
+  })
+  return n > 0
 }
 
 /** Ο σύνδεσμος επαλήθευσης ζει 48 ώρες. */
@@ -417,12 +422,8 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if (!dob || Number.isNaN(dob.getTime())) {
       return reply.code(400).send({ message: 'Η ημερομηνία γέννησης είναι υποχρεωτική' })
     }
-    const now = new Date()
-    let age = now.getFullYear() - dob.getFullYear()
-    const monthDiff = now.getMonth() - dob.getMonth()
-    // Αν δεν έχουν κλείσει ακόμα τα γενέθλια φέτος, ο χρόνος δεν μετράει.
-    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age--
-    if (age < 15) {
+    const age = ageInYears(dob)
+    if (age < MIN_AGE) {
       await audit(req, { action: 'register', resource: 'user', outcome: 'failure', metadata: { reason: 'under_age' } })
       return reply.code(403).send({ message: 'Πρέπει να είσαι τουλάχιστον 15 ετών για να δημιουργήσεις λογαριασμό' })
     }
@@ -472,6 +473,10 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'wrong_password' } })
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
+    if (await isUnderAgeClosed(user.id)) {
+      await audit(req, { action: 'login', resource: 'user', resource_id: user.id, outcome: 'failure', metadata: { reason: 'under_age_closed' } })
+      return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
+    }
     // Pick up any staff records the employer added for this email after the
     // user's original registration. Silent no-op when there is nothing new
     // — and when the email is not verified yet.
@@ -510,6 +515,84 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if ('phone'   in updateData) updateData.phone   = encryptField(updateData.phone)
     if ('address' in updateData) updateData.address = encryptField(updateData.address)
     const user = await prisma.user.update({ where: { id }, data: updateData })
+    return toSafeUser(user)
+  })
+
+  /**
+   * Ε13 — Ημερομηνία γέννησης για λογαριασμούς χωρίς αυτήν (Google/Facebook,
+   * παλιοί λογαριασμοί). Το PATCH /auth/me ΔΕΝ τη δέχεται (profileSchema, strip).
+   *
+   *   · Ορίζεται ΜΟΝΟ όταν είναι κενή — μία φορά, ατομικά (updateMany υπό
+   *     συνθήκη birth_date = null). Μετά δεν αλλάζει από εδώ: 409.
+   *   · Ίδιο όριο και ίδιος υπολογισμός με την εγγραφή (MIN_AGE, ageInYears).
+   *   · Κάτω των 15 → 403. Ο λογαριασμός ΔΕΝ ενεργοποιείται: η ημερομηνία δεν
+   *     αποθηκεύεται, καταχωρείται αίτημα διαγραφής (reason 'under_age',
+   *     scheduled_for = τώρα + 14 ημέρες — UNDER_AGE_GRACE_MS — ώστε ένα λάθος
+   *     έτος να μπορεί να διορθωθεί από διαχειριστή πριν τη μη αναστρέψιμη
+   *     διαγραφή· μετά το εκτελεί το cron της 03:00 με την κοινή
+   *     eraseUserAccount), όλες οι συνεδρίες ακυρώνονται (token_version+1) και
+   *     καμία νέα σύνδεση δεν γίνεται δεκτή (isUnderAgeClosed).
+   *
+   *   ΓΙΑΤΙ ΑΙΤΗΜΑ ΚΑΙ ΟΧΙ ΑΜΕΣΗ eraseUserAccount: η διαγραφή είναι
+   *   μη αναστρέψιμη και ένα λάθος έτος (π.χ. 2015 αντί 1985) από παλιό
+   *   χρήστη με παραγγελίες/συνδρομές θα τα έσβηνε στη στιγμή· επίσης η
+   *   eraseUserAccount μπορεί να αποτύχει στη μέση (Stripe) και το cron έχει
+   *   ήδη επανάληψη και καταγραφή. Μέχρι την εκτέλεση ο λογαριασμός είναι
+   *   κλειστός και εξαιρείται από τα μαζικά email (admin.ts: pending).
+   */
+  app.patch('/me/birth-date', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { id } = req.user as any
+    const parsed = parseBody(birthDateSchema, req.body, reply)
+    if (!parsed) return
+    const dob = new Date(parsed.birth_date)
+    // Ημερομηνία που δεν υπάρχει (π.χ. 2001-02-30) δεν «γυρίζει» ίδια.
+    if (Number.isNaN(dob.getTime()) || dob.toISOString().slice(0, 10) !== parsed.birth_date) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+    }
+    const now = new Date()
+    // Μελλοντική ημερομηνία = λάθος πληκτρολόγησης, όχι ανήλικος — 400, όχι κλείσιμο.
+    if (dob.getTime() > now.getTime()) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+    }
+    const age = ageInYears(dob, now)
+    if (age > 120) return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία γέννησης' })
+
+    const current = await prisma.user.findUnique({ where: { id }, select: { id: true, birth_date: true } })
+    if (!current) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' })
+    if (current.birth_date) return reply.code(409).send({ message: 'Η ημερομηνία γέννησης έχει ήδη οριστεί' })
+
+    if (age < MIN_AGE) {
+      // Διαγραφή σε 14 ημέρες, ΟΧΙ αμέσως: περιθώριο ώστε διαχειριστής να
+      // διορθώσει λάθος δήλωση (π.χ. 2015 αντί 1985) ακυρώνοντας το αίτημα.
+      // Ο λογαριασμός μένει κλειστός (isUnderAgeClosed) σε όλο το διάστημα.
+      const scheduledFor = new Date(now.getTime() + UNDER_AGE_GRACE_MS)
+      // Υπάρχον εκκρεμές αίτημα (του ίδιου του χρήστη, 30 ημερών) → γίνεται
+      // under_age· η ημερομηνία του μόνο ΠΡΟΣ ΤΑ ΠΙΣΩ (ποτέ αργότερα από όσο ήταν).
+      const moved = await prisma.accountDeletionRequest.updateMany({
+        where: { user_id: id, status: 'pending' },
+        data: { reason: UNDER_AGE_REASON },
+      })
+      if (moved.count > 0) {
+        await prisma.accountDeletionRequest.updateMany({
+          where: { user_id: id, status: 'pending', scheduled_for: { gt: scheduledFor } },
+          data: { scheduled_for: scheduledFor },
+        })
+      } else {
+        await prisma.accountDeletionRequest.create({
+          data: { user_id: id, reason: UNDER_AGE_REASON, status: 'pending', scheduled_for: scheduledFor },
+        })
+      }
+      await prisma.user.update({ where: { id }, data: { token_version: { increment: 1 } } })
+      ;(app as any).invalidateAuthCache?.(id)
+      // Χωρίς την ημερομηνία στο audit — δεδομένο ανηλίκου που δεν κρατάμε.
+      await audit(req, { action: 'birth_date_under_age', resource: 'user', resource_id: id, outcome: 'failure', metadata: { deletion_scheduled_for: scheduledFor.toISOString() } })
+      return reply.code(403).send({ message: UNDER_AGE_MESSAGE, account_closed: true })
+    }
+
+    const done = await prisma.user.updateMany({ where: { id, birth_date: null }, data: { birth_date: dob } })
+    if (done.count === 0) return reply.code(409).send({ message: 'Η ημερομηνία γέννησης έχει ήδη οριστεί' })
+    await audit(req, { action: 'birth_date_set', resource: 'user', resource_id: id })
+    const user = await prisma.user.findUnique({ where: { id } })
     return toSafeUser(user)
   })
 
@@ -653,6 +736,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         lang: preferredLang,
         provider: 'google',
       })
+      if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
       const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
       return { user: toSafeUser(user), token }
     } catch (err: any) {
@@ -733,6 +817,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         lang: preferredLang,
         provider: 'facebook',
       })
+      if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
       const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
       return { user: toSafeUser(user), token }
     } catch (err: any) {
@@ -803,6 +888,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         lang: preferredLang,
         provider: 'google',
       })
+      if (await isUnderAgeClosed(user.id)) return reply.redirect(`${APP_URL}/login?error=under_age`)
       reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Google OAuth error:', err)
@@ -859,6 +945,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         lang: preferredLang,
         provider: 'facebook',
       })
+      if (await isUnderAgeClosed(user.id)) return reply.redirect(`${APP_URL}/login?error=under_age`)
       reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Facebook OAuth error:', err)
@@ -888,6 +975,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) return reply.code(400).send({ message: 'Ο λογαριασμός δεν βρέθηκε' })
+    if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
 
     const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'oauth_exchange', resource: 'user', resource_id: user.id })

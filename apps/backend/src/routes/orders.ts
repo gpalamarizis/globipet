@@ -16,6 +16,7 @@ import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { fullNameOf } from '../lib/userName.js'
 import { audit, auditSystem } from '../lib/audit.js'
+import { handleVivaTransactionReversal } from '../lib/externalRefund.js'
 
 /**
  * Shipping options, priced on the server.
@@ -716,6 +717,14 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             if (orphan === 'skip') console.error(`[viva] webhook for ${ref} could not be verified — ignored`)
           }
         }
+      }
+      // 1797 = Transaction Reversal Created (επιστροφή). Επαλήθευση στη Viva·
+      // δική μας επιστροφή → τίποτα· εξωτερική (πίνακας Viva) → μόνο κατάσταση
+      // πληρωμής + καταγραφή για τον διαχειριστή (lib/externalRefund). Ποτέ
+      // κίνηση χρημάτων. Δική μας επιστροφή σε εξέλιξη → 503 (ξαναστέλνεται).
+      if (eventType === 1797 && eventData) {
+        const r = await handleVivaTransactionReversal(eventData, (event as any)?.Created)
+        if (r === 'retry') return retry()
       }
       return reply.code(200).send({ received: true })
     } catch (err: any) {

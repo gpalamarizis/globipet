@@ -8,6 +8,7 @@ import {
   eventRefundLockKey, alreadyRefunded, refundReason, legacyCancelledAt,
   EVENT_REFUND_CLAIM_ACTION, EVENT_CANCELLED_REASON, notifyRegistrationRefunded,
 } from './events.js'
+import { EXTERNAL_REFUND_ACTION } from '../lib/externalRefund.js'
 
 /**
  * Αποτυχημένες / κολλημένες επιστροφές χρημάτων — χειρισμός από τον admin.
@@ -23,6 +24,9 @@ import {
  *   · TelehealthConsultation `payment_status: 'refunding'`.
  *   · Audit outcome 'failure' επιστροφών (τελευταίες 180 ημέρες) χωρίς
  *     μεταγενέστερη επιτυχία για την ίδια συναλλαγή ή σήμανση «λύθηκε».
+ *   · Εξωτερικές επιστροφές (από τον πίνακα της Viva, webhook 1797 —
+ *     lib/externalRefund): kind 'external_refund', μία γραμμή ανά επιστροφή,
+ *     «Σήμανση ως λυμένο» όπως οι καταγραφές αποτυχίας.
  *
  * ΔΙΠΛΗ ΕΠΙΣΤΡΟΦΗ — πώς αποτρέπεται στο «Ξαναδοκίμασε»
  *   1. Ατομική διεκδίκηση `refund_failed → refunding` (updateMany υπό συνθήκη,
@@ -232,8 +236,13 @@ const txnOf = (m: any): string | null => {
   const v = m?.transaction_id
   return v === undefined || v === null || v === '' ? null : String(v)
 }
+/** Συναλλαγή της ομάδας: η εξωτερική επιστροφή ομαδοποιείται ανά συναλλαγή επιστροφής (πολλές μερικές της ίδιας πληρωμής = πολλές γραμμές). */
+const groupTxnOf = (action: string, m: any): string | null => {
+  const txn = txnOf(m)
+  return action === EXTERNAL_REFUND_ACTION && m?.refund_tx ? `${txn ?? ''}>${String(m.refund_tx)}` : txn
+}
 
-type Kind = 'event_registration' | 'booking' | 'telehealth' | 'order' | 'audit'
+type Kind = 'event_registration' | 'booking' | 'telehealth' | 'order' | 'audit' | 'external_refund'
 
 type PendingItem = {
   kind: Kind
@@ -254,6 +263,8 @@ type PendingItem = {
   viva_status?: string | null
   /** Το ποσό που ζητήθηκε: από τον admin (reason 'admin_refund') ή στην ακύρωση (booking_cancel / telehealth_cancel). */
   requested_amount?: number | null
+  /** Εξωτερική επιστροφή: η συναλλαγή της επιστροφής στη Viva (transaction_id = η αρχική πληρωμή). */
+  refund_transaction_id?: string | null
 }
 
 const requestedOf = (origin: any): number | null =>
@@ -452,7 +463,7 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
       const groups = new Map<string, { latest: typeof failures[number]; count: number }>()
       for (const f of failures) {
         const txn = txnOf(f.metadata)
-        const key = groupKey(f.action, f.resource, f.resource_id, txn)
+        const key = groupKey(f.action, f.resource, f.resource_id, groupTxnOf(f.action, f.metadata))
         // Σημάδι «λύθηκε» (για αυτή ή για νεότερη αποτυχία της ίδιας ομάδας) ή
         // μεταγενέστερη επιτυχία για την ίδια συναλλαγή.
         const resolved = successes.some(s =>
@@ -462,7 +473,9 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
           ))
         if (resolved) continue
         const resKey = f.resource === 'telehealth_consultation' ? 'telehealth' : f.resource
-        if (statusKey.has(`${resKey}|${f.resource_id}|${txn ?? ''}`)) continue
+        // Η εξωτερική επιστροφή εμφανίζεται ΠΑΝΤΑ (και δίπλα σε κολλημένη
+        // εγγραφή της ίδιας πληρωμής): ο admin πρέπει να τη δει πριν ξαναδοκιμάσει.
+        if (f.action !== EXTERNAL_REFUND_ACTION && statusKey.has(`${resKey}|${f.resource_id}|${txn ?? ''}`)) continue
         const g = groups.get(key)
         if (g) g.count++
         else groups.set(key, { latest: f, count: 1 })
@@ -494,14 +507,16 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
           ? Number(m.amount)
           : Number.isFinite(Number(m.amount_paid)) && m.amount_paid !== null && m.amount_paid !== undefined
             ? Number(m.amount_paid) : recAmount
+        const external = f.action === EXTERNAL_REFUND_ACTION
         items.push({
-          kind: 'audit', id: f.id, resource: f.resource, resource_id: String(f.resource_id ?? ''),
+          kind: external ? 'external_refund' : 'audit', id: f.id, resource: f.resource, resource_id: String(f.resource_id ?? ''),
           status: null, email: f.subject_email ?? rec?.email ?? null, amount,
           transaction_id: txn ?? (m.invoice_id ? String(m.invoice_id) : null),
           date: f.created_at.toISOString(), reason: m.reason ? String(m.reason) : null,
           last_error: f.error_message ?? (m.error ? String(m.error).slice(0, 500) : null),
           action: f.action, attempts: count, title: null,
           can_retry: false,
+          ...(external ? { refund_transaction_id: m.refund_tx ? String(m.refund_tx) : null } : {}),
         })
       }
     }
@@ -649,7 +664,7 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
   // ─── Σήμανση ως λυμένο (χωρίς κλήση στη Viva) ─────────────────────────
   app.post('/resolve', async (req: any, reply) => {
     const { kind, id, note: rawNote, refund_amount } = (req.body ?? {}) as any
-    if (!['event_registration', 'booking', 'telehealth', 'order', 'audit'].includes(kind)) {
+    if (!['event_registration', 'booking', 'telehealth', 'order', 'audit', 'external_refund'].includes(kind)) {
       return reply.code(400).send({ message: 'Άγνωστος τύπος συναλλαγής' })
     }
     if (!id || typeof id !== 'string') return reply.code(400).send({ message: 'Λείπει το αναγνωριστικό' })
@@ -848,13 +863,15 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
       return { success: true, status: r.status }
     }
 
-    // kind === 'audit': σημάδι «λύθηκε» για μια καταγραφή αποτυχίας.
+    // kind === 'audit' / 'external_refund': σημάδι «λύθηκε» για μια καταγραφή
+    // αποτυχίας (εξωτερική επιστροφή: καμία αλλαγή στην εγγραφή, καμία Viva).
     const f = await prisma.auditLog.findUnique({ where: { id } })
     if (!f || f.outcome !== 'failure') return reply.code(404).send({ message: 'Η συναλλαγή δεν βρέθηκε' })
+    if ((kind === 'external_refund') !== (f.action === EXTERNAL_REFUND_ACTION)) return reply.code(400).send({ message: 'Άγνωστος τύπος συναλλαγής' })
     const isRefundFailure = FAILURE_ACTIONS.includes(f.action) || f.action.endsWith('_refund')
     if (!isRefundFailure) return reply.code(400).send({ message: 'Άγνωστος τύπος συναλλαγής' })
     const txn = txnOf(f.metadata)
-    const group = groupKey(f.action, f.resource, f.resource_id, txn)
+    const group = groupKey(f.action, f.resource, f.resource_id, groupTxnOf(f.action, f.metadata))
     const existing = await prisma.auditLog.findFirst({
       where: {
         action: RESOLVED_MARKER_ACTION, resource: f.resource, resource_id: f.resource_id,

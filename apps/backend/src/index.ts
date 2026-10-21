@@ -7,6 +7,7 @@ import multipart from '@fastify/multipart'
 import cookie from '@fastify/cookie'
 import { Prisma } from '@prisma/client'
 import prisma from './lib/prisma.js'
+import { trustProxyHop } from './lib/trustProxy.js'
 import adminCatalogRoutes from './routes/admin-catalog.js'
 import insuranceRoutes from './routes/insurance.js'
 
@@ -70,21 +71,40 @@ import governanceRoutes from './routes/governance.js'
 /**
  * ΤΟ trustProxy ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ ΕΔΩ
  *
- *   Ο διακομιστής τρέχει πίσω από Railway και Cloudflare. Χωρίς αυτό, το
+ *   Ο διακομιστής τρέχει πίσω από τον proxy της Railway — και ίσως ΚΑΙ πίσω
+ *   από το Cloudflare (πελάτης → Cloudflare → Railway → εμείς). Χωρίς αυτό, το
  *   request.ip επιστρέφει τη διεύθυνση του proxy και όχι του χρήστη — που
  *   σημαίνει ότι το rate limiting μετράει ΟΛΟΥΣ τους χρήστες ως έναν, και
  *   το ημερολόγιο ελέγχου καταγράφει πάντα την ίδια IP.
  *
- *   Εμπιστευόμαστε ΕΝΑΝ μόνο proxy, τον πλησιέστερο. Το σκέτο `true` θα
- *   εμπιστευόταν ολόκληρη την αλυσίδα X-Forwarded-For, που τη γράφει ο
- *   πελάτης — ακριβώς η ευπάθεια GHSA-444r-cwp2-x5xf που διορθώνει αυτή η
- *   αναβάθμιση. Η συνάρτηση δέχεται τη διεύθυνση και τον αριθμό άλματος
- *   μετρημένο από τα δεξιά: το 0 είναι ο διπλανός proxy, οπότε `hop < 1`
- *   σταματά ακριβώς εκεί.
+ *   ΠΩΣ ΤΟ ΥΠΟΛΟΓΙΖΕΙ ΤΟ FASTIFY (@fastify/proxy-addr): λίστα διευθύνσεων
+ *   [socket, X-Forwarded-For από τα ΔΕΞΙΑ προς τα αριστερά]· για i = 0, 1, …
+ *   όσο το trust(addrs[i], i) είναι true προχωρά, και το req.ip είναι η
+ *   πρώτη διεύθυνση που ΔΕΝ εμπιστευόμαστε (ή η τελευταία της λίστας).
+ *
+ *   Εμπιστευόμαστε:
+ *     i === 0 — το socket: ο proxy της Railway (όπως πριν, `hop < 1`).
+ *     i === 1 — ΜΟΝΟ αν είναι διεύθυνση του Cloudflare: το άλμα που πρόσθεσε
+ *               η Railway στο XFF είναι τότε ο edge του Cloudflare, και η
+ *               επόμενη τιμή (που έγραψε το ίδιο το Cloudflare) είναι η IP
+ *               του πελάτη — η ίδια με το CF-Connecting-IP.
+ *   Τίποτα άλλο. Το σκέτο `true` θα εμπιστευόταν ολόκληρη την αλυσίδα
+ *   X-Forwarded-For, που τη γράφει ο πελάτης (GHSA-444r-cwp2-x5xf). Πλαστό
+ *   XFF χωρίς Cloudflare: η Railway προσθέτει την πραγματική IP του
+ *   επιτιθέμενου, που δεν είναι του Cloudflare → req.ip = επιτιθέμενος.
+ *   Μέσω Cloudflare με πλαστό XFF: το Cloudflare προσθέτει την πραγματική IP
+ *   του πελάτη δεξιά από τα πλαστά → req.ip = πελάτης.
+ *   Μόνο ΕΝΑ άλμα Cloudflare (i === 1): μια αλυσίδα «IP Cloudflare» που γράφει
+ *   ο πελάτης στο XFF δεν μας μεταφέρει πιο αριστερά.
+ *
+ *   Λίστα (lib/trustProxy.ts): https://www.cloudflare.com/ips/ (ips-v4 / ips-v6). Σταθερή στον
+ *   κώδικα — αν το Cloudflare προσθέσει δίκτυο, οι επισκέπτες από αυτό
+ *   μετριούνται με την IP του edge (ασφαλές: όχι πλαστοπροσωπία, μόνο
+ *   χονδρότερο rate limit) μέχρι να ενημερωθεί.
  */
 const app = Fastify({
   logger: process.env.NODE_ENV === 'development',
-  trustProxy: (_address: string, hop: number) => hop < 1,
+  trustProxy: trustProxyHop,
 })
 
 // ─── Έλεγχος μεταβλητών περιβάλλοντος (lib/envCheck.ts) ──
@@ -245,6 +265,7 @@ const STRICT_LIMITS: Record<string, LimitRule> = {
   '/api/auth/refresh':         { max: 30, window: '15 minutes', key: 'user' },
   '/api/auth/verify-email':    { max: 10, window: '1 hour' },
   '/api/auth/resend-verification': { max: 3, window: '1 hour', key: 'user' },
+  '/api/auth/me/birth-date': { max: 10, window: '1 hour', key: 'user' },
   '/api/auth/logout-all':      { max: 10, window: '1 hour', key: 'user' },
   '/api/users/me/password':    { max: 5,  window: '15 minutes', key: 'user' },
   '/api/user-rights/export':   { max: 5,  window: '1 hour' },

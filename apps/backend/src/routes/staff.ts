@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { audit, auditSystem } from '../lib/audit.js'
+import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
+import { sendPushToUser } from '../lib/push.js'
+import { broadcastToUser } from './notifications.js'
 
 /**
  * Γιατροί / επαγγελματικό προσωπικό παρόχων
@@ -11,8 +15,13 @@ import prisma from '../lib/prisma.js'
  *    DELETE /staff/:id                     διαγραφή
  *    GET    /staff/:id/prices              τιμοκατάλογος γιατρού
  *    PUT    /staff/:id/prices              ορισμός τιμών (μαζικά)
- *    POST   /staff/:id/link                σύνδεση με λογαριασμό χρήστη
+ *    POST   /staff/:id/link                πρόσκληση λογαριασμού (email) — όχι σύνδεση
  *    DELETE /staff/:id/link                αποσύνδεση λογαριασμού
+ *
+ *  ΠΡΟΣΚΛΗΣΕΙΣ (ο χρήστης που προσκλήθηκε — επιβεβαιωμένο email)
+ *    GET    /staff/invitations             εκκρεμείς προσκλήσεις μου
+ *    POST   /staff/:id/accept              αποδοχή → σύνδεση του λογαριασμού μου
+ *    POST   /staff/:id/decline             απόρριψη → το email αφαιρείται από το μέλος
  *
  *  ΓΙΑΤΡΟΣ (συνδεδεμένος με δικό του λογαριασμό)
  *    GET    /staff/me                      το προφίλ μου
@@ -21,6 +30,15 @@ import prisma from '../lib/prisma.js'
  *
  *  ΔΗΜΟΣΙΑ
  *    GET    /staff/by-service/:serviceId   οι γιατροί μιας κλινικής με τιμές
+ *
+ * ΠΡΟΣΚΛΗΣΗ ΑΝΤΙ ΓΙΑ ΑΥΤΟΜΑΤΗ ΣΥΝΔΕΣΗ (Ε13)
+ *   Πριν, κάθε μέλος με το email ενός λογαριασμού συνδεόταν μόνο του (στην
+ *   είσοδο / επιβεβαίωση email — autoLinkProviderStaff του auth.ts — και στο
+ *   /:id/link): ο πάροχος μπορούσε να «βάλει» στο προσωπικό του οποιονδήποτε
+ *   χωρίς να ερωτηθεί. Τώρα «εκκρεμής πρόσκληση» = μέλος με `email` = email
+ *   του χρήστη και `user_id` null (καμία αλλαγή σχήματος). Ο χρήστης τη βλέπει
+ *   στο προφίλ του και την αποδέχεται ή την απορρίπτει. Όσοι είναι ήδη
+ *   συνδεδεμένοι μένουν συνδεδεμένοι.
  *
  * ΚΑΝΟΝΑΣ ΤΙΜΩΝ
  *   Τις τιμές ορίζει ΜΟΝΟ η διοίκηση. Ο γιατρός δεν τις αγγίζει.
@@ -63,6 +81,73 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
       reply.code(403).send({ message: 'Δεν έχεις δικαίωμα σε αυτόν τον γιατρό' }); return null
     }
     return staff
+  }
+
+  /** Ειδοποίηση (εφαρμογή + push), στη γλώσσα του παραλήπτη. Ποτέ δεν πετά. */
+  async function notify(email: string, titleKey: string, message: (lang: any) => string, type: string, link: string) {
+    try {
+      const lang = await langOfUser(email)
+      const notification = await prisma.notification.create({
+        data: { user_email: email, title: notifyTitle(titleKey, lang), message: message(lang), type, link },
+      })
+      broadcastToUser(email, { type: 'notification', notification })
+      void sendPushToUser(email, { title: notification.title, body: notification.message, url: link })
+    } catch (err: any) {
+      console.error('[staff] notification failed:', err?.message)
+    }
+  }
+
+  /**
+   * Νέα/αλλαγμένη πρόσκληση: ειδοποίηση ΜΟΝΟ σε λογαριασμό με αυτό το email
+   * ΕΠΙΒΕΒΑΙΩΜΕΝΟ (όποιος δεν έχει το γραμματοκιβώτιο δεν μαθαίνει τίποτα).
+   * Ο πάροχος δεν μαθαίνει αν υπάρχει λογαριασμός (καμία διαφορά στην απάντηση).
+   *
+   * Όριο: το πολύ ΜΙΑ ειδοποίηση ανά (μέλος προσωπικού, email) ανά 24 ώρες —
+   * αλλιώς ο πάροχος, ξαναστέλνοντας την πρόσκληση, θα «βομβάρδιζε» τον
+   * χρήστη με ειδοποιήσεις/push. Η καταμέτρηση γίνεται στο audit_logs (υπάρχει
+   * ήδη, έχει resource_id + subject_email): εγγραφή 'staff_invite_notified'
+   * ΠΡΙΝ την αποστολή. Η απάντηση προς τον πάροχο δεν αλλάζει (σιωπηλή
+   * παράλειψη). Δύο ταυτόχρονα αιτήματα μπορεί σπάνια να περάσουν και τα δύο.
+   */
+  const INVITE_NOTIFY_WINDOW_MS = 24 * 3600_000
+  async function notifyInvitee(staff: { id: string; email: string | null; user_id: string | null; full_name: string; service_id: string }) {
+    if (!staff.email || staff.user_id) return
+    try {
+      const u: any = await prisma.user.findFirst({
+        where: { email: { equals: staff.email.trim(), mode: 'insensitive' } },
+        select: { email: true, email_verified_at: true } as any,
+      })
+      if (!u?.email_verified_at) return
+      const subject = String(u.email).trim().toLowerCase()
+      const recent = await prisma.auditLog.count({
+        where: {
+          action: 'staff_invite_notified',
+          resource: 'provider_staff',
+          resource_id: staff.id,
+          subject_email: subject,
+          created_at: { gte: new Date(Date.now() - INVITE_NOTIFY_WINDOW_MS) },
+        },
+      })
+      if (recent > 0) return
+      await auditSystem({ action: 'staff_invite_notified', resource: 'provider_staff', resource_id: staff.id, subject_email: subject })
+      const svc = await prisma.service.findUnique({ where: { id: staff.service_id }, select: { provider_name: true } as any }) as any
+      const business = String(svc?.provider_name ?? '')
+      await notify(u.email, 'staff_invitation', (l) => notifyMsg.staffInvitation(l, business, staff.full_name), 'staff_invitation', '/profile')
+    } catch (err: any) {
+      console.error('[staff] invitation notification failed:', err?.message)
+    }
+  }
+
+  const sameEmail = (a: string | null | undefined, b: string | null | undefined) =>
+    !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
+
+  /** Ο συνδεδεμένος χρήστης με το email του — μόνο αν είναι επιβεβαιωμένο. */
+  async function verifiedSelf(req: any): Promise<{ id: string; email: string } | null> {
+    const u: any = await prisma.user.findUnique({
+      where: { id: (req.user as any).id },
+      select: { id: true, email: true, email_verified_at: true } as any,
+    })
+    return u?.email_verified_at ? { id: u.id, email: u.email } : null
   }
 
   function pick(body: any, allowed: readonly string[]) {
@@ -122,6 +207,86 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
     secured.addHook('preHandler', async (req: any, reply: any) => {
       try { await (app as any).authenticate(req, reply) }
       catch { return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' }) }
+    })
+
+    // ── ΠΡΟΣΚΛΗΣΕΙΣ (ο χρήστης που προσκλήθηκε) ──────────────────────
+    // Ανεπιβεβαίωτο email: καμία πρόσκληση (κενή λίστα, όχι σφάλμα — η κάρτα
+    // απλώς δεν εμφανίζεται). Αποδοχή/απόρριψη: 403.
+    secured.get('/invitations', async (req: any) => {
+      const me = await verifiedSelf(req)
+      if (!me) return { data: [], email_unverified: true }
+      const rows = await (prisma as any).providerStaff.findMany({
+        where: { user_id: null, email: { equals: me.email.trim(), mode: 'insensitive' } },
+        select: { id: true, full_name: true, title: true, specialties: true, service_id: true, created_at: true },
+        orderBy: { created_at: 'desc' },
+        take: 50,
+      })
+      if (!rows.length) return { data: [] }
+      const services = await prisma.service.findMany({
+        where: { id: { in: [...new Set(rows.map((r: any) => r.service_id))] as string[] } },
+        select: { id: true, provider_name: true, service_type: true, city: true } as any,
+      }) as any[]
+      const smap = new Map(services.map(s => [s.id, s]))
+      return {
+        data: rows.map((r: any) => {
+          const s: any = smap.get(r.service_id)
+          return {
+            id: r.id, full_name: r.full_name, title: r.title ?? null, specialties: r.specialties ?? [],
+            created_at: r.created_at,
+            business_name: s?.provider_name ?? null, service_type: s?.service_type ?? null, city: s?.city ?? null,
+          }
+        }),
+      }
+    })
+
+    secured.post('/:id/accept', async (req: any, reply) => {
+      const me = await verifiedSelf(req)
+      if (!me) return reply.code(403).send({ message: 'Επιβεβαίωσε πρώτα το email σου', email_unverified: true })
+      const staff = await (prisma as any).providerStaff.findUnique({ where: { id: String(req.params.id) } })
+      if (!staff || staff.user_id || !sameEmail(staff.email, me.email)) {
+        return reply.code(404).send({ message: 'Η πρόσκληση δεν βρέθηκε ή δεν ισχύει πλέον' })
+      }
+      // Ένας λογαριασμός = ένα μέλος προσωπικού (το /staff/me βρίσκει ένα).
+      const taken = await (prisma as any).providerStaff.findFirst({ where: { user_id: me.id }, select: { id: true } })
+      if (taken) return reply.code(409).send({ message: 'Ο λογαριασμός σου είναι ήδη συνδεδεμένος με άλλο μέλος προσωπικού' })
+      // Ατομικά: μόνο αν είναι ακόμα εκκρεμής με το ίδιο email.
+      const r = await (prisma as any).providerStaff.updateMany({
+        where: { id: staff.id, user_id: null, email: { equals: me.email.trim(), mode: 'insensitive' } },
+        data: { user_id: me.id, updated_at: new Date() },
+      })
+      if (r.count === 0) return reply.code(404).send({ message: 'Η πρόσκληση δεν βρέθηκε ή δεν ισχύει πλέον' })
+      await audit(req, {
+        action: 'staff_invite_accepted', resource: 'provider_staff', resource_id: staff.id,
+        metadata: { service_id: staff.service_id, provider_email: staff.provider_email, staff_name: staff.full_name },
+      })
+      await notify(staff.provider_email, 'staff_invitation_accepted',
+        (l) => notifyMsg.staffInvitationAnswered(l, staff.full_name, true), 'staff_invitation_accepted', '/provider/staff')
+      return { success: true, status: 'linked' }
+    })
+
+    // Απόρριψη: το email αφαιρείται από το μέλος (ατομικά, μόνο αν είναι ακόμα
+    // εκκρεμής πρόσκληση προς ΑΥΤΟΝ). Έτσι η πρόσκληση δεν ξαναεμφανίζεται, ο
+    // πάροχος βλέπει ότι δεν ισχύει πια, και μπορεί να ξαναστείλει ρητά.
+    // Ασφαλέστερο από σημάδι στο audit: η κατάσταση είναι στην ίδια την εγγραφή.
+    secured.post('/:id/decline', async (req: any, reply) => {
+      const me = await verifiedSelf(req)
+      if (!me) return reply.code(403).send({ message: 'Επιβεβαίωσε πρώτα το email σου', email_unverified: true })
+      const staff = await (prisma as any).providerStaff.findUnique({ where: { id: String(req.params.id) } })
+      if (!staff || staff.user_id || !sameEmail(staff.email, me.email)) {
+        return reply.code(404).send({ message: 'Η πρόσκληση δεν βρέθηκε ή δεν ισχύει πλέον' })
+      }
+      const r = await (prisma as any).providerStaff.updateMany({
+        where: { id: staff.id, user_id: null, email: { equals: me.email.trim(), mode: 'insensitive' } },
+        data: { email: null, updated_at: new Date() },
+      })
+      if (r.count === 0) return reply.code(404).send({ message: 'Η πρόσκληση δεν βρέθηκε ή δεν ισχύει πλέον' })
+      await audit(req, {
+        action: 'staff_invite_declined', resource: 'provider_staff', resource_id: staff.id,
+        metadata: { service_id: staff.service_id, provider_email: staff.provider_email, staff_name: staff.full_name },
+      })
+      await notify(staff.provider_email, 'staff_invitation_declined',
+        (l) => notifyMsg.staffInvitationAnswered(l, staff.full_name, false), 'staff_invitation_declined', '/provider/staff')
+      return { success: true }
     })
 
     // ── Ο ΓΙΑΤΡΟΣ ──────────────────────────────────────────────────────
@@ -190,6 +355,8 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
         data: staff.map((s: any) => ({
           ...s,
           has_account: !!s.user_id,
+          // Προσθετικό: 'linked' = συνδεδεμένος · 'pending' = αναμένει αποδοχή · null = χωρίς email
+          invitation_status: s.user_id ? 'linked' : s.email ? 'pending' : null,
           bookings_count: cmap.get(s.id) ?? 0,
         })),
       }
@@ -210,7 +377,9 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
       for (const arr of ['specialties', 'languages', 'pet_types']) {
         if (data[arr] && !Array.isArray(data[arr])) data[arr] = [data[arr]]
       }
-      return { data: await (prisma as any).providerStaff.create({ data }) }
+      const created = await (prisma as any).providerStaff.create({ data })
+      await notifyInvitee(created)
+      return { data: created }
     })
 
     secured.patch('/:id', async (req: any, reply) => {
@@ -224,7 +393,10 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
         if (data[arr] && !Array.isArray(data[arr])) data[arr] = [data[arr]]
       }
       data.updated_at = new Date()
-      return { data: await (prisma as any).providerStaff.update({ where: { id: staff.id }, data }) }
+      const updated = await (prisma as any).providerStaff.update({ where: { id: staff.id }, data })
+      // Νέο email σε μέλος χωρίς λογαριασμό = νέα πρόσκληση.
+      if ('email' in data && !sameEmail(staff.email, updated.email)) await notifyInvitee(updated)
+      return { data: updated }
     })
 
     secured.delete('/:id', async (req: any, reply) => {
@@ -304,38 +476,33 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
       return { success: true, saved: clean.length }
     })
 
-    // ── Σύνδεση λογαριασμού γιατρού ───────────────────────────────────
+    // ── Πρόσκληση λογαριασμού γιατρού ─────────────────────────────────
     //
-    // Πριν: σύνδεση με οποιονδήποτε λογαριασμό χωρίς τη συγκατάθεσή του, και
-    // 404 «δεν υπάρχει λογαριασμός» / 409 «ήδη συνδεδεμένος» — δηλαδή έλεγχος
-    // ύπαρξης λογαριασμού για οποιοδήποτε email (enumeration).
-    // Τώρα: το email καταχωρείται πάντα· σύνδεση ΜΟΝΟ αν ο λογαριασμός έχει
-    // επαληθευμένο email και δεν είναι συνδεδεμένος αλλού. Η απάντηση είναι
-    // η ίδια σε κάθε περίπτωση. Αλλιώς η σύνδεση γίνεται στην επόμενη είσοδο
-    // του γιατρού (autoLinkProviderStaff, auth.ts).
+    // Πριν (Ε12): σύνδεση αμέσως αν ο λογαριασμός είχε επαληθευμένο email.
+    // Τώρα: ΠΟΤΕ σύνδεση από εδώ — το email καταχωρείται ως πρόσκληση και ο
+    // χρήστης την αποδέχεται (POST /:id/accept). Η απάντηση είναι η ίδια σε
+    // κάθε περίπτωση (καμία ένδειξη αν υπάρχει λογαριασμός — enumeration).
+    // Ίδιο email με τον ήδη συνδεδεμένο λογαριασμό → καμία αλλαγή.
     secured.post('/:id/link', async (req: any, reply) => {
       const staff = await assertOwnsStaff(req, reply, req.params.id)
       if (!staff) return
       const email = String(req.body?.email || '').trim().toLowerCase()
       if (!email) return reply.code(400).send({ message: 'Λείπει το email' })
 
-      // email_verified_at: πεδίο της s1 (schema) — as any μέχρι το generate.
-      const user: any = await prisma.user.findUnique({ where: { email }, select: { id: true, email_verified_at: true } as any })
-      let linkTo: string | null = null
-      if (user?.email_verified_at) {
-        const taken = await (prisma as any).providerStaff.findFirst({
-          where: { user_id: user.id, NOT: { id: staff.id } },
-          select: { id: true },
-        })
-        if (!taken) linkTo = user.id
+      let keepLinked = false
+      if (staff.user_id) {
+        const linked = await prisma.user.findUnique({ where: { id: staff.user_id }, select: { email: true } })
+        keepLinked = sameEmail(linked?.email, email)
       }
-      await (prisma as any).providerStaff.update({
+      const updated = await (prisma as any).providerStaff.update({
         where: { id: staff.id },
-        data: { user_id: linkTo, email, updated_at: new Date() },
+        data: { email, ...(keepLinked ? {} : { user_id: null }), updated_at: new Date() },
       })
+      // Και επανάληψη με το ίδιο email (εκκρεμής) = υπενθύμιση στον χρήστη.
+      if (!keepLinked) await notifyInvitee(updated)
       return {
         success: true,
-        message: 'Το email καταχωρήθηκε. Αν υπάρχει επαληθευμένος λογαριασμός με αυτό το email, συνδέεται με τον γιατρό.',
+        message: 'Η πρόσκληση καταχωρήθηκε. Αν υπάρχει λογαριασμός με αυτό το email, ο χρήστης θα τη δει στο προφίλ του και θα πρέπει να την αποδεχθεί.',
       }
     })
 

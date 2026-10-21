@@ -18,6 +18,7 @@ import ProviderMarketingPage from './ProviderMarketingPage'
 import ProviderCustomersPage from './ProviderCustomersPage'
 import ProviderReviewsPage from './ProviderReviewsPage'
 import ProviderTelehealthToday from '@/components/features/telehealth/ProviderTelehealthToday'
+import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
 // Το 'insights' υπήρχε στον πίνακα των καρτελών και στην απεικόνιση,
 // αλλά έλειπε από τον τύπο — ο μεταγλωττιστής θεωρούσε τη σύγκριση αδύνατη.
@@ -945,6 +946,10 @@ export default function ProviderDashboard() {
           {/* Σημερινές πληρωμένες τηλεσυνεδρίες — εδώ καταλήγει και η
               ειδοποίηση incoming_call (/provider/telehealth/:id → /provider/*). */}
           <ProviderTelehealthToday />
+
+          {/* Προσκλήσεις στο προσωπικό ΑΛΛΟΥ παρόχου προς αυτόν τον λογαριασμό
+              (αποδοχή/απόρριψη) — κρύβεται όταν δεν υπάρχει καμία. */}
+          <StaffInvitationsCard />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[

@@ -73,8 +73,9 @@ export default function ProviderStaff() {
               {!!m.email && <Text style={s.meta} numberOfLines={1}>{m.email}</Text>}
               <View style={s.badges}>
                 {!!serviceName(m.service_id) && <Badge label={serviceName(m.service_id)!} tone="neutral" />}
-                <Badge label={m.has_account ? t('providerStaff.linked') : t('providerStaff.pending')}
-                  tone={m.has_account ? 'success' : 'warning'} />
+                {/* Ε13: σύνδεση μόνο με αποδοχή πρόσκλησης — ίδια ένδειξη με το web. */}
+                <Badge label={m.has_account ? t('providerStaff.linked') : m.email ? t('providerStaff.awaitingAcceptance') : t('providerStaff.noInvite')}
+                  tone={m.has_account ? 'success' : m.email ? 'warning' : 'neutral'} />
                 {m.bookings_count > 0 && <Badge label={`${t('providerStaff.bookings')}: ${m.bookings_count}`} tone="info" />}
               </View>
             </View>

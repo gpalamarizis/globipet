@@ -15,12 +15,12 @@ import StaffPricesEditor from '@/components/provider/StaffPricesEditor'
  *   PATCH  /api/staff/:id         update
  *   DELETE /api/staff/:id         remove (bookings stay, just lose staff link)
  *
- * AUTO-LINK
- *   When adding a staff member we only need their email + name. As soon as
- *   that person registers (or logs in) with the same email, their user
- *   account is linked to this staff record automatically — no follow-up
- *   step from the employer. The `has_account` flag in the row tells us
- *   whether the link has happened yet.
+ * ΠΡΟΣΚΛΗΣΗ (Ε13 — όχι πια αυτόματη σύνδεση)
+ *   Με email, το μέλος γίνεται πρόσκληση προς τον λογαριασμό με αυτό το
+ *   email· η σύνδεση γίνεται ΜΟΝΟ όταν ο χρήστης την αποδεχθεί (προφίλ →
+ *   «Προσκλήσεις», POST /staff/:id/accept). `invitation_status` του server:
+ *   'linked' = συνδεδεμένος · 'pending' = αναμένει αποδοχή · null = χωρίς email.
+ *   Ίδια ένδειξη στο κινητό: mobile/app/(provider)/staff.tsx.
  */
 
 type StaffRow = {
@@ -34,6 +34,7 @@ type StaffRow = {
   specialties?: string[]
   is_active: boolean
   has_account: boolean
+  invitation_status?: 'linked' | 'pending' | null
   bookings_count: number
 }
 
@@ -170,10 +171,12 @@ export default function ProviderStaffPage() {
                         <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
                           <Check size={12}/> {t('providerStaff.linked')}
                         </span>
-                      ) : (
+                      ) : r.email ? (
                         <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
-                          <Clock size={12}/> {t('providerStaff.pending')}
+                          <Clock size={12}/> {t('providerStaff.awaitingAcceptance')}
                         </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">{t('providerStaff.noInvite')}</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">
@@ -294,7 +297,7 @@ function StaffEditor({
 
           <Field
             label={t('providerStaff.emailLabel')}
-            hint={t('providerStaff.emailHint')}>
+            hint={t('providerStaff.emailHintInvite')}>
             <div className="relative">
               <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
               <input type="email" value={form.email} onChange={e => setField('email', e.target.value)}

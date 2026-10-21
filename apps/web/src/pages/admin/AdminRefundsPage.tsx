@@ -14,10 +14,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
  *   «Ξαναδοκίμασε επιστροφή»   → POST /admin/refunds/retry (μόνο εγγραφές εκδηλώσεων σε refund_failed),
  *                                 με επιβεβαίωση του ποσού
  *   «Σήμανση ως λυμένο»        → POST /admin/refunds/resolve με υποχρεωτική σημείωση (καμία κλήση στη Viva)
+ *   kind 'external_refund'     → επιστροφή που έγινε από τον πίνακα της Viva (webhook 1797): «Εξωτερική
+ *                                 επιστροφή — έλεγξε»· η κατάσταση πληρωμής ενημερώθηκε, τίποτα δεν ακυρώθηκε.
  */
 
 type Item = {
-  kind: 'event_registration' | 'booking' | 'telehealth' | 'order' | 'audit'
+  kind: 'event_registration' | 'booking' | 'telehealth' | 'order' | 'audit' | 'external_refund'
   id: string
   resource: string
   resource_id: string
@@ -34,9 +36,10 @@ type Item = {
   can_retry: boolean
   viva_status?: string | null
   requested_amount?: number | null
+  refund_transaction_id?: string | null
 }
 
-const KNOWN_REASONS = ['full', 'cancelled', 'event_cancelled', 'booking_cancel', 'telehealth_cancel', 'admin_refund']
+const KNOWN_REASONS = ['full', 'cancelled', 'event_cancelled', 'booking_cancel', 'telehealth_cancel', 'admin_refund', 'external_refund']
 const KNOWN_VIVA = ['F', 'R', 'E', 'A', 'X', 'error', 'unknown']
 const KNOWN_RESOURCES = ['event_registration', 'booking', 'telehealth', 'order', 'product_subscription']
 const KNOWN_STATUSES = ['refund_failed', 'refunding']
@@ -69,7 +72,7 @@ export default function AdminRefundsPage() {
   const when = (iso: string) => new Date(iso).toLocaleString(i18n.language, {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
-  const kindLabel = (r: Item) => r.kind === 'audit' || r.kind === 'order'
+  const kindLabel = (r: Item) => r.kind === 'audit' || r.kind === 'order' || r.kind === 'external_refund'
     ? (KNOWN_RESOURCES.includes(r.resource) ? t(`adminRefunds.res_${r.resource}`) : r.resource)
     : t(`adminRefunds.kind_${r.kind}`)
   const reasonLabel = (r: Item) => !r.reason ? '—'
@@ -174,6 +177,9 @@ export default function AdminRefundsPage() {
                   <td className="px-4 py-3 align-top">
                     <div className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{kindLabel(r)}</div>
                     {r.title && <div className="text-xs text-gray-500 max-w-[14rem] truncate" title={r.title}>{r.title}</div>}
+                    {r.kind === 'external_refund' && (
+                      <span className="badge text-xs mt-1 bg-amber-100 text-amber-700">{t('adminRefunds.kind_external_refund')}</span>
+                    )}
                     {r.status && (
                       <span className="badge text-xs mt-1 bg-red-50 text-red-700">
                         {KNOWN_STATUSES.includes(r.status) ? t(`adminRefunds.status_${r.status}`) : r.status}
@@ -185,7 +191,12 @@ export default function AdminRefundsPage() {
                   </td>
                   <td className="px-4 py-3 align-top text-gray-700 dark:text-gray-300 break-all">{r.email ?? '—'}</td>
                   <td className="px-4 py-3 align-top text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap">{money(r.amount)}</td>
-                  <td className="px-4 py-3 align-top font-mono text-xs text-gray-500 break-all max-w-[12rem]">{r.transaction_id ?? '—'}</td>
+                  <td className="px-4 py-3 align-top font-mono text-xs text-gray-500 break-all max-w-[12rem]">
+                    {r.transaction_id ?? '—'}
+                    {r.refund_transaction_id && (
+                      <div className="mt-1 text-gray-400" title={t('adminRefunds.refundTxn')}>↩ {r.refund_transaction_id}</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 align-top text-gray-500 whitespace-nowrap">{when(r.date)}</td>
                   <td className="px-4 py-3 align-top text-gray-700 dark:text-gray-300">{reasonLabel(r)}</td>
                   <td className="px-4 py-3 align-top text-xs text-red-600 dark:text-red-400 max-w-[16rem] break-words">{r.last_error ?? '—'}</td>
@@ -242,7 +253,9 @@ export default function AdminRefundsPage() {
           onClick={() => !resolve.isPending && setResolving(null)}>
           <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-5" onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-gray-900 dark:text-white mb-1">{t('adminRefunds.resolveTitle')}</h2>
-            <p className="text-sm text-gray-500 mb-4">{t('adminRefunds.resolveHint')}</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {resolving.kind === 'external_refund' ? t('adminRefunds.externalResolveHint') : t('adminRefunds.resolveHint')}
+            </p>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={4}
               placeholder={t('adminRefunds.notePh')} className="input w-full" />
             {(resolving.kind === 'booking' || resolving.kind === 'telehealth' || resolving.kind === 'order') && (

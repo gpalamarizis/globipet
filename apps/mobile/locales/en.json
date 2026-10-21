@@ -1109,7 +1109,10 @@
       "nurse": "Nurse",
       "tech": "Technician",
       "other": "Other"
-    }
+    },
+    "awaitingAcceptance": "Awaiting acceptance",
+    "noInvite": "No invitation",
+    "emailHintInvite": "An invitation will be sent to the account with this email. The employee joins your team only after accepting it."
   },
   "providerMobile": {
     "manageOnWeb": "To add or edit, use globipet.com on a computer.",
@@ -1853,6 +1856,13 @@
     "functional": {
       "title": "Functional",
       "desc": "Remembers choices such as language, theme and recent searches, so you do not have to set them every time."
+    },
+    "subtitleInfo": "What we store on your device and which emails you receive.",
+    "noTracking": "We do not use analytics or advertising tools. If we ever add any, we will ask for your consent first.",
+    "loginForNewsletter": "Sign in to choose whether you want to receive newsletter emails.",
+    "newsletter": {
+      "title": "Newsletter emails",
+      "desc": "GlobiPet news and offers in your inbox. Emails about your bookings, orders and account security are always sent."
     }
   },
   "account": {
@@ -2423,5 +2433,27 @@
   "orderOos": {
     "refunded": "The product sold out — your money has been refunded",
     "refundDelayed": "The product sold out — the refund is delayed and will be completed by our team"
+  },
+  "staffInvite": {
+    "title": "Invitations",
+    "subtitle": "A provider has added you to their staff. If you accept, your account will be linked to the business and you will see the appointments assigned to you.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "Invitation accepted — your account is now linked.",
+    "declined": "Invitation declined.",
+    "asMember": "As: {{name}}",
+    "unknownBusiness": "Provider"
+  },
+  "birthGate": {
+    "title": "Enter your date of birth",
+    "body": "To continue on GlobiPet we need your date of birth. The platform is available from age 15, in line with the threshold that applies in Greece. We ask only once and it cannot be changed later.",
+    "submit": "Continue",
+    "underConfirm": "The date you entered means you are under 15. If you continue, your account will be closed and deleted. If you made a mistake, correct the date.",
+    "confirmUnder": "Confirm and close account",
+    "closedTitle": "Account closed",
+    "closedLogin": "This account has been closed: GlobiPet is available from age 15.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "changeDate": "Change date"
   }
 }

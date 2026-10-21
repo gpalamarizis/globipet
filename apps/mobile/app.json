@@ -35,7 +35,29 @@
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "globipet.com",
+              "pathPrefix": "/reset-password"
+            },
+            {
+              "scheme": "https",
+              "host": "www.globipet.com",
+              "pathPrefix": "/reset-password"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

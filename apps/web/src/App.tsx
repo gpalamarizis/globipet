@@ -13,7 +13,7 @@ import ProviderLayout from '@/components/layout/ProviderLayout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
-import CookieBanner from '@/components/CookieBanner'
+import BirthDateGate from '@/components/BirthDateGate'
 import PushPrompt from '@/components/PushPrompt'
 import EmailVerifyBanner from '@/pages/auth/EmailVerifyBanner'
 
@@ -202,6 +202,9 @@ export default function App() {
           <OAuthHandler />
           {/* Ε12: «Επιβεβαίωσε το email σου — Ξαναστείλε», πάνω από κάθε layout. */}
           <EmailVerifyBanner />
+          {/* Ε13: λογαριασμός χωρίς ημερομηνία γέννησης (Google/Facebook) →
+              μόνο η οθόνη συμπλήρωσης, εκτός από τις νομικές σελίδες. */}
+          <BirthDateGate>
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route element={<AuthLayout />}>
@@ -311,9 +314,12 @@ export default function App() {
               <Route path="*"        element={<NotFound />} />
             </Routes>
           </Suspense>
+          </BirthDateGate>
         </BrowserRouter>
 
-        <CookieBanner />
+        {/* Ε13: χωρίς cookie banner — δεν χρησιμοποιούμε cookies στατιστικών ή
+            διαφήμισης, και τα απαραίτητα δεν απαιτούν συγκατάθεση. Οι
+            πληροφορίες και τα ενημερωτικά email: /cookies (σύνδεσμος στο footer). */}
         {/* Εμφανίζεται μόνο σε συνδεδεμένο χρήστη που δεν έχει αποφασίσει
             ακόμα, έξι δευτερόλεπτα μετά, και το πολύ μία φορά τον μήνα. */}
         <PushPrompt />

@@ -13,6 +13,7 @@ import { confirmTelehealthCancel, postTelehealthCancel } from '@/lib/telehealthC
 import { colors, space, radius, type, weight, icon, font } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
 import { ProviderReviews } from '@/components/ProviderReviews'
+import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
 /**
  * Επισκόπηση παρόχου — ίδια με την καρτέλα «Επισκόπηση» του web.
@@ -190,6 +191,9 @@ export default function ProviderOverview() {
         </TouchableOpacity>
       )}
 
+      {/* Προσκλήσεις στο προσωπικό ΑΛΛΟΥ παρόχου προς αυτόν τον λογαριασμό — όπως στο web. */}
+      <StaffInvitationsCard style={s.invitations} />
+
       <View style={s.grid}>
         {STATS.map(({ Icon, value, labelKey, tint }) => (
           <Card key={labelKey} style={s.stat}>
@@ -323,6 +327,7 @@ const s = StyleSheet.create({
   teleTxt: { ...type.body, color: colors.text, fontWeight: weight.semibold },
   teleTxtOn: { color: colors.textOnDark },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.lg },
+  invitations: { marginBottom: space.md },
   stat: { width: '48%', alignItems: 'flex-start' },
   statIcon: { width: 40, height: 40, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
   statValue: { ...type.title, color: colors.text, fontWeight: weight.black },
