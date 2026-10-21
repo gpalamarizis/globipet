@@ -189,14 +189,15 @@ export default function Playdates() {
                                 <span className="flex items-center gap-1"><Users size={12} />{ev.invitations?.length || 0}/{ev.max_participants}</span>
                               </div>
                             </div>
-                            {ev.creator_email === user?.email && (
+                            {/* is_mine / is_me από τον server: τα email δεν επιστρέφονται πια. */}
+                            {ev.is_mine === true && (
                               <div className="flex gap-1">
                                 <button onClick={() => setShowInviteModal(ev.id)} className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-lg">{t('pgPlaydates.invite')}</button>
                                 <button onClick={() => confirmDelete(ev)} disabled={deleteEvent.isPending} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                               </div>
                             )}
-                            {ev.creator_email !== user?.email && (() => {
-                              const joined = (ev.invitations ?? []).some((i: any) => i.invitee_email === user?.email)
+                            {ev.is_mine !== true && (() => {
+                              const joined = (ev.invitations ?? []).some((i: any) => i.is_me === true)
                               const full = !!ev.max_participants && (ev.invitations?.length || 0) >= ev.max_participants
                               return (
                                 <button onClick={() => joinEvent.mutate({ id: ev.id, leave: joined })}
@@ -231,7 +232,7 @@ export default function Playdates() {
                       {data.nearbyOwners.map((owner: any) => (
                         <button key={owner.id}
                           onClick={() => {
-                            const mine = data?.events?.filter((e: any) => e.creator_email === user?.email) ?? []
+                            const mine = data?.events?.filter((e: any) => e.is_mine === true) ?? []
                             if (!mine.length) { toast.error(t('pgPlaydates.createEventFirst')); return }
                             setInviteUserId(owner.id)
                             setInviteEmail('')

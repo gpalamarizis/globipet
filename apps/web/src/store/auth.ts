@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { api } from '@/lib/api'
+import { api, setTokenRotationHandler } from '@/lib/api'
 import i18n from '@/lib/i18n'
 import type { User } from '@/types'
 
@@ -17,6 +17,17 @@ interface AuthState {
   refreshToken: () => Promise<void>
   refreshUser: () => Promise<void>
   updateLanguage: (lang: string) => Promise<void>
+  /** Ε12: νέο email επιβεβαίωσης (POST /auth/resend-verification). */
+  resendVerification: () => Promise<{ message?: string; email_verified?: boolean }>
+}
+
+/**
+ * Ε12: `email_verified` έρχεται από τον server (login, register, /auth/me).
+ * Μόνο το ρητό `false` σημαίνει ανεπιβεβαίωτο: ένας χρήστης αποθηκευμένος από
+ * παλιότερη έκδοση (χωρίς το πεδίο) δεν βλέπει μπάρα μέχρι το επόμενο /auth/me.
+ */
+export function isEmailUnverified(user: User | null | undefined): boolean {
+  return (user as any)?.email_verified === false
 }
 
 interface RegisterData {
@@ -130,6 +141,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      resendVerification: async () => {
+        const { data } = await api.post('/auth/resend-verification')
+        if (data?.email_verified === true) {
+          const current = get().user
+          if (current) set({ user: { ...current, email_verified: true } as User })
+        }
+        return data
+      },
+
       /**
        * Pull the latest user record from the backend and replace the cached
        * one. Used at app boot / MainLayout mount so users who logged in before
@@ -166,3 +186,9 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// Ε12: όταν ο server ανακυκλώνει το τοκεν (αλλαγή κωδικού), η συνεδρία το παίρνει αμέσως.
+setTokenRotationHandler((token) => {
+  useAuthStore.setState({ token })
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+})

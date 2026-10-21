@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
 import { fullNameOf } from '../lib/userName.js'
+import { langOf, notifyTitle, notifyMsg } from '../lib/notifyText.js'
+import { sendPushToUser } from '../lib/push.js'
 
 /**
  * Πελάτες παρόχου — διαχείριση, φίλτρα, επικοινωνία.
@@ -189,6 +191,34 @@ const customersRoutes: FastifyPluginAsync = async (app) => {
           (${uid()}, ${user.email}, ${providerName}, ${email},
            ${b.subject ?? null}, ${String(b.body).trim()}, ${campaignId}, ${batch}, now())`
       sent++
+    }
+
+    // Ειδοποίηση (καμπανάκι + push) με σύνδεσμο στο /inbox — αλλιώς ο
+    // πελάτης δεν μάθαινε ποτέ ότι έχει μήνυμα. Κάθε παραλήπτης στη δική
+    // του γλώσσα· μία ανάγνωση γλωσσών για όλη την παρτίδα. Δεν περιμένουμε
+    // την αποστολή και ένα σφάλμα εδώ δεν ακυρώνει τα μηνύματα που γράφτηκαν.
+    try {
+      const recipients = await prisma.user.findMany({
+        where: { email: { in: [...allowed] } },
+        select: { email: true, preferred_language: true },
+      })
+      const subject = typeof b.subject === 'string' ? b.subject : null
+      const rows = recipients.map(u => {
+        const lang = langOf(u.preferred_language)
+        return {
+          user_email: u.email,
+          title: notifyTitle('provider_message', lang),
+          message: notifyMsg.providerMessage(lang, providerName, subject, String(b.body)),
+          type: 'provider_message',
+          link: '/inbox',
+        }
+      })
+      if (rows.length) await prisma.notification.createMany({ data: rows })
+      for (const r of rows) {
+        void sendPushToUser(r.user_email, { title: r.title, body: r.message, url: '/inbox', data: { type: 'provider_message' } })
+      }
+    } catch (err) {
+      req.log?.warn?.({ err }, 'provider message notification failed')
     }
 
     audit(req, { action: 'create', resource: 'provider_message',

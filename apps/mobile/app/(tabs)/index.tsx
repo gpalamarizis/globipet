@@ -9,7 +9,8 @@ import {
   Stethoscope, Scissors, Footprints, House, GraduationCap, Car,
   Brain, FileText, Video, MapPin, ShieldCheck, Pill, Sparkles, Calendar,
 } from 'lucide-react-native'
-import { useAuthStore } from '../../src/store/auth'
+import { useAuthStore, isEmailUnverified } from '../../src/store/auth'
+import EmailVerifyBanner from '../../src/components/EmailVerifyBanner'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { effectivePrice } from '@/lib/price'
@@ -128,6 +129,8 @@ export default function HomeScreen() {
   const trialLeft = aiStatus?.ai_subscription_status === 'trial'
     ? Math.max(0, Number(aiStatus.trial_days_left ?? 0)) : 0
   const trialExpired = trialLeft === 0
+  // Αποτυχημένη πληρωμή συνδρομής AI: μη ενεργή → πλάνα (όπως στο web).
+  const aiPaymentFailed = aiStatus?.ai_subscription_status === 'payment_failed'
 
   // Επόμενο ραντεβού — όπως η κάρτα της αρχικής του web.
   const { data: nextBooking } = useQuery({
@@ -217,6 +220,31 @@ export default function HomeScreen() {
           <Text style={s.searchText}>{t('home.search_placeholder')}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Επιβεβαίωση email (ισοτιμία με τη μπάρα του web) ───────── */}
+      {isAuthenticated && isEmailUnverified(user) && (
+        <View style={[s.section, { paddingTop: space.lg }]}>
+          <EmailVerifyBanner />
+        </View>
+      )}
+
+      {/* ── Συνδρομή AI με αποτυχημένη πληρωμή → πλάνα ─────────────── */}
+      {isAuthenticated && aiPaymentFailed && (
+        <View style={[s.section, { paddingTop: space.lg }]}>
+          <TouchableOpacity activeOpacity={0.8}
+            style={[s.trial, s.trialExpired]}
+            onPress={() => router.push('/pricing' as any)}>
+            <View style={[s.trialIcon, { backgroundColor: colors.dangerBg }]}>
+              <Sparkles size={icon.sm} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.trialLabel} numberOfLines={1}>{t('aiGate.subscriptionLabel')}</Text>
+              <Text style={s.trialValue} numberOfLines={1}>{t('aiGate.paymentFailedShort')}</Text>
+            </View>
+            <ChevronRight size={icon.sm} color={colors.textLight} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Δοκιμή AI: ενεργή → AI Health, ληγμένη → πλάνα ─────────── */}
       {isAuthenticated && trialShown && (

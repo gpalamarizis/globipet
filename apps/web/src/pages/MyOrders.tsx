@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { Package, ChevronRight, ShoppingBag, Truck } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -29,6 +30,34 @@ export default function MyOrders() {
     queryFn: () => api.get('/orders/my').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
   })
+
+  // Απλήρωτη παραγγελία (π.χ. εγκατέλειψε τη σελίδα πληρωμής): «Πληρωμή»
+  // ξανανοίγει τη Viva για την ΙΔΙΑ παραγγελία (POST /orders/viva/checkout),
+  // «Ακύρωση» την ακυρώνει (POST /orders/:id/cancel, μόνο απλήρωτη) — όπως στο κινητό.
+  const qc = useQueryClient()
+  const pay = useMutation({
+    mutationFn: (orderId: string) => api.post('/orders/viva/checkout', { order_id: orderId }).then(r => r.data),
+    onSuccess: (data: any) => {
+      if (data?.checkoutUrl) { window.location.href = data.checkoutUrl; return }
+      toast.error(t('checkout.err_no_page'))
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message || t('checkout.err_order'))
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+    },
+  })
+  const cancel = useMutation({
+    mutationFn: (orderId: string) => api.post(`/orders/${orderId}/cancel`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+      toast.success(t('ordersPay.cancelled'))
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message || t('common.error'))
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+    },
+  })
+  const busy = pay.isPending || cancel.isPending
 
   if (!isAuthenticated) return (
     <div className="page-container py-16 text-center">
@@ -56,9 +85,11 @@ export default function MyOrders() {
           {orders.map((order: any, i: number) => {
             // Τα είδη και ο αριθμός αποστολής, όπως στη λίστα του κινητού.
             const lines: any[] = Array.isArray(order.items) ? order.items : []
+            const payable = order.payment_status === 'unpaid' && order.status !== 'cancelled'
             return (
-            <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Link to={`/orders/${order.id}`} className="card p-5 hover:shadow-md transition-shadow block">
+            <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              className="card hover:shadow-md transition-shadow">
+              <Link to={`/orders/${order.id}`} className="p-5 block">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center shrink-0">
                     <Package size={20} className="text-brand-900" />
@@ -103,6 +134,19 @@ export default function MyOrders() {
                   </p>
                 )}
               </Link>
+              {payable && (
+                <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-yellow-700 flex-1 min-w-[140px]">{t('ordersPay.unpaidHint')}</p>
+                  <button onClick={() => { if (confirm(t('ordersPay.confirmCancel'))) cancel.mutate(order.id) }} disabled={busy}
+                    className="btn-secondary text-xs px-3 py-1.5 text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-60">
+                    {t('ordersPay.cancel')}
+                  </button>
+                  <button onClick={() => pay.mutate(order.id)} disabled={busy}
+                    className="btn-primary text-xs px-3 py-1.5 disabled:opacity-60">
+                    {pay.isPending && pay.variables === order.id ? t('common.loading') : t('ordersPay.pay')}
+                  </button>
+                </div>
+              )}
             </motion.div>
             )
           })}

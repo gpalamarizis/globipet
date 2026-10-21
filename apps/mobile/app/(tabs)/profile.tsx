@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone, Inbox } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -57,6 +57,8 @@ const MENU = [
   { key: 'wishlist',   Icon: Heart,       labelKey: 'wishlist.title',            route: '/wishlist' },
   { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
   { key: 'notifCenter', Icon: Bell,       labelKey: 'notifCenter.title',         route: '/notifications' },
+  // Μηνύματα από παρόχους (ίδιο με το «Μηνύματα» στο μενού χρήστη του web).
+  { key: 'inbox',      Icon: Inbox,       labelKey: 'inbox.title',               route: '/inbox' },
   { key: 'notifications', Icon: Bell,     labelKey: 'account.notifications',     route: '/notification-settings' },
   { key: 'password',   Icon: KeyRound,    labelKey: 'account.changePassword',    route: '/change-password' },
   { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
@@ -116,6 +118,14 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   })
   const profile: any = { ...(user ?? {}), ...(me ?? {}) }
+
+  // Αδιάβαστα μηνύματα παρόχων — ίδιο query (και cache) με την οθόνη inbox.
+  const { data: inbox } = useQuery<{ unread: number }>({
+    queryKey: ['inbox'],
+    queryFn: () => api.get('/customers/inbox').then(r => r.data),
+    enabled: isAuthenticated,
+  })
+  const inboxUnread = inbox?.unread ?? 0
 
   // Επεξεργασία προφίλ
   const [editing, setEditing] = useState(false)
@@ -336,13 +346,19 @@ export default function ProfileScreen() {
           <ChevronRight size={icon.sm} color={colors.textLight} />
         </TouchableOpacity>
 
-        {MENU.map(({ key, Icon, labelKey, route }) => (
+        {/* Λογαριασμός Google/Facebook χωρίς κωδικό: καμία «Αλλαγή κωδικού» (ίδιο με το web). */}
+        {MENU.filter(m => !(m.key === 'password' && (!!(user as any)?.google_id || !!(user as any)?.facebook_id))).map(({ key, Icon, labelKey, route }) => (
           <TouchableOpacity key={key} style={s.row} activeOpacity={0.7}
             onPress={() => router.push(route as any)}>
             <View style={s.rowIcon}>
               <Icon size={icon.md} color={colors.brand} />
             </View>
             <Text style={s.rowLabel}>{t(labelKey)}</Text>
+            {key === 'inbox' && inboxUnread > 0 && (
+              <View style={s.countPill}>
+                <Text style={s.countPillText}>{inboxUnread > 99 ? '99+' : inboxUnread}</Text>
+              </View>
+            )}
             <ChevronRight size={icon.md} color={colors.textLight} />
           </TouchableOpacity>
         ))}
@@ -503,6 +519,11 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   rowLabel: { flex: 1, ...type.body, color: colors.text, fontWeight: weight.medium },
+  countPill: {
+    minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11,
+    backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center',
+  },
+  countPillText: { ...type.caption, color: colors.textOnDark, fontWeight: weight.bold },
 
   logout: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,

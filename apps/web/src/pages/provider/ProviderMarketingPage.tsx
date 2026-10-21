@@ -7,6 +7,7 @@ import {
   Percent, Euro, Calendar, Target, MonitorPlay, Users, CheckCircle2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import CampaignMediaUpload from '@/components/provider/CampaignMediaUpload'
@@ -59,6 +60,11 @@ const PAGES: { value: string; labelKey: string }[] = [
   { value: 'insurance',      labelKey: 'providerMkt.pgInsurance' },
   { value: 'pets',           labelKey: 'providerMkt.pgMyPets' },
 ]
+
+// Ίδιο με backend campaigns.ts ADMIN_ONLY_PAGES: η Αρχική και «Όλες οι
+// σελίδες» μόνο από τη διαχείριση (ο server απαντά 403 σε άλλο ρόλο).
+const ADMIN_ONLY_PAGES = ['home', 'all']
+const DEFAULT_PROVIDER_PAGE = 'services'
 
 const SLOTS = [
   { value: 'hero',    labelKey: 'providerMkt.slHero' },
@@ -476,6 +482,7 @@ function CampaignSettings({
   tab, setTab, onClose, onSaveTargets, onSavePlacements, onSaveAudience, pending,
 }: any) {
   const { t } = useTranslation()
+  const isAdmin = useAuthStore(s => s.user?.role) === 'admin'
   const [targets, setTargets] = useState<any[] | null>(null)
   const [placements, setPlacements] = useState<any[] | null>(null)
   const [audience, setAudience] = useState<string[] | null>(null)
@@ -497,7 +504,7 @@ function CampaignSettings({
   }
 
   const addPlacement = () =>
-    setPlacements([...P, { page: 'home', slot: 'banner', media_type: 'image',
+    setPlacements([...P, { page: isAdmin ? 'home' : DEFAULT_PROVIDER_PAGE, slot: 'banner', media_type: 'image',
                            headline: campaign.title, is_active: true }])
 
   const updPlacement = (i: number, patch: any) =>
@@ -619,7 +626,11 @@ function CampaignSettings({
                     <label className="label">{t('providerMkt.fPage')}</label>
                     <select className="input text-sm" value={p.page}
                       onChange={e => updPlacement(i, { page: e.target.value })}>
-                      {PAGES.map(x => <option key={x.value} value={x.value}>{t(x.labelKey)}</option>)}
+                      {/* Μη-admin: χωρίς Αρχική/Όλες· μια παλιά τέτοια προβολή φαίνεται
+                          (απενεργοποιημένη επιλογή) ώστε να αλλαχτεί πριν την αποθήκευση. */}
+                      {PAGES.filter(x => isAdmin || !ADMIN_ONLY_PAGES.includes(x.value) || x.value === p.page)
+                        .map(x => <option key={x.value} value={x.value}
+                          disabled={!isAdmin && ADMIN_ONLY_PAGES.includes(x.value)}>{t(x.labelKey)}</option>)}
                     </select>
                   </div>
                   <div>

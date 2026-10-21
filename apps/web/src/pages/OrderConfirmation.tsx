@@ -37,6 +37,8 @@ function OrderConfirmationInner() {
   // Αποτέλεσμα του verify (orders.ts): 'refunded' / 'refund_failed' = η
   // πληρωμή επιστράφηκε (ή η επιστροφή καθυστερεί) — όπως στο BookingConfirmation.
   const [result, setResult] = useState<string | null>(null)
+  // 'out_of_stock': το απόθεμα εξαντλήθηκε τη στιγμή της πληρωμής (orders.ts).
+  const [reason, setReason] = useState<string | null>(null)
 
   const { data: order, refetch } = useQuery({
     queryKey: ['order', id],
@@ -57,6 +59,7 @@ function OrderConfirmationInner() {
       const r = await api.post('/orders/viva/verify', { order_id: id, transaction_id: transactionId })
       verified.current = true
       setResult(r.data?.result ?? null)
+      setReason(r.data?.reason ?? null)
     } catch (err: any) {
       const st = err?.response?.status ?? err?.statusCode
       // 4xx = οριστική απάντηση· όχι νέα απόπειρα (το webhook επιβεβαιώνει ανεξάρτητα).
@@ -104,6 +107,7 @@ function OrderConfirmationInner() {
   // webhook has not reported yet.
   const extraRefunded = result === 'refunded'
   const extraRefundFailed = result === 'refund_failed'
+  const outOfStock = reason === 'out_of_stock' && (extraRefunded || extraRefundFailed)
   // Επιστροφή = οριστική απάντηση: η πληρωμή δεν θα καταχωρηθεί, δεν περιμένουμε.
   const waiting = verifying || (cameFromViva && !isPaid && !extraRefunded && !extraRefundFailed)
 
@@ -154,7 +158,8 @@ function OrderConfirmationInner() {
             {extraRefunded || extraRefundFailed ? t('pgOrderConfirm.notChargedTitle') : t('pgOrderConfirm.pendingTitle')}
           </h1>
           <p className="text-gray-500 mb-6">
-            {extraRefunded ? t('pgOrderConfirm.lateRefunded')
+            {outOfStock ? (extraRefunded ? t('orderOos.refunded') : t('orderOos.refundDelayed'))
+              : extraRefunded ? t('pgOrderConfirm.lateRefunded')
               : extraRefundFailed ? t('pgOrderConfirm.lateRefundDelayed')
               : t('pgOrderConfirm.pendingDesc', { id: id?.slice(0, 8) })}
           </p>

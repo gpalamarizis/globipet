@@ -60,6 +60,9 @@ export default function Home() {
     enabled: isAuthenticated,
     staleTime: 60_000,
   })
+  // Κατάσταση AI για το κουμπί του hero: πρώτα το my-status (φρέσκο), αλλιώς
+  // ό,τι έχει ο χρήστης στη μνήμη.
+  const heroAiStatus: string | undefined = aiStatus?.ai_subscription_status ?? (user as any)?.ai_subscription_status
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     navigate(`/services?q=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(searchCity)}`)
@@ -145,13 +148,16 @@ export default function Home() {
                   to={
                     !isAuthenticated
                       ? '/register'                                    // guest → sign up (auto-starts trial)
-                      : (user as any)?.ai_subscription_status === 'trial'
-                          || (user as any)?.ai_subscription_status === 'active'
+                      : heroAiStatus === 'trial' || heroAiStatus === 'active'
                         ? '/ai-health'                                  // active/trial → jump into AI
-                        : '/pricing'                                    // expired/none → show plans
+                        : '/pricing'                                    // expired/none/cancelled/payment_failed → show plans
                   }
                   className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-base px-8 py-4 rounded-xl transition-all shadow-2xl hover:shadow-yellow-400/50 hover:-translate-y-0.5">
-                  {t('home.hero.tryFree')}
+                  {/* Η δωρεάν δοκιμή δίνεται μόνο από 'none' — ληγμένη, ακυρωμένη ή
+                      με αποτυχημένη πληρωμή: «Επιλογή πλάνου» (όπως στο κινητό). */}
+                  {isAuthenticated && heroAiStatus && !['none', 'trial', 'active'].includes(heroAiStatus)
+                    ? t('aiGate.choosePlan')
+                    : t('home.hero.tryFree')}
                 </Link>
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
                   {t('home.hero.learnMore')}
@@ -194,6 +200,20 @@ export default function Home() {
                 {/* AI trial badge — active → jump into AI Health, expired → pricing */}
                 {/* Το my-status γυρίζει τη δοκιμή σε 'expired' όταν τελειώσει, γι' αυτό
                     η ληγμένη δοκιμή αναγνωρίζεται και από αυτή την κατάσταση. */}
+                {/* Αποτυχημένη πληρωμή συνδρομής AI: μη ενεργή → πλάνα (όπως στο κινητό). */}
+                {aiStatus?.ai_subscription_status === 'payment_failed' && (
+                  <Link
+                    to="/pricing"
+                    className="flex items-center gap-2 border rounded-xl px-4 py-2.5 hover:shadow-md transition-shadow bg-white dark:bg-gray-800 border-red-300 dark:border-red-500/40">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-100 dark:bg-red-900/30">
+                      <Sparkles size={16} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{t('aiGate.subscriptionLabel')}</div>
+                      <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{t('aiGate.paymentFailedShort')}</div>
+                    </div>
+                  </Link>
+                )}
                 {aiStatus?.ai_trial_started_at && (aiStatus.ai_subscription_status === 'trial' || aiStatus.ai_subscription_status === 'expired') && (() => {
                   const daysLeft = aiStatus.ai_subscription_status === 'trial' ? Math.max(0, Number(aiStatus.trial_days_left ?? 0)) : 0
                   const expired = daysLeft === 0

@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { SwitchRow } from '@/components/SwitchRow'
 import { colors, space, type } from '@/theme'
@@ -26,7 +27,7 @@ export default function CampaignFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const isNew = !id
 
-  const { data: existing, isLoading } = useQuery({
+  const { data: existing, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['campaign', id],
     queryFn: () => api.get(`/campaigns/${id}`).then(r => r.data?.data),
     enabled: !isNew,
@@ -100,8 +101,12 @@ export default function CampaignFormScreen() {
     save.mutate()
   }
 
-  if (!isNew && (isLoading || !existing)) return (
-    <Screen title={t('providerMkt.editCampaign')} back><Loading /></Screen>
+  if (!isNew && !existing) return (
+    <Screen title={t('providerMkt.editCampaign')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
   )
 
   return (

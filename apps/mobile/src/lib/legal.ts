@@ -24,7 +24,7 @@
  */
 
 export const LEGAL_VERSION = '1.1'
-export const LEGAL_UPDATED = '2026-10-19'
+export const LEGAL_UPDATED = '2026-10-21'
 
 export type LegalSection = { title: string; body: string }
 export type LegalDoc = { title: string; intro: string; sections: LegalSection[] }
@@ -59,8 +59,10 @@ const privacyEl: LegalDoc = {
         'Δεδομένα χρήσης: κρατήσεις, παραγγελίες, αξιολογήσεις, δημοσιεύσεις στην κοινότητα.\n\n' +
         'Τεχνικά δεδομένα: διεύθυνση IP, τύπος συσκευής, χρόνος πρόσβασης.\n\n' +
         'Προαιρετικά: τοποθεσία κατοικιδίου μέσω συσκευής εντοπισμού, εφόσον το ενεργοποιήσεις.\n\n' +
-        'Δεν συλλέγουμε ποτέ στοιχεία τραπεζικής κάρτας. Οι πληρωμές γίνονται απευθείας ' +
-        'στη Viva Payments και τα στοιχεία της κάρτας δεν περνούν από τα συστήματά μας.',
+        'Δεν συλλέγουμε ποτέ στοιχεία τραπεζικής κάρτας. Οι πληρωμές κρατήσεων, παραγγελιών, ' +
+        'τηλεϊατρικής και εκδηλώσεων γίνονται απευθείας στη Viva Payments και οι πληρωμές ' +
+        'συνδρομών (συνδρομή τροφής, πακέτα AI) απευθείας στη Stripe. Τα στοιχεία της κάρτας ' +
+        'δεν περνούν από τα συστήματά μας.',
     },
     {
       title: '3. Γιατί τα χρησιμοποιούμε',
@@ -101,21 +103,50 @@ const privacyEl: LegalDoc = {
       body:
         'Railway — φιλοξενία εφαρμογής και βάσης δεδομένων. Εγκαταστάσεις στην ΕΕ.\n\n' +
         'Cloudflare — δίκτυο διανομής και αποθήκευση αρχείων. Εγκαταστάσεις στην ΕΕ.\n\n' +
-        'Viva Payments — επεξεργασία πληρωμών. Ελλάδα.\n\n' +
+        'Viva Payments — πληρωμές κρατήσεων, παραγγελιών, τηλεϊατρικής και εκδηλώσεων. Ελλάδα.\n\n' +
+        'Stripe — πληρωμές συνδρομών (συνδρομή τροφής, πακέτα AI). Λαμβάνει το email σου και ' +
+        'τα στοιχεία της συνδρομής· τα στοιχεία της κάρτας τα καταχωρείς απευθείας στη σελίδα ' +
+        'πληρωμής της. ΗΠΑ.\n\n' +
         'Resend — αποστολή email. ΗΠΑ.\n\n' +
         'Anthropic — υπηρεσίες τεχνητής νοημοσύνης. ΗΠΑ. Λαμβάνει μόνο το περιεχόμενο που ' +
         'υποβάλλεις για ανάλυση, και δεν το χρησιμοποιεί για εκπαίδευση μοντέλων.\n\n' +
+        '8x8 (Jitsi as a Service) — βιντεοκλήσεις τηλεϊατρικής. Λαμβάνει το όνομα, το email και ' +
+        'τη φωτογραφία προφίλ σου, καθώς και τον ήχο και την εικόνα της κλήσης. Αν η υπηρεσία ' +
+        'δεν είναι διαθέσιμη, η κλήση γίνεται μέσω της δημόσιας υπηρεσίας meet.jit.si, που ' +
+        'λαμβάνει το όνομα εμφάνισής σου. ΗΠΑ.\n\n' +
+        'Mapbox — χάρτες στον ιστότοπο (χάρτης υπηρεσιών, επιλογή τοποθεσίας, εντοπισμός ' +
+        'κατοικιδίου). Όταν ανοίγεις έναν χάρτη, λαμβάνει τη διεύθυνση IP σου και την περιοχή ' +
+        'που προβάλλεται — στον εντοπισμό, άρα και την κατά προσέγγιση θέση του κατοικιδίου. ΗΠΑ.\n\n' +
+        'OpenStreetMap (Nominatim) — μετατροπή διευθύνσεων υπηρεσιών και κοινοτήτων σε ' +
+        'συντεταγμένες. Λαμβάνει μόνο το κείμενο της διεύθυνσης, από τους διακομιστές μας. ' +
+        'OpenStreetMap Foundation, Ηνωμένο Βασίλειο.\n\n' +
+        'Google — σύνδεση με λογαριασμό Google, αν την επιλέξεις (λαμβάνουμε όνομα, email και ' +
+        'φωτογραφία προφίλ)· συγχρονισμός κρατήσεων με το Google Calendar του παρόχου, αν τον ' +
+        'ενεργοποιήσει (τίτλος υπηρεσίας, όνομα πελάτη, σημειώσεις, ημερομηνία, ώρα και ' +
+        'τοποθεσία της κράτησης)· γραμματοσειρές του ιστότοπου (Google Fonts — λαμβάνει τη ' +
+        'διεύθυνση IP σου)· παράδοση ειδοποιήσεων push σε συσκευές Android (Firebase Cloud ' +
+        'Messaging). ΗΠΑ.\n\n' +
+        'Meta (Facebook) — σύνδεση με λογαριασμό Facebook, αν την επιλέξεις. Λαμβάνουμε όνομα, ' +
+        'email και φωτογραφία προφίλ. ΗΠΑ.\n\n' +
+        'Microsoft — συγχρονισμός κρατήσεων με το Outlook Calendar του παρόχου, αν τον ' +
+        'ενεργοποιήσει· ίδια στοιχεία με το Google Calendar. ΗΠΑ.\n\n' +
+        'Expo — αποστολή ειδοποιήσεων push στην εφαρμογή κινητού. Λαμβάνει το αναγνωριστικό ' +
+        'της συσκευής σου και τον τίτλο και το κείμενο της ειδοποίησης, και τα προωθεί στην ' +
+        'υπηρεσία push της Google (Android) ή της Apple (iOS). ΗΠΑ. Στον browser, οι ειδοποιήσεις ' +
+        'push παραδίδονται μέσω της υπηρεσίας push του κατασκευαστή του browser σου.\n\n' +
         'Καθένας ενεργεί κατ’ εντολή μας και μόνο για τον σκοπό που του αναθέτουμε.',
     },
     {
       title: '7. Διαβιβάσεις εκτός Ευρώπης',
       body:
-        'Δύο από τους παρόχους μας εδρεύουν στις ΗΠΑ: η Resend για την αποστολή email και ' +
-        'η Anthropic για τις υπηρεσίες AI.\n\n' +
-        'Οι διαβιβάσεις αυτές γίνονται με τις εγγυήσεις που προβλέπει το κεφάλαιο V του ' +
-        'Γενικού Κανονισμού — Τυποποιημένες Συμβατικές Ρήτρες της Ευρωπαϊκής Επιτροπής ή ' +
-        'πιστοποίηση στο πλαίσιο επάρκειας ΕΕ–ΗΠΑ.\n\n' +
-        'Όλα τα υπόλοιπα δεδομένα παραμένουν εντός Ευρωπαϊκής Ένωσης.',
+        'Ορισμένοι από τους παρόχους της ενότητας 6 εδρεύουν ή επεξεργάζονται δεδομένα στις ' +
+        'ΗΠΑ: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Microsoft και Expo.\n\n' +
+        'Οι διαβιβάσεις αυτές γίνονται βάσει κατάλληλων εγγυήσεων κατά το κεφάλαιο V του ' +
+        'Γενικού Κανονισμού — π.χ. Τυποποιημένες Συμβατικές Ρήτρες της Ευρωπαϊκής Επιτροπής ' +
+        'ή το πλαίσιο EU‑US Data Privacy Framework, όπου ο πάροχος είναι πιστοποιημένος.\n\n' +
+        'Η OpenStreetMap Foundation εδρεύει στο Ηνωμένο Βασίλειο, για το οποίο υπάρχει ' +
+        'απόφαση επάρκειας της Ευρωπαϊκής Επιτροπής.\n\n' +
+        'Η εφαρμογή και η βάση δεδομένων φιλοξενούνται εντός Ευρωπαϊκής Ένωσης.',
     },
     {
       title: '8. Πόσο καιρό τα κρατάμε',
@@ -123,12 +154,18 @@ const privacyEl: LegalDoc = {
         'Λογαριασμός και προφίλ κατοικιδίων: όσο ο λογαριασμός είναι ενεργός.\n\n' +
         'Μετά από αίτημα διαγραφής: 30 ημέρες περίοδος χάριτος για να αλλάξεις γνώμη, και ' +
         'μετά οριστική διαγραφή.\n\n' +
-        'Κρατήσεις και παραγγελίες: πέντε έτη, για λογιστικούς και φορολογικούς λόγους. ' +
-        'Τα στοιχεία που σε ταυτοποιούν ανωνυμοποιούνται.\n\n' +
+        'Κρατήσεις, παραγγελίες, συνεδρίες τηλεϊατρικής, συνδρομές και κριτικές: διατηρούνται ' +
+        'για λογιστικούς και φορολογικούς λόγους. Με τη διαγραφή του λογαριασμού αποσυνδέονται ' +
+        'από αυτόν: το email σου αντικαθίσταται και, στις κρατήσεις και τις κριτικές, και το ' +
+        'όνομά σου. Τα στοιχεία αποστολής μιας παραγγελίας διατηρούνται όπως καταχωρίστηκαν.\n\n' +
         'Ιστορικό τοποθεσίας: 90 ημέρες.\n\n' +
         'Ειδοποιήσεις: δώδεκα μήνες.\n\n' +
+        'Στατιστικά προβολών προωθήσεων και προϊόντων, που κρατούν μόνο κατακερματισμένη ' +
+        'μορφή της IP και του browser: 90 ημέρες.\n\n' +
+        'Μηνύματα της φόρμας επικοινωνίας: δύο έτη μετά την απάντηση ή την αρχειοθέτηση.\n\n' +
+        'Αιτήματα διαγραφής που ακυρώθηκαν ή δεν ολοκληρώθηκαν: τρία έτη.\n\n' +
         'Συγκαταθέσεις: πέντε έτη μετά την ανάκληση, ως απόδειξη ότι τηρήσαμε τον νόμο.\n\n' +
-        'Τεχνικά αρχεία καταγραφής: έξι μήνες.',
+        'Τεχνικά αρχεία καταγραφής: έξι μήνες. Εξαίρεση: οι καταγραφές που τεκμηριώνουν πληρωμές, επιστροφές χρημάτων και συνδρομές (π.χ. ότι μια επιστροφή έγινε) τηρούνται όσο και τα αντίστοιχα οικονομικά στοιχεία, για την αποφυγή διπλών χρεώσεων ή επιστροφών.',
     },
     {
       title: '9. Τα δικαιώματά σου',
@@ -163,9 +200,14 @@ const privacyEl: LegalDoc = {
     {
       title: '11. Cookies',
       body:
-        'Χρησιμοποιούμε απαραίτητα cookies για τη λειτουργία της πλατφόρμας — σύνδεση, ' +
-        'καλάθι, προτιμήσεις. Αυτά δεν απαιτούν συγκατάθεση.\n\n' +
-        'Για κάθε άλλη κατηγορία ζητάμε τη συγκατάθεσή σου κατά την πρώτη επίσκεψη.\n\n' +
+        'Χρησιμοποιούμε μόνο ό,τι είναι απαραίτητο για τη λειτουργία της πλατφόρμας: σύνδεση, ' +
+        'γλώσσα, θέμα και τις επιλογές σου για τα cookies, αποθηκευμένα στον browser σου, και ' +
+        'ένα προσωρινό cookie ασφαλείας, δέκα λεπτών, κατά τη σύνδεση με Google ή Facebook. ' +
+        'Αυτά δεν απαιτούν συγκατάθεση.\n\n' +
+        'Για κάθε άλλη κατηγορία ζητάμε τη συγκατάθεσή σου κατά την πρώτη επίσκεψη. Σήμερα ' +
+        'δεν χρησιμοποιούμε cookies ή εργαλεία στατιστικών και διαφήμισης.\n\n' +
+        'Ο ιστότοπος φορτώνει γραμματοσειρές από τη Google (Google Fonts) και, όταν ανοίγεις ' +
+        'έναν χάρτη, χάρτες από τη Mapbox. Και οι δύο λαμβάνουν τη διεύθυνση IP σου.\n\n' +
         'Μπορείς να αλλάξεις τις επιλογές σου οποτεδήποτε από τη σελίδα προτιμήσεων cookies.',
     },
     {
@@ -173,7 +215,8 @@ const privacyEl: LegalDoc = {
       body:
         'Η εγγραφή επιτρέπεται από τα 15 έτη και άνω, σύμφωνα με το όριο που ισχύει στην ' +
         'Ελλάδα για τη συγκατάθεση ανηλίκου σε υπηρεσίες της κοινωνίας της πληροφορίας.\n\n' +
-        'Κατά την εγγραφή ζητείται ημερομηνία γέννησης και ο έλεγχος γίνεται αυτόματα.\n\n' +
+        'Κατά την εγγραφή με email και κωδικό ζητείται ημερομηνία γέννησης και ο έλεγχος ' +
+        'γίνεται αυτόματα.\n\n' +
         'Για συναλλαγές και πληρωμές ενδέχεται να απαιτείται ενηλικίωση ή συναίνεση ' +
         'κηδεμόνα, κατά τις διατάξεις περί δικαιοπρακτικής ικανότητας.\n\n' +
         'Αν διαπιστώσουμε λογαριασμό κάτω των 15, τον διαγράφουμε.',
@@ -243,15 +286,27 @@ const termsEl: LegalDoc = {
       title: '4. Κρατήσεις και ακυρώσεις',
       body:
         'Η κράτηση δεσμεύει εσένα και τον πάροχο.\n\n' +
-        'Οι όροι ακύρωσης ορίζονται από κάθε πάροχο και εμφανίζονται πριν επιβεβαιώσεις.\n\n' +
+        'Ακύρωση από εσένα: έως 24 ώρες πριν το ραντεβού επιστρέφεται ολόκληρο το ποσό· ' +
+        'μέσα στις τελευταίες 24 ώρες επιστρέφεται το 50%. Μετά την ώρα έναρξης η κράτηση δεν ' +
+        'ακυρώνεται. Οι ίδιοι κανόνες ισχύουν για τις συνεδρίες τηλεϊατρικής.\n\n' +
+        'Ακύρωση από τον πάροχο ή από εμάς: επιστρέφεται πάντα ολόκληρο το ποσό.\n\n' +
+        'Αλλαγή ημερομηνίας ή ώρας πληρωμένου ραντεβού από εσένα: έως 24 ώρες πριν από αυτό.\n\n' +
+        'Εκδηλώσεις με πληρωμή: πλήρης επιστροφή αν ακυρώσεις τη θέση σου έως 48 ώρες πριν ' +
+        'την έναρξη· αργότερα η θέση δεν ακυρώνεται.\n\n' +
+        'Οι ώρες υπολογίζονται με ώρα Ελλάδας. Το ποσό της επιστροφής εμφανίζεται πριν ' +
+        'επιβεβαιώσεις την ακύρωση.\n\n' +
         'Επαναλαμβανόμενες μη εμφανίσεις σε ραντεβού μπορεί να οδηγήσουν σε περιορισμό ' +
         'του λογαριασμού.',
     },
     {
       title: '5. Πληρωμές',
       body:
-        'Οι πληρωμές διεκπεραιώνονται από τη Viva Payments. Δεν αποθηκεύουμε στοιχεία ' +
+        'Οι πληρωμές κρατήσεων, παραγγελιών, τηλεϊατρικής και εκδηλώσεων διεκπεραιώνονται από ' +
+        'τη Viva Payments και οι πληρωμές συνδρομών από τη Stripe. Δεν αποθηκεύουμε στοιχεία ' +
         'κάρτας.\n\n' +
+        'Συνδρομή τροφής: χρεώνεται μηνιαία, με διάρκεια 12 μηνών. Την ακυρώνεις οποτεδήποτε ' +
+        'από τις συνδρομές σου. Η ακύρωση ισχύει αμέσως και δεν γίνεται νέα χρέωση· η ' +
+        'παράδοση του μήνα που έχει ήδη πληρωθεί αποστέλλεται κανονικά.\n\n' +
         'Οι τιμές εμφανίζονται με ΦΠΑ όπου απαιτείται.\n\n' +
         'Ενδέχεται να παρακρατείται προμήθεια πλατφόρμας από το ποσό που αποδίδεται στον ' +
         'πάροχο. Το ποσοστό γνωστοποιείται στον πάροχο κατά την εγγραφή του.',
@@ -273,7 +328,8 @@ const termsEl: LegalDoc = {
         'πλατφόρμα.\n\n' +
         'Δεν επιτρέπεται περιεχόμενο παράνομο, προσβλητικό, παραπλανητικό, ή που παραβιάζει ' +
         'δικαιώματα τρίτων.\n\n' +
-        'Οι αξιολογήσεις πρέπει να βασίζονται σε πραγματική εμπειρία.\n\n' +
+        'Οι αξιολογήσεις πρέπει να βασίζονται σε πραγματική εμπειρία. Μπορείς να αφήσεις μία ' +
+        'αξιολόγηση για κάθε κράτηση που ολοκληρώθηκε ή πληρώθηκε.\n\n' +
         'Μπορούμε να αφαιρέσουμε περιεχόμενο που παραβιάζει τους όρους.',
     },
     {
@@ -371,8 +427,9 @@ const privacyEn: LegalDoc = {
         'Usage data: bookings, orders, reviews, community posts.\n\n' +
         'Technical data: IP address, device type, access time.\n\n' +
         'Optional: pet location via tracking device, if you enable it.\n\n' +
-        'We never collect card details. Payments go directly to Viva Payments and card ' +
-        'data never passes through our systems.',
+        'We never collect card details. Payments for bookings, orders, telehealth and events ' +
+        'go directly to Viva Payments, and subscription payments (food subscription, AI plans) ' +
+        'go directly to Stripe. Card data never passes through our systems.',
     },
     {
       title: '3. Why we use it',
@@ -409,32 +466,67 @@ const privacyEn: LegalDoc = {
       body:
         'Railway — application and database hosting. EU facilities.\n\n' +
         'Cloudflare — content delivery and file storage. EU facilities.\n\n' +
-        'Viva Payments — payment processing. Greece.\n\n' +
+        'Viva Payments — payments for bookings, orders, telehealth and events. Greece.\n\n' +
+        'Stripe — subscription payments (food subscription, AI plans). Receives your email and ' +
+        'the subscription details; you enter your card details directly on its payment page. ' +
+        'United States.\n\n' +
         'Resend — email delivery. United States.\n\n' +
         'Anthropic — AI services. United States. Receives only the content you submit for ' +
         'analysis, and does not use it to train models.\n\n' +
+        '8x8 (Jitsi as a Service) — telehealth video calls. Receives your name, email and ' +
+        'profile photo, as well as the call’s audio and video. If the service is unavailable, ' +
+        'the call runs on the public meet.jit.si service, which receives your display name. ' +
+        'United States.\n\n' +
+        'Mapbox — maps on the website (services map, location picker, pet tracker). When you ' +
+        'open a map it receives your IP address and the area shown — on the tracker, therefore ' +
+        'also your pet’s approximate location. United States.\n\n' +
+        'OpenStreetMap (Nominatim) — converts service and community addresses into ' +
+        'coordinates. Receives only the address text, from our servers. OpenStreetMap ' +
+        'Foundation, United Kingdom.\n\n' +
+        'Google — Google sign-in, if you choose it (we receive name, email and profile photo); ' +
+        'syncing bookings to a provider’s Google Calendar, if the provider enables it (service ' +
+        'title, customer name, notes, date, time and location of the booking); the website’s ' +
+        'fonts (Google Fonts — receives your IP address); delivery of push notifications to ' +
+        'Android devices (Firebase Cloud Messaging). United States.\n\n' +
+        'Meta (Facebook) — Facebook sign-in, if you choose it. We receive name, email and ' +
+        'profile photo. United States.\n\n' +
+        'Microsoft — syncing bookings to a provider’s Outlook Calendar, if the provider enables ' +
+        'it; same details as Google Calendar. United States.\n\n' +
+        'Expo — push notifications to the mobile app. Receives your device identifier and the ' +
+        'notification’s title and text, and forwards them to Google’s (Android) or Apple’s ' +
+        '(iOS) push service. United States. In the browser, push notifications are delivered ' +
+        'through your browser vendor’s push service.\n\n' +
         'Each acts on our instructions and only for the purpose we assign.',
     },
     {
       title: '7. Transfers outside Europe',
       body:
-        'Two providers are US-based: Resend for email and Anthropic for AI.\n\n' +
-        'These transfers rely on the safeguards in Chapter V of the GDPR — the European ' +
-        'Commission’s Standard Contractual Clauses or certification under the EU–US Data ' +
-        'Privacy Framework.\n\n' +
-        'All other data stays within the European Union.',
+        'Some of the providers in section 6 are based in, or process data in, the United ' +
+        'States: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Microsoft and Expo.\n\n' +
+        'These transfers rely on appropriate safeguards under Chapter V of the GDPR — e.g. the ' +
+        'European Commission’s Standard Contractual Clauses or the EU‑US Data Privacy ' +
+        'Framework, where the provider is certified.\n\n' +
+        'The OpenStreetMap Foundation is based in the United Kingdom, which is covered by a ' +
+        'European Commission adequacy decision.\n\n' +
+        'The application and the database are hosted within the European Union.',
     },
     {
       title: '8. How long we keep it',
       body:
         'Account and pet profiles: as long as the account is active.\n\n' +
         'After a deletion request: 30-day grace period, then permanent deletion.\n\n' +
-        'Bookings and orders: five years, for accounting and tax. Identifying details are ' +
-        'anonymised.\n\n' +
+        'Bookings, orders, telehealth sessions, subscriptions and reviews: kept for accounting ' +
+        'and tax purposes. When the account is deleted they are detached from it: your email ' +
+        'is replaced and, in bookings and reviews, so is your name. An order’s shipping ' +
+        'details are kept as entered.\n\n' +
         'Location history: 90 days.\n\n' +
         'Notifications: twelve months.\n\n' +
+        'Promotion and product view statistics, which hold only a hashed form of the IP ' +
+        'address and browser: 90 days.\n\n' +
+        'Contact form messages: two years after they are answered or archived.\n\n' +
+        'Deletion requests that were cancelled or not completed: three years.\n\n' +
         'Consent records: five years after withdrawal, as proof of compliance.\n\n' +
-        'Technical logs: six months.',
+        'Technical logs: six months. Exception: records documenting payments, refunds and subscriptions (e.g. that a refund was made) are kept as long as the related financial records, to prevent duplicate charges or refunds.',
     },
     {
       title: '9. Your rights',
@@ -465,9 +557,13 @@ const privacyEn: LegalDoc = {
     {
       title: '11. Cookies',
       body:
-        'We use essential cookies for the platform to work — sign-in, cart, preferences. ' +
-        'These do not require consent.\n\n' +
-        'For every other category we ask for your consent on first visit.\n\n' +
+        'We use only what the platform needs to work: sign-in, language, theme and your cookie ' +
+        'choices, stored in your browser, plus a temporary ten-minute security cookie during ' +
+        'Google or Facebook sign-in. These do not require consent.\n\n' +
+        'For every other category we ask for your consent on first visit. We currently use no ' +
+        'analytics or advertising cookies or tools.\n\n' +
+        'The website loads fonts from Google (Google Fonts) and, when you open a map, maps ' +
+        'from Mapbox. Both receive your IP address.\n\n' +
         'You can change your choices at any time from the cookie preferences page.',
     },
     {
@@ -475,7 +571,7 @@ const privacyEn: LegalDoc = {
       body:
         'Registration is permitted from age 15, in line with the Greek threshold for a ' +
         'minor’s consent to information society services.\n\n' +
-        'Date of birth is requested at sign-up and checked automatically.\n\n' +
+        'Date of birth is requested at email-and-password sign-up and checked automatically.\n\n' +
         'Transactions and payments may require legal capacity or guardian consent.\n\n' +
         'If we find an account belonging to someone under 15, we delete it.',
     },
@@ -542,13 +638,25 @@ const termsEn: LegalDoc = {
       title: '4. Bookings and cancellations',
       body:
         'A booking binds both you and the provider.\n\n' +
-        'Cancellation terms are set by each provider and shown before you confirm.\n\n' +
+        'If you cancel: up to 24 hours before the appointment you get a full refund; within ' +
+        'the last 24 hours, 50% is refunded. Once the start time has passed the booking cannot ' +
+        'be cancelled. The same rules apply to telehealth sessions.\n\n' +
+        'If the provider or we cancel: you always get a full refund.\n\n' +
+        'Changing the date or time of a paid appointment yourself: up to 24 hours before it.\n\n' +
+        'Paid events: full refund if you cancel your place up to 48 hours before the start; ' +
+        'after that the place cannot be cancelled.\n\n' +
+        'Times are in Greek time. The refund amount is shown before you confirm a ' +
+        'cancellation.\n\n' +
         'Repeated no-shows may lead to account restrictions.',
     },
     {
       title: '5. Payments',
       body:
-        'Payments are processed by Viva Payments. We do not store card details.\n\n' +
+        'Payments for bookings, orders, telehealth and events are processed by Viva Payments, ' +
+        'and subscription payments by Stripe. We do not store card details.\n\n' +
+        'Food subscription: billed monthly, for a 12-month term. You can cancel it at any time ' +
+        'from your subscriptions. Cancellation takes effect immediately and no further charge ' +
+        'is made; the delivery for a month already paid is shipped as normal.\n\n' +
         'Prices include VAT where applicable.\n\n' +
         'A platform commission may be withheld from the amount paid to the provider. The ' +
         'rate is disclosed to providers at registration.',
@@ -568,7 +676,8 @@ const termsEn: LegalDoc = {
         'What you post remains yours. You grant us a licence to display it on the platform.\n\n' +
         'Content that is unlawful, offensive, misleading or infringes third-party rights is ' +
         'not permitted.\n\n' +
-        'Reviews must reflect genuine experience.\n\n' +
+        'Reviews must reflect genuine experience. You can leave one review for each booking ' +
+        'that was completed or paid.\n\n' +
         'We may remove content that breaches these terms.',
     },
     {

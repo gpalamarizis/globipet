@@ -121,9 +121,8 @@ export default function ProviderTelehealthToday() {
                     <Clock size={12} /> {c.scheduled_time}{c.duration ? ` · ${t('providerTele.minutes', { count: c.duration })}` : ''}
                   </p>
                 </div>
-                {/* py-[7px] + περίγραμμα 1px = ίδιο ύψος με το κουμπί κλήσης (py-2, χωρίς περίγραμμα). */}
                 <button onClick={() => askCancel(c)} disabled={cancelSession.isPending || asking}
-                  className="btn-secondary px-3 py-[7px] text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 shrink-0 disabled:opacity-60">
+                  className="btn-secondary px-3 py-2 text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 shrink-0 disabled:opacity-60">
                   {t('bookingPolicy.cancel')}
                 </button>
                 <button onClick={() => setActive(c)} className="btn-primary px-3 py-2 text-sm flex items-center gap-1.5 shrink-0">
@@ -155,7 +154,7 @@ export default function ProviderTelehealthToday() {
                   <span className="text-xs font-medium text-amber-700 dark:text-amber-400 shrink-0">{t('teleCancel.refunding')}</span>
                 ) : (
                   <button onClick={() => askCancel(c)} disabled={cancelSession.isPending || asking}
-                    className="btn-secondary px-3 py-[7px] text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 shrink-0 disabled:opacity-60">
+                    className="btn-secondary px-3 py-2 text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 shrink-0 disabled:opacity-60">
                     {t('bookingPolicy.cancel')}
                   </button>
                 )}

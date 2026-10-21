@@ -15,6 +15,7 @@ import LoadingScreen from '@/components/ui/LoadingScreen'
 import AiFeatureGuard from '@/components/guards/AiFeatureGuard'
 import CookieBanner from '@/components/CookieBanner'
 import PushPrompt from '@/components/PushPrompt'
+import EmailVerifyBanner from '@/pages/auth/EmailVerifyBanner'
 
 const Home              = lazy(() => import('@/pages/Home'))
 const Social            = lazy(() => import('@/pages/Social'))
@@ -59,9 +60,11 @@ const Login             = lazy(() => import('@/pages/auth/Login'))
 const Register          = lazy(() => import('@/pages/auth/Register'))
 const ForgotPassword    = lazy(() => import('@/pages/auth/ForgotPassword'))
 const ResetPassword     = lazy(() => import('@/pages/auth/ResetPassword'))
+const VerifyEmail       = lazy(() => import('@/pages/auth/VerifyEmail'))
 const ProviderDashboard = lazy(() => import('@/pages/provider/ProviderDashboard'))
 const ProviderPackagesPage = lazy(() => import('@/pages/provider/ProviderPackagesPage'))
 const ProviderStaffPage = lazy(() => import('@/pages/provider/ProviderStaffPage'))
+const ProviderVerificationPage = lazy(() => import('@/pages/ProviderVerificationPage'))
 const AdminDashboard    = lazy(() => import('@/pages/admin/AdminDashboard'))
 const AdminCatalogPage  = lazy(() => import('@/pages/admin/AdminCatalogPage'))
 const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage'))
@@ -197,6 +200,8 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <OAuthHandler />
+          {/* Ε12: «Επιβεβαίωσε το email σου — Ξαναστείλε», πάνω από κάθε layout. */}
+          <EmailVerifyBanner />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route element={<AuthLayout />}>
@@ -205,6 +210,10 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password"  element={<ResetPassword />} />
               </Route>
+              {/* Ε12: ο σύνδεσμος του email επιβεβαίωσης. Εκτός AuthLayout, γιατί
+                  εκείνο στέλνει τον συνδεδεμένο χρήστη στην αρχική — κι εδώ
+                  έρχεται συχνά ήδη συνδεδεμένος. */}
+              <Route path="/verify-email"      element={<VerifyEmail />} />
 
               <Route element={<MainLayout />}>
                 <Route path="/"                element={<Home />} />
@@ -254,7 +263,7 @@ export default function App() {
                 <Route path="/bookings/:id/confirmation" element={<BookingConfirmation />} />
                 <Route path="/community"       element={<PrivateRoute><Community /></PrivateRoute>} />
                 <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
-                <Route path="/inbox" element={<InboxPage />} />
+                <Route path="/inbox"           element={<PrivateRoute><InboxPage /></PrivateRoute>} />
                 <Route path="/wishlist"        element={<PrivateRoute><Wishlist /></PrivateRoute>} />
                 <Route path="/checkout"        element={<PrivateRoute><Checkout /></PrivateRoute>} />
                 <Route path="/orders"          element={<PrivateRoute><MyOrders /></PrivateRoute>} />
@@ -274,6 +283,7 @@ export default function App() {
                 <Route path="/provider"          element={<ProviderDashboard />} />
                 <Route path="/provider/packages" element={<ProviderPackagesPage />} />
                 <Route path="/provider/staff"    element={<ProviderStaffPage />} />
+                <Route path="/provider/verification" element={<ProviderVerificationPage />} />
                 <Route path="/provider/*"        element={<ProviderDashboard />} />
               </Route>
 

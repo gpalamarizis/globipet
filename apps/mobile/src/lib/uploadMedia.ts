@@ -55,3 +55,40 @@ export async function pickAndUploadMedia(folder: string, kind: 'image' | 'video'
   if (!url) throw new Error(t('campaignUi.errNoUrl'))
   return url
 }
+
+/**
+ * Ιδιωτικά αρχεία (ιατρικά, εικόνες AI).
+ *
+ * Το upload στους φακέλους medical / ai-health / stool-urine επιστρέφει
+ * αναφορά `r2priv://…` αντί για δημόσιο URL. Για εμφάνιση ζητάμε από το
+ * GET /upload/private-url σύνδεσμο που λήγει σε 10 λεπτά και τον κρατάμε
+ * μέχρι 30" πριν τη λήξη. Στα endpoints AI η αναφορά στέλνεται ΟΠΩΣ ΕΙΝΑΙ —
+ * τη λύνει ο server. Ίδια λογική με το usePrivateUrl του web (web/src/lib/api.ts).
+ *
+ * `petId`: όταν το αρχείο το βλέπει κτηνίατρος μέσα από το διαβατήριο του ζώου.
+ * Δημόσιο URL → επιστρέφεται ίδιο. Αποτυχία → null.
+ */
+const privateCache = new Map<string, { url: string; exp: number }>()
+const privatePending = new Map<string, Promise<string | null>>()
+
+export const isPrivateRef = (v: unknown): v is string => typeof v === 'string' && v.startsWith('r2priv://')
+
+export async function privateUrl(ref: string, petId?: string | null): Promise<string | null> {
+  if (!isPrivateRef(ref)) return ref || null
+  const hit = privateCache.get(ref)
+  if (hit && hit.exp - 30_000 > Date.now()) return hit.url
+  const k = ref + '|' + (petId || '')
+  let p = privatePending.get(k)
+  if (!p) {
+    p = api.get('/upload/private-url', { params: { ref, ...(petId ? { pet_id: petId } : {}) } })
+      .then(({ data }) => {
+        if (!data?.url) return null
+        privateCache.set(ref, { url: data.url, exp: Date.parse(data.expires_at) || Date.now() + 300_000 })
+        return data.url as string
+      })
+      .catch(() => null)
+      .finally(() => { privatePending.delete(k) })
+    privatePending.set(k, p)
+  }
+  return p
+}

@@ -22,10 +22,72 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   ο server. Η ετήσια εμφανίζεται ανά μήνα, ώστε η σύγκριση να είναι
  *   τίμια και να φαίνεται το όφελος.
  */
+/**
+ * Πληρωμένη συνδρομή AI (Stripe): κατάσταση και «Ακύρωση συνδρομής» με
+ * επιβεβαίωση — ίδιο μοτίβο με τη συνδρομή τροφής (subscriptions.tsx) και
+ * με το web (PricingPage → AiSubscriptionManage). Χρησιμοποιείται εδώ και
+ * στο Κέντρο υγείας. Τίποτα, αν δεν υπάρχει πληρωμένη/ακυρωμένη συνδρομή.
+ */
+export function AiSubscriptionManage() {
+  const { t, i18n } = useTranslation()
+  const qc = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
+
+  const { data: status } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
+    enabled: isAuthenticated,
+  })
+
+  const cancel = useMutation({
+    mutationFn: () => api.post('/ai-subscriptions/cancel', {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ai-subscription-status'] })
+      Alert.alert(t('mySubs.cancelledToast'))
+    },
+    onError: (e: any) =>
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
+  })
+
+  const st = status?.ai_subscription_status
+  if (!isAuthenticated || (st !== 'active' && st !== 'payment_failed' && st !== 'cancelled')) return null
+  const canCancel = status?.can_cancel ?? (st === 'active' || st === 'payment_failed')
+  const plan = status?.plan
+  const planName = plan ? ((i18n.language === 'el' && plan.name_el) ? plan.name_el : plan.name) : null
+
+  const confirmCancel = () => Alert.alert(
+    t('mySubs.cancel'),
+    t('aiSub.confirmText'),
+    [
+      { text: t('mySubs.keep'), style: 'cancel' },
+      { text: t('mySubs.confirmCancel'), style: 'destructive', onPress: () => cancel.mutate() },
+    ],
+  )
+
+  return (
+    <Card>
+      <View style={s.subHead}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.subTitle}>{st === 'cancelled' ? t('aiSub.cancelledTitle') : t('aiSub.activeTitle')}</Text>
+          {!!planName && <Text style={s.subMeta}>{t('aiSub.plan', { plan: planName })}</Text>}
+        </View>
+        <Badge label={t(`mySubs.status_${st}`)}
+          tone={st === 'active' ? 'success' : st === 'payment_failed' ? 'danger' : 'neutral'} />
+      </View>
+      {st === 'payment_failed' && <Text style={s.subWarn}>{t('aiSub.paymentFailedHint')}</Text>}
+      {canCancel && (
+        <Button label={t('mySubs.cancel')} variant="ghost" size="sm"
+          loading={cancel.isPending} disabled={cancel.isPending}
+          onPress={confirmCancel} style={s.subCancel} />
+      )}
+    </Card>
+  )
+}
+
 export default function PricingScreen() {
   const { t, i18n } = useTranslation()
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [annual, setAnnual] = useState(false)
   const qc = useQueryClient()
 
@@ -79,6 +141,9 @@ export default function PricingScreen() {
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.intro}>{t('pricing.subtitle')}</Text>
 
+        {/* Πληρωμένη συνδρομή AI: κατάσταση και ακύρωση (όπως στο web). */}
+        <AiSubscriptionManage />
+
         {canTrial && (
           <Card style={s.trial}>
             <View style={s.trialHead}>
@@ -86,8 +151,14 @@ export default function PricingScreen() {
               <Text style={s.trialTitle}>{t('ai.try_free')}</Text>
             </View>
             <Text style={s.trialTxt}>{t('ai.trial_desc')}</Text>
-            <Button label={t('ai.start_trial')} loading={startTrial.isPending}
-              onPress={() => startTrial.mutate()} full style={{ marginTop: space.md }} />
+            {/* Η δοκιμή ξεκινά με την επιβεβαίωση του email (server 403) —
+                μήνυμα αντί για κουμπί, όπως medical-center και web. */}
+            {(user as any)?.email_verified === false ? (
+              <Text style={[s.trialTxt, { marginTop: space.md, fontWeight: weight.semibold }]}>{t('trialVerify.confirmEmail')}</Text>
+            ) : (
+              <Button label={t('ai.start_trial')} loading={startTrial.isPending}
+                onPress={() => startTrial.mutate()} full style={{ marginTop: space.md }} />
+            )}
           </Card>
         )}
 
@@ -182,4 +253,9 @@ const s = StyleSheet.create({
   feature: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   featureTxt: { ...type.caption, color: colors.textMuted, flex: 1 },
   note: { ...type.caption, color: colors.textLight, textAlign: 'center', marginTop: space.md },
+  subHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  subTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  subMeta: { ...type.caption, color: colors.textLight, marginTop: 2 },
+  subWarn: { ...type.caption, color: colors.danger, marginTop: space.sm },
+  subCancel: { alignSelf: 'flex-start', marginTop: space.md },
 })

@@ -290,7 +290,9 @@ async function verifyEventPayment(registrationId: string, transactionId: string)
 
     if (!(reg.amount_paid && reg.amount_paid > 0)) return null
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
-    if (Number.isFinite(paid) && paid + 0.01 < reg.amount_paid) {
+    // Ποσό που δεν διαβάζεται (NaN) = απόρριψη. Πριν, το NaN περνούσε τον
+    // έλεγχο (fail-open) και η εγγραφή επιβεβαιωνόταν χωρίς γνωστό ποσό.
+    if (!Number.isFinite(paid) || paid + 0.01 < reg.amount_paid) {
       console.error(`[viva] transaction ${txn} paid ${paid}, event registration needs ${reg.amount_paid}`)
       return null
     }
@@ -1216,6 +1218,20 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     return data
   }
 
+  /**
+   * Δημόσια προβολή: χωρίς organizer_email. Ο κατάλογος και η σελίδα της
+   * εκδήλωσης είναι ανοιχτά σε όλους και έδιναν το email κάθε διοργανωτή.
+   * Το «δική μου;» (κουμπιά επεξεργασίας/ακύρωσης) ως is_mine από το JWT.
+   */
+  const viewerEmail = async (req: any): Promise<string | null> => {
+    if (!req.headers?.authorization) return null
+    try { await req.jwtVerify(); return (req.user as any)?.email ?? null } catch { return null }
+  }
+  const publicEvent = <T extends { organizer_email?: string | null }>(e: T, viewer: string | null) => {
+    const { organizer_email, ...rest } = e
+    return { ...rest, is_mine: !!viewer && organizer_email === viewer }
+  }
+
   app.get('/', async (req: any, reply) => {
     const lang = getRequestLang(req)
     const { q, city, country, event_type, upcoming, featured, mine, page = 1, limit = 20 } = req.query
@@ -1274,13 +1290,14 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         out = out.map((e: any) => ({ ...e, refunds_pending: pending.get(e.id) ?? 0 }))
       } catch { /* το πεδίο λείπει· η λίστα επιστρέφεται κανονικά */ }
     }
-    return { data: out, total, page: Number(page), totalPages: Math.ceil(total / take) }
+    const viewer = mineEmail ?? await viewerEmail(req)
+    return { data: out.map((e: any) => publicEvent(e, viewer)), total, page: Number(page), totalPages: Math.ceil(total / take) }
   })
 
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const event = await prisma.event.findUniqueOrThrow({ where: { id: req.params.id } })
-    const translated: any = await translateRecord('event', event, lang)
+    const translated: any = publicEvent(await translateRecord('event', event, lang) ?? event, await viewerEmail(req))
     // Προσθετικό: ορατό και σε μη συνδεδεμένους (το event_cancelled του
     // /:id/registration θέλει σύνδεση). Από τη στήλη cancelled_at· audit
     // μόνο για ακυρώσεις πριν τη στήλη. Σε σφάλμα βάσης: από τη στήλη.

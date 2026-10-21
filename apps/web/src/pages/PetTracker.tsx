@@ -160,19 +160,18 @@ function MapView({ selected, rows, t }: { selected: TrackerRow | null; rows: Tra
 
 export default function PetTracker() {
   const { t } = useTranslation()
-  const { isAuthenticated, token } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
   const qc = useQueryClient()
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
-  const [wsConnected, setWsConnected] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rows = [], isLoading, isError } = useQuery({
     queryKey: ['tracker-latest'],
     queryFn: () => api.get('/tracker/latest').then(r => (r.data?.data ?? []) as TrackerRow[]),
     enabled: isAuthenticated,
-    // A collar reports on its own schedule; poll so the page keeps up even if
-    // the socket drops.
-    refetchInterval: 60_000,
+    // Ο server δεν έχει WebSocket· οι θέσεις ανανεώνονται με polling κάθε
+    // 30″ (ίδιο διάστημα με το κινητό).
+    refetchInterval: 30_000,
   })
 
   const selected = useMemo(
@@ -181,43 +180,6 @@ export default function PetTracker() {
   )
   const lostRows = rows.filter(r => r.pet.is_lost || r.location?.status === 'lost')
 
-  useEffect(() => {
-    if (!isAuthenticated || !token) return
-
-    /**
-     * The notifications router is mounted at /api/notifications, so its socket
-     * lives at /api/notifications/ws. This previously pointed at a bare /ws,
-     * which no route serves — the connection failed every time and the
-     * "realtime" dot stayed grey.
-     *
-     * The server identifies the caller from a verified JWT. Browsers cannot
-     * set headers on a WebSocket handshake, so the token goes in the query.
-     */
-    const apiBase = import.meta.env.VITE_API_URL
-      || 'https://globipetbackend-production.up.railway.app/api'
-    const wsUrl = apiBase.replace(/^http/, 'ws').replace(/\/$/, '')
-      + `/notifications/ws?token=${encodeURIComponent(token)}`
-
-    let ws: WebSocket | null = null
-    try {
-      ws = new WebSocket(wsUrl)
-      ws.onopen = () => setWsConnected(true)
-      ws.onclose = () => setWsConnected(false)
-      ws.onerror = () => setWsConnected(false)
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data)
-          if (data.type === 'location_update') {
-            // Pull the authoritative rows rather than patching local state
-            // from a socket payload.
-            qc.invalidateQueries({ queryKey: ['tracker-latest'] })
-          }
-        } catch {}
-      }
-    } catch { setWsConnected(false) }
-
-    return () => { ws?.close() }
-  }, [isAuthenticated, token, qc])
 
   const batteryColor = (b: number | null) =>
     b == null ? 'text-gray-400' : b > 50 ? 'text-green-500' : b > 20 ? 'text-yellow-500' : 'text-red-500'
@@ -245,8 +207,8 @@ export default function PetTracker() {
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('tracker.title')}</h1>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-            <span className={cn('w-2 h-2 rounded-full', wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400')} />
-            {wsConnected ? t('tracker.realtime') : t('tracker.offline')}
+            <span className={cn('w-2 h-2 rounded-full', !isError ? 'bg-green-500 animate-pulse' : 'bg-gray-400')} />
+            {!isError ? t('trackerPoll.auto') : t('tracker.offline')}
           </p>
         </div>
         <button onClick={() => setAddOpen(true)} className="btn-primary text-sm inline-flex items-center gap-1.5">

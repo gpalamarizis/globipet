@@ -3,7 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle2, Smartphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
@@ -16,6 +16,10 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [done, setDone] = useState(false)
+  // Ο σύνδεσμος του email ανοίγει πάντα στον browser (δεν υπάρχουν App Links).
+  // Σε κινητό, μετά την αλλαγή, προτείνουμε και το άνοιγμα της εφαρμογής.
+  const onPhone = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +36,9 @@ export default function ResetPassword() {
     try {
       await api.post('/auth/reset-password', { token, password })
       toast.success(t('authExtraLogin.passwordReset'))
-      navigate('/login')
+      // Σε υπολογιστή όπως πριν· σε κινητό οθόνη με «Άνοιξε την εφαρμογή».
+      if (onPhone) setDone(true)
+      else navigate('/login')
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err.message || t('common.error'))
     } finally {
@@ -55,6 +61,16 @@ export default function ResetPassword() {
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('authExtraLogin.resetTitle')}</h1>
         </div>
 
+        {done ? (
+          <div className="card p-6 text-center space-y-4">
+            <CheckCircle2 size={40} className="mx-auto text-green-600" aria-hidden="true" />
+            <p className="text-sm text-gray-700 dark:text-gray-300">{t('resetDone.message')}</p>
+            <a href="globipet://auth/login" className="btn-primary w-full flex items-center justify-center gap-2">
+              <Smartphone size={16} aria-hidden="true" /> {t('resetDone.openApp')}
+            </a>
+            <Link to="/login" className="btn-secondary w-full block text-center">{t('resetDone.loginWeb')}</Link>
+          </div>
+        ) : (
         <div className="card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -73,6 +89,7 @@ export default function ResetPassword() {
             </button>
           </form>
         </div>
+        )}
       </motion.div>
     </div>
   )

@@ -91,7 +91,7 @@ export default function ForumScreen() {
             <Text style={s.title} numberOfLines={2}>{x.title}</Text>
           </View>
           <Text style={s.meta} numberOfLines={1}>
-            {x.author_name ?? x.author_email} · {t('forum.replies', { count: x.replies_count ?? 0 })}
+            {x.author_name} · {t('forum.replies', { count: x.replies_count ?? 0 })}
           </Text>
           <View style={s.badges}>
             {!!x.category && <Badge label={t(`forum.cat${x.category.charAt(0).toUpperCase()}${x.category.slice(1)}`, { defaultValue: x.category })} tone="neutral" />}

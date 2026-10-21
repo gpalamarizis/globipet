@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { SwitchRow } from '@/components/SwitchRow'
 import { ServiceLocationField } from '@/components/ServiceLocationField'
 import { space } from '@/theme'
@@ -22,7 +23,7 @@ export default function ServiceFormScreen() {
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
 
-  const { data: services = [], isLoading } = useQuery({
+  const { data: services = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['provider-packages'],
     queryFn: () => api.get('/packages/my').then(r => r.data?.data ?? []),
   })
@@ -80,8 +81,12 @@ export default function ServiceFormScreen() {
     [{ text: t('providerPkg.cancel'), style: 'cancel' },
      { text: t('providerPkg.delete'), style: 'destructive', onPress: () => remove.mutate() }])
 
-  if (isLoading || !service) return (
-    <Screen title={t('providerPkg.editService')} back><Loading /></Screen>
+  if (!service) return (
+    <Screen title={t('providerPkg.editService')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
   )
 
   return (

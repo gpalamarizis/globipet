@@ -175,7 +175,7 @@ export default function TelehealthConfirmationScreen() {
         <Button label={t('profile.menu.telehealth')} icon={<Stethoscope size={18} color={colors.textOnDark} />}
           onPress={backToTelehealth} full />
         <Button label={t('tele.title')} variant="secondary"
-          onPress={() => router.replace('/(tabs)/index' as any)} full />
+          onPress={() => router.replace('/(tabs)' as any)} full />
       </ScrollView>
     </Screen>
   )

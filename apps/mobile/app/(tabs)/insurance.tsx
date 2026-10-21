@@ -214,9 +214,10 @@ export default function InsuranceScreen() {
                   <Text style={s.secondaryBtnText}>{selected.provider.phone}</Text>
                 </TouchableOpacity>
               )}
-              {!!selected?.provider?.website && (
+              {/* Μόνο http(s) — όχι javascript:/intent:/άλλο σχήμα (όπως στο web). */}
+              {!!selected?.provider?.website && /^https?:\/\//i.test(String(selected.provider.website).trim()) && (
                 <TouchableOpacity style={s.primaryBtn} activeOpacity={0.85}
-                  onPress={() => Linking.openURL(selected.provider.website)}>
+                  onPress={() => Linking.openURL(String(selected.provider.website).trim()).catch(() => {})}>
                   <Globe size={icon.sm} color="#fff" />
                   <Text style={s.primaryBtnText}>{t('insurance.apply')}</Text>
                 </TouchableOpacity>

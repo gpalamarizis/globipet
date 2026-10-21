@@ -91,7 +91,9 @@ const userConsentsRoutes: FastifyPluginAsync = async (app) => {
         terms_accepted: terms_accepted === undefined ? !!prev?.terms_accepted : !!terms_accepted,
         privacy_accepted: privacy_accepted === undefined ? !!prev?.privacy_accepted : !!privacy_accepted,
         source: source || 'cookie_banner',
-        ip_address: (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip,
+        // req.ip (trustProxy, index.ts): η απόδειξη συγκατάθεσης δεν πρέπει
+        // να κρατά IP που διάλεξε ο client μέσω X-Forwarded-For.
+        ip_address: req.ip || null,
         user_agent: (req.headers['user-agent'] as string) || null,
       },
     })

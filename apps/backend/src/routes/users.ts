@@ -17,18 +17,55 @@ import { parseBody, text, httpUrl, phone, language } from '../lib/validate.js'
  *
  * Όλα προαιρετικά: είναι μερική ενημέρωση, ο χρήστης στέλνει μόνο όσα
  * αλλάζει.
+ *
+ * Ε12: ΤΟ ΙΔΙΟ σχήμα ισχύει πλέον και στα PATCH /auth/me, PUT /users/me και
+ * PATCH /user-rights/rectify (εκεί σε λειτουργία strip, για συμβατότητα). Πριν,
+ * αυτά τα τρία έγραφαν ό,τι ερχόταν — η «πόρτα» του javascript: έμενε ανοιχτή.
+ *
+ * profile_photo: μόνο https από το R2 (CF_R2_PUBLIC_URL ή *.r2.cloudflarestorage.com
+ * / *.r2.dev) — εκεί ανεβάζει το /api/upload. Κενό = αφαίρεση. Μια οποιαδήποτε
+ * εξωτερική διεύθυνση θα γινόταν pixel παρακολούθησης για όποιον βλέπει το προφίλ.
  */
-const profileSchema = z.object({
+function isAllowedPhotoUrl(v: string): boolean {
+  if (v === '') return true
+  let u: URL
+  try { u = new URL(v) } catch { return false }
+  if (u.protocol !== 'https:') return false
+  const host = u.hostname.toLowerCase()
+  const pub = process.env.CF_R2_PUBLIC_URL
+  if (pub) {
+    try { if (new URL(pub).hostname.toLowerCase() === host) return true } catch { /* κακή τιμή env */ }
+  }
+  return host.endsWith('.r2.cloudflarestorage.com') || host.endsWith('.r2.dev')
+}
+
+export const profileSchema = z.object({
   full_name: text(2, 120, 'ονοματεπώνυμο').optional(),
   bio: z.string().trim().max(2000, 'Το βιογραφικό ξεπερνά τους 2000 χαρακτήρες').optional(),
   phone: phone.optional(),
   city: z.string().trim().max(120).optional(),
   country: z.string().trim().max(120).optional(),
   website: httpUrl.optional(),
-  profile_photo: z.string().trim().max(1000).optional(),
+  profile_photo: z.string().trim().max(1000)
+    .refine(isAllowedPhotoUrl, 'Μη έγκυρη διεύθυνση φωτογραφίας').optional(),
   preferred_language: language.optional(),
   address: z.string().trim().max(500).optional(),
 }).strict()
+
+/**
+ * Ε12: ο χρήστης προς τον client ΧΩΡΙΣ μυστικά (κωδικός, hash reset/επαλήθευσης,
+ * token_version) και με `email_verified` — όπως το toSafeUser του auth.ts.
+ */
+function safeUser(user: any) {
+  const {
+    password_hash: _p, reset_token: _r, reset_token_expires: _re,
+    email_verify_token: _v, email_verify_expires: _ve, token_version: _tv,
+    ...safe
+  } = user
+  decryptUserFields(safe)
+  safe.email_verified = !!user.email_verified_at
+  return safe
+}
 
 const usersRoutes: FastifyPluginAsync = async (app) => {
 
@@ -37,15 +74,20 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return null
-    const { password_hash: _, ...safe } = user as any
-    return decryptUserFields(safe)
+    return safeUser(user)
   })
 
   // PUT /users/me — legacy full-update endpoint
   // Kept for backward compatibility with older clients.
-  app.put('/me', { preHandler: [(app as any).authenticate] }, async (req) => {
+  // Ε12: ίδιοι έλεγχοι τιμών με το PATCH (profileSchema), σε strip.
+  app.put('/me', { preHandler: [(app as any).authenticate] }, async (req, reply) => {
     const { email, id } = req.user as any
-    const { full_name, bio, phone, city, country, website } = req.body as any
+    const parsed = parseBody(
+      profileSchema.pick({ full_name: true, bio: true, phone: true, city: true, country: true, website: true }).strip(),
+      req.body, reply,
+    )
+    if (!parsed) return
+    const { full_name, bio, phone, city, country, website } = parsed
     const user = await prisma.user.update({
       where: { email },
       data: {
@@ -54,8 +96,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         phone: encryptField(phone) as any,
       },
     })
-    const { password_hash: _, ...safe } = user as any
-    decryptUserFields(safe)
+    const safe = safeUser(user)
     await audit(req, {
       action: 'profile_update',
       resource: 'user',
@@ -86,8 +127,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     if ('address' in updateData) updateData.address = encryptField(updateData.address)
 
     const user = await prisma.user.update({ where: { email }, data: updateData })
-    const { password_hash: _, ...safe } = user as any
-    decryptUserFields(safe)
+    const safe = safeUser(user)
     await audit(req, {
       action: 'profile_update',
       resource: 'user',
@@ -119,7 +159,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const valid = await bcrypt.compare(current_password, user.password_hash)
     if (!valid) {
       await audit(req, { action: 'password_change', resource: 'user', resource_id: id, subject_email: email, outcome: 'failure', metadata: { reason: 'wrong_current_password' } })
-      return reply.code(401).send({ message: 'Λανθασμένος τρέχων κωδικός' })
+      return reply.code(400).send({ message: 'Λανθασμένος τρέχων κωδικός' })
     }
 
     const same = await bcrypt.compare(new_password, user.password_hash)
@@ -128,7 +168,19 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const password_hash = await bcrypt.hash(new_password, 12)
-    await prisma.user.update({ where: { email }, data: { password_hash } })
+    // Ε12: token_version+1 → κάθε ΑΛΛΗ συνεδρία (π.χ. συσκευή που χάθηκε ή
+    // όποιος είχε τον παλιό κωδικό) τελειώνει. Αυτή η συσκευή παίρνει νέο
+    // τοκεν στην απάντηση (`token`, προσθετικό πεδίο) και μένει συνδεδεμένη.
+    const updated = await prisma.user.update({
+      where: { email },
+      data: { password_hash, token_version: { increment: 1 } },
+      select: { id: true, email: true, role: true, token_version: true },
+    })
+    ;(app as any).invalidateAuthCache?.(updated.id)
+    const token = app.jwt.sign(
+      { id: updated.id, email: updated.email, role: updated.role, tv: updated.token_version },
+      { expiresIn: '7d' },
+    )
 
     await audit(req, {
       action: 'password_change',
@@ -136,7 +188,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       resource_id: id,
       subject_email: email,
     })
-    return { message: 'Ο κωδικός άλλαξε επιτυχώς' }
+    return { message: 'Ο κωδικός άλλαξε επιτυχώς', token }
   })
 }
 

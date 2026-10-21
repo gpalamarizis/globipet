@@ -35,6 +35,13 @@ model User {
   reset_token             String?                     @db.VarChar(255)
   reset_token_expires     DateTime?                   @db.Timestamptz(6)
   birth_date              DateTime?                   @db.Date
+  /// Επαλήθευση email (Ε12). null = ανεπιβεβαίωτο. Οι υπάρχοντες λογαριασμοί σημάνθηκαν επαληθευμένοι στη migration.
+  email_verified_at       DateTime?                   @db.Timestamptz(6)
+  /// SHA-256 του τοκεν επαλήθευσης — ποτέ το καθαρό τοκεν (όπως το reset_token).
+  email_verify_token      String?                     @db.VarChar(255)
+  email_verify_expires    DateTime?                   @db.Timestamptz(6)
+  /// Αυξάνεται σε αλλαγή/επαναφορά κωδικού, αλλαγή ρόλου, διαγραφή, «αποσύνδεση παντού»: ακυρώνει κάθε JWT με παλιό `tv`.
+  token_version           Int                         @default(0)
   deletion_requests       AccountDeletionRequest[]
   product_subscriptions   ProductSubscription[]
   staff_profiles          ProviderStaff[]

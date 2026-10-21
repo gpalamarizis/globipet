@@ -361,6 +361,8 @@ export default function AdminSubscriptionsPage() {
                   <option value="trial">{t('adminSubs.trial30')}</option>
                   <option value="active">{t('adminSubs.st_active')}</option>
                   <option value="expired">{t('adminSubs.st_expired')}</option>
+                  <option value="payment_failed">{t('adminSubs.st_payment_failed')}</option>
+                  <option value="cancelled">{t('adminSubs.st_cancelled')}</option>
                 </select>
               </div>
 

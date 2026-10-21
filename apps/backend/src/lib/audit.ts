@@ -49,10 +49,10 @@ export async function audit(req: any, params: AuditParams): Promise<void> {
     const actor_email = req?.user?.email ?? null
     const actor_role  = req?.user?.role  ?? null
 
-    const ip =
-      ((req?.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim())
-      || req?.ip
-      || null
+    // req.ip: ήδη σωστό πίσω από τον proxy (trustProxy στο index.ts). Το
+    // πρώτο στοιχείο του X-Forwarded-For το γράφει ο client — με αυτό
+    // καθένας έγραφε όποια IP ήθελε στο ημερολόγιο ελέγχου.
+    const ip = req?.ip || null
     const user_agent = (req?.headers?.['user-agent'] as string) ?? null
     const method     = req?.method ?? null
     const path       = req?.url    ?? null

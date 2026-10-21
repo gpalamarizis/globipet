@@ -102,7 +102,12 @@ export default function AiPetHealth() {
       setResult(data)
       setStep('result')
     } catch (err: any) {
-      toast.error(t('pgAiHealth.errAnalysis'))
+      // Χωρίς συνδρομή (402) ή ημερήσιο όριο (429): το μήνυμα του server,
+      // όπως στις άλλες σελίδες AI (AiEmotion/AiStoolUrine).
+      const status = err?.response?.status
+      toast.error((status === 402 || status === 429) && err?.response?.data?.message
+        ? err.response.data.message
+        : t('pgAiHealth.errAnalysis'))
       setStep('upload')
       setUploading(false)
     }

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import i18n from 'i18next'
-import { api, setAuthToken } from '../lib/api'
+import { api, setAuthToken, setTokenRotationHandler } from '../lib/api'
 import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
@@ -44,6 +44,16 @@ interface User {
   website?: string | null
   google_id?: string | null
   preferred_language?: string | null
+  /** Ε12: false = το email δεν έχει επιβεβαιωθεί ακόμα (μπάρα/οθόνη «Επιβεβαίωσε το email σου»). */
+  email_verified?: boolean
+}
+
+/**
+ * Ε12: μόνο το ρητό `false` σημαίνει ανεπιβεβαίωτο. Ένας χρήστης
+ * αποθηκευμένος από παλιότερη έκδοση (χωρίς το πεδίο) δεν θεωρείται.
+ */
+export function isEmailUnverified(user: { email_verified?: boolean } | null | undefined): boolean {
+  return user?.email_verified === false
 }
 
 interface AuthState {
@@ -66,6 +76,10 @@ interface AuthState {
    * μένει αλλαγμένη τοπικά.
    */
   updateLanguage: (lang: string) => Promise<void>
+  /** Ε12: ξαναδιαβάζει τον χρήστη από το /auth/me (focus, pull-to-refresh). Σιωπηλό σε αποτυχία. */
+  refreshUser: () => Promise<void>
+  /** Ε12: νέο email επιβεβαίωσης (POST /auth/resend-verification). */
+  resendVerification: () => Promise<{ message?: string; email_verified?: boolean }>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -119,7 +133,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false // user cancelled
       }
 
+      // Ε12: και το id_token — ο server ελέγχει σε αυτό το audience (aud)
+      // απέναντι στα δικά μας client IDs. Το access_token μένει για συμβατότητα.
       const { data } = await api.post('/auth/google/mobile', {
+        id_token: googleResult.idToken,
         access_token: googleResult.accessToken,
         user: {
           email: googleResult.user.email,
@@ -207,6 +224,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try { await SecureStore.setItemAsync('user', JSON.stringify(user)) } catch {}
   },
 
+  refreshUser: async () => {
+    if (!get().token) return
+    try {
+      const { data } = await api.get('/auth/me')
+      if (data && typeof data === 'object' && data.id) await get().updateUser(data)
+    } catch { /* μένει ο αποθηκευμένος χρήστης */ }
+  },
+
+  resendVerification: async () => {
+    const { data } = await api.post('/auth/resend-verification')
+    if (data?.email_verified === true) await get().updateUser({ email_verified: true })
+    return data
+  },
+
   updateLanguage: async (lang) => {
     await changeLanguage(lang)
     if (!get().user) return
@@ -235,3 +266,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     signOutFacebook().catch(() => {})
   },
 }))
+
+// Ε12: όταν ο server ανακυκλώνει το τοκεν (αλλαγή κωδικού), η συνεδρία το παίρνει αμέσως.
+setTokenRotationHandler((token) => {
+  useAuthStore.setState({ token })
+})

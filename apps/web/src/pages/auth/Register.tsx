@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore, isEmailUnverified } from '@/store/auth'
 import { Eye, EyeOff } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
-import { api } from '@/lib/api'
 
 /** Ηλικία σε συμπληρωμένα έτη. Επιστρέφει -1 για κενή ή άκυρη ημερομηνία. */
 function ageFrom(iso: string): number {
@@ -32,14 +31,17 @@ export default function Register() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/'
-  const trialPlanId = searchParams.get('plan')
   const { register, isLoading } = useAuthStore()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [role, setRole] = useState<'user' | 'service_provider' | 'both'>('user')
+  // ?role=service_provider (π.χ. «Γίνε συνεργάτης» στη Νομική Υποστήριξη)
+  // ανοίγει τη φόρμα με επιλεγμένο τον ρόλο παρόχου· ο χρήστης τον αλλάζει.
+  const roleParam = searchParams.get('role')
+  const [role, setRole] = useState<'user' | 'service_provider' | 'both'>(
+    roleParam === 'service_provider' || roleParam === 'both' ? roleParam : 'user')
   const [showPass, setShowPass] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
 
@@ -62,17 +64,9 @@ export default function Register() {
     }
     try {
       await register({ full_name: fullName, email, password, role, birth_date: birthDate, terms_accepted: true })
-      // If user came from /trial, auto-start the AI trial with the chosen plan
-      if (redirectTo === '/trial' && trialPlanId) {
-        try {
-          await api.post('/ai-subscriptions/start-trial', { plan_id: trialPlanId })
-          toast.success(t('trial.started'))
-          navigate('/')
-          return
-        } catch {
-          // Fall through — the /trial page will let them retry manually
-        }
-      }
+      // Ε12: ο λογαριασμός είναι ενεργός· το email επιβεβαίωσης έχει σταλεί
+      // (το AI trial ενεργοποιείται με την επιβεβαίωση).
+      if (isEmailUnverified(useAuthStore.getState().user)) toast.success(t('emailVerify.sentAfterRegister'), { duration: 6000 })
       // Νέος πάροχος: κατευθείαν στον πίνακά του, όχι στην καταναλωτική
       // αρχική που δεν τον αφορά.
       navigate(role === 'service_provider' ? '/provider' : redirectTo)

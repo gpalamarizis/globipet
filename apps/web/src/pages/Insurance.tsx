@@ -218,8 +218,9 @@ export default function Insurance() {
 
                   {/* Actions */}
                   <div className="flex gap-3 mt-4">
-                    {plan.provider?.website && (
-                      <a href={plan.provider.website} target="_blank" rel="noopener noreferrer"
+                    {/* Μόνο http(s) — όχι javascript:/data: ως href. */}
+                    {plan.provider?.website && /^https?:\/\//i.test(String(plan.provider.website).trim()) && (
+                      <a href={String(plan.provider.website).trim()} target="_blank" rel="noopener noreferrer"
                         className="btn-primary flex-1 text-center text-sm flex items-center justify-center gap-2">
                         <Globe size={15}/> {t('insurance.applyCta')}
                       </a>

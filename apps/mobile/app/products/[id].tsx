@@ -9,7 +9,9 @@ import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '../../src/lib/shipping'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
+import { ReviewReply } from '@/components/ReviewReply'
 
 /**
  * Λεπτομέρεια προϊόντος.
@@ -23,10 +25,10 @@ export default function ProductDetailScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [qty, setQty] = useState(1)
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['product', id],
     queryFn: () => api.get(`/products/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
@@ -105,9 +107,15 @@ export default function ProductDetailScreen() {
   }
 
   if (isLoading) return <Screen title={t('marketplace.title')} back><SkeletonRows count={3} /></Screen>
+  // Σφάλμα δικτύου ≠ «δεν βρέθηκε»: επανάληψη.
+  if (isError && !product) return (
+    <Screen title={t('marketplace.title')} back>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+    </Screen>
+  )
   if (!product) return (
     <Screen title={t('marketplace.title')} back>
-      <EmptyState icon={ShoppingBag} title={t('marketplace.no_products')} />
+      <NotFoundState />
     </Screen>
   )
 
@@ -248,12 +256,10 @@ export default function ProductDetailScreen() {
                   </View>
                 </View>
                 {!!r.comment && <Text style={s.reviewText}>{r.comment}</Text>}
-                {!!r.response && (
-                  <View style={s.reply}>
-                    <Text style={s.replyTitle}>{t('reviews.sellerReply')}</Text>
-                    <Text style={s.reviewText}>{r.response}</Text>
-                  </View>
-                )}
+                {/* Απάντηση πωλητή (δημόσια)· ο πωλητής απαντά από εδώ — όπως στο web. */}
+                <ReviewReply review={r} label={t('reviews.sellerReply')}
+                  canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                  invalidate={[['product-reviews', id], ['provider-reviews']]} />
               </View>
             ))}
         </Card>

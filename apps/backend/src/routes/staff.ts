@@ -96,7 +96,10 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
       byStaff.get(o.staff_id)!.set(o.package_id, o)
     }
 
-    const data = staff.map((s: any) => ({
+    // Δημόσιο endpoint: κανένα στοιχείο επικοινωνίας ή μητρώου του γιατρού
+    // (email, τηλέφωνο, αριθμός άδειας, email κλινικής). Η επικοινωνία
+    // γίνεται με την κλινική (contact_* της υπηρεσίας) ή με κράτηση.
+    const data = staff.map(({ email: _e, phone: _p, license_number: _l, provider_email: _pe, ...s }: any) => ({
       ...s,
       has_account: !!s.user_id,
       user_id: undefined,               // δεν εκτίθεται δημόσια
@@ -302,30 +305,38 @@ const staffRoutes: FastifyPluginAsync = async (app) => {
     })
 
     // ── Σύνδεση λογαριασμού γιατρού ───────────────────────────────────
+    //
+    // Πριν: σύνδεση με οποιονδήποτε λογαριασμό χωρίς τη συγκατάθεσή του, και
+    // 404 «δεν υπάρχει λογαριασμός» / 409 «ήδη συνδεδεμένος» — δηλαδή έλεγχος
+    // ύπαρξης λογαριασμού για οποιοδήποτε email (enumeration).
+    // Τώρα: το email καταχωρείται πάντα· σύνδεση ΜΟΝΟ αν ο λογαριασμός έχει
+    // επαληθευμένο email και δεν είναι συνδεδεμένος αλλού. Η απάντηση είναι
+    // η ίδια σε κάθε περίπτωση. Αλλιώς η σύνδεση γίνεται στην επόμενη είσοδο
+    // του γιατρού (autoLinkProviderStaff, auth.ts).
     secured.post('/:id/link', async (req: any, reply) => {
       const staff = await assertOwnsStaff(req, reply, req.params.id)
       if (!staff) return
       const email = String(req.body?.email || '').trim().toLowerCase()
       if (!email) return reply.code(400).send({ message: 'Λείπει το email' })
 
-      const user = await prisma.user.findUnique({ where: { email }, select: { id: true, full_name: true } })
-      if (!user) {
-        return reply.code(404).send({
-          message: 'Δεν υπάρχει λογαριασμός με αυτό το email. Ο γιατρός πρέπει να εγγραφεί πρώτα.',
+      // email_verified_at: πεδίο της s1 (schema) — as any μέχρι το generate.
+      const user: any = await prisma.user.findUnique({ where: { email }, select: { id: true, email_verified_at: true } as any })
+      let linkTo: string | null = null
+      if (user?.email_verified_at) {
+        const taken = await (prisma as any).providerStaff.findFirst({
+          where: { user_id: user.id, NOT: { id: staff.id } },
+          select: { id: true },
         })
+        if (!taken) linkTo = user.id
       }
-      const taken = await (prisma as any).providerStaff.findFirst({
-        where: { user_id: user.id, NOT: { id: staff.id } },
-        select: { id: true, full_name: true },
-      })
-      if (taken) {
-        return reply.code(409).send({ message: 'Ο λογαριασμός είναι ήδη συνδεδεμένος με άλλον γιατρό' })
-      }
-      const updated = await (prisma as any).providerStaff.update({
+      await (prisma as any).providerStaff.update({
         where: { id: staff.id },
-        data: { user_id: user.id, email, updated_at: new Date() },
+        data: { user_id: linkTo, email, updated_at: new Date() },
       })
-      return { data: { ...updated, has_account: true } }
+      return {
+        success: true,
+        message: 'Το email καταχωρήθηκε. Αν υπάρχει επαληθευμένος λογαριασμός με αυτό το email, συνδέεται με τον γιατρό.',
+      }
     })
 
     secured.delete('/:id/link', async (req: any, reply) => {

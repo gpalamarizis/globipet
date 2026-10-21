@@ -15,6 +15,7 @@ import { refundExtraVivaPayment } from '../lib/extraPaymentRefund.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { fullNameOf } from '../lib/userName.js'
+import { audit, auditSystem } from '../lib/audit.js'
 
 /**
  * Shipping options, priced on the server.
@@ -32,6 +33,30 @@ const SHIPPING_METHODS: Record<string, number> = {
   elta:   4.50,
 }
 const FREE_SHIPPING_THRESHOLD = 50
+
+/** Μέγιστος αριθμός γραμμών ανά παραγγελία. */
+const MAX_ORDER_LINES = 50
+const MSG_OUT_OF_STOCK = 'Δεν υπάρχει αρκετό απόθεμα για κάποια προϊόντα'
+
+/** Συνολική ποσότητα ανά προϊόν (το ίδιο προϊόν μπορεί να είναι σε πολλές γραμμές). */
+function qtyByProduct(items: any[]): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const i of Array.isArray(items) ? items : []) {
+    const pid = i?.product_id
+    const q = Number(i?.quantity) || 0
+    if (!pid || q <= 0) continue
+    m.set(String(pid), (m.get(String(pid)) ?? 0) + q)
+  }
+  return m
+}
+
+/** Καταγραφή της δέσμευσης αποθέματος κατά την πληρωμή (claimOrderPayment· admin.ts /refund). */
+export const ORDER_STOCK_RESERVED_ACTION = 'order_stock_reserved'
+
+/** Το απόθεμα δεν έφτασε τη στιγμή της πληρωμής (ακυρώνει τη συναλλαγή βάσης). */
+class OutOfStockError extends Error {
+  constructor(public productId: string) { super(`out of stock: ${productId}`) }
+}
 
 function shippingCostFor(method: string | undefined, subtotal: number): number {
   if (subtotal > FREE_SHIPPING_THRESHOLD) return 0
@@ -130,6 +155,10 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
     if (!Array.isArray(items) || items.length === 0) {
       return reply.code(400).send({ message: 'Το καλάθι είναι κενό' })
     }
+    // Όριο γραμμών: κάθε γραμμή κάνει ερωτήματα (έκπτωση, προμήθεια).
+    if (items.length > MAX_ORDER_LINES) {
+      return reply.code(400).send({ message: 'Πάρα πολλά είδη στην παραγγελία (έως 50)' })
+    }
 
     // Look up products for authoritative price, name, image, category, owner
     const productIds = items.map((i: any) => i.product_id || i.id).filter(Boolean)
@@ -196,6 +225,16 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       }
     }))
 
+    // Απόθεμα: η ζητούμενη ποσότητα (άθροισμα, αν το ίδιο προϊόν είναι σε
+    // πολλές γραμμές) δεν ξεπερνά το stock. Η πραγματική δέσμευση γίνεται
+    // ατομικά τη στιγμή της πληρωμής (claimOrderPayment).
+    const outOfStock = [...qtyByProduct(enrichedItems)]
+      .filter(([pid, qty]) => (productMap.get(pid)?.stock ?? 0) < qty)
+      .map(([pid]) => ({ product_id: pid, available: Math.max(0, productMap.get(pid)?.stock ?? 0) }))
+    if (outOfStock.length) {
+      return reply.code(400).send({ message: MSG_OUT_OF_STOCK, out_of_stock: outOfStock })
+    }
+
     // The delivery fee is priced here, from the method the customer chose.
     const shippingMethod = (shipping_address as any)?.shipping_method
     const shippingCost = shippingCostFor(shippingMethod, computedTotal)
@@ -222,9 +261,37 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
         provider_payout_amount: totalProviderPayout > 0 ? Math.round(totalProviderPayout * 100) / 100 : null,
       }
     })
-    // Clear cart
-    await prisma.cartItem.deleteMany({ where: { user_email: email } })
+    // Το καλάθι ΔΕΝ αδειάζει εδώ: αν ο πελάτης εγκατέλειπε την πληρωμή, έχανε
+    // καλάθι χωρίς να έχει αγοράσει τίποτα. Τα είδη της παραγγελίας φεύγουν
+    // από το καλάθι μόλις επιβεβαιωθεί η πληρωμή (claimOrderPayment).
     return withAddress(order)
+  })
+
+  // Ακύρωση ΑΠΛΗΡΩΤΗΣ παραγγελίας από τον πελάτη (web «Οι παραγγελίες μου»,
+  // κινητό orders). Ατομικά: μόνο unpaid → cancelled. Πληρωμή που φτάνει
+  // μετά την ακύρωση επιστρέφεται αυτόματα (claimOrderPayment). Το απόθεμα
+  // δεσμεύεται μόνο στην πληρωμή, άρα εδώ δεν επιστρέφεται τίποτα.
+  app.post('/:id/cancel', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email } = req.user as any
+    const id = String(req.params.id)
+    const order = await prisma.order.findUnique({ where: { id } })
+    if (!order || order.user_email !== email) {
+      return reply.code(404).send({ message: 'Η παραγγελία δεν βρέθηκε' })
+    }
+    if (order.status === 'cancelled') return { data: withAddress(order) }
+    if (order.payment_status !== 'unpaid') {
+      return reply.code(409).send({ message: 'Η παραγγελία έχει πληρωθεί — για ακύρωση επικοινώνησε με την υποστήριξη' })
+    }
+    const r = await prisma.order.updateMany({
+      where: { id, user_email: email, payment_status: 'unpaid', status: { not: 'cancelled' } },
+      data: { status: 'cancelled' },
+    })
+    if (r.count === 0) {
+      return reply.code(409).send({ message: 'Η παραγγελία άλλαξε στο μεταξύ — ανανέωσε τη σελίδα' })
+    }
+    await audit(req, { action: 'order_cancel', resource: 'order', resource_id: id, subject_email: email, metadata: { by: 'customer' } })
+    const fresh = await prisma.order.findUnique({ where: { id } })
+    return { data: fresh ? withAddress(fresh) : null }
   })
 
   // ─── VIVA.COM SMART CHECKOUT ─────────────────────────────────────
@@ -248,6 +315,16 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       }
       if (order.payment_status !== 'unpaid') {
         return reply.code(409).send({ message: 'Η παραγγελία δεν μπορεί πλέον να πληρωθεί' })
+      }
+      // Πληρωμή υπάρχουσας (παλιότερης) παραγγελίας: αν το απόθεμα δεν φτάνει
+      // πια, όχι χρέωση που θα επέστρεφε αμέσως.
+      const lines = qtyByProduct(order.items as any[])
+      if (lines.size) {
+        const stock = await prisma.product.findMany({ where: { id: { in: [...lines.keys()] } }, select: { id: true, stock: true } })
+        const byId = new Map(stock.map(p => [p.id, p.stock]))
+        const short = [...lines].filter(([pid, qty]) => (byId.get(pid) ?? 0) < qty)
+          .map(([pid]) => ({ product_id: pid, available: Math.max(0, byId.get(pid) ?? 0) }))
+        if (short.length) return reply.code(409).send({ message: MSG_OUT_OF_STOCK, out_of_stock: short })
       }
 
       const { orderCode, checkoutUrl } = await createVivaPaymentOrder({
@@ -274,6 +351,21 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
       return serverError(reply, err, 'order-checkout', 'Η πληρωμή δεν ξεκίνησε.')
     }
   })
+
+  // Μετά την πληρωμή: αφαιρούνται από το καλάθι ΜΟΝΟ τα προϊόντα της
+  // παραγγελίας (ό,τι πρόσθεσε ο πελάτης στο μεταξύ μένει). Ποτέ δεν κάνει
+  // την καταχώριση της πληρωμής να αποτύχει.
+  async function clearOrderedCartItems(orderId: string) {
+    try {
+      const o = await prisma.order.findUnique({ where: { id: orderId }, select: { user_email: true, items: true } })
+      if (!o) return
+      const ids = [...qtyByProduct(o.items as any[]).keys()]
+      if (!ids.length) return
+      await prisma.cartItem.deleteMany({ where: { user_email: o.user_email, product_id: { in: ids } } })
+    } catch (err: any) {
+      console.error('clearOrderedCartItems error:', err?.message)
+    }
+  }
 
   // Fires once when an order transitions to paid: buyer confirmation email +
   // provider new-order email/in-app notification (per distinct provider in items).
@@ -392,8 +484,9 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
 
     // And it must cover the total. Viva reports amounts in euros here; allow
     // a cent of rounding either way.
+    // Μη αριθμητικό ποσό (NaN) = άκυρη, όχι «περνά» (πριν ο έλεγχος ήταν fail-open).
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
-    if (Number.isFinite(paid) && paid + 0.01 < order.total_amount) {
+    if (!Number.isFinite(paid) || paid + 0.01 < order.total_amount) {
       console.error(`[viva] transaction ${transactionId} paid ${paid}, order needs ${order.total_amount}`)
       return 'invalid'
     }
@@ -428,11 +521,71 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
  * Σφάλμα βάσης/κλειδώματος πετιέται: το webhook απαντά 503.
  */
 async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' | 'already' | 'refunded' | 'refund_failed' | 'manual'> {
-  const claimed = await prisma.order.updateMany({
-    where: { id: orderId, payment_status: 'unpaid', status: { not: 'cancelled' } },
-    data: { status: 'confirmed', payment_status: 'paid', payment_ref: txn },
-  })
-  if (claimed.count > 0) {
+  // Διεκδίκηση unpaid → paid ΚΑΙ δέσμευση αποθέματος σε ΜΙΑ συναλλαγή βάσης:
+  // κάθε προϊόν μειώνεται ατομικά μόνο αν φτάνει (stock >= ποσότητα). Αν
+  // κάποιο δεν φτάνει, τίποτα δεν γράφεται (rollback) και η παραγγελία
+  // ακυρώνεται με αυτόματη επιστροφή των χρημάτων (παρακάτω).
+  let claimedNow = false
+  try {
+    claimedNow = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, payment_status: 'unpaid', status: { not: 'cancelled' } },
+        data: { status: 'confirmed', payment_status: 'paid', payment_ref: txn },
+      })
+      if (claimed.count === 0) return false
+      const o = await tx.order.findUnique({ where: { id: orderId }, select: { items: true } })
+      const reserved: Record<string, number> = {}
+      for (const [pid, qty] of qtyByProduct((o?.items ?? []) as any[])) {
+        const r = await tx.product.updateMany({
+          where: { id: pid, stock: { gte: qty } },
+          data: { stock: { decrement: qty } },
+        })
+        if (r.count === 0) throw new OutOfStockError(pid)
+        reserved[pid] = qty
+      }
+      // Τι ακριβώς δεσμεύτηκε, στην ΙΔΙΑ συναλλαγή βάσης: η πλήρης επιστροφή
+      // από τη διαχείριση (admin /refund) επαναφέρει ΜΟΝΟ αυτό — όχι για
+      // παραγγελίες που πληρώθηκαν πριν υπάρξει δέσμευση αποθέματος.
+      await tx.auditLog.create({
+        data: {
+          action: ORDER_STOCK_RESERVED_ACTION, resource: 'order', resource_id: orderId,
+          actor_id: null, actor_email: 'system@globipet', actor_role: 'system',
+          metadata: { transaction_id: txn, items: reserved } as any, outcome: 'success',
+        },
+      })
+      return true
+    })
+  } catch (err: any) {
+    if (!(err instanceof OutOfStockError)) throw err
+    // Πληρώθηκε αλλά το απόθεμα εξαντλήθηκε στο μεταξύ: ακύρωση (ατομικά,
+    // μόνο από unpaid) και πλήρης επιστροφή ΜΙΑ φορά (lib/extraPaymentRefund,
+    // audit ανά συναλλαγή + κλείδωμα). Επανάληψη του webhook → η ακυρωμένη
+    // παραγγελία πηγαίνει στον κλάδο «επιστροφή» πιο κάτω → 'already'.
+    const cancelled = await prisma.order.updateMany({
+      where: { id: orderId, payment_status: 'unpaid', status: { not: 'cancelled' } },
+      data: { status: 'cancelled' },
+    })
+    if (cancelled.count > 0) {
+      await auditSystem({
+        action: 'order_out_of_stock_cancel', resource: 'order', resource_id: orderId, outcome: 'failure',
+        error_message: 'Paid order cancelled: not enough stock at payment time — automatic refund',
+        metadata: { transaction_id: txn, product_id: err.productId },
+      })
+      const r = await refundExtraVivaPayment('order', orderId, txn, 'out of stock at payment time')
+      if (r !== 'failed') {
+        await prisma.order.updateMany({
+          where: { id: orderId, status: 'cancelled', payment_status: 'unpaid' },
+          data: { payment_status: 'refunded' },
+        })
+        return 'refunded'
+      }
+      return 'refund_failed'
+    }
+    // Άλλαξε στο μεταξύ (π.χ. πληρώθηκε με άλλη συναλλαγή): κανονική ροή.
+  }
+  if (claimedNow) {
+    // Τα είδη της παραγγελίας φεύγουν από το καλάθι ΜΟΝΟ τώρα (πληρώθηκε).
+    await clearOrderedCartItems(orderId)
     await firePaidSideEffects(orderId)
     return 'paid'
   }
@@ -626,7 +779,21 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
           const result = await claimOrderPayment(String(order_id), String(transaction_id))
           const fresh = await prisma.order.findUnique({ where: { id: String(order_id) }, select: { payment_status: true } })
           // `result` προσθετικό: 'paid' | 'already' | 'refunded' | 'refund_failed' | 'manual'
-          return { paid: fresh?.payment_status === 'paid', order_id, result }
+          // `reason` προσθετικό: 'out_of_stock' = η παραγγελία ακυρώθηκε γιατί
+          // το απόθεμα εξαντλήθηκε τη στιγμή της πληρωμής (claimOrderPayment)
+          // — από την καταγραφή, ώστε να ισχύει και όταν το webhook πρόλαβε.
+          let reason: 'out_of_stock' | undefined
+          if (result === 'refunded' || result === 'refund_failed') {
+            const oos = await prisma.auditLog.findFirst({
+              where: {
+                action: 'order_out_of_stock_cancel', resource: 'order', resource_id: String(order_id),
+                metadata: { path: ['transaction_id'], equals: String(transaction_id) },
+              },
+              select: { id: true },
+            })
+            if (oos) reason = 'out_of_stock'
+          }
+          return { paid: fresh?.payment_status === 'paid', order_id, result, ...(reason ? { reason } : {}) }
         }
       }
       return { paid: false, order_id }

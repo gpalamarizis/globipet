@@ -139,8 +139,8 @@ export default function TrackerScreen() {
     queryFn: () => api.get('/tracker/latest').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
     // Το κολάρο στέλνει με δικό του ρυθμό· η οθόνη ανανεώνεται μόνη της
-    // ώστε να μη χρειάζεται ο χρήστης να τραβάει συνεχώς.
-    refetchInterval: 60_000,
+    // ώστε να μη χρειάζεται ο χρήστης να τραβάει συνεχώς. 30″ όπως στο web.
+    refetchInterval: 30_000,
   })
 
   const onRefresh = useCallback(async () => {

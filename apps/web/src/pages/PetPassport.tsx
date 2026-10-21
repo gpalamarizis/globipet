@@ -8,7 +8,7 @@ import {
   Pill, FlaskConical, ScanLine, Scissors, AlertTriangle, Heart, Smile,
   Scale, Dna, Activity, Shield, FileDown, Users, Edit2, ChevronDown, ExternalLink
 } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, usePrivateUrl } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -36,6 +36,12 @@ const TABS = [
 const speciesEmoji: Record<string, string> = { dog: '🐶', cat: '🐱', bird: '🐦', rabbit: '🐰', fish: '🐟', reptile: '🦎', horse: '🐴', other: '🐾' }
 
 // ─── REUSABLE COMPONENTS ─────────────────────────────────────────
+/** Σύνδεσμος αρχείου εγγραφής· τα ιδιωτικά (r2priv://) ανοίγουν με προσωρινό URL. */
+function FileLink({ url, petId, children }: { url: string; petId?: string | null; children: any }) {
+  const href = usePrivateUrl(url, petId)
+  return <a href={href || undefined} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">{children}</a>
+}
+
 function RecordCard({ title, subtitle, date, badge, badgeColor, onDelete, children }: any) {
   const [open, setOpen] = useState(false)
   return (
@@ -145,6 +151,34 @@ export default function PetPassport() {
     queryFn: () => api.get(`/passport/${activePetId}`).then(r => r.data),
     enabled: !!activePetId,
   })
+
+  /**
+   * Εξαγωγή φακέλου για εκτύπωση/αποθήκευση ως PDF.
+   *
+   * Ο απλός σύνδεσμος στο /passport/:id/pdf έπαιρνε 401: μια νέα καρτέλα δεν
+   * στέλνει κεφαλίδα Authorization. Ζητάμε πρώτα (συνδεδεμένοι) βραχύβιο
+   * υπογεγραμμένο σύνδεσμο — ίδια ροή με το κινητό. Η καρτέλα ανοίγει
+   * ΑΜΕΣΩΣ στο κλικ, αλλιώς ο browser τη μπλοκάρει ως αναδυόμενο.
+   */
+  const [pdfBusy, setPdfBusy] = useState(false)
+  const exportPdf = async () => {
+    if (!activePetId || pdfBusy) return
+    setPdfBusy(true)
+    const w = window.open('', '_blank')
+    if (w) w.opener = null
+    try {
+      const { data } = await api.post(`/passport/${activePetId}/pdf-link`)
+      const url = data?.path ? `${api.defaults.baseURL || ''}${data.path}` : data?.url
+      if (!url) throw new Error('no url')
+      if (w) w.location.href = url
+      else window.location.assign(url)
+    } catch (e: any) {
+      w?.close()
+      toast.error(e?.message && e.message !== 'no url' ? e.message : t('pgPassportPdf.failed'))
+    } finally {
+      setPdfBusy(false)
+    }
+  }
 
   const inv = () => qc.invalidateQueries({ queryKey: ['passport', activePetId] })
 
@@ -282,11 +316,11 @@ export default function PetPassport() {
             </div>
           </div>
           {activePetId && (
-            <a href={`${import.meta.env.VITE_API_URL || 'https://api.globipet.com'}/passport/${activePetId}/pdf`}
-              target="_blank" rel="noreferrer"
-              className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5">
+            <button type="button" onClick={exportPdf} disabled={pdfBusy}
+              title={t('pgPassportPdf.hint')}
+              className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 disabled:opacity-60">
               <FileDown size={15} /> {t('pgPassport.exportPdf')}
-            </a>
+            </button>
           )}
         </div>
 
@@ -436,7 +470,7 @@ export default function PetPassport() {
                       badge={l.is_abnormal ? t('pgPassport.abnormal') : t('pgPassport.normal')} badgeColor={l.is_abnormal ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => confirmRemove(lab.remove, l.id)}>
                       <Field label={t('pgPassport.findings')} value={l.findings} /><Field label={t('pgPassport.laboratory')} value={l.lab_name} />
-                      {l.file_urls?.length > 0 && <p className="font-medium">{t('pgPassport.files')}: {l.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">{t('pgPassport.fileN', { n: i+1 })} <ExternalLink size={10} className="inline"/></a>)}</p>}
+                      {l.file_urls?.length > 0 && <p className="font-medium">{t('pgPassport.files')}: {l.file_urls.map((u: string, i: number) => <FileLink key={i} url={u} petId={activePetId}>{t('pgPassport.fileN', { n: i+1 })} <ExternalLink size={10} className="inline"/></FileLink>)}</p>}
                     </RecordCard>
                   ))}
               </>
@@ -450,7 +484,7 @@ export default function PetPassport() {
                   (p.imaging || []).map((img: any) => (
                     <RecordCard key={img.id} title={code('imgType', img.imaging_type)} subtitle={`${img.body_region || ''} · ${img.vet_name || ''} · ${img.clinic_name || ''}`} date={img.date} onDelete={() => confirmRemove(imaging.remove, img.id)}>
                       <Field label={t('pgPassport.findings')} value={img.findings} /><Field label={t('pgPassport.report')} value={img.report} />
-                      {img.file_urls?.length > 0 && <p>{t('pgPassport.files')}: {img.file_urls.map((u: string, i: number) => <a key={i} href={u} target="_blank" rel="noreferrer" className="text-blue-500 underline mr-2">{t('pgPassport.imageN', { n: i+1 })}</a>)}</p>}
+                      {img.file_urls?.length > 0 && <p>{t('pgPassport.files')}: {img.file_urls.map((u: string, i: number) => <FileLink key={i} url={u} petId={activePetId}>{t('pgPassport.imageN', { n: i+1 })}</FileLink>)}</p>}
                     </RecordCard>
                   ))}
               </>
@@ -660,14 +694,19 @@ export default function PetPassport() {
                 <button onClick={() => openModal('access', {})} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.grantAccess')}</button>
                 {(p.accessList || []).length === 0 ? (
                   <div className="text-center py-12 text-gray-400">{t('pgPassport.noVetAccess')}</div>
-                ) : (p.accessList || []).map((a: any) => (
+                ) : (p.accessList || []).map((a: any) => {
+                  // Εγκεκριμένη αλλά με παρελθοντική λήξη: ο κτηνίατρος δεν έχει
+                  // πια πρόσβαση (ο server ελέγχει το expires_at) — «Έληξε».
+                  const expired = a.status === 'approved' && !!a.expires_at && new Date(a.expires_at).getTime() <= Date.now()
+                  return (
                   <RecordCard key={a.id} title={a.provider_name} subtitle={a.provider_email}
-                    badge={a.status === 'approved' ? t('pgPassport.approved') : t('pgPassport.revoked')}
-                    badgeColor={a.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
+                    badge={expired ? t('pgPassport.expired') : a.status === 'approved' ? t('pgPassport.approved') : t('pgPassport.revoked')}
+                    badgeColor={a.status === 'approved' && !expired ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
                     onDelete={a.status === 'approved' ? () => { if (window.confirm(t('pgPassport.revokeQ'))) revokeAccess.mutate(a.id) } : undefined}>
                     <Field label={t('pgPassport.reason')} value={a.reason} /><Field label={t('pgPassport.grantedOn')} value={a.granted_at ? new Date(a.granted_at).toLocaleDateString(i18n.language) : null} /><Field label={t('pgPassport.expiry')} value={a.expires_at ? new Date(a.expires_at).toLocaleDateString(i18n.language) : t('pgPassport.noExpiry')} />
                   </RecordCard>
-                ))}
+                  )
+                })}
               </>
             )}
           </>

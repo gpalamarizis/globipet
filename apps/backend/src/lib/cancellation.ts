@@ -62,6 +62,12 @@ export function cancellationTerms(b: any, by: CancelBy, now = new Date()) {
   if (!['pending', 'confirmed'].includes(b.status)) {
     return { allowed: false, reason: 'not_cancellable', paid, total, refund: 0, fee: 0, late: false, free_until: freeUntil, hours_left: hoursLeft }
   }
+  // Μη αναγνώσιμη ημερομηνία/ώρα: πριν, το hoursLeft null άφηνε τον πελάτη
+  // να ακυρώσει ΠΑΝΤΑ με πλήρη επιστροφή (ούτε «έχει περάσει» ούτε «αργά»).
+  // Πληρωμένη → μόνο από πάροχο/διαχειριστή. Απλήρωτη: δεν κινούνται χρήματα.
+  if (by === 'customer' && !start && b.payment_status === 'paid') {
+    return { allowed: false, reason: 'unknown_start', paid, total, refund: 0, fee: 0, late: false, free_until: null, hours_left: null }
+  }
   if (by === 'customer' && hoursLeft !== null && hoursLeft <= 0) {
     return { allowed: false, reason: 'already_started', paid, total, refund: 0, fee: 0, late: true, free_until: freeUntil, hours_left: hoursLeft }
   }

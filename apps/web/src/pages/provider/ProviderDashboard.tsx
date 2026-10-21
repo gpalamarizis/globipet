@@ -16,11 +16,12 @@ import MarketInsights from '@/pages/MarketInsights'
 import ProviderTranslationsPage from './ProviderTranslationsPage'
 import ProviderMarketingPage from './ProviderMarketingPage'
 import ProviderCustomersPage from './ProviderCustomersPage'
+import ProviderReviewsPage from './ProviderReviewsPage'
 import ProviderTelehealthToday from '@/components/features/telehealth/ProviderTelehealthToday'
 
 // Το 'insights' υπήρχε στον πίνακα των καρτελών και στην απεικόνιση,
 // αλλά έλειπε από τον τύπο — ο μεταγλωττιστής θεωρούσε τη σύγκριση αδύνατη.
-type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers' | 'insights'
+type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers' | 'insights' | 'reviews'
 
 // Ποιοι τύποι παρόχων πουλάνε ΚΑΙ προϊόντα (τροφές, σαμπουάν, αξεσουάρ).
 // Ένας walker ή sitter δεν έχει κατάστημα — δεν βλέπει καθόλου Προϊόντα
@@ -322,15 +323,22 @@ function BookingsTab() {
                 </select>
               )}
               <div className="flex gap-1.5 ml-auto">
-                {b.status === 'pending' && (
+                {/* Επιβεβαίωση / «δεν προσήλθε» μόνο για πληρωμένη κράτηση (ο server
+                    απαντά 400 αλλιώς). Απλήρωτη σε αναμονή: ετικέτα «Αναμένει πληρωμή». */}
+                {b.status === 'pending' && b.payment_status === 'paid' && (
                   <button onClick={() => setStatus.mutate({ id: b.id, status: 'confirmed' })} disabled={setStatus.isPending}
                     className="btn-primary text-xs px-3 py-1.5">{t('bookingPolicy.confirm')}</button>
+                )}
+                {b.status === 'pending' && b.payment_status !== 'paid' && (
+                  <span className="self-center text-xs px-2 py-1 rounded-full font-medium bg-yellow-50 text-yellow-700">
+                    {t('providerPay.awaitingPayment')}
+                  </span>
                 )}
                 {b.status === 'confirmed' && b.payment_status === 'paid' && (
                   <button onClick={() => setStatus.mutate({ id: b.id, status: 'completed' })} disabled={setStatus.isPending}
                     className="btn-primary text-xs px-3 py-1.5">{t('bookingPolicy.complete')}</button>
                 )}
-                {b.status === 'confirmed' && (
+                {b.status === 'confirmed' && b.payment_status === 'paid' && (
                   <button onClick={() => setStatus.mutate({ id: b.id, status: 'no_show' })} disabled={setStatus.isPending}
                     className="btn-secondary text-xs px-3 py-1.5">{t('bookingPolicy.noShow')}</button>
                 )}
@@ -859,6 +867,8 @@ export default function ProviderDashboard() {
     { id: 'calendar',  label: t('providerDash.tabCalendar'), icon: Calendar },
     { id: 'marketing',    label: t('providerDash.tabCampaigns'),   icon: Megaphone },
     { id: 'customers',    label: t('providerDash.tabCustomers'),     icon: Users },
+    // Κριτικές που έλαβε ο πάροχος, με απάντηση (PATCH /reviews/:id/response).
+    { id: 'reviews',      label: t('reviewReply.tab'),                icon: Star },
     { id: 'translations', label: t('providerDash.tabTranslations'), icon: Languages },
     // The insights page existed with no way to reach it.
     ...(sellsProducts ? [{ id: 'insights', label: t('providerDash.tabInsights'), icon: BarChart3 }] : []),
@@ -927,6 +937,7 @@ export default function ProviderDashboard() {
       {/* Καμπάνιες και πελάτες */}
       {activeTab === 'marketing' && <ProviderMarketingPage />}
       {activeTab === 'customers' && <ProviderCustomersPage />}
+      {activeTab === 'reviews' && <ProviderReviewsPage />}
 
       {/* Overview */}
       {activeTab === 'overview' && (

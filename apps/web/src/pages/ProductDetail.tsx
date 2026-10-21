@@ -13,6 +13,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ReviewReply from '@/components/provider/ReviewReply'
 import type { Product } from '@/types'
 import { FREE_SHIPPING_OVER, SHIPPING_PRICES } from '@/lib/shipping'
 
@@ -425,14 +426,10 @@ export default function ProductDetail() {
                       </div>
                     </div>
                     {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
-                    {r.response && (
-                      <div className="mt-3 pl-3 border-l-2 border-brand-200 dark:border-brand-800">
-                        <p className="text-xs font-semibold text-brand-900 dark:text-yellow-400 mb-0.5">
-                          {t('reviews.sellerReply')}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{r.response}</p>
-                      </div>
-                    )}
+                    {/* Απάντηση πωλητή (δημόσια)· ο ίδιος ο πωλητής απαντά/διορθώνει από εδώ. */}
+                    <ReviewReply review={r} label={t('reviews.sellerReply')}
+                      canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                      invalidate={[['product-reviews', id], ['provider-reviews']]} />
                   </div>
                 ))}
               </div>

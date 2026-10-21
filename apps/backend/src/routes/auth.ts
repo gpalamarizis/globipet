@@ -6,6 +6,8 @@ import { parseBody, text, email as emailField, phone, language } from '../lib/va
 import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { sendEmailVerificationEmail } from '../lib/email.js'
+import { profileSchema } from './users.js'
 
 /**
  * Auto-link any provider_staff records that were pre-created by an employer
@@ -20,9 +22,16 @@ import { audit } from '../lib/audit.js'
  *
  * Case-insensitive email match. Safe to call on every login too — a no-op
  * when there is nothing to link.
+ *
+ * ΜΟΝΟ ΓΙΑ ΕΠΑΛΗΘΕΥΜΕΝΟ EMAIL (Ε12). Πριν, οποιοσδήποτε έγραφε λογαριασμό με
+ * το email ενός υπαλλήλου (χωρίς να έχει το γραμματοκιβώτιό του) αποκτούσε
+ * αμέσως τον πίνακα προσωπικού του εργοδότη — πελάτες, κρατήσεις, ραντεβού.
+ * Καλείται ξανά τη στιγμή της επαλήθευσης.
  */
-async function autoLinkProviderStaff(userId: string, userEmail: string, req: any) {
-  const email = userEmail.trim().toLowerCase()
+async function autoLinkProviderStaff(user: { id: string; email: string; email_verified_at?: Date | null }, req: any) {
+  if (!user.email_verified_at) return 0
+  const userId = user.id
+  const email = user.email.trim().toLowerCase()
   const unlinked = await (prisma as any).providerStaff.findMany({
     where: {
       user_id: null,
@@ -124,7 +133,8 @@ async function recordSignupConsent(req: any, userId: string, source: 'registrati
         terms_accepted: true,
         privacy_accepted: true,
         source,
-        ip_address: (req.headers?.['x-forwarded-for'] as string)?.split(',')[0] || req.ip,
+        // req.ip (trustProxy, index.ts) — όχι το X-Forwarded-For που γράφει ο client.
+        ip_address: req.ip || null,
         user_agent: (req.headers?.['user-agent'] as string) || null,
       },
     })
@@ -154,6 +164,152 @@ function safeRole(input: unknown): string {
 
 function hashResetToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
+}
+
+/**
+ * Σταθερός χρόνος στο login (Ε12): για ανύπαρκτο χρήστη ή λογαριασμό χωρίς
+ * κωδικό γίνεται κι εκεί ένα bcrypt.compare (κόστος 12, όπως οι πραγματικοί
+ * κωδικοί). Χωρίς αυτό, η απάντηση «λάθος στοιχεία» ερχόταν ~250ms γρηγορότερα
+ * όταν το email δεν υπήρχε — και η διαφορά αρκούσε για απαρίθμηση λογαριασμών.
+ */
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(randomBytes(16).toString('hex'), 12)
+
+/** Το JWT της συνεδρίας: `tv` = users.token_version, ώστε να ανακαλείται (βλ. index.ts). */
+type SessionUser = { id: string; email: string; role: string; token_version?: number | null }
+function sessionClaims(user: SessionUser) {
+  return { id: user.id, email: user.email, role: user.role, tv: user.token_version ?? 0 }
+}
+
+/**
+ * Ο χρήστης όπως επιστρέφεται στον client.
+ *
+ * Έξω μένουν ΟΛΑ τα μυστικά: κωδικός, hash του reset και του τοκεν
+ * επαλήθευσης, token_version. (Πριν έφευγαν τα hash του reset_token σε κάθε
+ * login.) Προστίθεται `email_verified` για τη μπάρα «Επιβεβαίωσε το email σου».
+ */
+function toSafeUser(user: any) {
+  const {
+    password_hash: _p, reset_token: _r, reset_token_expires: _re,
+    email_verify_token: _v, email_verify_expires: _ve, token_version: _tv,
+    ...safe
+  } = user
+  decryptUserFields(safe)
+  safe.email_verified = !!user.email_verified_at
+  return safe
+}
+
+/** Ο σύνδεσμος επαλήθευσης ζει 48 ώρες. */
+const EMAIL_VERIFY_TTL_MS = 48 * 3600_000
+
+const verifySchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/i, 'Μη έγκυρος σύνδεσμος επιβεβαίωσης'),
+})
+
+/**
+ * Νέο τοκεν επαλήθευσης: στη βάση το SHA-256, στο email το καθαρό (όπως το
+ * reset). Η αποστολή δεν περιμένεται — η sendEmail δεν πετάει ποτέ.
+ * Βάση URL: APP_URL, η ίδια με το email επαναφοράς κωδικού.
+ */
+async function issueEmailVerification(user: { id: string; email: string; full_name: string }) {
+  const token = randomBytes(32).toString('hex')
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { email_verify_token: hashResetToken(token), email_verify_expires: new Date(Date.now() + EMAIL_VERIFY_TTL_MS) },
+  })
+  const APP_URL = process.env.APP_URL || 'https://globipet.com'
+  void sendEmailVerificationEmail(user.email, { name: user.full_name, url: `${APP_URL}/verify-email?token=${token}` })
+}
+
+/**
+ * Το 30ήμερο AI trial δίνεται ΜΙΑ φορά, τη στιγμή που το email αποδεικνύεται
+ * δικό του (Ε12) — όχι πια στην εγγραφή, όπου έφτανε ένα ψεύτικο email για
+ * ατελείωτα δωρεάν trials. Υπό συνθήκη: μόνο αν δεν έχει πάρει/αγοράσει ήδη.
+ */
+async function grantTrialOnVerification(userId: string) {
+  await prisma.user.updateMany({
+    where: { id: userId, ai_subscription_status: 'none', ai_trial_started_at: null },
+    data: { ai_subscription_status: 'trial', ai_trial_started_at: new Date() },
+  })
+}
+
+const SUPPORTED_LANGS = ['el', 'en', 'es', 'fr', 'zh']
+
+/**
+ * Εύρεση ή δημιουργία λογαριασμού από Google/Facebook με ΕΠΑΛΗΘΕΥΜΕΝΟ email.
+ *
+ *   Νέος λογαριασμός → επαληθευμένος αμέσως, με trial.
+ *   Υπάρχων, ΑΝΕΠΙΒΕΒΑΙΩΤΟΣ λογαριασμός κωδικού → κάποιος τον έφτιαξε με αυτό
+ *   το email χωρίς να το αποδείξει. Ο κάτοχος του email (που μόλις το απέδειξε
+ *   μέσω του παρόχου) παίρνει τον λογαριασμό: ο κωδικός μηδενίζεται, όλα τα
+ *   ενεργά τοκεν ακυρώνονται (token_version+1) — ο «προ-καταληψίας» χάνει την
+ *   πρόσβαση. Ο κάτοχος μπορεί να ορίσει κωδικό από το «Ξέχασα τον κωδικό».
+ */
+async function upsertOAuthUser(req: any, p: { email: string; name?: string | null; photo?: string | null; lang: string; provider: 'google' | 'facebook' }) {
+  const now = new Date()
+  // Χωρίς διάκριση πεζών/κεφαλαίων: παλιοί λογαριασμοί OAuth γράφτηκαν με το
+  // email όπως το έδινε ο πάροχος (το Facebook κρατά τα κεφαλαία του χρήστη).
+  let user = await prisma.user.findFirst({
+    where: { email: { equals: p.email, mode: 'insensitive' } },
+    orderBy: { created_at: 'asc' },
+  })
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: p.email,
+        full_name: (p.name || '').trim().slice(0, 120) || (p.provider === 'facebook' ? 'Facebook User' : p.email.split('@')[0]),
+        profile_photo: p.photo || null,
+        role: 'user',
+        preferred_language: p.lang,
+        email_verified_at: now,
+        // Every new OAuth-created account starts a 30-day AI trial — the
+        // provider has already verified the email.
+        ai_subscription_status: 'trial',
+        ai_trial_started_at: now,
+      }
+    })
+    await recordSignupConsent(req, user.id, 'social_signup')
+  } else {
+    const data: any = {}
+    const claimed = !user.email_verified_at
+    if (claimed) {
+      data.email_verified_at = now
+      data.email_verify_token = null
+      data.email_verify_expires = null
+      if (user.password_hash) {
+        data.password_hash = null
+        data.token_version = { increment: 1 }
+      }
+    }
+    if (!user.profile_photo && p.photo) data.profile_photo = p.photo
+    if (Object.keys(data).length) user = await prisma.user.update({ where: { id: user.id }, data })
+    if (claimed) {
+      ;(req.server as any)?.invalidateAuthCache?.(user.id)
+      await grantTrialOnVerification(user.id)
+      user = (await prisma.user.findUnique({ where: { id: user.id } }))!
+      await audit(req, {
+        action: 'email_verified', resource: 'user', resource_id: user.id,
+        metadata: { via: p.provider, password_cleared: 'password_hash' in data },
+      })
+    }
+  }
+  await autoLinkProviderStaff(user, req)
+  return user
+}
+
+/**
+ * Λίστα επιτρεπόμενων Google client IDs (aud/azp του τοκεν).
+ * GOOGLE_CLIENT_IDS (με κόμμα) ∪ GOOGLE_CLIENT_ID ∪ το webClientId του
+ * mobile/app.json (`extra.googleWebClientId`). Τα Android/iOS client IDs
+ * ΠΡΕΠΕΙ να μπουν στο GOOGLE_CLIENT_IDS (δεν υπάρχουν στο app.json).
+ */
+const MOBILE_GOOGLE_WEB_CLIENT_ID = '26367014154-8aqhrgd9l9nr6brcjimfgahnq095vpvu.apps.googleusercontent.com'
+function googleClientIds(): string[] {
+  const ids = [
+    ...(process.env.GOOGLE_CLIENT_IDS || '').split(','),
+    process.env.GOOGLE_CLIENT_ID || '',
+    MOBILE_GOOGLE_WEB_CLIENT_ID,
+  ].map(s => s.trim()).filter(Boolean)
+  return [...new Set(ids)]
 }
 
 /**
@@ -284,25 +440,20 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         birth_date: dob,
         // Sensitive fields encrypted at rest
         phone: encryptField(phone) as any,
-        // Every new account starts a 30-day AI trial automatically.
-        // The AI feature gate reads `ai_subscription_status` and treats
-        // 'trial' the same as an active paid subscription.
-        ai_subscription_status: 'trial',
-        ai_trial_started_at: new Date(),
+        // Ε12: ΚΑΝΕΝΑ trial και καμία σύνδεση προσωπικού εδώ. Ο λογαριασμός
+        // είναι ενεργός, αλλά το email δεν έχει αποδειχθεί (email_verified_at
+        // null). Το trial και η σύνδεση με εγγραφές προσωπικού γίνονται στο
+        // POST /auth/verify-email.
       }
     })
     await recordSignupConsent(req, user.id, 'registration')
-    // Auto-link any provider_staff records pre-created by an employer for
-    // this email. If a provider added their employee's email before the
-    // employee registered, this links the account so the employee immediately
-    // sees the staff dashboard on first login.
-    await autoLinkProviderStaff(user.id, user.email, req)
+    // Αποτυχία εδώ δεν ακυρώνει την εγγραφή — ο χρήστης έχει «Ξαναστείλε».
+    try { await issueEmailVerification(user) }
+    catch (err) { console.error('[auth] verification email not issued', user.id, err) }
 
-    const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-    const { password_hash: _, ...userSafe } = user as any
-    decryptUserFields(userSafe) // return plaintext to caller
+    const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'register', resource: 'user', resource_id: user.id })
-    return { user: userSafe, token }
+    return { user: toSafeUser(user), token }
   })
 
   // Login
@@ -312,6 +463,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { email, password } = parsed
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || !user.password_hash) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH) // σταθερός χρόνος (βλ. DUMMY_PASSWORD_HASH)
       await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'no_such_user', email } })
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
@@ -321,13 +473,12 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ message: 'Λανθασμένα στοιχεία' })
     }
     // Pick up any staff records the employer added for this email after the
-    // user's original registration. Silent no-op when there is nothing new.
-    await autoLinkProviderStaff(user.id, user.email, req)
-    const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-    const { password_hash: _, ...userSafe } = user as any
-    decryptUserFields(userSafe)
+    // user's original registration. Silent no-op when there is nothing new
+    // — and when the email is not verified yet.
+    await autoLinkProviderStaff(user, req)
+    const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'login', resource: 'user', resource_id: user.id })
-    return { user: userSafe, token }
+    return { user: toSafeUser(user), token }
   })
 
   // Me
@@ -335,97 +486,175 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { email } = (req.user as any)
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return null
-    const { password_hash: _, ...userSafe } = user as any
-    return decryptUserFields(userSafe)
+    return toSafeUser(user)
   })
 
   // Update me (PATCH /auth/me or PATCH /users/me - whichever your frontend uses)
   // The web store calls PATCH /users/me, but we'll also add PATCH /auth/me for safety
+  //
+  // Ε12: ίδιο σχήμα με το PATCH /users/me (users.ts → profileSchema): μήκη,
+  // website μόνο http(s), profile_photo μόνο https από το R2. Σε λειτουργία
+  // strip — άγνωστα πεδία αγνοούνται σιωπηλά, όπως πριν (συμβατότητα).
   app.patch('/me', { preHandler: [(app as any).authenticate] }, async (req, reply) => {
     const { id } = (req.user as any)
-    const allowedFields = ['full_name', 'bio', 'phone', 'city', 'country', 'website', 'profile_photo', 'preferred_language']
+    const parsed = parseBody(profileSchema.strip(), req.body, reply)
+    if (!parsed) return
     const updateData: any = {}
-    for (const key of allowedFields) {
-      if ((req.body as any)[key] !== undefined) updateData[key] = (req.body as any)[key]
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value !== undefined) updateData[key] = value
     }
     if (Object.keys(updateData).length === 0) {
       return reply.code(400).send({ message: 'No fields to update' })
     }
     // Encrypt sensitive fields before write
-    if ('phone' in updateData) updateData.phone = encryptField(updateData.phone)
+    if ('phone'   in updateData) updateData.phone   = encryptField(updateData.phone)
+    if ('address' in updateData) updateData.address = encryptField(updateData.address)
     const user = await prisma.user.update({ where: { id }, data: updateData })
-    const { password_hash: _, ...userSafe } = user as any
-    decryptUserFields(userSafe)
-    return userSafe
+    return toSafeUser(user)
   })
 
-  // Refresh
-  app.post('/refresh', { preHandler: [(app as any).authenticate] }, async (req) => {
-    const { id, email, role } = req.user as any
-    const token = app.jwt.sign({ id, email, role }, { expiresIn: '7d' })
+  // Refresh — ξαναδιαβάζει τον χρήστη: διαγραμμένος ή ανακλημένος → 401
+  // (το authenticate το έχει ήδη ελέγξει), νέο τοκεν με τον ΤΡΕΧΟΝΤΑ ρόλο.
+  app.post('/refresh', { preHandler: [(app as any).authenticate] }, async (req, reply) => {
+    const { id } = req.user as any
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, role: true, token_version: true } })
+    if (!user) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' })
+    const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     return { token }
   })
 
+  /**
+   * Αποσύνδεση από ΟΛΕΣ τις συσκευές (Ε12).
+   *
+   * Με stateless JWT δεν γίνεται να ακυρωθεί μόνο ένα τοκεν· η απλή
+   * αποσύνδεση του client μένει τοπική. Αυτό αυξάνει το token_version και
+   * κάθε τοκεν που έχει εκδοθεί ως τώρα — και αυτό της κλήσης — παύει να ισχύει.
+   */
+  app.post('/logout-all', { preHandler: [(app as any).authenticate] }, async (req: any) => {
+    const { id } = req.user as any
+    await prisma.user.update({ where: { id }, data: { token_version: { increment: 1 } } })
+    ;(app as any).invalidateAuthCache?.(id)
+    await audit(req, { action: 'logout_all', resource: 'user', resource_id: id })
+    return { message: 'Αποσυνδέθηκες από όλες τις συσκευές' }
+  })
+
+  /**
+   * Επαλήθευση email από τον σύνδεσμο του email (Ε12).
+   *
+   * Χωρίς σύνδεση: ο σύνδεσμος μπορεί να ανοίξει σε άλλο browser ή από το
+   * κινητό. Το τοκεν είναι 256 bit, μίας χρήσης, 48 ωρών, και στη βάση μένει
+   * μόνο το hash του. Στην επιτυχία: AI trial (μία φορά) και σύνδεση με τις
+   * εγγραφές προσωπικού που έχει ετοιμάσει ο εργοδότης για αυτό το email.
+   */
+  app.post('/verify-email', async (req: any, reply) => {
+    const parsed = parseBody(verifySchema, req.body, reply)
+    if (!parsed) return
+    const hash = hashResetToken(parsed.token.toLowerCase())
+    const user = await prisma.user.findFirst({
+      where: { email_verify_token: hash, email_verify_expires: { gt: new Date() } },
+    })
+    if (!user) {
+      await audit(req, { action: 'email_verify', resource: 'user', outcome: 'failure', metadata: { reason: 'invalid_or_expired_token' } })
+      return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος επιβεβαίωσης' })
+    }
+    // Ατομικά: μόνο όποιο αίτημα βρει ακόμα το τοκεν το καταναλώνει.
+    const done = await prisma.user.updateMany({
+      where: { id: user.id, email_verify_token: hash },
+      data: { email_verified_at: user.email_verified_at ?? new Date(), email_verify_token: null, email_verify_expires: null },
+    })
+    if (done.count === 0) return reply.code(400).send({ message: 'Μη έγκυρος ή ληγμένος σύνδεσμος επιβεβαίωσης' })
+    await grantTrialOnVerification(user.id)
+    await autoLinkProviderStaff({ ...user, email_verified_at: user.email_verified_at ?? new Date() }, req)
+    await audit(req, { action: 'email_verified', resource: 'user', resource_id: user.id, metadata: { via: 'link' } })
+    return { message: 'Το email σου επιβεβαιώθηκε', email_verified: true }
+  })
+
+  /** Νέος σύνδεσμος επαλήθευσης για τον συνδεδεμένο χρήστη (όριο: index.ts). */
+  app.post('/resend-verification', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { id } = req.user as any
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, full_name: true, email_verified_at: true } })
+    if (!user) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' })
+    if (user.email_verified_at) return { message: 'Το email σου είναι ήδη επιβεβαιωμένο', email_verified: true }
+    await issueEmailVerification(user)
+    await audit(req, { action: 'email_verify_resend', resource: 'user', resource_id: user.id })
+    return { message: 'Σου στείλαμε νέο email επιβεβαίωσης', email_verified: false }
+  })
+
   // ─── GOOGLE OAUTH FOR MOBILE APPS ────────────────────────────────
-  // Mobile app sends Google's access_token + user info from native OAuth flow
-  // Backend verifies the token and creates/updates user, returns JWT
+  // Mobile app sends Google's id_token (νέες εκδόσεις) και/ή access_token
+  // (ήδη εγκατεστημένες) από τη native ροή.
+  //
+  // Ε12 — ΕΛΕΓΧΟΣ AUDIENCE. Πριν, αρκούσε ΟΠΟΙΟΔΗΠΟΤΕ έγκυρο access token
+  // Google: το userinfo επιβεβαιώνει μόνο ότι το τοκεν είναι ζωντανό, όχι για
+  // ποια εφαρμογή εκδόθηκε. Μια τρίτη εφαρμογή («Σύνδεση με Google» σε
+  // οποιοδήποτε site) που έπαιρνε τοκεν από το θύμα, μπορούσε να το φέρει εδώ
+  // και να μπει στον λογαριασμό του. Τώρα το tokeninfo της Google πρέπει να
+  // δείχνει aud/azp από τη λίστα μας (googleClientIds) και επιβεβαιωμένο email.
   app.post('/google/mobile', async (req: any, reply) => {
     try {
-      const { access_token, user: googleUserData } = req.body as any
+      const { access_token, id_token, user: googleUserData } = (req.body ?? {}) as any
 
-      if (!access_token || !googleUserData?.email) {
+      if ((typeof access_token !== 'string' || !access_token) && (typeof id_token !== 'string' || !id_token)) {
         return reply.code(400).send({ message: 'Λείπουν δεδομένα' })
       }
+      const allowed = googleClientIds()
+      if (!allowed.length) {
+        console.error('[auth] GOOGLE_CLIENT_IDS/GOOGLE_CLIENT_ID δεν έχουν οριστεί — η σύνδεση Google από κινητό απορρίπτεται')
+        return reply.code(503).send({ message: 'Η σύνδεση με Google δεν είναι διαθέσιμη αυτή τη στιγμή' })
+      }
 
-      // Verify the access_token by calling Google's userinfo endpoint
-      // This ensures the token is valid and belongs to this user
-      const verifyRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      })
-      if (!verifyRes.ok) {
+      const useId = typeof id_token === 'string' && !!id_token
+      const infoUrl = new URL('https://oauth2.googleapis.com/tokeninfo')
+      infoUrl.searchParams.set(useId ? 'id_token' : 'access_token', useId ? id_token : access_token)
+      const infoRes = await fetch(infoUrl.toString())
+      if (!infoRes.ok) {
         return reply.code(401).send({ message: 'Μη έγκυρο Google token' })
       }
-      const verifiedUser = await verifyRes.json() as any
+      const info = await infoRes.json() as any
+      // id_token: το aud ΠΡΕΠΕΙ να είναι δικό μας. access token: aud ή azp
+      // (ο client που το ζήτησε — π.χ. το Android client ID).
+      const audOk = allowed.includes(String(info.aud ?? ''))
+        || (!useId && allowed.includes(String(info.azp ?? '')))
+      const issOk = !useId || info.iss === 'accounts.google.com' || info.iss === 'https://accounts.google.com'
+      if (!audOk || !issOk) {
+        console.warn('[auth] google/mobile: token for foreign client rejected', { aud: info.aud, azp: info.azp })
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'google', reason: 'audience_mismatch', aud: info.aud ?? null } })
+        return reply.code(401).send({ message: 'Μη έγκυρο Google token' })
+      }
+      const verifiedEmail = typeof info.email === 'string' ? info.email.trim().toLowerCase() : ''
+      if (!verifiedEmail) return reply.code(401).send({ message: 'Μη έγκυρο Google token' })
+      if (!(info.email_verified === true || info.email_verified === 'true')) {
+        return reply.code(403).send({ message: 'Το email του λογαριασμού Google δεν είναι επιβεβαιωμένο' })
+      }
 
       // Make sure the email matches what client sent (prevent token swapping)
-      if (verifiedUser.email !== googleUserData.email) {
+      if (googleUserData?.email && String(googleUserData.email).trim().toLowerCase() !== verifiedEmail) {
         return reply.code(401).send({ message: 'Email mismatch' })
       }
 
-      // Get preferred language from Google locale
-      const googleLocale = (verifiedUser.locale || googleUserData.locale || '').toLowerCase().split('-')[0]
-      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
-      const preferredLang = supportedLangs.includes(googleLocale) ? googleLocale : 'el'
-
-      // Find or create user
-      let user = await prisma.user.findUnique({ where: { email: verifiedUser.email } })
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email: verifiedUser.email,
-            full_name: verifiedUser.name || googleUserData.full_name,
-            profile_photo: verifiedUser.picture || googleUserData.profile_photo,
-            role: 'user',
-            preferred_language: preferredLang,
-            // Every new OAuth-created account starts a 30-day AI trial too.
-            ai_subscription_status: 'trial',
-            ai_trial_started_at: new Date(),
-          }
+      // Όνομα/φωτογραφία/γλώσσα: από το id_token ή, για access token, από το
+      // userinfo με το ήδη ελεγμένο τοκεν. Η φωτογραφία ΠΟΤΕ από τον client.
+      let profile: any = useId ? info : {}
+      if (!useId) {
+        const uRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${access_token}` },
         })
-        await recordSignupConsent(req, user.id, 'social_signup')
-      } else if (!user.profile_photo && (verifiedUser.picture || googleUserData.profile_photo)) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { profile_photo: verifiedUser.picture || googleUserData.profile_photo }
-        })
+        if (uRes.ok) profile = await uRes.json() as any
       }
 
-      const { password_hash: _, ...userSafe } = user as any
-      decryptUserFields(userSafe) // return plaintext to caller
-      // Auto-link staff records the employer pre-created for this email
-      await autoLinkProviderStaff(user.id, user.email, req)
-      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      return { user: userSafe, token }
+      // Get preferred language from Google locale
+      const googleLocale = String(profile.locale || googleUserData?.locale || '').toLowerCase().split('-')[0]
+      const preferredLang = SUPPORTED_LANGS.includes(googleLocale) ? googleLocale : 'el'
+
+      const user = await upsertOAuthUser(req, {
+        email: verifiedEmail,
+        name: profile.name || (typeof googleUserData?.full_name === 'string' ? googleUserData.full_name : null),
+        photo: typeof profile.picture === 'string' && profile.picture.startsWith('https://') ? profile.picture : null,
+        lang: preferredLang,
+        provider: 'google',
+      })
+      const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
+      return { user: toSafeUser(user), token }
     } catch (err: any) {
       console.error('Google mobile OAuth error:', err)
       return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
@@ -434,16 +663,36 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
   // ─── FACEBOOK OAUTH FOR MOBILE APPS ──────────────────────────────
   // Mobile app sends Facebook's access_token from the native FB SDK.
-  // Backend verifies the token with Graph API's /me endpoint, then
-  // creates/updates the user and returns a JWT.
+  //
+  // Ε12 — ΕΛΕΓΧΟΣ ΕΦΑΡΜΟΓΗΣ. Το /me δέχεται τοκεν ΟΠΟΙΑΣΔΗΠΟΤΕ εφαρμογής
+  // Facebook. Πρώτα το debug_token (με app access token) επιβεβαιώνει ότι το
+  // τοκεν είναι έγκυρο ΚΑΙ εκδόθηκε για τη δική μας εφαρμογή (app_id).
   app.post('/facebook/mobile', async (req: any, reply) => {
     try {
-      const { access_token } = req.body as any
-      if (!access_token) {
+      const { access_token } = (req.body ?? {}) as any
+      if (typeof access_token !== 'string' || !access_token) {
         return reply.code(400).send({ message: 'Λείπει το access token' })
       }
 
-      // Verify the token by hitting Graph API. Fields we ask for:
+      const appId = (process.env.FACEBOOK_APP_ID || '').trim()
+      const appSecret = (process.env.FACEBOOK_APP_SECRET || '').trim()
+      if (!appId || !appSecret) {
+        console.error('[auth] FACEBOOK_APP_ID/FACEBOOK_APP_SECRET δεν έχουν οριστεί — η σύνδεση Facebook από κινητό απορρίπτεται')
+        return reply.code(503).send({ message: 'Η σύνδεση με Facebook δεν είναι διαθέσιμη αυτή τη στιγμή' })
+      }
+
+      const dbg = new URL('https://graph.facebook.com/v18.0/debug_token')
+      dbg.searchParams.set('input_token', access_token)
+      dbg.searchParams.set('access_token', `${appId}|${appSecret}`)
+      const dbgRes = await fetch(dbg.toString())
+      const dbgData = dbgRes.ok ? (await dbgRes.json() as any)?.data : null
+      if (!dbgData?.is_valid || String(dbgData.app_id ?? '') !== appId) {
+        console.warn('[auth] facebook/mobile: token rejected', { app_id: dbgData?.app_id ?? null, valid: !!dbgData?.is_valid })
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'facebook', reason: 'app_mismatch_or_invalid' } })
+        return reply.code(401).send({ message: 'Μη έγκυρο Facebook token' })
+      }
+
+      // Fields we ask for:
       //   id       — Facebook's stable user id
       //   email    — requires 'email' permission (we always request it)
       //   name     — full name
@@ -458,6 +707,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(401).send({ message: 'Μη έγκυρο Facebook token' })
       }
       const fbUser = await verifyRes.json() as any
+      if (dbgData.user_id && fbUser.id && String(dbgData.user_id) !== String(fbUser.id)) {
+        return reply.code(401).send({ message: 'Μη έγκυρο Facebook token' })
+      }
 
       if (!fbUser.email) {
         // Some FB users deny the email permission — we cannot create an
@@ -469,39 +721,20 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       // Map Facebook locale (e.g. "el_GR") to our supported languages
       const fbLocale = (fbUser.locale || '').toLowerCase().split('_')[0]
-      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
-      const preferredLang = supportedLangs.includes(fbLocale) ? fbLocale : 'el'
+      const preferredLang = SUPPORTED_LANGS.includes(fbLocale) ? fbLocale : 'el'
 
       const fbPicture = fbUser.picture?.data?.url || null
 
-      let user = await prisma.user.findUnique({ where: { email: fbUser.email } })
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email: fbUser.email,
-            full_name: fbUser.name || 'Facebook User',
-            profile_photo: fbPicture,
-            role: 'user',
-            preferred_language: preferredLang,
-            // Every new OAuth-created account starts a 30-day AI trial too.
-            ai_subscription_status: 'trial',
-            ai_trial_started_at: new Date(),
-          }
-        })
-        await recordSignupConsent(req, user.id, 'social_signup')
-      } else if (!user.profile_photo && fbPicture) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { profile_photo: fbPicture }
-        })
-      }
-
-      const { password_hash: _, ...userSafe } = user as any
-      decryptUserFields(userSafe) // return plaintext to caller
-      // Auto-link staff records the employer pre-created for this email
-      await autoLinkProviderStaff(user.id, user.email, req)
-      const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
-      return { user: userSafe, token }
+      // Το Facebook δίνει μόνο επιβεβαιωμένο κύριο email → θεωρείται επαληθευμένο.
+      const user = await upsertOAuthUser(req, {
+        email: String(fbUser.email).trim().toLowerCase(),
+        name: fbUser.name || 'Facebook User',
+        photo: fbPicture,
+        lang: preferredLang,
+        provider: 'facebook',
+      })
+      const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
+      return { user: toSafeUser(user), token }
     } catch (err: any) {
       console.error('Facebook mobile OAuth error:', err)
       return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
@@ -550,36 +783,26 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       })
+      if (!userRes.ok) return reply.redirect(`${APP_URL}/login?error=google_failed`)
       const googleUser = await userRes.json() as any
+      // Ε12: μόνο επιβεβαιωμένο από τη Google email — αλλιώς κάποιος με
+      // ανεπιβεβαίωτο email τρίτου στη Google θα έπαιρνε τον λογαριασμό του.
+      if (!googleUser.email || googleUser.verified_email !== true) {
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'google', reason: 'email_not_verified' } })
+        return reply.redirect(`${APP_URL}/login?error=google_unverified`)
+      }
 
       // Try to read preferred language from Google profile (locale field)
       const googleLocale = (googleUser.locale || '').toLowerCase().split('-')[0]
-      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
-      const preferredLang = supportedLangs.includes(googleLocale) ? googleLocale : 'el'
+      const preferredLang = SUPPORTED_LANGS.includes(googleLocale) ? googleLocale : 'el'
 
-      let user = await prisma.user.findUnique({ where: { email: googleUser.email } })
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email: googleUser.email,
-            full_name: googleUser.name,
-            profile_photo: googleUser.picture,
-            role: 'user',
-            preferred_language: preferredLang,
-            // Every new OAuth-created account starts a 30-day AI trial too.
-            ai_subscription_status: 'trial',
-            ai_trial_started_at: new Date(),
-          }
-        })
-        await recordSignupConsent(req, user.id, 'social_signup')
-      } else if (!user.profile_photo && googleUser.picture) {
-        user = await prisma.user.update({ where: { id: user.id }, data: { profile_photo: googleUser.picture } })
-      }
-
-      const { password_hash: _, ...userSafe } = user as any
-      decryptUserFields(userSafe) // return plaintext to caller
-      // Auto-link staff records the employer pre-created for this email
-      await autoLinkProviderStaff(user.id, user.email, req)
+      const user = await upsertOAuthUser(req, {
+        email: String(googleUser.email).trim().toLowerCase(),
+        name: googleUser.name,
+        photo: googleUser.picture,
+        lang: preferredLang,
+        provider: 'google',
+      })
       reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Google OAuth error:', err)
@@ -625,30 +848,17 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
       // Try to read preferred language from Facebook profile (locale field, e.g. "el_GR")
       const fbLocale = (fbUser.locale || '').toLowerCase().split('_')[0]
-      const supportedLangs = ['el', 'en', 'es', 'fr', 'zh']
-      const preferredLang = supportedLangs.includes(fbLocale) ? fbLocale : 'el'
+      const preferredLang = SUPPORTED_LANGS.includes(fbLocale) ? fbLocale : 'el'
 
-      let user = await prisma.user.findUnique({ where: { email: fbUser.email } })
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email: fbUser.email,
-            full_name: fbUser.name,
-            profile_photo: fbUser.picture?.data?.url,
-            role: 'user',
-            preferred_language: preferredLang,
-            // Every new OAuth-created account starts a 30-day AI trial too.
-            ai_subscription_status: 'trial',
-            ai_trial_started_at: new Date(),
-          }
-        })
-        await recordSignupConsent(req, user.id, 'social_signup')
-      }
-
-      const { password_hash: _, ...userSafe } = user as any
-      decryptUserFields(userSafe) // return plaintext to caller
-      // Auto-link staff records the employer pre-created for this email
-      await autoLinkProviderStaff(user.id, user.email, req)
+      // Το τοκεν εδώ προέρχεται από ΔΙΚΗ ΜΑΣ ανταλλαγή code (client_secret),
+      // άρα ανήκει στην εφαρμογή μας· το Facebook δίνει μόνο επιβεβαιωμένο email.
+      const user = await upsertOAuthUser(req, {
+        email: String(fbUser.email).trim().toLowerCase(),
+        name: fbUser.name,
+        photo: fbUser.picture?.data?.url,
+        lang: preferredLang,
+        provider: 'facebook',
+      })
       reply.redirect(`${APP_URL}/auth/complete?code=${issueOAuthCode(user.id)}`)
     } catch (err: any) {
       console.error('Facebook OAuth error:', err)
@@ -679,11 +889,9 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) return reply.code(400).send({ message: 'Ο λογαριασμός δεν βρέθηκε' })
 
-    const { password_hash: _, ...userSafe } = user as any
-    decryptUserFields(userSafe)
-    const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '7d' })
+    const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'oauth_exchange', resource: 'user', resource_id: user.id })
-    return { user: userSafe, token }
+    return { user: toSafeUser(user), token }
   })
 
   // Forgot password
@@ -753,8 +961,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     }
     const c = emailContent[lang] || emailContent.el
 
+    // Ε12: ΔΕΝ περιμένουμε το Resend. Η απάντηση για υπαρκτό email έπαιρνε
+    // όσο ο γύρος προς το Resend (εκατοντάδες ms) και για ανύπαρκτο ήταν
+    // άμεση — η διαφορά χρόνου μαρτυρούσε ποια email είναι εγγεγραμμένα.
     if (RESEND_KEY) {
-      await fetch('https://api.resend.com/emails', {
+      void fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -771,7 +982,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
             </div>
           `
         })
-      })
+      }).catch((err: any) => console.error('[auth] reset email failed:', err?.message))
     }
 
     return { message: 'Αν το email υπάρχει, θα λάβετε οδηγίες.' }
@@ -796,10 +1007,23 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     const bcryptMod = await import('bcryptjs')
     const password_hash = await bcryptMod.hash(password, 12)
+    // Ε12: token_version+1 → κάθε συνεδρία που υπήρχε (π.χ. αυτού που έκλεψε
+    // τον κωδικό) τελειώνει. Ο σύνδεσμος ήρθε στο email, άρα αποδεικνύει και
+    // την κατοχή του: ανεπιβεβαίωτος λογαριασμός γίνεται επαληθευμένος.
+    const newlyVerified = !user.email_verified_at
     await prisma.user.update({
       where: { id: user.id },
-      data: { password_hash, reset_token: null, reset_token_expires: null }
+      data: {
+        password_hash, reset_token: null, reset_token_expires: null,
+        token_version: { increment: 1 },
+        ...(newlyVerified ? { email_verified_at: new Date(), email_verify_token: null, email_verify_expires: null } : {}),
+      }
     })
+    ;(app as any).invalidateAuthCache?.(user.id)
+    if (newlyVerified) {
+      await grantTrialOnVerification(user.id)
+      await autoLinkProviderStaff({ ...user, email_verified_at: new Date() }, req)
+    }
     await audit(req, { action: 'password_reset_complete', resource: 'user', resource_id: user.id })
     return { message: 'Ο κωδικός άλλαξε επιτυχώς' }
   })

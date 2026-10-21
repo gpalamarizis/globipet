@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ErrorState } from '@/components/ErrorState'
 
 /**
  * Θέμα φόρουμ με απαντήσεις.
@@ -32,7 +33,7 @@ export default function ForumTopicScreen() {
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null)
   const [editReplyText, setEditReplyText] = useState('')
 
-  const { data: topic, isLoading } = useQuery({
+  const { data: topic, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['forum-topic', id],
     queryFn: () => api.get(`/forum/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
@@ -106,6 +107,12 @@ export default function ForumTopicScreen() {
   })
 
   if (isLoading) return <Screen title={t('forum.title')} back><SkeletonRows count={3} /></Screen>
+  // Σφάλμα δικτύου ≠ «δεν βρέθηκε»: επανάληψη.
+  if (isError && !topic) return (
+    <Screen title={t('forum.title')} back>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+    </Screen>
+  )
   if (!topic) return (
     <Screen title={t('forum.title')} back>
       <EmptyState icon={MessagesSquare} title={t('forum.notFound')} />
@@ -114,7 +121,8 @@ export default function ForumTopicScreen() {
 
   const replies = topic.replies ?? []
   const isAdmin = user?.role === 'admin'
-  const isTopicAuthor = !!user?.email && user.email === topic.author_email
+  // is_mine από τον server: το author_email δεν επιστρέφεται πια δημόσια.
+  const isTopicAuthor = !!user && topic.is_mine === true
 
   return (
     <Screen title={t('forum.title')} back scroll={false}>
@@ -125,7 +133,7 @@ export default function ForumTopicScreen() {
             {topic.is_solved && <CheckCircle2 size={14} color={colors.success} />}
             {!editingTopic && <Text style={s.title}>{topic.title}</Text>}
           </View>
-          <Text style={s.meta}>{topic.author_name ?? topic.author_email}</Text>
+          <Text style={s.meta}>{topic.author_name}</Text>
           {editingTopic ? (
             <View style={{ marginTop: space.sm }}>
               <Input label={t('forum.topicTitle')} value={editTitle} onChangeText={setEditTitle} />
@@ -170,20 +178,20 @@ export default function ForumTopicScreen() {
             {r.is_answer && <Text style={s.answerLabel}>{t('forum.acceptedAnswer')}</Text>}
             <View style={s.topRow}>
               {r.is_answer && <CheckCircle2 size={14} color={colors.success} />}
-              <Text style={[s.author, { flex: 1 }]}>{r.author_name ?? r.author_email}</Text>
+              <Text style={[s.author, { flex: 1 }]}>{r.author_name}</Text>
               {(isTopicAuthor || isAdmin) && !r.is_answer && (
                 <TouchableOpacity hitSlop={10} accessibilityLabel={t('forum.markAnswer')}
                   disabled={markAnswer.isPending} onPress={() => markAnswer.mutate(r.id)}>
                   <Check size={icon.sm} color={colors.success} />
                 </TouchableOpacity>
               )}
-              {(isAdmin || (!!user?.email && r.author_email === user.email)) && editingReplyId !== r.id && (
+              {(isAdmin || (!!user && r.is_mine === true)) && editingReplyId !== r.id && (
                 <TouchableOpacity hitSlop={10} accessibilityLabel={t('common.edit')}
                   onPress={() => { setEditReplyText(r.content ?? ''); setEditingReplyId(r.id) }}>
                   <Pencil size={icon.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
-              {(isAdmin || (!!user?.email && r.author_email === user.email)) && (
+              {(isAdmin || (!!user && r.is_mine === true)) && (
                 <TouchableOpacity hitSlop={10} accessibilityLabel={t('common.delete')}
                   disabled={deleteReply.isPending} onPress={() => confirmDelete(r.id)}>
                   <Trash2 size={icon.sm} color={colors.danger} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +7,6 @@ import { Video, Clock, Star, Search, Shield, Award, X, Lock, Zap, Calendar } fro
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
-import { useWsStore } from '@/store/ws'
 import toast from 'react-hot-toast'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
 import { canAskTelehealthCancel, telehealthCancelQuestion, postTelehealthCancel } from '@/components/features/telehealth/telehealthCancel'
@@ -105,12 +104,9 @@ export default function Telehealth() {
     if (msg && confirm(msg)) cancelSession.mutate(String(c.id))
   }
 
-  const wsLastMsg = useWsStore?.((s: any) => s.lastMessage)
-  useEffect(() => {
-    if (wsLastMsg?.type === 'vet_availability_change') {
-      queryClient.invalidateQueries({ queryKey: ['telehealth-available-now'] })
-    }
-  }, [wsLastMsg, queryClient])
+  // Η διαθεσιμότητα των κτηνιάτρων ανανεώνεται με polling (refetchInterval
+  // 30″ στο query παραπάνω), όπως και στο κινητό. Δεν υπάρχει WebSocket στον
+  // server — η παλιά ακρόαση εδώ δεν λάμβανε ποτέ τίποτα.
 
   const vets = tab === 'now' ? availableVets : allVets
   const isLoading = tab === 'now' ? loadingNow : loadingAll
@@ -277,7 +273,7 @@ export default function Telehealth() {
                     {canAskTelehealthCancel(c) && (
                       <button onClick={e => { e.stopPropagation(); askCancel(c) }}
                         disabled={cancelSession.isPending || asking}
-                        className={cn('btn-secondary w-full py-[7px] text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 disabled:opacity-60',
+                        className={cn('btn-secondary w-full py-2 text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 disabled:opacity-60',
                           paid && !!c.meeting_url ? 'mt-2' : 'mt-3')}>
                         {t('bookingPolicy.cancel')}
                       </button>

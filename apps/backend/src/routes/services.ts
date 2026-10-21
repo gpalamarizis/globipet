@@ -44,13 +44,17 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     if (verified === 'true') where.is_verified = true
     if (emergency === 'true') where.emergency_available = true
     if (min_rating) where.rating = { gte: Number(min_rating) }
-    const skip = (Number(page) - 1) * Number(limit)
+    // Ανώτατο όριο σελίδας: 100 (500 για διαχειριστή — AdminTranslationsPage
+    // ζητά ?limit=500). Πριν, ?limit=1000000 φόρτωνε ολόκληρο τον πίνακα.
+    const take = Math.min(Math.max(1, Number(limit) || 20), isAdmin ? 500 : 100)
+    const pageNo = Math.max(1, Number(page) || 1)
+    const skip = (pageNo - 1) * take
     const [data, total] = await Promise.all([
-      prisma.service.findMany({ where, skip, take: Number(limit), orderBy: [{ rating: 'desc' }, { id: 'asc' }] }),
+      prisma.service.findMany({ where, skip, take, orderBy: [{ rating: 'desc' }, { id: 'asc' }] }),
       prisma.service.count({ where })
     ])
     const translated = await translateRecords('service', data, lang)
-    return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
+    return { data: translated, total, page: pageNo, totalPages: Math.ceil(total / take) }
   })
 
   // Οι υπηρεσίες του συνδεδεμένου παρόχου.

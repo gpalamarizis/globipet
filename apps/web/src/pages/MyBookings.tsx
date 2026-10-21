@@ -224,7 +224,7 @@ export default function MyBookings() {
                     to cancel anything the provider had accepted. */}
                 {(booking.status === 'pending' || booking.status === 'confirmed') && (
                   <button onClick={() => askCancel(booking)}
-                    className="flex-1 btn-secondary text-xs py-[7px] text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50">
+                    className="flex-1 btn-secondary text-xs py-2 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50">
                     {t('bookings.cancel')}
                   </button>
                 )}

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { randomBytes } from 'crypto'
+import prisma from '../lib/prisma.js'
+import { r2, putObject, toDisplayUrl, parsePrivateRef, ownerHashes, PRIVATE_URL_TTL } from '../lib/storage.js'
 
 /**
  * Allowed MIME types and their expected magic bytes (file signatures).
@@ -94,47 +94,104 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ message: 'Το αρχείο δεν είναι έγκυρο WebP' })
       }
 
-      const accountId = process.env.CF_R2_ACCOUNT_ID
-      const bucketName = process.env.CF_R2_BUCKET_NAME
-      const accessKeyId = process.env.CF_R2_ACCESS_KEY_ID
-      const secretAccessKey = process.env.CF_R2_SECRET_ACCESS_KEY
-      const publicUrl = process.env.CF_R2_PUBLIC_URL
-
-      if (!accountId || !bucketName || !accessKeyId || !secretAccessKey) {
+      const c = r2()
+      if (!c) {
         const base64 = body.toString('base64')
         const dataUrl = `data:${mime};base64,${base64}`
         return { url: dataUrl, key: `base64-${Date.now()}` }
       }
 
-      const s3 = new S3Client({
-        region: 'auto',
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-        credentials: { accessKeyId, secretAccessKey },
-        forcePathStyle: true,
-      })
-
       // 4) Sanitize folder (prevent path traversal)
       const folder = sanitizeFolder((req.query as any).folder)
 
-      // 5) Generate safe filename — use enforced extension from whitelist, NOT client filename
+      // 5) Ασφαλές όνομα: επέκταση από τη λίστα, ΟΧΙ από το όνομα του πελάτη.
+      //    Το κλειδί περιέχει το hash του ιδιοκτήτη (lib/storage.ts), ώστε η
+      //    διαγραφή λογαριασμού να βρίσκει τα αρχεία του.
+      //    Ιατρικοί φάκελοι → ιδιωτικό bucket, url = 'r2priv://…'.
+      //    Το url μένει r2priv και για την ήδη εγκατεστημένη εφαρμογή: εκείνη
+      //    το στέλνει μόνο στα endpoints AI, που το λύνουν (resolveForAi), και
+      //    την προεπισκόπηση τη δείχνει από το τοπικό αρχείο. Ένα δημόσιο http
+      //    εδώ θα αναιρούσε το ιδιωτικό bucket.
       const ext = ALLOWED_TYPES[mime].ext
-      const randomId = randomBytes(16).toString('hex')
-      const key = `${folder}/${Date.now()}-${randomId}.${ext}`
-
-      await s3.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-        Body: body,
-        ContentType: mime,
-      }))
-
-      const url = publicUrl ? `${publicUrl}/${key}` : `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${key}`
-      return { url, key }
+      const up = await putObject(c, folder, (req.user as any)?.email, body, mime, ext)
+      if (!up.private) return { url: up.url, key: up.key }
+      const preview_url = await toDisplayUrl(up.url)
+      return {
+        url: up.url, key: up.key, private: true,
+        preview_url, preview_expires_at: new Date(Date.now() + PRIVATE_URL_TTL * 1000).toISOString(),
+      }
 
     } catch (err: any) {
       console.error('Upload error:', err)
       return reply.code(500).send({ message: 'Σφάλμα κατά το upload' })
     }
+  })
+
+  /**
+   * Προσωρινός σύνδεσμος (10') για ιδιωτικό αρχείο 'r2priv://…'.
+   *
+   * Πρόσβαση έχουν:
+   *   - ο ιδιοκτήτης (το <owner> του κλειδιού = hash του email του)
+   *   - ο admin (ρόλος από τη βάση, όχι από το JWT· καταγράφεται)
+   *   - κτηνίατρος με εγκεκριμένη, μη ληγμένη πρόσβαση στο διαβατήριο του
+   *     `pet_id` — και μόνο για αρχείο που (α) ανήκει στον ιδιοκτήτη του ζώου
+   *     και (β) είναι καταχωρημένο σε εγγραφή του ζώου (file_urls). Χωρίς το
+   *     (β) η πρόσβαση σε ένα ζώο θα έδινε κάθε αρχείο του ιδιοκτήτη, π.χ.
+   *     φωτογραφίες AI που δεν μοιράστηκε ποτέ.
+   *
+   * Όριο 120/λεπτό ανά IP: ένα διαβατήριο με πολλά αρχεία ζητά έναν σύνδεσμο
+   * για το καθένα, αλλά οι πελάτες κρατούν cache μέχρι τη λήξη.
+   */
+  app.get('/private-url', {
+    preHandler: [(app as any).authenticate],
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+  }, async (req: any, reply) => {
+    const { ref, pet_id } = (req.query || {}) as { ref?: unknown; pet_id?: unknown }
+    const p = parsePrivateRef(ref)
+    if (!p) return reply.code(400).send({ message: 'Μη έγκυρη αναφορά αρχείου' })
+    const c = r2()
+    if (!c?.privateBucket) return reply.code(503).send({ message: 'Η ιδιωτική αποθήκευση δεν είναι διαθέσιμη' })
+
+    const { email, id } = (req.user || {}) as any
+    let allowed = !!email && ownerHashes(email).includes(p.owner)
+
+    if (!allowed && id) {
+      const u = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+      if (u?.role === 'admin') {
+        allowed = true
+        console.warn('[upload] admin private-url', email, p.key)
+      }
+    }
+
+    if (!allowed && email && typeof pet_id === 'string' && pet_id.length <= 64) {
+      const pet = await prisma.pet.findUnique({ where: { id: pet_id }, select: { owner_email: true } })
+      if (pet && ownerHashes(pet.owner_email).includes(p.owner)) {
+        const now = new Date()
+        const access = await prisma.petPassportAccess.findFirst({
+          where: {
+            pet_id, provider_email: email, status: 'approved',
+            OR: [{ expires_at: null }, { expires_at: { gt: now } }],
+          },
+          select: { id: true },
+        })
+        if (access) {
+          const where = { pet_id, file_urls: { has: ref as string } }
+          const sel = { select: { id: true } }
+          const hits = await Promise.all([
+            prisma.petLabResult.findFirst({ where, ...sel }),
+            prisma.petImaging.findFirst({ where, ...sel }),
+            prisma.petSurgery.findFirst({ where, ...sel }),
+            prisma.petDentalRecord.findFirst({ where, ...sel }),
+            prisma.petGeneticTest.findFirst({ where, ...sel }),
+          ])
+          allowed = hits.some(Boolean)
+        }
+      }
+    }
+
+    if (!allowed) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const url = await toDisplayUrl(ref)
+    return { url, expires_at: new Date(Date.now() + PRIVATE_URL_TTL * 1000).toISOString() }
   })
 }
 

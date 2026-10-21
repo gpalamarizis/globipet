@@ -59,8 +59,29 @@ api.interceptors.request.use(async config => {
   return config
 })
 
+/**
+ * Ε12 — νέο τοκεν από τον server, όπως στο web/src/lib/api.ts.
+ *
+ * Η αλλαγή κωδικού (POST /users/me/password) ακυρώνει όλα τα παλιά τοκεν
+ * (token_version+1) και επιστρέφει νέο για αυτή τη συσκευή. Το παίρνουμε
+ * εδώ, σε μνήμη και SecureStore· το store/auth.ts ενημερώνεται μέσω του
+ * χειριστή (χωρίς import του store εδώ — κυκλική εξάρτηση).
+ */
+const TOKEN_ROTATING_ENDPOINTS = ['/users/me/password']
+let onTokenRotated: ((token: string) => void) | null = null
+export function setTokenRotationHandler(fn: (token: string) => void) { onTokenRotated = fn }
+
 api.interceptors.response.use(
-  res => res,
+  res => {
+    const url: string = res.config?.url || ''
+    const token = (res.data as any)?.token
+    if (typeof token === 'string' && token && TOKEN_ROTATING_ENDPOINTS.some(p => url.includes(p))) {
+      setAuthToken(token)
+      SecureStore.setItemAsync('token', token).catch(() => {})
+      onTokenRotated?.(token)
+    }
+    return res
+  },
   err => {
     // Μόνο στην ανάπτυξη: σε production τα σφάλματα δικτύου του χρήστη δεν
     // έχουν λόγο να γράφονται στα logs της συσκευής του.

@@ -10,13 +10,16 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
     if (q) where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { name_el: { contains: q, mode: 'insensitive' } }]
     if (species) where.species = species
     if (size) where.size = size
-    const skip = (Number(page) - 1) * Number(limit)
+    // Ανώτατο όριο σελίδας (πριν, ?limit=1000000 περνούσε).
+    const take = Math.min(Math.max(1, Number(limit) || 20), 100)
+    const pageNo = Math.max(1, Number(page) || 1)
+    const skip = (pageNo - 1) * take
     const [data, total] = await Promise.all([
-      prisma.breed.findMany({ where, skip, take: Number(limit), orderBy: { popularity: 'desc' } }),
+      prisma.breed.findMany({ where, skip, take, orderBy: { popularity: 'desc' } }),
       prisma.breed.count({ where })
     ])
     const translated = await translateRecords('breed', data, lang)
-    return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
+    return { data: translated, total, page: pageNo, totalPages: Math.ceil(total / take) }
   })
 
   app.get('/:id', async (req: any) => {

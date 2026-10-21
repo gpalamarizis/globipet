@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { AiSubscriptionManage } from './pricing'
 
 /**
  * Κέντρο υγείας — κόμβος για όλα τα εργαλεία.
@@ -54,16 +55,22 @@ export default function MedicalCenterScreen() {
   const st = status?.ai_subscription_status
   const active = isAdmin || st === 'active' || st === 'trial'
   const expired = st === 'expired'
-  // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
-  const canTrial = isAuthenticated && !isAdmin && st === 'none'
+  // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400). Η δοκιμή δίνεται
+  // με την επιβεβαίωση του email: ανεπιβεβαίωτος → μήνυμα, όχι κουμπί (όπως web).
+  const emailUnverified = (user as any)?.email_verified === false
+  const canTrial = isAuthenticated && !isAdmin && st === 'none' && !emailUnverified
+  // Πληρωμένη/ακυρωμένη συνδρομή: ΜΙΑ κάρτα — η πληρέστερη (AiSubscriptionManage:
+  // πλάνο, κατάσταση, ακύρωση), όπως στο web PetMedicalCenter. Πριν έβγαιναν
+  // δύο κάρτες κατάστασης η μία κάτω από την άλλη.
+  const showManage = isAuthenticated && !isAdmin && (st === 'active' || st === 'payment_failed' || st === 'cancelled')
 
   return (
     <Screen title={t('medical.title')} back>
       <Text style={s.intro}>{t('medical.subtitle')}</Text>
 
       {/* Κατάσταση συνδρομής από πάνω: ο χρήστης ξέρει τι θα βρει. */}
-      {isAuthenticated && (
-        <Card style={active ? s.statusOk : undefined}>
+      {isAuthenticated && !showManage && (
+        <Card style={StyleSheet.flatten([s.statusCard, active && s.statusOk])}>
           <View style={s.statusRow}>
             <Sparkles size={icon.md} color={active ? colors.success : colors.textMuted} />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -82,11 +89,25 @@ export default function MedicalCenterScreen() {
             <Button label={t('ai.start_trial')} loading={startTrial.isPending}
               onPress={() => startTrial.mutate()} full style={{ marginTop: space.md }} />
           )}
+          {!active && !expired && !isAdmin && st === 'none' && emailUnverified && (
+            <Text style={[s.statusMeta, { marginTop: space.md }]}>{t('trialVerify.confirmEmail')}</Text>
+          )}
           {!active && !canTrial && (
             <Button label={t('ai.see_plans')} variant="secondary"
               onPress={() => router.push('/pricing' as any)} full style={{ marginTop: space.md }} />
           )}
         </Card>
+      )}
+      {/* Πληρωμένη συνδρομή AI: κατάσταση και ακύρωση (όπως στο web). */}
+      {showManage && (
+        <View style={{ marginBottom: space.md }}>
+          <AiSubscriptionManage />
+          {/* Ακυρωμένη / αποτυχημένη πληρωμή: επιλογή πλάνου (web: «Επίλεξε πλάνο»). */}
+          {st !== 'active' && (
+            <Button label={t('ai.see_plans')} variant="secondary"
+              onPress={() => router.push('/pricing' as any)} full style={{ marginTop: space.md }} />
+          )}
+        </View>
       )}
       {/* Όπως το web: χωρίς σύνδεση, πρόσκληση σύνδεσης για τη δωρεάν δοκιμή. */}
       {!isAuthenticated && (
@@ -114,6 +135,8 @@ export default function MedicalCenterScreen() {
 
 const s = StyleSheet.create({
   intro: { ...type.body, color: colors.textMuted, marginBottom: space.md },
+  // Ίδιο κενό με την κάρτα συνδρομής πάνω από τη λίστα εργαλείων.
+  statusCard: { marginBottom: space.md },
   statusOk: { borderColor: colors.success, borderWidth: 1 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   statusTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },

@@ -66,6 +66,25 @@ function isAllowedMedia(url: string | null | undefined): boolean {
   return MEDIA_HOSTS.some(h => host === h || host.endsWith('.' + h))
 }
 
+/** Ρόλοι που δημιουργούν καμπάνιες (ίδιοι με τη ζώνη παρόχου, provider.ts). */
+const CAMPAIGN_ROLES = ['service_provider', 'both', 'admin']
+
+/** Σελίδες που κατοχυρώνει μόνο η πλατφόρμα: η αρχική και «όλες οι σελίδες». */
+const ADMIN_ONLY_PAGES = ['home', 'all']
+
+const MSG_BOOST_RANGE = 'Η προβολή (boost) πρέπει να είναι ακέραιος από 0 έως 100'
+
+/**
+ * boost: η σειρά των banner (ORDER BY boost DESC). Χωρίς όριο, ένας πάροχος
+ * έβαζε 999999 και έπαιρνε πάντα την πρώτη θέση. Κενό/απόν → 0 (όπως πριν).
+ */
+function boostError(raw: any): string | null {
+  if (raw === undefined || raw === null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n < 0 || n > 100) return MSG_BOOST_RANGE
+  return null
+}
+
 function uid() {
   return (globalThis as any).crypto?.randomUUID?.() ??
          Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
@@ -117,8 +136,8 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
    * data we have no reason to store.
    */
   function visitorHash(req: any): string {
-    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim()
-      || req.ip || 'unknown'
+    // req.ip (trustProxy, index.ts) — όχι το X-Forwarded-For που γράφει ο client.
+    const ip = req.ip || 'unknown'
     const ua = (req.headers['user-agent'] || '').toString().slice(0, 200)
     return createHash('sha256')
       .update(`${ip}|${ua}|${process.env.JWT_SECRET || 'globipet'}`)
@@ -164,7 +183,7 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
     async function owns(req: any, reply: any, id: string) {
       const user = req.user as any
       const rows = await prisma.$queryRaw<any[]>`
-        SELECT id, owner_email FROM campaigns WHERE id = ${id}`
+        SELECT id, owner_email, owner_type FROM campaigns WHERE id = ${id}`
       if (!rows.length) { reply.code(404).send({ message: 'Η καμπάνια δεν βρέθηκε' }); return null }
       if (rows[0].owner_email !== user.email && user.role !== 'admin') {
         audit(req, { action: 'permission_denied', resource: 'campaign',
@@ -291,7 +310,15 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       const user = req.user as any
       const b = req.body || {}
 
+      // Μόνο πάροχοι (και ο διαχειριστής για την πλατφόρμα). Πριν, κάθε
+      // συνδεδεμένος χρήστης δημιουργούσε καμπάνιες και banner.
+      if (!CAMPAIGN_ROLES.includes(user?.role)) {
+        audit(req, { action: 'permission_denied', resource: 'campaign', outcome: 'denied' })
+        return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })
+      }
       if (!b.title?.trim()) return reply.code(400).send({ message: 'Ο τίτλος είναι υποχρεωτικός' })
+      const boostErr = boostError(b.boost)
+      if (boostErr) return reply.code(400).send({ message: boostErr })
       if (!b.starts_at || !b.ends_at) {
         return reply.code(400).send({ message: 'Απαιτούνται ημερομηνίες έναρξης και λήξης' })
       }
@@ -346,6 +373,10 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       // άφηνε τα προηγούμενα πεδία ήδη αλλαγμένα.
       if ('discount_value' in b && b.discount_value !== '' && b.discount_value != null && !(Number(b.discount_value) > 0)) {
         return reply.code(400).send({ message: 'Το ποσό πρέπει να είναι θετικό' })
+      }
+      if ('boost' in b) {
+        const boostErr = boostError(b.boost)
+        if (boostErr) return reply.code(400).send({ message: boostErr })
       }
       if ('starts_at' in b || 'ends_at' in b) {
         const [cur] = await prisma.$queryRaw<any[]>`SELECT starts_at, ends_at FROM campaigns WHERE id = ${id}`
@@ -404,6 +435,13 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       const list = Array.isArray(req.body?.targets) ? req.body.targets : null
       if (!list) return reply.code(400).send({ message: 'Αναμένεται πίνακας targets' })
 
+      // Απόφαση ιδιοκτήτη: η καμπάνια της πλατφόρμας αφορά μόνο την τιμή
+      // συνδρομής — όχι προϊόντα/υπηρεσίες παρόχων (lib/campaignDiscount τις
+      // αγνοεί ούτως ή άλλως· εδώ δεν αποθηκεύεται στόχος που δεν θα ίσχυε).
+      if (c.owner_type === 'platform' && list.length > 0) {
+        return reply.code(400).send({ message: 'Οι καμπάνιες της πλατφόρμας ισχύουν μόνο για την τιμή συνδρομής — όχι για προϊόντα ή υπηρεσίες παρόχων' })
+      }
+
       for (const t of list) {
         if (!TARGET_TYPES.includes(t.target_type)) {
           return reply.code(400).send({ message: 'Άγνωστος τύπος στόχου', type: t.target_type, allowed: TARGET_TYPES })
@@ -452,6 +490,11 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
       for (const p of list) {
         if (!PAGES.includes(p.page)) {
           return reply.code(400).send({ message: 'Άγνωστη σελίδα', page: p.page, allowed: PAGES })
+        }
+        // Αρχική και «όλες οι σελίδες»: μόνο ο διαχειριστής (αλλιώς κάθε
+        // πάροχος θα έβγαζε banner σε κάθε οθόνη της εφαρμογής).
+        if (ADMIN_ONLY_PAGES.includes(p.page) && (req.user as any)?.role !== 'admin') {
+          return reply.code(403).send({ message: 'Η αρχική σελίδα και «όλες οι σελίδες» διατίθενται μόνο από την GlobiPet', page: p.page })
         }
         const slot = p.slot || 'banner'
         if (!SLOTS.includes(slot)) {

@@ -2,6 +2,20 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { identityOf } from '../lib/userName.js'
 
+/**
+ * Δημόσια προβολή. Το feed, μία δημοσίευση και τα σχόλια είναι ανοιχτά σε
+ * όλους και επέστρεφαν το author_email κάθε συντάκτη. Το email φεύγει· το
+ * «είναι δικό μου;» (κουμπί διαγραφής) υπολογίζεται εδώ από το JWT ως is_mine.
+ */
+async function viewerEmail(req: any): Promise<string | null> {
+  if (!req.headers?.authorization) return null
+  try { await req.jwtVerify(); return (req.user as any)?.email ?? null } catch { return null }
+}
+function publicRow<T extends { author_email?: string | null }>(row: T, viewer: string | null) {
+  const { author_email, ...rest } = row
+  return { ...rest, is_mine: !!viewer && author_email === viewer }
+}
+
 const postsRoutes: FastifyPluginAsync = async (app) => {
 
   /**
@@ -52,16 +66,10 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
 
     // Try to identify the caller. This route is public, so a missing or
     // invalid token simply means we skip the liked_by_me enrichment.
-    let email: string | null = null
-    try {
-      await req.jwtVerify()
-      email = (req.user as any)?.email ?? null
-    } catch {
-      /* anonymous visitor */
-    }
+    const email = await viewerEmail(req)
 
     if (!email || posts.length === 0) {
-      return { data: posts.map(p => ({ ...p, liked_by_me: false })), total }
+      return { data: posts.map(p => ({ ...publicRow(p, email), liked_by_me: false })), total }
     }
 
     const likes = await prisma.postLike.findMany({
@@ -70,7 +78,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     })
     const likedIds = new Set(likes.map(l => l.post_id))
     return {
-      data: posts.map(p => ({ ...p, liked_by_me: likedIds.has(p.id) })),
+      data: posts.map(p => ({ ...publicRow(p, email), liked_by_me: likedIds.has(p.id) })),
       total,
     }
   })
@@ -79,7 +87,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/:id', async (req: any, reply) => {
     const post = await prisma.post.findUnique({ where: { id: req.params.id } })
     if (!post) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    return post
+    return publicRow(post, await viewerEmail(req))
   })
 
   // POST create post
@@ -111,7 +119,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
         pet_id: pet_id || null,
       }
     })
-    return reply.code(201).send(post)
+    return reply.code(201).send({ ...post, is_mine: true })
   })
 
   // POST like — idempotent
@@ -187,7 +195,8 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'asc' },
       take: 200,
     })
-    return { data }
+    const viewer = await viewerEmail(req)
+    return { data: data.map(c => publicRow(c, viewer)) }
   })
 
   app.post('/:id/comments', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -212,7 +221,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       }),
       prisma.post.update({ where: { id: post.id }, data: { comments_count: { increment: 1 } } }),
     ])
-    return reply.code(201).send({ data: created })
+    return reply.code(201).send({ data: { ...created, is_mine: true } })
   })
 
   // Comment author, post author, or admin — a post owner can moderate their
@@ -249,7 +258,8 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     if (content !== undefined) data.content = String(content).trim()
     if (image_url !== undefined) data.image_url = image_url || null
     if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : []
-    return prisma.post.update({ where: { id: post.id }, data })
+    const updated = await prisma.post.update({ where: { id: post.id }, data })
+    return { ...updated, is_mine: post.author_email === (req.user as any).email }
   })
 
   // DELETE post — author or admin (moderation)

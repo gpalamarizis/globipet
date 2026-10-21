@@ -273,7 +273,7 @@ export default function SocialScreen() {
                 accessibilityLabel={t('social.share')} onPress={() => sharePost(item)}>
                 <Share2 size={icon.md} color={colors.textMuted} />
               </TouchableOpacity>
-              {isAuthenticated && (item.author_email === (user as any)?.email || (user as any)?.role === 'admin') && (
+              {isAuthenticated && (item.is_mine === true || (user as any)?.role === 'admin') && (
                 <TouchableOpacity style={s.action} activeOpacity={0.7}
                   accessibilityLabel={t('common.delete')} onPress={() => confirmDeletePost(item.id)}>
                   <Trash2 size={icon.md} color={colors.textMuted} />
@@ -350,11 +350,12 @@ export default function SocialScreen() {
               ) : comments.map((c: any) => (
                 <View key={c.id} style={s.comment}>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.commentAuthor}>{c.author_name ?? c.author_email}</Text>
+                    <Text style={s.commentAuthor}>{c.author_name}</Text>
                     <Text style={s.commentTxt}>{c.content}</Text>
                   </View>
                   {/* Ίδιοι κανόνες με το backend/web: ο συντάκτης του σχολίου ή της δημοσίευσης. */}
-                  {(c.author_email === (user as any)?.email || commentsFor?.author_email === (user as any)?.email) && (
+                  {/* is_mine από τον server: τα author_email δεν επιστρέφονται πια δημόσια. */}
+                  {isAuthenticated && (c.is_mine === true || commentsFor?.is_mine === true) && (
                     <TouchableOpacity onPress={() => deleteComment.mutate(c.id)} hitSlop={8}>
                       <Trash2 size={14} color={colors.danger} />
                     </TouchableOpacity>

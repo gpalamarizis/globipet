@@ -1,5 +1,6 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
 import Constants from 'expo-constants'
+import i18n from 'i18next'
 
 let isConfigured = false
 
@@ -61,13 +62,18 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult | null> {
     // Trigger sign-in
     const result = await GoogleSignin.signIn()
 
-    // Handle response (new API in v13+ wraps in {type, data})
-    const data: any = (result as any).data || result
-    const idToken = data.idToken
-    const user = data.user
+    // Handle response (new API in v13+ wraps in {type, data}). Ακύρωση στο
+    // v13+ ΔΕΝ πετά σφάλμα· επιστρέφει { type: 'cancelled', data: null } —
+    // πριν έπεφτε στο «No ID token» και ο χρήστης έβλεπε Alert σφάλματος
+    // επειδή απλώς έκλεισε το παράθυρο. Σιωπηλή ακύρωση (null), όπως το
+    // SIGN_IN_CANCELLED πιο κάτω· οι καλούντες (login/register) δεν δείχνουν τίποτα.
+    if ((result as any)?.type === 'cancelled') return null
+    const data: any = (result as any)?.data || result
+    const idToken = data?.idToken
+    const user = data?.user
 
     if (!idToken || !user) {
-      throw new Error('No ID token received from Google')
+      throw new Error(i18n.t('oauthErrors.googleToken'))
     }
 
     // Get access token
@@ -96,10 +102,10 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult | null> {
       return null  // User cancelled
     }
     if (error.code === statusCodes.IN_PROGRESS) {
-      throw new Error('Η σύνδεση είναι σε εξέλιξη')
+      throw new Error(i18n.t('oauthErrors.inProgress'))
     }
     if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-      throw new Error('Το Google Play Services δεν είναι διαθέσιμο')
+      throw new Error(i18n.t('oauthErrors.playServices'))
     }
     throw error
   }

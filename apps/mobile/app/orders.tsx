@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Image, Platform, StatusBar } from 'react-native'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Image, Platform, StatusBar, Alert, Linking, ActivityIndicator } from 'react-native'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Package, ArrowLeft, Truck } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { ErrorState } from '@/components/ErrorState'
 
 /** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
  *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
@@ -36,11 +37,49 @@ export default function OrdersScreen() {
   const { isAuthenticated } = useAuthStore()
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['my-orders'],
     queryFn: () => api.get('/orders/my').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
   })
+
+  // Απλήρωτη παραγγελία: «Πληρωμή» ξανανοίγει τη Viva για την ΙΔΙΑ
+  // παραγγελία (POST /orders/viva/checkout) και «Ακύρωση» την ακυρώνει
+  // (POST /orders/:id/cancel, μόνο απλήρωτη) — όπως στο web.
+  const pay = useMutation({
+    mutationFn: (orderId: string) => api.post('/orders/viva/checkout', { order_id: orderId }).then(r => ({ orderId, url: r.data?.checkoutUrl })),
+    onSuccess: async ({ orderId, url }) => {
+      if (!url) { Alert.alert(t('common.error'), t('checkout.err_no_page')); return }
+      const ok = await Linking.canOpenURL(url)
+      if (!ok) { Alert.alert(t('common.error'), t('checkout.err_open_page')); return }
+      Linking.openURL(url)
+      // Επιστρέφοντας από τη Viva: επιβεβαίωση πληρωμής (ίδια ροή με το checkout).
+      router.push(`/order-confirmation?id=${encodeURIComponent(orderId)}` as any)
+    },
+    onError: (e: any) => {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('checkout.err_order'))
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+    },
+  })
+  const cancel = useMutation({
+    mutationFn: (orderId: string) => api.post(`/orders/${orderId}/cancel`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+      Alert.alert(t('ordersPay.cancelled'))
+    },
+    onError: (e: any) => {
+      Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong'))
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+    },
+  })
+  const busy = pay.isPending || cancel.isPending
+  const askCancel = (orderId: string) => Alert.alert(
+    t('ordersPay.cancel'), t('ordersPay.confirmCancel'),
+    [
+      { text: t('mySubs.keep'), style: 'cancel' },
+      { text: t('ordersPay.cancel'), style: 'destructive', onPress: () => cancel.mutate(orderId) },
+    ],
+  )
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -92,7 +131,10 @@ export default function OrdersScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }
         ListEmptyComponent={
-          isLoading
+          // Σφάλμα δικτύου ≠ «καμία παραγγελία»: επανάληψη.
+          isError
+            ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+            : isLoading
             ? <View>{[0, 1].map(i => (
                 <View key={i} style={s.card}>
                   <View style={[s.skeleton, { height: 14, width: '40%', borderRadius: radius.sm }]} />
@@ -112,6 +154,7 @@ export default function OrdersScreen() {
         renderItem={({ item }) => {
           const st = STATUS[item.status] ?? STATUS.pending
           const items = Array.isArray(item.items) ? item.items : []
+          const payable = item.payment_status === 'unpaid' && item.status !== 'cancelled'
           return (
             // Η κάρτα ανοίγει τη λεπτομέρεια, όπως στο web (/orders/:id).
             <TouchableOpacity style={s.card} activeOpacity={0.85}
@@ -156,6 +199,24 @@ export default function OrdersScreen() {
                 <Text style={s.totalLabel}>{t('common.total')}</Text>
                 <Text style={s.total}>€{item.total_amount?.toFixed(2)}</Text>
               </View>
+
+              {payable && (
+                <View style={s.payBox}>
+                  <Text style={s.payHint}>{t('ordersPay.unpaidHint')}</Text>
+                  <View style={s.payRow}>
+                    <TouchableOpacity style={[s.payBtn, s.cancelBtn]} activeOpacity={0.85} disabled={busy}
+                      onPress={() => askCancel(item.id)}>
+                      <Text style={s.cancelBtnText}>{t('ordersPay.cancel')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.payBtn, s.payBtnPrimary, busy && { opacity: 0.6 }]} activeOpacity={0.85} disabled={busy}
+                      onPress={() => pay.mutate(item.id)}>
+                      {pay.isPending && pay.variables === item.id
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Text style={s.payBtnText}>{t('ordersPay.pay')}</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </TouchableOpacity>
           )
         }}
@@ -222,6 +283,21 @@ const s = StyleSheet.create({
   },
   totalLabel: { ...type.body, color: colors.textMuted },
   total: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold },
+
+  payBox: {
+    marginTop: space.md, paddingTop: space.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight, gap: space.sm,
+  },
+  payHint: { ...type.caption, color: colors.warning },
+  payRow: { flexDirection: 'row', gap: space.sm },
+  payBtn: {
+    flex: 1, height: touch.min, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  payBtnPrimary: { backgroundColor: colors.brand },
+  payBtnText: { ...type.body, color: '#fff', fontWeight: weight.bold },
+  cancelBtn: { borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.surface },
+  cancelBtnText: { ...type.body, color: colors.danger, fontWeight: weight.semibold },
 
   skeleton: { backgroundColor: colors.surfaceAlt },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: space.xl, gap: space.sm },

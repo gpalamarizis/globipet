@@ -2,7 +2,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame, Inbox } from 'lucide-react'
 import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -43,6 +43,15 @@ const communityDropdown = [
   { path: '/shelters',    labelKey: 'nav.shelters',    icon: HomeIcon,      color: 'text-amber-600' },
   { path: '/welfare-organisations', labelKey: 'nav.welfareOrgs', icon: HeartHandshake, color: 'text-rose-500' },
 ]
+
+/**
+ * Σελίδες κοινές για κάθε λογαριασμό — και για τον καθαρό πάροχο.
+ *
+ * Λογαριασμός (προφίλ: αλλαγή κωδικού, ειδοποιήσεις, τα δεδομένα μου),
+ * μηνύματα, νομικά, συγκαταθέσεις (cookies) και βοήθεια. Ίδια λίστα με το
+ * PROVIDER_SHARED του κινητού (mobile/app/_layout.tsx).
+ */
+const PROVIDER_SHARED_PATHS = ['/profile', '/inbox', '/privacy', '/terms', '/cookies', '/help', '/faq', '/contact', '/about']
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────
 const bottomTabs = [
@@ -123,6 +132,7 @@ function ThemeToggle() {
 export default function MainLayout() {
   const { user: authUser } = useAuthStore()
   const navigateGuard = useNavigate()
+  const { pathname: guardPath } = useLocation()
   /**
    * Ο καθαρός πάροχος δεν βλέπει το καταναλωτικό site.
    *
@@ -130,10 +140,15 @@ export default function MainLayout() {
    * έναν κτηνίατρο ή ένα κομμωτήριο. Αν φτάσει εδώ (σελιδοδείκτης, πίσω
    * από browser, σύνδεσμος), τον στέλνουμε στον πίνακά του. Ο «both»
    * είναι και ιδιοκτήτης και βλέπει τα πάντα.
+   *
+   * Εξαίρεση: οι σελίδες λογαριασμού, νομικών και βοήθειας
+   * (PROVIDER_SHARED_PATHS). Χωρίς αυτές ο καθαρός πάροχος δεν είχε αλλαγή
+   * κωδικού, εξαγωγή/διαγραφή δεδομένων ή τους όρους — τον έστελνε πίσω.
    */
+  const providerAllowed = PROVIDER_SHARED_PATHS.includes(guardPath.replace(/\/+$/, '') || '/')
   useEffect(() => {
-    if (authUser?.role === 'service_provider') navigateGuard('/provider', { replace: true })
-  }, [authUser?.role, navigateGuard])
+    if (authUser?.role === 'service_provider' && !providerAllowed) navigateGuard('/provider', { replace: true })
+  }, [authUser?.role, providerAllowed, navigateGuard])
 
   const { t } = useTranslation()
   const location = useLocation()
@@ -187,6 +202,20 @@ export default function MainLayout() {
     queryFn: () => api.get('/notifications?unread=true').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
   })
+
+  // Αδιάβαστα μηνύματα παρόχων — ίδιο query (και cache) με τη σελίδα /inbox.
+  const { data: inbox } = useQuery<{ unread: number }>({
+    queryKey: ['inbox'],
+    queryFn: () => api.get('/customers/inbox').then(r => r.data),
+    enabled: isAuthenticated,
+  })
+  const inboxUnread = inbox?.unread ?? 0
+  const inboxBadge = inboxUnread > 0 && (
+    <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-brand-900 text-white text-[11px] font-bold flex items-center justify-center"
+      aria-label={t('nav.unread', { count: inboxUnread })}>
+      {inboxUnread > 99 ? '99+' : inboxUnread}
+    </span>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -280,11 +309,13 @@ export default function MainLayout() {
                           { to: '/orders',     icon: ShoppingBag,   label: t('nav.orders') },
                           { to: '/wishlist',   icon: Heart,         label: t('nav.wishlist') },
                           { to: '/telehealth', icon: Video,         label: t('nav.telehealth') },
+                          { to: '/inbox',      icon: Inbox,         label: t('pgInbox.title') },
                         ].map(item => (
                           <Link key={item.to} to={item.to} onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <item.icon size={15} className="text-gray-400" />
                             {item.label}
+                            {item.to === '/inbox' && inboxBadge}
                           </Link>
                         ))}
                         {(user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin') && (
@@ -489,11 +520,13 @@ export default function MainLayout() {
                         { to: '/bookings', icon: Calendar,    label: t('nav.myBookings') },
                         { to: '/orders',   icon: ShoppingBag, label: t('nav.orders') },
                         { to: '/wishlist', icon: Heart,       label: t('nav.wishlist') },
+                        { to: '/inbox',    icon: Inbox,       label: t('pgInbox.title') },
                       ].map(item => (
                         <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)}
                           className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                           <item.icon size={18} className="text-gray-400 shrink-0" />
                           {item.label}
+                          {item.to === '/inbox' && inboxBadge}
                         </Link>
                       ))}
                       {(user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin') && (

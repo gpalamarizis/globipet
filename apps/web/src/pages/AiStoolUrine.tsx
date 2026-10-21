@@ -1,6 +1,6 @@
 ﻿import { useState, useRef } from 'react'
 import { Camera, Upload, X, FlaskConical, AlertTriangle, CheckCircle, Loader2, ChevronDown, ChevronUp, Info } from 'lucide-react'
-import { api, uploadFile } from '@/lib/api'
+import { api, uploadFile, usePrivateUrl } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -54,6 +54,8 @@ export default function AiStoolUrine() {
   const [sampleType, setSampleType] = useState<SampleType>('stool')
   const [species, setSpecies] = useState<Species>('dog')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  // Το upload δίνει αναφορά r2priv:// (ιδιωτικό bucket) — για εμφάνιση προσωρινός σύνδεσμος.
+  const imageSrc = usePrivateUrl(imageUrl)
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
@@ -185,7 +187,7 @@ export default function AiStoolUrine() {
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('pgStool.photo')}</p>
         {imageUrl ? (
           <div className="relative">
-            <img src={imageUrl} alt={t('pgStool.sampleAlt')} className="w-full max-h-64 object-contain rounded-xl bg-gray-50 dark:bg-gray-800" />
+            <img src={imageSrc || undefined} alt={t('pgStool.sampleAlt')} className="w-full max-h-64 object-contain rounded-xl bg-gray-50 dark:bg-gray-800" />
             <button onClick={() => { setImageUrl(null); setResult(null) }}
               className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow flex items-center justify-center hover:bg-red-50">
               <X size={14} className="text-gray-600" />
@@ -240,7 +242,7 @@ export default function AiStoolUrine() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.breed')}</label>
-                <input value={form.breed} onChange={e => setForm(f => ({...f, breed: e.target.value}))}
+                <input value={form.breed} maxLength={400} onChange={e => setForm(f => ({...f, breed: e.target.value}))}
                   placeholder={t('pgStool.breedPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
               </div>
               <div>
@@ -273,32 +275,32 @@ export default function AiStoolUrine() {
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.recentMeds')}</label>
-              <input value={form.recent_medications} onChange={e => setForm(f => ({...f, recent_medications: e.target.value}))}
+              <input value={form.recent_medications} maxLength={400} onChange={e => setForm(f => ({...f, recent_medications: e.target.value}))}
                 placeholder={t('pgStool.recentMedsPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.dietChange')}</label>
-              <input value={form.diet_change} onChange={e => setForm(f => ({...f, diet_change: e.target.value}))}
+              <input value={form.diet_change} maxLength={400} onChange={e => setForm(f => ({...f, diet_change: e.target.value}))}
                 placeholder={t('pgStool.dietChangePh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.lastNormal')}</label>
-              <input value={form.last_normal_stool} onChange={e => setForm(f => ({...f, last_normal_stool: e.target.value}))}
+              <input value={form.last_normal_stool} maxLength={400} onChange={e => setForm(f => ({...f, last_normal_stool: e.target.value}))}
                 placeholder={t('pgStool.lastNormalPh')} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400" />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.symptoms')}</label>
-              <textarea value={form.symptoms} onChange={e => setForm(f => ({...f, symptoms: e.target.value}))}
+              <textarea value={form.symptoms} maxLength={2000} onChange={e => setForm(f => ({...f, symptoms: e.target.value}))}
                 placeholder={t('pgStool.symptomsPh')} rows={2}
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
             </div>
 
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">{t('pgStool.additional')}</label>
-              <textarea value={form.additional_notes} onChange={e => setForm(f => ({...f, additional_notes: e.target.value}))}
+              <textarea value={form.additional_notes} maxLength={2000} onChange={e => setForm(f => ({...f, additional_notes: e.target.value}))}
                 placeholder={t('pgStool.additionalPh')} rows={2}
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
             </div>

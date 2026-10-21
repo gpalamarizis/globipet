@@ -135,8 +135,10 @@ export default function AdminVerificationsPage() {
                       {t('adminVerif.yearsExperience', { count: r.years_experience })}
                     </span>
                   )}
-                  {r.website && (
-                    <a href={r.website} target="_blank" rel="noopener noreferrer"
+                  {/* Μόνο http(s): το website το γράφει ο πάροχος, και ένα
+                      `javascript:` εκτελούνταν με κλικ στη συνεδρία του διαχειριστή. */}
+                  {r.website && /^https?:\/\//i.test(String(r.website).trim()) && (
+                    <a href={String(r.website).trim()} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-brand-900 hover:underline">
                       <Globe size={14} />{t('adminVerif.website')}
                     </a>

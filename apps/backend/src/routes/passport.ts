@@ -1,5 +1,6 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
 /**
  * Strip fields that decide who a medical record belongs to.
@@ -12,6 +13,15 @@ import prisma from '../lib/prisma.js'
 function sanitizeMedicalUpdate(body: any) {
   const { id, pet_id, owner_email, created_at, updated_at, ...rest } = (body ?? {}) as any
   return rest
+}
+
+/**
+ * Πρόσβαση κτηνιάτρου που δεν έχει λήξει. Ο ιδιοκτήτης ορίζει «Λήξη
+ * πρόσβασης», αλλά κανένας έλεγχος δεν κοιτούσε το expires_at: η πρόσβαση
+ * ίσχυε για πάντα. Χωρίς λήξη (null) = μέχρι ανάκληση, όπως πριν.
+ */
+function accessNotExpired() {
+  return { OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] }
 }
 
 const routes: FastifyPluginAsync = async (app) => {
@@ -98,7 +108,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
     // Owner or approved vet can view
     const hasAccess = pet.owner_email === email ||
-      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved' } })
+      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
     if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const [vaccinations, healthRecords, pedigree, travelDocs,
@@ -131,14 +141,81 @@ const routes: FastifyPluginAsync = async (app) => {
   })
 
   // ─── PDF EXPORT ──────────────────────────────────────────────────
-  app.get('/:petId/pdf', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
+  /**
+   * Βραχύβιος υπογεγραμμένος σύνδεσμος για το έγγραφο εκτύπωσης.
+   *
+   * ΓΙΑΤΙ
+   *   Το έγγραφο ανοίγει σε νέα καρτέλα (web) ή στον browser του κινητού.
+   *   Εκεί δεν υπάρχει κεφαλίδα Authorization, οπότε ένας απλός σύνδεσμος
+   *   έπαιρνε 401. Ο client ζητά πρώτα (με τη σύνδεσή του) έναν σύνδεσμο που
+   *   ισχύει 5 λεπτά για ΕΝΑ ζώο και ΕΝΑΝ χρήστη.
+   *
+   *   Το token ΔΕΝ είναι JWT: με JWT θα γινόταν δεκτό και ως κανονική
+   *   σύνδεση σε κάθε άλλο endpoint. Είναι HMAC-SHA256 με το JWT_SECRET και
+   *   δικό του πρόθεμα σκοπού, οπότε ισχύει μόνο εδώ.
+   */
+  const PDF_TTL_MS = 5 * 60 * 1000
+  const pdfSecret = () => process.env.JWT_SECRET || 'dev-secret-min-32-chars-here!!'
+  const pdfSig = (payload: string) =>
+    createHmac('sha256', pdfSecret()).update(`passport-pdf|${payload}`).digest('base64url')
+  // Στο token μπαίνει το id του χρήστη, όχι το email: το URL καταγράφεται σε
+  // logs (proxy, Railway) και δεν θέλουμε εκεί προσωπικά δεδομένα.
+  function signPdfToken(petId: string, userId: string): string {
+    const payload = Buffer.from(JSON.stringify({ p: petId, u: userId, x: Date.now() + PDF_TTL_MS })).toString('base64url')
+    return `${payload}.${pdfSig(payload)}`
+  }
+  /** Το id του χρήστη αν το token είναι έγκυρο, μη ληγμένο και για αυτό το ζώο. */
+  function verifyPdfToken(token: string, petId: string): string | null {
+    const [payload, sig] = String(token).split('.')
+    if (!payload || !sig) return null
+    const want = Buffer.from(pdfSig(payload))
+    const got = Buffer.from(sig)
+    if (want.length !== got.length || !timingSafeEqual(want, got)) return null
+    try {
+      const d = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+      if (d?.p !== petId || typeof d?.u !== 'string' || !(Number(d?.x) > Date.now())) return null
+      return d.u
+    } catch { return null }
+  }
+
+  app.post('/:petId/pdf-link', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const { email, id: userId } = req.user as any
     const { petId } = req.params as any
+    const pet = await prisma.pet.findUnique({ where: { id: petId }, select: { owner_email: true } })
+    if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    const hasAccess = pet.owner_email === email ||
+      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
+    if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+
+    const path = `/passport/${encodeURIComponent(petId)}/pdf?t=${signPdfToken(petId, String(userId))}`
+    const base = process.env.PUBLIC_API_URL || 'https://globipetbackend-production.up.railway.app/api'
+    // path: σχετικό με τη βάση του api του client (που ξέρει τη δική του)· url: πλήρες.
+    return { path, url: `${base}${path}`, expires_in: PDF_TTL_MS / 1000 }
+  })
+
+  app.get('/:petId/pdf', async (req: any, reply) => {
+    const { petId } = req.params as any
+    // Δύο τρόποι: υπογεγραμμένος σύνδεσμος (?t=) ή κανονική σύνδεση (Bearer).
+    let email: string
+    const t = (req.query as any)?.t
+    if (t) {
+      const userId = verifyPdfToken(String(t), petId)
+      const owner = userId
+        ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+        : null
+      if (!owner) return reply.code(401).send({ message: 'Ο σύνδεσμος έληξε. Πάτησε ξανά «Εξαγωγή PDF».' })
+      // Η πρόσβαση ξαναελέγχεται παρακάτω (μπορεί να ανακλήθηκε στο μεταξύ).
+      email = owner.email
+    } else {
+      await (app as any).authenticate(req, reply)
+      if (reply.sent) return reply
+      email = (req.user as any).email
+    }
 
     const pet = await prisma.pet.findUnique({ where: { id: petId } })
     if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
     const hasAccess = pet.owner_email === email ||
-      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved' } })
+      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
     if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const [vaccinations, healthRecords, medications, labResults, imaging, surgeries, allergies, chronicConditions, dentalRecords, weightRecords] = await Promise.all([
@@ -269,6 +346,12 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
 </body></html>`
 
     reply.header('Content-Type', 'text/html; charset=utf-8')
+    // Ιατρικά δεδομένα: χωρίς cache, χωρίς Referer (το URL έχει το token),
+    // και χωρίς κανένα script — το έγγραφο είναι μόνο κείμενο και στυλ.
+    reply.header('Cache-Control', 'no-store')
+    reply.header('Referrer-Policy', 'no-referrer')
+    reply.header('X-Robots-Tag', 'noindex')
+    reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:")
     return reply.send(html)
   })
 
@@ -555,6 +638,10 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
     const { provider_email, provider_name, reason, expires_at } = req.body as any
     if (!provider_email) return reply.code(400).send({ message: 'Λείπει το email παρόχου' })
+    // Μη έγκυρη ημερομηνία έδινε Invalid Date → 500 από το Prisma.
+    if (expires_at && Number.isNaN(new Date(expires_at).getTime())) {
+      return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία λήξης' })
+    }
     const access = await prisma.petPassportAccess.upsert({
       where: { pet_id_provider_email: { pet_id: req.params.petId, provider_email } },
       create: { pet_id: req.params.petId, owner_email: email, provider_email, provider_name: provider_name || provider_email, reason, status: 'approved', granted_at: new Date(), expires_at: expires_at ? new Date(expires_at) : null },
@@ -575,7 +662,7 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.get('/my-patients', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     const accesses = await prisma.petPassportAccess.findMany({
-      where: { provider_email: email, status: 'approved' },
+      where: { provider_email: email, status: 'approved', ...accessNotExpired() },
       orderBy: { granted_at: 'desc' },
     })
     if (!accesses.length) return reply.send({ data: [] })

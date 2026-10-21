@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
@@ -44,7 +45,20 @@ export default function Profile() {
     })
   }, [user])
 
-  const hasGoogleAuth = !!(user as any)?.google_id
+  // Λογαριασμός Google/Facebook χωρίς κωδικό: καμία αλλαγή κωδικού (ίδιος
+  // κανόνας με το μενού του παρόχου, ProviderLayout, και με το κινητό).
+  const hasGoogleAuth = !!(user as any)?.google_id || !!(user as any)?.facebook_id
+
+  // Σύνδεσμοι από το μενού λογαριασμού του παρόχου (/profile#password κ.λπ.):
+  // ο router δεν κυλά μόνος του στο #, οπότε το κάνουμε εδώ.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (!hash) return
+    const id = setTimeout(() => {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 150)
+    return () => clearTimeout(id)
+  }, [hash])
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
@@ -308,13 +322,13 @@ export default function Profile() {
 
       {/* Ειδοποιήσεις — η κάρτα κρύβεται μόνη της σε browser που δεν τις
           υποστηρίζει, οπότε δεν χρειάζεται έλεγχος εδώ. */}
-      <div className="mt-6">
+      <div id="notifications" className="mt-6 scroll-mt-20">
         <NotificationSettingsCard />
       </div>
 
       {/* Change Password — only for users with an actual password (not Google sign-in) */}
       {!hasGoogleAuth && (
-        <div className="mt-6">
+        <div id="password" className="mt-6 scroll-mt-20">
           <ChangeMyPasswordCard />
         </div>
       )}
@@ -322,7 +336,7 @@ export default function Profile() {
       {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων. ΕΚΤΟΣ του
           ελέγχου Google: το δικαίωμα ισχύει για κάθε λογαριασμό, όπως και
           στο κινητό. */}
-      <div className="mt-6">
+      <div id="my-data" className="mt-6 scroll-mt-20">
         <MyDataCard />
       </div>
 

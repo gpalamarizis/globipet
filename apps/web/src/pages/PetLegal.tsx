@@ -81,7 +81,7 @@ export default function PetLegalPage() {
       setQuestion('')
       setAnswer(data)
     },
-    onError: () => toast.error(t('pgLegal.errAsk')),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('pgLegal.errAsk')),
   })
 
   const handleAsk = (q: string) => {
@@ -124,6 +124,7 @@ export default function PetLegalPage() {
             <div className="flex gap-2">
               <textarea
                 value={question}
+                maxLength={2000}
                 onChange={e => setQuestion(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAsk(question) } }}
                 placeholder={t('pgLegal.placeholder')}
@@ -285,7 +286,7 @@ export default function PetLegalPage() {
                 <p className="text-3xl mb-2">⚖️</p>
                 <p className="text-sm text-gray-500 mb-3">{t('pgLegal.comingSoon')}</p>
                 <p className="text-xs text-gray-400">{t('pgLegal.registerLawyerHint')}</p>
-                <a href="/provider/register" className="btn-primary text-xs px-4 py-2 mt-3 inline-block">{t('pgLegal.registerLawyer')}</a>
+                <a href="/register?role=service_provider" className="btn-primary text-xs px-4 py-2 mt-3 inline-block">{t('pgLegal.registerLawyer')}</a>
               </div>
             ) : (
               <div className="space-y-3">

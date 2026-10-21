@@ -49,10 +49,36 @@ const CARD_ROUTES = [
   'verification',
 ] as const
 
+/**
+ * Οθόνες κοινές για κάθε λογαριασμό, άρα και για τον καθαρό πάροχο:
+ * λογαριασμός, νομικά, συγκαταθέσεις, βοήθεια, επαλήθευση, μηνύματα.
+ * Χωρίς αυτή τη λίστα το παρακάτω effect τον έστελνε αμέσως πίσω στο
+ * (provider) και οι σύνδεσμοι του «Περισσότερα» δεν άνοιγαν ποτέ.
+ * Ίδια λίστα με το PROVIDER_SHARED_PATHS του web (MainLayout.tsx).
+ */
+const PROVIDER_SHARED = new Set([
+  'about',
+  'change-password',
+  'consents',
+  'contact',
+  'faq',
+  'help',
+  'inbox',
+  'language',
+  'notification-settings',
+  'notifications',
+  'privacy',
+  'privacy-policy',
+  'reset-password',
+  'terms',
+  'verification',
+])
+
 const MODAL_ROUTES = [
   'auth/forgot-password',
   'auth/login',
   'auth/register',
+  'auth/verify-email',
 ] as const
 
 export default function RootLayout() {
@@ -134,7 +160,8 @@ export default function RootLayout() {
     const first = segments[0] as string | undefined
     const inProvider = first === '(provider)'
     const inAuth = first === 'auth'
-    if (isAuthenticated && role === 'service_provider' && !inProvider && !inAuth) {
+    const shared = !!first && PROVIDER_SHARED.has(first)
+    if (isAuthenticated && role === 'service_provider' && !inProvider && !inAuth && !shared) {
       router.replace('/(provider)' as any)
     }
     if ((!isAuthenticated || role !== 'service_provider') && inProvider && role !== 'both') {

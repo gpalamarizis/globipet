@@ -811,7 +811,8 @@
     "crt_prolonged": "2-3 sec (Abnormal)",
     "crt_critical": "> 3 sec (Critical)",
     "destCountry": "Destination country",
-    "bcsRange": "Body condition score (BCS) must be between 1 and 9."
+    "bcsRange": "Body condition score (BCS) must be between 1 and 9.",
+    "st_expired": "Expired"
   },
   "play": {
     "create_first": "Create the first one and invite other owners.",
@@ -2263,5 +2264,164 @@
     "providerRefunded": "The customer is receiving a full refund of €{{amount}}.",
     "refunding": "Refund in progress",
     "contactSupport": "The session has been paid; to cancel it, please contact support."
+  },
+  "emailVerify": {
+    "title": "Confirm your email",
+    "sentTo": "We sent a link to {{email}}. Open it to confirm your account and activate your free AI trial.",
+    "successTitle": "Your email is confirmed",
+    "successBody": "Thank you! Your account is fully active and your free AI trial has started.",
+    "continue": "Continue to the app",
+    "resend": "Resend",
+    "iVerified": "I've confirmed it",
+    "notYet": "Not confirmed yet. Open the link in your email and try again.",
+    "alreadyVerified": "Your email is already confirmed",
+    "sent": "We sent you a new confirmation email",
+    "bannerText": "Confirm your email — we sent you a link."
+  },
+  "aiSub": {
+    "activeTitle": "Your AI subscription is active",
+    "cancelledTitle": "Your AI subscription has been cancelled",
+    "plan": "Plan: {{plan}}",
+    "paymentFailedHint": "The last charge to your card failed, so AI features are on hold until the payment goes through.",
+    "confirmText": "Your AI subscription is cancelled immediately and your card will not be charged again. Access to AI features stops now. Amounts already charged are not refunded. You can start a new subscription whenever you like."
+  },
+  "providerPay": {
+    "awaitingPayment": "Awaiting payment"
+  },
+  "ordersPay": {
+    "pay": "Pay",
+    "cancel": "Cancel order",
+    "confirmCancel": "Cancel this order? It has not been paid, so nothing will be charged.",
+    "cancelled": "The order has been cancelled",
+    "unpaidHint": "This order has not been paid yet."
+  },
+  "providerAccount": {
+    "verifyAccount": "Account verification",
+    "verifyTitle": "Verify your account",
+    "verifyRejectedTitle": "Your verification request was rejected — submit a new one",
+    "verifyDesc": "Verified providers appear with a verified badge and earn customers’ trust."
+  },
+  "trialVerify": {
+    "confirmEmail": "Confirm your email to start your free trial."
+  },
+  "loadState": {
+    "notFound": "Not found"
+  },
+  "oauthErrors": {
+    "inProgress": "Sign-in is already in progress",
+    "playServices": "Google Play Services is not available",
+    "facebookToken": "We didn’t receive an access token from Facebook",
+    "googleToken": "We didn’t receive sign-in details from Google. Please try again."
+  },
+  "notifChannel": {
+    "name": "GlobiPet notifications"
+  },
+  "reviewReply": {
+    "tab": "Reviews",
+    "providerReply": "Provider reply",
+    "yourReply": "Your reply",
+    "placeholder": "Write a courteous reply to the customer…",
+    "publicHint": "The reply is shown publicly under the review",
+    "reply": "Reply",
+    "edit": "Edit reply",
+    "remove": "Delete reply",
+    "confirmRemove": "Delete your reply to this review?",
+    "saved": "Reply saved",
+    "removed": "Reply deleted",
+    "count": "Reviews: {{count}}",
+    "unansweredCount": "Unanswered: {{count}}",
+    "onlyUnanswered": "Unanswered",
+    "allAnswered": "You have replied to every review.",
+    "empty": "You have not received any reviews yet.",
+    "product": "Product",
+    "service": "Service",
+    "noComment": "Rating only, no comment.",
+    "showLess": "Show less"
+  },
+  "staffPrices": {
+    "title": "Prices per service/package",
+    "hint": "Set a price only where it differs for this professional. Empty field = the package’s base price.",
+    "loadError": "Prices could not be loaded. Please try again.",
+    "noPackages": "This service has no packages yet. Add packages to set prices per professional.",
+    "base": "Base: {{price}}",
+    "priceFor": "Price for “{{name}}”",
+    "invalid": "Invalid price: enter an amount in euros (e.g. 35 or 35.50) or leave it empty.",
+    "save": "Save prices",
+    "saved": "Prices saved",
+    "afterSave": "You can set prices per service/package after saving the team member.",
+    "unsaved": "Unsaved prices"
+  },
+  "eventForm": {
+    "newButton": "New event",
+    "editButton": "Edit",
+    "newTitle": "New event",
+    "editTitle": "Edit event",
+    "title": "Title",
+    "type": "Category",
+    "description": "Description",
+    "termsLocked": "There are paid registrations: the date, time and price can no longer be changed. Contact support if you need a change.",
+    "date": "Start date",
+    "time": "Start time",
+    "endDate": "End date",
+    "endDateHint": "Only for multi-day events; times are Greek local time.",
+    "location": "Venue",
+    "locationPlaceholder": "e.g. Tritsis Park",
+    "city": "City",
+    "capacity": "Capacity (people)",
+    "capacityPlaceholder": "No limit",
+    "price": "Price per person",
+    "pricePlaceholder": "Free",
+    "priceHint": "Empty = free. Payments go through Viva, in euros only. Anyone who cancels up to {{hours}} hours before the start gets a full refund; if you cancel the event, every payment is refunded.",
+    "image": "Image",
+    "addImage": "Add image",
+    "changeImage": "Change image",
+    "errRequired": "Fill in the title, date, time, venue and city.",
+    "errDate": "The date must be in YYYY-MM-DD format (e.g. 2026-11-15).",
+    "errPast": "The start date is in the past.",
+    "errTime": "The time must be in HH:MM format (e.g. 18:30).",
+    "errEndDate": "The end date must be YYYY-MM-DD and not before the start.",
+    "errPrice": "Invalid price: enter an amount in euros (e.g. 15 or 15.50) or leave it empty.",
+    "errPaidFormat": "A paid event needs a YYYY-MM-DD date and an HH:MM time.",
+    "errCapacity": "Capacity must be a whole number of 1 or more, or empty for no limit.",
+    "errCapacityBelow": "Capacity cannot be lower than the people already registered ({{count}}).",
+    "created": "Event created",
+    "updated": "Event updated",
+    "create": "Create event",
+    "notAllowed": "Only the organiser can edit this event.",
+    "errPermission": "Photo access permission is needed to add an image.",
+    "types": {
+      "meetup": "Meetup",
+      "show": "Show",
+      "adoption": "Adoption",
+      "training": "Training",
+      "charity": "Charity",
+      "competition": "Competition"
+    }
+  },
+  "eventAttendees": {
+    "title": "Participants",
+    "summary": "Registrations: {{count}} · People: {{people}}",
+    "loadError": "The participant list could not be loaded. Please try again.",
+    "empty": "No registrations yet.",
+    "people_one": "{{count}} person",
+    "people": "{{count}} people",
+    "statusPaid": "Paid",
+    "statusFree": "Free",
+    "statusPending": "Payment pending",
+    "statusRefunding": "Refund in progress",
+    "statusRefundFailed": "Refund pending",
+    "statusRefunded": "Refunded",
+    "statusCancelled": "Cancelled"
+  },
+  "aiGate": {
+    "paymentFailedTitle": "Your AI subscription payment failed",
+    "cancelledText": "Choose a plan to keep using the AI features.",
+    "subscriptionLabel": "AI subscription",
+    "paymentFailedShort": "Payment failed",
+    "required": "AI subscription required"
+  },
+  "orderOos": {
+    "refunded": "The product sold out — your money has been refunded",
+    "refundDelayed": "The product sold out — the refund is delayed and will be completed by our team"
   }
 }

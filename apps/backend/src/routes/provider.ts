@@ -71,6 +71,18 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
     const full_name = String(b.full_name || '').trim()
     if (!full_name) return reply.code(400).send({ message: 'Το ονοματεπώνυμο είναι υποχρεωτικό' })
 
+    // Ιστότοπος: εμφανίζεται ως σύνδεσμος στη διαχείριση — μόνο http(s).
+    // Χωρίς σχήμα (π.χ. «www.example.gr», όπως το γράφουν οι χρήστες και
+    // όπως το στέλνει η ήδη εγκατεστημένη εφαρμογή) → https://. Ό,τι άλλο
+    // (javascript:, data:, …) → 400.
+    let website: string | null = null
+    const rawSite = b.website ? String(b.website).trim().slice(0, 300) : ''
+    if (rawSite) {
+      if (/^https?:\/\/[^\s]+$/i.test(rawSite)) website = rawSite
+      else if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(rawSite)) website = `https://${rawSite}`.slice(0, 300)
+      else return reply.code(400).send({ message: 'Μη έγκυρη διεύθυνση (URL)' })
+    }
+
     // Μία εκκρεμής τη φορά — αλλιώς ο ίδιος γεμίζει την ουρά πατώντας ξανά.
     const pending = await prisma.providerVerificationRequest.findFirst({
       where: { user_email: email, status: 'pending' },
@@ -98,7 +110,7 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
           ? b.specializations.split(',').map((x: string) => x.trim()).filter(Boolean)
           : Array.isArray(b.specializations) ? b.specializations : [],
         bio: b.bio ? String(b.bio).slice(0, 4000) : null,
-        website: b.website ? String(b.website).slice(0, 300) : null,
+        website,
       },
       select: { id: true, status: true, created_at: true },
     })
@@ -138,8 +150,10 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
     if (!ALLOWED.includes(status)) {
       return reply.code(400).send({ message: 'Μη έγκυρη κατάσταση', allowed: ALLOWED })
     }
-    // Completing a booking implies it was paid for.
-    if (status === 'completed' && existing.payment_status !== 'paid') {
+    // Επιβεβαίωση, «ολοκληρώθηκε» και «δεν προσήλθε» μόνο για πληρωμένη
+    // κράτηση. Πριν, ο πάροχος επιβεβαίωνε απλήρωτη κράτηση και ο πελάτης
+    // πίστευε ότι το ραντεβού έχει κλειστεί (χωρίς να έχει πληρώσει τίποτα).
+    if ((status === 'confirmed' || status === 'completed' || status === 'no_show') && existing.payment_status !== 'paid') {
       return reply.code(400).send({ message: 'Η κράτηση δεν έχει πληρωθεί' })
     }
 

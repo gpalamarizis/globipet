@@ -9,6 +9,7 @@ import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { AiSubscriptionManage } from './PricingPage'
 
 export default function PetMedicalCenter() {
   const { t, i18n } = useTranslation()
@@ -72,6 +73,21 @@ export default function PetMedicalCenter() {
         <p className="text-amber-400 text-sm font-medium">{t('pgMedical.trialExpired')}</p>
       )
     }
+    // Ακυρωμένη ή με αποτυχημένη πληρωμή: το δωρεάν trial δεν ξαναδίνεται
+    // (start-trial μόνο από 'none') — επιλογή πλάνου στη σελίδα τιμών.
+    if (status?.ai_subscription_status === 'cancelled' || status?.ai_subscription_status === 'payment_failed') {
+      return (
+        <Link to="/pricing" className="bg-amber-400 text-gray-900 font-bold text-sm px-6 py-3 rounded-xl hover:bg-amber-300 transition-colors inline-block">
+          {t('pgMedical.choosePlan')}
+        </Link>
+      )
+    }
+    // Η δοκιμή ξεκινά με την επιβεβαίωση του email (backend) — όχι κουμπί.
+    if ((user as any)?.email_verified === false) {
+      return (
+        <p className="text-amber-400 text-sm font-medium">{t('trialVerify.confirmEmail')}</p>
+      )
+    }
     return (
       <button
         onClick={() => startTrial.mutate()}
@@ -99,6 +115,11 @@ export default function PetMedicalCenter() {
               {t('pgMedical.heroSubtitle')}
             </p>
             {renderTrialCta()}
+            {!isAdmin && (
+              <div className="mt-5 max-w-md empty:hidden">
+                <AiSubscriptionManage dark />
+              </div>
+            )}
           </div>
         </div>
       </section>

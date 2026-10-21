@@ -79,11 +79,16 @@ export default function AiFeatureGuard({ children }: { children: ReactNode }) {
           <Lock size={26} className="text-brand-900 dark:text-yellow-400"/>
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('aiFeatureGuard.title')}
+          {st === 'payment_failed' ? t('aiGate.paymentFailedTitle')
+            : st === 'cancelled' ? t('aiSub.cancelledTitle')
+            : t('aiFeatureGuard.title')}
         </h2>
+        {/* Δωρεάν δοκιμή μόνο από 'none' (server start-trial)· ληγμένη,
+            ακυρωμένη ή με αποτυχημένη πληρωμή → επιλογή πλάνου (όπως AiGate κινητού). */}
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {st === 'expired'
-            ? t('aiFeatureGuard.expired')
+          {st === 'expired' ? t('aiFeatureGuard.expired')
+            : st === 'payment_failed' ? t('aiSub.paymentFailedHint')
+            : st && st !== 'none' ? t('aiGate.cancelledText')
             : t('aiFeatureGuard.upgrade')}
         </p>
         <Link to="/pricing" className="btn-primary inline-flex items-center gap-2">

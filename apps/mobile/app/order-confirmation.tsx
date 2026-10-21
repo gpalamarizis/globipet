@@ -38,6 +38,8 @@ export default function OrderConfirmationScreen() {
   // Αποτέλεσμα του verify (orders.ts): 'refunded' / 'refund_failed' = η
   // πληρωμή επιστράφηκε (ή η επιστροφή καθυστερεί) — όπως στο booking-confirmation.
   const [result, setResult] = useState<string | null>(null)
+  // 'out_of_stock': το απόθεμα εξαντλήθηκε τη στιγμή της πληρωμής (orders.ts).
+  const [reason, setReason] = useState<string | null>(null)
   // Όπως στο web: αν ήρθαμε από την πληρωμή, ξαναρωτάμε κάθε 3″ για έως ένα
   // λεπτό, γιατί το webhook του Viva μπορεί να επιβεβαιώσει μετά την επιστροφή.
   const [pollUntil] = useState(() => transactionId ? Date.now() + 60_000 : 0)
@@ -65,6 +67,7 @@ export default function OrderConfirmationScreen() {
     onSuccess: (r: any) => {
       verified.current = true
       setResult(r?.data?.result ?? null)
+      setReason(r?.data?.reason ?? null)
       qc.invalidateQueries({ queryKey: ['order', id] })
       // Το κλειδί της λίστας είναι 'my-orders' (orders.tsx)· το 'orders' δεν
       // ανανέωνε τίποτα.
@@ -88,6 +91,7 @@ export default function OrderConfirmationScreen() {
   const refundFailed = result === 'refund_failed'
   // Απλήρωτη αλλά η πληρωμή επιστράφηκε (π.χ. ακυρωμένη παραγγελία).
   const notCharged = !paid && (refunded || refundFailed)
+  const outOfStock = reason === 'out_of_stock' && (refunded || refundFailed)
 
   return (
     <Screen title={t('orderConfirm.title')} scroll={false}>
@@ -104,6 +108,7 @@ export default function OrderConfirmationScreen() {
           </Text>
           <Text style={s.heroTxt}>
             {paid ? t('orderConfirm.paidHint') : failed ? t('orderConfirm.failedHint')
+              : notCharged && outOfStock ? (refunded ? t('orderOos.refunded') : t('orderOos.refundDelayed'))
               : notCharged ? (refunded ? t('orderConfirm.lateRefunded') : t('orderConfirm.lateRefundDelayed'))
               : t('orderConfirm.pendingHint')}
           </Text>

@@ -2,6 +2,24 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { identityOf } from '../lib/userName.js'
 
+/**
+ * Χωρίς email τρίτων. Η λίστα έδινε σε κάθε συνδεδεμένο το creator_email κάθε
+ * βόλτας και το invitee_email κάθε συμμετέχοντα. Η εφαρμογή χρειάζεται μόνο
+ * «δική μου;» (is_mine) και «συμμετέχω;» (is_me ανά συμμετοχή).
+ */
+function publicInvitation<T extends { invitee_email?: string | null }>(i: T, viewer: string) {
+  const { invitee_email, ...rest } = i
+  return { ...rest, is_me: invitee_email === viewer }
+}
+function publicPlaydate<T extends { creator_email?: string | null; invitations?: any[] }>(e: T, viewer: string) {
+  const { creator_email, invitations, ...rest } = e
+  return {
+    ...rest,
+    is_mine: creator_email === viewer,
+    ...(invitations ? { invitations: invitations.map(i => publicInvitation(i, viewer)) } : {}),
+  }
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   // GET nearby events + owners by city
@@ -23,9 +41,8 @@ const routes: FastifyPluginAsync = async (app) => {
           ...(event_type ? { event_type } : {}),
         },
         include: {
-          // Το invitee_email χρειάζεται για να ξέρει η εφαρμογή αν ο
-          // χρήστης συμμετέχει ήδη — χωρίς αυτό το κουμπί έλεγε πάντα
-          // «Συμμετοχή», ακόμα και σε όποιον είχε ήδη δηλώσει.
+          // Το invitee_email διαβάζεται μόνο για το is_me (αν ο χρήστης
+          // συμμετέχει ήδη)· δεν επιστρέφεται (publicPlaydate).
           invitations: {
             where: { status: 'accepted' },
             select: { invitee_email: true, invitee_name: true, invitee_photo: true, pet_name: true },
@@ -46,7 +63,7 @@ const routes: FastifyPluginAsync = async (app) => {
       })
     ])
 
-    return { events, nearbyOwners, userCity: user?.city }
+    return { events: events.map(e => publicPlaydate(e, email)), nearbyOwners, userCity: user?.city }
   })
 
   // GET my events
@@ -62,7 +79,17 @@ const routes: FastifyPluginAsync = async (app) => {
       include: { event: true },
       orderBy: { created_at: 'desc' },
     })
-    return { events, invitations }
+    // Δικές μου βόλτες: το creator_email είναι δικό μου, αλλά οι συμμετέχοντες
+    // δεν δίνονται με email (όσοι δήλωσαν μόνοι τους δεν το έδωσαν σε μένα).
+    // Οι προσκλήσεις μου: χωρίς το email του δημιουργού.
+    return {
+      events: events.map(({ invitations, ...e }) => ({
+        ...e, is_mine: true, invitations: invitations.map(i => publicInvitation(i, email)),
+      })),
+      invitations: invitations.map(({ event, ...i }) => ({
+        ...i, is_me: true, event: event ? publicPlaydate(event, email) : event,
+      })),
+    }
   })
 
   // POST create event
@@ -193,7 +220,9 @@ const routes: FastifyPluginAsync = async (app) => {
       },
       update: { status: 'pending', message: message ? String(message).slice(0, 500) : null },
     })
-    return inv
+    // Πρόσκληση με invitee_id: η απάντηση δεν πρέπει να «μεταφράζει» το id
+    // της λίστας «κοντά σου» σε email.
+    return publicInvitation(inv, email)
   })
 
   // PATCH respond to invitation

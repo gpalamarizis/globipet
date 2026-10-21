@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/auth'
 import { Eye, EyeOff } from 'lucide-react'
@@ -14,6 +14,15 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const [params] = useSearchParams()
+
+  // Επιστροφή από Google/Facebook με ?error=… (routes/auth.ts). Πριν δεν
+  // εμφανιζόταν τίποτα· ο χρήστης έβλεπε απλώς ξανά τη φόρμα.
+  const oauthError = params.get('error')
+  useEffect(() => {
+    if (!oauthError) return
+    toast.error(oauthError === 'google_unverified' ? t('emailVerify.googleUnverified') : t('emailVerify.oauthFailed'))
+  }, [oauthError, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

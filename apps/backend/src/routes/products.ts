@@ -54,7 +54,15 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async (req: any) => {
     const lang = getRequestLang(req)
-    const { q, category, featured, min_price, max_price, sort, page = 1, limit = 20 } = req.query
+    const { q, category, featured, min_price, max_price, sort, page = 1 } = req.query
+    // Ανώτατο όριο σελίδας: 100 (500 για διαχειριστή — AdminTranslationsPage
+    // ζητά ?limit=500 για τον επιλογέα). Πριν, ?limit=1000000 περνούσε.
+    let isAdmin = false
+    if (req.headers?.authorization) {
+      try { await req.jwtVerify(); isAdmin = (req.user as any)?.role === 'admin' } catch { isAdmin = false }
+    }
+    const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), isAdmin ? 500 : 100)
+    const pageNo = Math.max(1, Number(page) || 1)
     const where: any = {}
     if (q) where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
     if (category) where.category = category
@@ -92,7 +100,7 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
       : sort === 'newest' ? [{ created_at: 'desc' }, { id: 'asc' }]
       : [{ is_featured: 'desc' }, { id: 'asc' }]  // 'featured' (default)
 
-    const skip = (Number(page) - 1) * Number(limit)
+    const skip = (pageNo - 1) * limit
     let data: any[]
     let total: number
     if (sort === 'price_asc' || sort === 'price_desc') {
@@ -103,19 +111,19 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
       const dir = sort === 'price_asc' ? 1 : -1
       const all = await prisma.product.findMany({ where, select: { id: true, price: true, sale_price: true } })
       all.sort((a, b) => (effectivePrice(a) - effectivePrice(b)) * dir || a.id.localeCompare(b.id))
-      const pageIds = all.slice(skip, skip + Number(limit)).map(r => r.id)
+      const pageIds = all.slice(skip, skip + limit).map(r => r.id)
       const rows = pageIds.length ? await prisma.product.findMany({ where: { id: { in: pageIds } } }) : []
       const byId = new Map(rows.map(r => [r.id, r]))
       data = pageIds.map(id => byId.get(id)).filter(Boolean) as any[]
       total = all.length
     } else {
       ;[data, total] = await Promise.all([
-        prisma.product.findMany({ where, skip, take: Number(limit), orderBy }),
+        prisma.product.findMany({ where, skip, take: limit, orderBy }),
         prisma.product.count({ where })
       ])
     }
     const translated = await translateRecords('product', data, lang)
-    return { data: translated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
+    return { data: translated, total, page: pageNo, totalPages: Math.ceil(total / limit) }
   })
 
   // ─── Provider dashboard ────────────────────────────────────────────
@@ -178,8 +186,9 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
    * refresh loop would decide which products the insights page calls popular.
    */
   function visitorHash(req: any): string {
-    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim()
-      || req.ip || 'unknown'
+    // req.ip (trustProxy, index.ts): το πρώτο στοιχείο του X-Forwarded-For
+    // το γράφει ο ίδιος ο client, οπότε άλλαζε «επισκέπτη» σε κάθε αίτημα.
+    const ip = req.ip || 'unknown'
     const ua = (req.headers['user-agent'] || '').toString().slice(0, 200)
     return createHash('sha256')
       .update(`${ip}|${ua}|${process.env.JWT_SECRET || 'globipet'}`)

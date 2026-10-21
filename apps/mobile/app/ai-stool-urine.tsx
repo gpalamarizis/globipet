@@ -232,12 +232,12 @@ export default function AiStoolUrineScreen() {
           ) : null}
 
           <Input label={t('stool.breed')} value={form.breed} onChangeText={v => set('breed', v)}
-            placeholder={t('stool.breedPh')} />
+            placeholder={t('stool.breedPh')} maxLength={400} />
           <View style={s.row}>
             <Input label={t('stool.age')} value={form.age_years} onChangeText={v => set('age_years', v)}
-              placeholder={t('stool.agePh')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+              placeholder={t('stool.agePh')} maxLength={400} keyboardType="decimal-pad" style={{ flex: 1 }} />
             <Input label={t('stool.weight')} value={form.weight_kg} onChangeText={v => set('weight_kg', v)}
-              placeholder={t('stool.weightPh')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+              placeholder={t('stool.weightPh')} maxLength={400} keyboardType="decimal-pad" style={{ flex: 1 }} />
           </View>
           <Chips<Sterilized> label={t('stool.sterilized')} value={form.is_sterilized}
             onChange={v => set('is_sterilized', v)}
@@ -249,14 +249,14 @@ export default function AiStoolUrineScreen() {
           <SwitchRow label={t('stool.ateFromStreet')} value={form.ate_from_street}
             onChange={v => set('ate_from_street', v)} />
           <Input label={t('stool.recentMeds')} value={form.recent_medications}
-            onChangeText={v => set('recent_medications', v)} placeholder={t('stool.recentMedsPh')} />
+            onChangeText={v => set('recent_medications', v)} placeholder={t('stool.recentMedsPh')} maxLength={400} />
           <Input label={t('stool.dietChange')} value={form.diet_change}
-            onChangeText={v => set('diet_change', v)} placeholder={t('stool.dietChangePh')} />
+            onChangeText={v => set('diet_change', v)} placeholder={t('stool.dietChangePh')} maxLength={400} />
           <Input label={t('stool.lastNormal')} value={form.last_normal_stool}
-            onChangeText={v => set('last_normal_stool', v)} placeholder={t('stool.lastNormalPh')} />
-          <Input label={t('stool.symptoms')} value={form.symptoms} multiline
+            onChangeText={v => set('last_normal_stool', v)} placeholder={t('stool.lastNormalPh')} maxLength={400} />
+          <Input label={t('stool.symptoms')} value={form.symptoms} multiline maxLength={2000}
             onChangeText={v => set('symptoms', v)} placeholder={t('stool.symptomsPh')} />
-          <Input label={t('stool.additional')} value={form.additional_notes} multiline
+          <Input label={t('stool.additional')} value={form.additional_notes} multiline maxLength={2000}
             onChangeText={v => set('additional_notes', v)} placeholder={t('stool.additionalPh')}
             style={{ marginBottom: 0 }} />
         </Card>

@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, Upload } from 'lucide-react-native'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, Upload, BadgeCheck, Inbox } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
@@ -28,6 +28,9 @@ const ITEMS = [
   { key: 'calendar',  Icon: CalendarDays, labelKey: 'providerTabs.calendar', route: '/(provider)/calendar' },
   { key: 'insights',  Icon: BarChart3,  labelKey: 'providerTabs.insights',  route: '/(provider)/insights' },
   { key: 'translations', Icon: Languages2, labelKey: 'providerTabs.translations', route: '/(provider)/translations' },
+  // Αίτηση επαλήθευσης (σήμα «επαληθευμένος») — ίδια με /provider/verification του web.
+  { key: 'verification', Icon: BadgeCheck, labelKey: 'providerAccount.verifyAccount', route: '/verification' },
+  { key: 'notifCenter', Icon: Inbox,   labelKey: 'notifCenter.title',      route: '/notifications' },
   { key: 'notifications', Icon: Bell,  labelKey: 'account.notifications',  route: '/notification-settings' },
   { key: 'password',  Icon: KeyRound,  labelKey: 'account.changePassword',  route: '/change-password' },
   { key: 'language',  Icon: Languages, labelKey: 'language.title',         route: '/language' },
@@ -54,7 +57,10 @@ export default function ProviderMore() {
   })
   const sells = !isSuccess || PRODUCT_TYPES.includes(myServices?.[0]?.service_type ?? '')
   // Ίδιο με το web: και τα Στατιστικά (καταστήματος) μόνο σε όσους πουλάνε.
+  // Λογαριασμός Google/Facebook χωρίς κωδικό: καμία «Αλλαγή κωδικού» (ίδιο με το web).
+  const socialOnly = !!(user as any)?.google_id || !!(user as any)?.facebook_id
   const items = ITEMS.filter(i => sells || (i.key !== 'products' && i.key !== 'import' && i.key !== 'insights'))
+    .filter(i => !(socialOnly && i.key === 'password'))
 
   return (
     <Screen title={t('providerTabs.more')} subtitle={user?.email}>

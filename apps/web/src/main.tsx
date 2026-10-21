@@ -4,49 +4,12 @@ import App from './App'
 import './styles/globals.css'
 import '@/lib/i18n'
 
-// Handle OAuth token BEFORE React renders
-// Support both ?token= (query) and #token= (hash) formats
-const handleOAuthToken = () => {
-  try {
-    // Check query params
-    const params = new URLSearchParams(window.location.search)
-    let token = params.get('token')
-    let userStr = params.get('user')
-
-    // Check hash (for Google OAuth redirect)
-    if (!token && window.location.hash) {
-      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
-      token = hashParams.get('token')
-      userStr = hashParams.get('user')
-    }
-
-    if (token) {
-      let user = null
-      if (userStr) {
-        try { user = JSON.parse(decodeURIComponent(userStr)) } catch {}
-      }
-      
-      if (user) {
-        const stored = { state: { user, token, isAuthenticated: true }, version: 0 }
-        localStorage.setItem('globipet-auth', JSON.stringify(stored))
-      } else {
-        // Just store token, fetch user after
-        const existing = localStorage.getItem('globipet-auth')
-        const parsed = existing ? JSON.parse(existing) : { state: {}, version: 0 }
-        parsed.state.token = token
-        parsed.state.isAuthenticated = true
-        localStorage.setItem('globipet-auth', JSON.stringify(parsed))
-      }
-      
-      // Clean URL
-      window.history.replaceState({}, '', '/')
-    }
-  } catch(e) { 
-    console.error('OAuth parse error:', e) 
-  }
-}
-
-handleOAuthToken()
+// Ε12: ΚΑΜΙΑ συνεδρία από το URL. Παλιότερα, ένα `?token=` ή `#token=` σε
+// οποιονδήποτε σύνδεσμο προς το globipet.com γραφόταν κατευθείαν ως συνεδρία:
+// ένας επιτιθέμενος έστελνε σύνδεσμο με το ΔΙΚΟ ΤΟΥ τοκεν, το θύμα έβλεπε
+// «συνδεδεμένο» λογαριασμό και ό,τι ανέβαζε (κατοικίδια, μηνύματα, κρατήσεις)
+// κατέληγε σε εκείνον (session fixation). Η σύνδεση Google/Facebook στο web
+// επιστρέφει πλέον στο /auth/complete με κωδικό μίας χρήσης (App.tsx), όχι τοκεν.
 
 // Apply theme before React renders to prevent flash of light mode
 try {

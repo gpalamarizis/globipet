@@ -8,6 +8,8 @@ import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input, Badge } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
+import { ReviewReply } from '@/components/ReviewReply'
 
 // Τοπική ημερομηνία ⇄ YYYY-MM-DD. Το toISOString() δίνει τη μέρα σε UTC
 // (στην Ελλάδα, μετά τα μεσάνυχτα, ακόμη «χθες») και το new Date('YYYY-MM-DD')
@@ -41,7 +43,7 @@ export default function ServiceDetailScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const [petId, setPetId] = useState('')
   const [staffId, setStaffId] = useState('')
@@ -51,7 +53,7 @@ export default function ServiceDetailScreen() {
   const [time, setTime] = useState('')
   const [note, setNote] = useState('')
 
-  const { data: service, isLoading } = useQuery({
+  const { data: service, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['service', id],
     queryFn: () => api.get(`/services/${id}`).then(r => r.data),
     enabled: !!id,
@@ -158,9 +160,15 @@ export default function ServiceDetailScreen() {
 
   if (isLoading) return <Screen title={t('services.title')} back><SkeletonRows count={3} /></Screen>
 
+  // Σφάλμα δικτύου ≠ «δεν βρέθηκε»: επανάληψη.
+  if (isError && !service) return (
+    <Screen title={t('services.title')} back>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+    </Screen>
+  )
   if (!service) return (
     <Screen title={t('services.title')} back>
-      <EmptyState icon={Stethoscope} title={t('services.no_services')} />
+      <NotFoundState />
     </Screen>
   )
 
@@ -229,6 +237,10 @@ export default function ServiceDetailScreen() {
                   </View>
                 </View>
                 {!!r.comment && <Text style={s.reviewTxt}>{r.comment}</Text>}
+                {/* Απάντηση παρόχου (δημόσια)· ο πάροχος της κριτικής απαντά από εδώ — όπως στο web. */}
+                <ReviewReply review={r}
+                  canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                  invalidate={[['service-reviews', id], ['provider-reviews']]} />
               </View>
             ))}
           </Card>

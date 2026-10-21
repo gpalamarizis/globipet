@@ -130,10 +130,11 @@ export default function CommunityDetailScreen() {
         ) : messages.length === 0 ? (
           <Text style={s.hint}>{t('com.noMessages')}</Text>
         ) : messages.map((m: any) => {
-          const mine = m.author_email === (user as any)?.email
+          // is_mine από τον server: τα author_email των μελών δεν επιστρέφονται πια.
+          const mine = m.is_mine === true
           return (
             <View key={m.id} style={[s.msg, mine && s.msgMine]}>
-              {!mine && <Text style={s.msgAuthor}>{m.author_name ?? m.author_email}</Text>}
+              {!mine && <Text style={s.msgAuthor}>{m.author_name}</Text>}
               {!!m.content && <Text style={[s.msgTxt, mine && s.msgTxtMine]}>{m.content}</Text>}
               {/* Μηνύματα με φωτογραφία (από web ή κινητό) — πριν δεν φαίνονταν καθόλου. */}
               {!!m.image_url && <Image source={{ uri: m.image_url }} style={s.msgImg} resizeMode="cover" />}

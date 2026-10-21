@@ -5,8 +5,10 @@ import { useLocalSearchParams } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Target, MonitorPlay, Users, Plus, X, Check, Film } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
+import { useAuthStore } from '../../src/store/auth'
 import { pickAndUploadMedia } from '../../src/lib/uploadMedia'
 import { Screen, Card, Button, Input, Loading, EmptyState } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -29,6 +31,9 @@ const PAGE_KEY: Record<string, string> = {
   playdates: 'pgPlaydates', communities: 'pgCommunities', events: 'pgEvents', forum: 'pgForum',
   telehealth: 'pgTelehealth', insurance: 'pgInsurance', pets: 'pgMyPets',
 }
+// Ίδιο με backend campaigns.ts ADMIN_ONLY_PAGES (403 σε μη-admin) και web.
+const ADMIN_ONLY_PAGES: readonly string[] = ['home', 'all']
+const DEFAULT_PROVIDER_PAGE = 'services'
 const SLOTS = ['hero', 'banner', 'sidebar', 'inline', 'popup'] as const
 const SLOT_KEY: Record<string, string> = { hero: 'slHero', banner: 'slBanner', sidebar: 'slSidebar', inline: 'slInline', popup: 'slPopup' }
 
@@ -63,6 +68,7 @@ function Toggles({ items, isOn, onToggle }: { items: { key: string; label: strin
 
 export default function CampaignSettingsScreen() {
   const { t } = useTranslation()
+  const isAdmin = useAuthStore(st => st.user?.role) === 'admin'
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [tab, setTab] = useState<Tab>('targets')
@@ -71,7 +77,7 @@ export default function CampaignSettingsScreen() {
   const [A, setA] = useState<string[]>([])
   const [uploading, setUploading] = useState<number | null>(null)
 
-  const { data: detail, isLoading } = useQuery({
+  const { data: detail, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['campaign', id],
     queryFn: () => api.get(`/campaigns/${id}`).then(r => r.data?.data),
     enabled: !!id,
@@ -134,7 +140,7 @@ export default function CampaignSettingsScreen() {
 
   // ── Προβολές ────────────────────────────────────────────────────────
   const upd = (i: number, patch: any) => setP(P.map((p, j) => j === i ? { ...p, ...patch } : p))
-  const addPlacement = () => setP([...P, { page: 'home', slot: 'banner', media_type: 'image', media_url: null,
+  const addPlacement = () => setP([...P, { page: isAdmin ? 'home' : DEFAULT_PROVIDER_PAGE, slot: 'banner', media_type: 'image', media_url: null,
     link_url: '', headline: detail?.title ?? '', subtext: '', cta_label: '', is_active: true }])
   const upload = async (i: number) => {
     const p = P[i]
@@ -157,7 +163,13 @@ export default function CampaignSettingsScreen() {
   // ── Κοινό ───────────────────────────────────────────────────────────
   const toggleCustomer = (email: string) => setA(A.includes(email) ? A.filter(e => e !== email) : [...A, email])
 
-  if (isLoading || !detail) return <Screen title={t('providerMkt.campaignSettings')} back><Loading /></Screen>
+  if (!detail) return (
+    <Screen title={t('providerMkt.campaignSettings')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
+  )
 
   return (
     <Screen title={detail.title} subtitle={t('providerMkt.campaignSettings')} back>
@@ -205,7 +217,10 @@ export default function CampaignSettingsScreen() {
             return (
               <Card key={i}>
                 <Chips label={t('providerMkt.fPage')} value={p.page} onChange={v => upd(i, { page: v })}
-                  options={PAGES.map(v => ({ value: v, label: t(`providerMkt.${PAGE_KEY[v]}`) }))} />
+                  options={PAGES
+                    // Μη-admin: χωρίς Αρχική/Όλες· μια παλιά τέτοια προβολή φαίνεται για να αλλαχτεί.
+                    .filter(v => isAdmin || !ADMIN_ONLY_PAGES.includes(v) || v === p.page)
+                    .map(v => ({ value: v, label: t(`providerMkt.${PAGE_KEY[v]}`) }))} />
                 <Chips label={t('providerMkt.fSlot')} value={p.slot} onChange={v => upd(i, { slot: v })}
                   options={SLOTS.map(v => ({ value: v, label: t(`providerMkt.${SLOT_KEY[v]}`) }))} />
                 <Chips label={t('providerMkt.fMedia')} value={p.media_type}

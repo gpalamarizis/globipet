@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Users, Plus, Edit3, Trash2, Mail, Check, Clock, X, Save } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import StaffPricesEditor from '@/components/provider/StaffPricesEditor'
 
 /**
  * Provider staff management — the employer's view of "my team".
@@ -328,6 +329,11 @@ function StaffEditor({
             <input type="checkbox" checked={form.accepts_telehealth} onChange={e => setField('accepts_telehealth', e.target.checked)} />
             {t('providerEdit.acceptsTelehealth')}
           </label>
+
+          {/* Τιμές ανά πακέτο για αυτό το μέλος (GET/PUT /staff/:id/prices) — χρειάζεται id, άρα μετά την πρώτη αποθήκευση. */}
+          {isNew
+            ? <p className="text-xs text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-3 mt-2">{t('staffPrices.afterSave')}</p>
+            : <StaffPricesEditor staffId={staff!.id} />}
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t border-gray-100 dark:border-gray-800">

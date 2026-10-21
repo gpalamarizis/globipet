@@ -425,8 +425,12 @@ export default function PassportScreen() {
 
   const exportPdf = async () => {
     try {
-      const { data: res } = await api.get(`/passport/${petId}/pdf`)
-      const url = res?.url ?? res?.data?.url
+      // Το /pdf επιστρέφει HTML και θέλει σύνδεση· ο browser του κινητού δεν
+      // έχει το τοκεν. Ζητάμε βραχύβιο υπογεγραμμένο σύνδεσμο (5') και τον
+      // ανοίγουμε εκεί, όπου ο χρήστης εκτυπώνει ή αποθηκεύει ως PDF. Ίδια
+      // ροή με το web.
+      const { data: res } = await api.post(`/passport/${petId}/pdf-link`)
+      const url = res?.path ? `${api.defaults.baseURL ?? ''}${res.path}` : res?.url
       if (!url) return Alert.alert(t('common.error'), t('passport.pdfFailed'))
       const ok = await Linking.canOpenURL(url)
       if (ok) Linking.openURL(url)
@@ -484,6 +488,12 @@ export default function PassportScreen() {
 
   const badgeFor = (r: any) => {
     if (!spec.badge) return null
+    // Πρόσβαση κτηνιάτρου εγκεκριμένη αλλά με παρελθοντική λήξη: ο server δεν
+    // τη δέχεται πια (expires_at) — «Έληξε», όπως στο web.
+    if (spec.id === 'access' && r.status === 'approved' && r.expires_at
+        && new Date(r.expires_at).getTime() <= Date.now()) {
+      return <Badge label={t('passport.st_expired')} tone="neutral" />
+    }
     const v = r[spec.badge.key]
     if (v == null || v === '') return null
     if (spec.opts?.[spec.badge.key]) {

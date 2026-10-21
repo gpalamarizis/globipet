@@ -195,12 +195,13 @@ export default function InsuranceScreen() {
                   style={{ marginTop: space.lg }}
                 />
               )}
-              {!!selected?.provider?.website && (
+              {/* Μόνο http(s) — όχι javascript:/intent:/άλλο σχήμα (όπως στο web). */}
+              {!!selected?.provider?.website && /^https?:\/\//i.test(String(selected.provider.website).trim()) && (
                 <Button
                   label={t('insurance.apply')}
                   full
                   icon={<Globe size={icon.sm} color={colors.textOnDark} />}
-                  onPress={() => Linking.openURL(selected.provider.website)}
+                  onPress={() => Linking.openURL(String(selected.provider.website).trim()).catch(() => {})}
                   style={{ marginTop: space.md }}
                 />
               )}

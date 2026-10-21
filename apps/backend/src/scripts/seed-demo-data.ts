@@ -1,10 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { assertSeedAllowed, seedPassword } from './seed-guard.js'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Δοκιμαστικοί λογαριασμοί/δεδομένα — μόνο σε τοπική βάση (seed-guard).
+  assertSeedAllowed('seed-demo-data')
   console.log('Seeding demo data across all categories...')
-  const pass = await bcrypt.hash('Demo12345!', 10)
+  // Κωδικός από SEED_PASSWORD, όχι σταθερός στον κώδικα.
+  const pass = await bcrypt.hash(seedPassword('seed-demo-data'), 10)
 
   // ---- Users (customers + providers) ----
   const usersData = [

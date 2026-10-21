@@ -177,9 +177,9 @@ export default function PlaydatesScreen() {
     setRefreshing(false)
   }, [qc])
 
-  /** Συμμετέχω αν το email μου είναι στις αποδεκτές προσκλήσεις. */
+  /** Συμμετέχω αν είμαι στις αποδεκτές προσκλήσεις (is_me από τον server — τα email δεν επιστρέφονται πια). */
   const amIn = (ev: any) =>
-    (ev.invitations ?? []).some((i: any) => i.invitee_email === user?.email)
+    (ev.invitations ?? []).some((i: any) => i.is_me === true)
 
   return (
     <Screen title={t('community.walks_meetups')}
@@ -233,7 +233,7 @@ export default function PlaydatesScreen() {
             const joined = amIn(ev)
             const accepted = (ev.invitations ?? []).length
             const full = ev.max_participants && accepted >= ev.max_participants
-            const mine = ev.creator_email === user?.email
+            const mine = ev.is_mine === true
             return (
               <Card key={ev.id}>
                 <View style={s.head}>
@@ -328,7 +328,7 @@ export default function PlaydatesScreen() {
             {nearby.slice(0, 8).map((o: any) => (
               <TouchableOpacity key={o.id} style={s.owner} disabled={!isAuthenticated}
                 onPress={() => {
-                  const own = events.filter((e: any) => e.creator_email === user?.email)
+                  const own = events.filter((e: any) => e.is_mine === true)
                   if (!own.length) { Alert.alert(t('play.invite'), t('play.createEventFirst')); return }
                   setInviteOwner(o); setInvitingFor(own[0])
                 }}>

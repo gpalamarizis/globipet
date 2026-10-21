@@ -15,74 +15,23 @@ import { audit } from '../lib/audit.js'
  */
 const clients = new Map<string, Set<any>>()
 
-function addClient(email: string, socket: any) {
-  let set = clients.get(email)
-  if (!set) { set = new Set(); clients.set(email, set) }
-  set.add(socket)
-}
-
-function removeClient(email: string, socket: any) {
-  const set = clients.get(email)
-  if (!set) return
-  set.delete(socket)
-  if (set.size === 0) clients.delete(email)
-}
-
 const notificationsRoutes: FastifyPluginAsync = async (app) => {
 
   /**
-   * WebSocket endpoint for real-time notifications.
+   * Ε12 — ΤΟ WEBSOCKET ΑΦΑΙΡΕΘΗΚΕ.
    *
-   * AUTHENTICATION
-   *   The previous version read the identity straight from `?userId=` with no
-   *   verification, so connecting as `?userId=victim@example.com` streamed
-   *   that person's notifications to anyone who asked. The identity now comes
-   *   from a verified JWT and the query parameter is ignored entirely.
+   *   Το route `/ws` δηλωνόταν με `{ websocket: true }`, αλλά το
+   *   @fastify/websocket δεν είναι εγκατεστημένο: το Fastify το έβλεπε ως
+   *   απλό GET και ο handler έσκαγε σε κάθε κλήση. Επιπλέον ζητούσε το JWT
+   *   στο query (`?token=`), όπου καταλήγει σε logs του Cloudflare/Railway,
+   *   στο ιστορικό και στο Referer — ένα τοκεν επτά ημερών εκτεθειμένο.
    *
-   *   Browsers cannot set headers on a WebSocket handshake, so the token is
-   *   passed as `?token=<jwt>`.
+   *   Οι ειδοποιήσεις φτάνουν με push (Expo / Web Push) και με το polling
+   *   του GET /notifications. Το broadcastToUser παραμένει (no-op χωρίς
+   *   συνδεδεμένα sockets) ώστε οι καλούντες να μη χρειάζονται αλλαγή.
+   *   Αν ξαναμπεί websocket: εγκατάσταση του plugin και ταυτοποίηση με
+   *   πρώτο μήνυμα μετά το handshake ή με εισιτήριο μίας χρήσης — ΟΧΙ JWT στο URL.
    */
-  app.get('/ws', { websocket: true } as any, (socket: any, req: any) => {
-    let email: string | null = null
-    try {
-      const token = (req.query as any)?.token
-      if (!token) throw new Error('missing token')
-      const payload = (app as any).jwt.verify(token) as any
-      email = payload?.email ?? null
-      if (!email) throw new Error('token has no email')
-    } catch {
-      socket.send(JSON.stringify({ type: 'error', message: 'unauthorized' }))
-      socket.close(1008, 'unauthorized')
-      return
-    }
-
-    addClient(email, socket)
-
-    socket.on('message', (raw: any) => {
-      try {
-        const msg = JSON.parse(raw.toString())
-        if (msg.type === 'ping') {
-          socket.send(JSON.stringify({ type: 'pong' }))
-          return
-        }
-        if (msg.type === 'location_update') {
-          // Echo the update back to this user's own sessions only.
-          // Previously the target came from msg.userId, which let any connected
-          // client push arbitrary payloads into any other user's socket.
-          broadcastToUser(email!, {
-            type: 'location_update',
-            pet_id: msg.pet_id,
-            latitude: msg.latitude,
-            longitude: msg.longitude,
-          })
-        }
-      } catch {}
-    })
-
-    socket.on('close', () => removeClient(email!, socket))
-    socket.on('error', () => removeClient(email!, socket))
-    socket.send(JSON.stringify({ type: 'connected' }))
-  })
 
   /**
    * List notifications.
@@ -250,12 +199,26 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Μη έγκυρο token συσκευής' })
     }
 
+    /**
+     * Ε12 — μεταφορά συσκευής σε άλλον χρήστη: ΣΚΟΠΙΜΗ.
+     *
+     *   Το Expo push token είναι μυστικό της συσκευής: το εκδίδει το Expo
+     *   μόνο στην εγκατάσταση της εφαρμογής και δεν εμφανίζεται πουθενά
+     *   δημόσια. Όποιος το στέλνει είναι, στην πράξη, η ίδια συσκευή όπου
+     *   μόλις συνδέθηκε άλλος χρήστης — και η εγγραφή ΠΡΕΠΕΙ να περάσει σε
+     *   αυτόν, αλλιώς θα έπαιρνε τις ειδοποιήσεις του προηγούμενου.
+     *   Καταγράφεται ρητά (transferred_from) ώστε να φαίνεται στο audit.
+     */
+    const prev = await prisma.pushSubscription.findUnique({ where: { expo_token: token }, select: { user_id: true } })
     const row = await prisma.pushSubscription.upsert({
       where: { expo_token: token },
       create: { user_id, platform, expo_token: token, device_name: name },
       update: { user_id, platform, device_name: name, last_seen_at: now },
     })
-    await audit(req, { action: 'push_subscribe', resource: 'push_subscription', resource_id: row.id, metadata: { platform } })
+    await audit(req, {
+      action: 'push_subscribe', resource: 'push_subscription', resource_id: row.id,
+      metadata: { platform, ...(prev && prev.user_id !== user_id ? { transferred_from: prev.user_id } : {}) },
+    })
     return reply.code(201).send({ data: { id: row.id } })
   })
 

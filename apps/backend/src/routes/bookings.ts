@@ -212,7 +212,9 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
 
     if (requested.length) {
       const ids = requested.map(p => p.package_id).filter(Boolean)
-      const found = await prisma.servicePackage.findMany({ where: { id: { in: ids } } })
+      // Μόνο ενεργά πακέτα: ένα πακέτο που ο πάροχος απενεργοποίησε (π.χ.
+      // παλιά, φθηνότερη τιμή) δεν κρατιέται πια.
+      const found = await prisma.servicePackage.findMany({ where: { id: { in: ids }, is_active: true } })
       const byId = new Map(found.map(p => [p.id, p]))
 
       const missing = ids.filter(id => !byId.has(id))
@@ -224,6 +226,20 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       const foreign = found.filter(p => p.service_id !== service.id).map(p => p.id)
       if (foreign.length) {
         return reply.code(400).send({ message: 'Κάποια πακέτα δεν ανήκουν σε αυτή την υπηρεσία', foreign })
+      }
+      // Μόνο πρόσθετα (add-on) χωρίς κύριο πακέτο: ο πελάτης θα πλήρωνε π.χ.
+      // μόνο το «άρωμα» για ολόκληρο το κούρεμα. Αν η υπηρεσία έχει ενεργά
+      // κύρια πακέτα, χρειάζεται τουλάχιστον ένα.
+      if (!found.some(p => !p.is_addon)) {
+        const mainPackages = await prisma.servicePackage.count({
+          where: { service_id: service.id, is_active: true, is_addon: false },
+        })
+        if (mainPackages > 0) {
+          return reply.code(400).send({
+            message: 'Επίλεξε τουλάχιστον ένα κύριο πακέτο — τα πρόσθετα δεν κλείνονται μόνα τους',
+            code: 'MAIN_PACKAGE_REQUIRED',
+          })
+        }
       }
 
       packageRows = requested.map(r => {
@@ -588,6 +604,9 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
       }
       if (body.status === 'cancelled') {
         data.status = 'cancelled'
+      } else if (body.status === 'confirmed' && (isProvider || isAdmin) && existing.payment_status !== 'paid') {
+        // Ίδιος κανόνας με το PATCH /provider/bookings/:id: επιβεβαίωση μόνο πληρωμένης.
+        return reply.code(400).send({ message: 'Η κράτηση δεν έχει πληρωθεί' })
       } else if (body.status === 'confirmed' && (isProvider || isAdmin)) {
         data.status = 'confirmed'
       } else if (body.status === 'completed' && (isProvider || isAdmin) && existing.payment_status === 'paid') {

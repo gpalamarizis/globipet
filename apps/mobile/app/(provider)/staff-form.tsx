@@ -5,9 +5,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { SwitchRow } from '@/components/SwitchRow'
 import { STAFF_TITLE_OPTIONS } from '@/components/staffOptions'
+import { StaffPricesEditor } from '@/components/StaffPricesEditor'
 import { colors, space, type } from '@/theme'
 
 /**
@@ -25,7 +27,7 @@ export default function StaffFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const isNew = !id
 
-  const { data: staff = [], isLoading } = useQuery({
+  const { data: staff = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['provider-staff-all'],
     queryFn: () => api.get('/staff/mine').then(r => r.data?.data ?? r.data ?? []),
     enabled: !isNew,
@@ -88,8 +90,12 @@ export default function StaffFormScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerEdit.errSave')),
   })
 
-  if (!isNew && (isLoading || !existing)) return (
-    <Screen title={t('providerStaff.editTitle')} back><Loading /></Screen>
+  if (!isNew && !existing) return (
+    <Screen title={t('providerStaff.editTitle')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
   )
 
   return (
@@ -124,6 +130,8 @@ export default function StaffFormScreen() {
               { text: t('providerPkg.delete'), style: 'destructive', onPress: () => remove.mutate() },
             ])} />
         )}
+        {/* Τιμές ανά πακέτο για αυτό το μέλος (όπως στο web) — χρειάζεται id, άρα μετά την πρώτη αποθήκευση. */}
+        {isNew ? <Text style={s.hint}>{t('staffPrices.afterSave')}</Text> : <StaffPricesEditor staffId={String(id)} />}
       </Card>
     </Screen>
   )
@@ -131,4 +139,5 @@ export default function StaffFormScreen() {
 
 const s = StyleSheet.create({
   warn: { ...type.caption, color: colors.warning, marginBottom: space.md },
+  hint: { ...type.caption, color: colors.textLight, marginTop: space.lg },
 })

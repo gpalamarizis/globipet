@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { SwitchRow } from '@/components/SwitchRow'
 import { GROUP_KEYS, SIZE_OPTIONS, PET_OPTIONS, MODALITY_OPTIONS } from '@/components/packageOptions'
@@ -21,7 +22,7 @@ export default function PackageFormScreen() {
   const { serviceId, id } = useLocalSearchParams<{ serviceId: string; id?: string }>()
   const isNew = !id
 
-  const { data: services = [], isLoading } = useQuery({
+  const { data: services = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['provider-packages'],
     queryFn: () => api.get('/packages/my').then(r => r.data?.data ?? []),
   })
@@ -72,8 +73,12 @@ export default function PackageFormScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('providerPkg.error')),
   })
 
-  if (!isNew && (isLoading || !existing)) return (
-    <Screen title={t('providerPkg.editPackage')} back><Loading /></Screen>
+  if (!isNew && !existing) return (
+    <Screen title={t('providerPkg.editPackage')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
   )
 
   const opts = (list: { value: string; key: string }[]) => list.map(o => ({ value: o.value, label: t(o.key) }))

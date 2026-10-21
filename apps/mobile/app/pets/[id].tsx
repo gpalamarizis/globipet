@@ -8,6 +8,7 @@ import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { PetFormFields, EMPTY_PET_FORM, petToForm, petPayload, petEmoji, type PetFormState } from '@/components/PetForm'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 
 /**
  * Καρτέλα κατοικιδίου.
@@ -22,7 +23,7 @@ export default function PetDetailScreen() {
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
 
-  const { data: pets = [], isLoading } = useQuery({
+  const { data: pets = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['my-pets'],
     queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
   })
@@ -75,9 +76,15 @@ export default function PetDetailScreen() {
   })
 
   if (isLoading) return <Screen title={t('pets.title')} back><SkeletonRows count={3} /></Screen>
+  // Σφάλμα δικτύου ≠ «δεν βρέθηκε»: επανάληψη.
+  if (isError && !pet) return (
+    <Screen title={t('pets.title')} back>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+    </Screen>
+  )
   if (!pet) return (
     <Screen title={t('pets.title')} back>
-      <EmptyState icon={PawPrint} title={t('pets.none_yet')} />
+      <NotFoundState />
     </Screen>
   )
 

@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client'
+import { assertSeedAllowed } from './seed-guard.js'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Δοκιμαστικά προϊόντα — όχι στον κατάλογο της παραγωγής (seed-guard).
+  assertSeedAllowed('seed-food-products')
   console.log('Seeding sample pet food products...')
 
   await prisma.product.createMany({

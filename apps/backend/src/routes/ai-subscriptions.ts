@@ -4,6 +4,8 @@ import prisma from '../lib/prisma.js'
 import { sendAiTrialStartedEmail } from '../lib/email.js'
 import { serverError } from '../lib/errors.js'
 import { getRequestLang, translateRecords, translateRecord } from '../lib/i18n.js'
+import { audit } from '../lib/audit.js'
+import { liveAiStripeSubscriptionIds, cancelStripeSubscription, openAiCheckoutSessionUrl } from '../lib/stripeSubscriptions.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const TRIAL_DAYS = 30
@@ -67,7 +69,10 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
       })
     }
     if (plan) plan = await translateRecord('ai_plan', plan, getRequestLang(req))
-    return reply.send({ data: { ...user, trial_days_left: daysLeft, plan } })
+    // Προσθετικό `can_cancel`: πληρωμένη συνδρομή (Stripe) που τρέχει ακόμη
+    // — κουμπί «Ακύρωση συνδρομής» σε web και κινητό.
+    const can_cancel = user.ai_subscription_status === 'active' || user.ai_subscription_status === 'payment_failed'
+    return reply.send({ data: { ...user, trial_days_left: daysLeft, plan, can_cancel } })
   })
 
   // POST /ai-subscriptions/start-trial
@@ -76,6 +81,8 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const userId = (req.user as any).id
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) return reply.code(404).send({ message: 'Not found' })
+    // Δωρεάν δοκιμή μόνο με επιβεβαιωμένο email (όχι πολλαπλά trials με ψεύτικα email).
+    if (!(user as any).email_verified_at) return reply.code(403).send({ message: 'Επιβεβαίωσε πρώτα το email σου', email_unverified: true })
 
     if (user.ai_subscription_status !== 'none') {
       return reply.code(400).send({ message: 'Έχετε ήδη χρησιμοποιήσει ή ενεργοποιήσει το δωρεάν trial' })
@@ -123,6 +130,17 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const plan = await prisma.aiSubscriptionPlan.findUnique({ where: { id: plan_id } })
     if (!plan || !plan.is_active) return reply.code(404).send({ message: 'Το πλάνο δεν είναι διαθέσιμο' })
 
+    // Μία πληρωμένη συνδρομή AI ανά χρήστη — αλλιώς δεύτερο checkout θα
+    // χρέωνε δύο παράλληλες μηνιαίες συνδρομές (ίδιο με τη συνδρομή τροφής).
+    // Με αποτυχημένη πληρωμή η συνδρομή του Stripe ζει ακόμη (ξαναδοκιμάζει).
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { ai_subscription_status: true } })
+    if (me?.ai_subscription_status === 'active') {
+      return reply.code(409).send({ message: 'Έχεις ήδη ενεργή συνδρομή AI' })
+    }
+    if (me?.ai_subscription_status === 'payment_failed') {
+      return reply.code(409).send({ message: 'Η συνδρομή AI σου έχει εκκρεμή πληρωμή — ακύρωσέ τη πριν ξεκινήσεις νέα' })
+    }
+
     const isAnnual = billing === 'annual'
     const unitAmount = isAnnual
       ? Math.round((plan.price_annual ?? plan.price_monthly * 12) * 100)
@@ -130,10 +148,18 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const interval: 'month' | 'year' = isAnnual ? 'year' : 'month'
     const planName = plan.name_el || plan.name
 
+    // Ανοιχτό checkout του ίδιου χρήστη για το ίδιο πλάνο τα τελευταία 30'
+    // (διπλό πάτημα, δεύτερη συσκευή): επιστρέφεται το ίδιο URL αντί για
+    // δεύτερο session — δύο ολοκληρωμένα sessions θα έφτιαχναν δύο συνδρομές.
+    const reuse = await openAiCheckoutSessionUrl(String(userId), plan.id, String(billing))
+    if (reuse) return reply.send({ data: { checkout_url: reuse } })
+
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer_email: userEmail,
+        // Στο ίδιο το session (όχι μόνο στη συνδρομή), για τον έλεγχο ανοιχτού checkout.
+        metadata: { user_id: String(userId), ai_plan_id: plan.id, billing: String(billing) },
         line_items: [{
           price_data: {
             currency: 'eur',
@@ -158,6 +184,65 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
       console.error('Stripe AI checkout error:', err)
       return serverError(reply, err, 'ai-subscription-create', 'Η συνδρομή δεν δημιουργήθηκε.')
     }
+  })
+
+  // POST /ai-subscriptions/cancel
+  //
+  // Ίδιο μοτίβο με την ακύρωση συνδρομής τροφής (subscriptions.ts): ΑΜΕΣΗ
+  // ακύρωση στο Stripe, χωρίς επιστροφή — καμία νέα χρέωση. Αν το Stripe
+  // αποτύχει, ΔΕΝ σημειώνεται ακύρωση (αλλιώς η εφαρμογή θα έλεγε
+  // «ακυρώθηκε» και η κάρτα θα συνέχιζε να χρεώνεται).
+  //
+  // Ποιες συνδρομές: η τρέχουσα (καταγραφή ενεργοποίησης του webhook) ΚΑΙ
+  // όσες βρει η αναζήτηση του Stripe με metadata user_id + ai_plan_id — ώστε
+  // να ακυρώνονται και όσες πληρώθηκαν πριν διορθωθεί το webhook.
+  app.post('/cancel', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const userId = String((req.user as any).id)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
+    })
+    if (!user) return reply.code(404).send({ message: 'Not found' })
+    if (user.ai_subscription_status === 'cancelled') return reply.send({ data: user })
+    if (user.ai_subscription_status !== 'active' && user.ai_subscription_status !== 'payment_failed') {
+      return reply.code(400).send({ message: 'Δεν υπάρχει ενεργή συνδρομή AI για ακύρωση' })
+    }
+
+    // Κοινή αναζήτηση με τη διαγραφή λογαριασμού (lib/stripeSubscriptions).
+    let ids: Set<string>, searched: boolean
+    try {
+      ;({ ids, searched } = await liveAiStripeSubscriptionIds(userId))
+    } catch (err) {
+      return serverError(reply, err, 'ai-subscription-cancel')
+    }
+    // Ούτε καταγραφή ούτε αναζήτηση: δεν ξέρουμε τι χρεώνεται — καμία αλλαγή.
+    if (!ids.size && !searched) {
+      return reply.code(502).send({
+        message: 'Η ακύρωση δεν ολοκληρώθηκε στον πάροχο πληρωμών. Δεν έγινε καμία αλλαγή — δοκίμασε ξανά σε λίγο.',
+      })
+    }
+
+    for (const id of ids) {
+      if (!(await cancelStripeSubscription(id))) {
+        return reply.code(502).send({
+          message: 'Η ακύρωση δεν ολοκληρώθηκε στον πάροχο πληρωμών. Δεν έγινε καμία αλλαγή — δοκίμασε ξανά σε λίγο.',
+        })
+      }
+    }
+
+    await prisma.user.updateMany({
+      where: { id: userId, ai_subscription_status: { in: ['active', 'payment_failed'] } },
+      data: { ai_subscription_status: 'cancelled' },
+    })
+    await audit(req, {
+      action: 'ai_subscription_cancelled', resource: 'user', resource_id: userId, subject_email: user.email,
+      metadata: { stripe_subscription_ids: [...ids], by: 'customer' },
+    })
+    const fresh = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
+    })
+    return reply.send({ data: fresh })
   })
 
   // POST /admin/ai-subscriptions/plans

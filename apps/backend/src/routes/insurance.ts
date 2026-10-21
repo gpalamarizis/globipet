@@ -2,6 +2,50 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
+/**
+ * Πεδία που αλλάζει η διαχείριση. Πριν περνούσε όλο το σώμα στη βάση (id,
+ * provider_id σε άλλη εταιρεία, ό,τι άλλο έστελνε ο client) και το website
+ * μπορούσε να είναι `javascript:` — γινόταν href στο κουμπί «Αίτηση» του web.
+ */
+const PROVIDER_FIELDS = ['name', 'name_el', 'logo_url', 'website', 'phone', 'email', 'description', 'is_active', 'display_order'] as const
+const PLAN_FIELDS = [
+  'provider_id', 'name', 'name_el', 'description', 'tier', 'price_monthly', 'price_annual', 'currency',
+  'covers_accidents', 'covers_illness', 'covers_surgery', 'covers_dental', 'covers_preventive',
+  'covers_liability', 'covers_death', 'annual_limit', 'per_incident_limit', 'deductible',
+  'reimbursement_percent', 'waiting_period_days', 'pet_types', 'max_age_years', 'min_age_months',
+  'features', 'exclusions', 'is_active', 'is_featured', 'display_order',
+] as const
+const FLOAT_FIELDS = new Set(['price_monthly', 'price_annual', 'annual_limit', 'per_incident_limit', 'deductible'])
+const INT_FIELDS = new Set(['reimbursement_percent', 'waiting_period_days', 'max_age_years', 'min_age_months', 'display_order'])
+const URL_FIELDS = ['website', 'logo_url'] as const
+
+/** Κενό, ή διεύθυνση http(s). Οτιδήποτε άλλο (javascript:, data:) απορρίπτεται. */
+function isSafeUrl(v: unknown): boolean {
+  if (v === null || v === undefined || v === '') return true
+  return typeof v === 'string' && /^https?:\/\/[^\s]+$/i.test(v.trim())
+}
+
+/** Μόνο τα επιτρεπόμενα πεδία· οι αριθμοί από φόρμα (κείμενο) γίνονται αριθμοί. */
+function pickFields(body: any, allowed: readonly string[]): any {
+  const out: any = {}
+  for (const k of allowed) {
+    if (!(k in (body ?? {}))) continue
+    let v = body[k]
+    if (FLOAT_FIELDS.has(k) || INT_FIELDS.has(k)) {
+      if (v === '' || v === null) v = null
+      else {
+        const n = FLOAT_FIELDS.has(k) ? parseFloat(v) : parseInt(v)
+        v = Number.isFinite(n) ? n : null
+      }
+      // Υποχρεωτικά με default στη βάση: κενό = καμία αλλαγή.
+      if (v === null && (k === 'price_monthly' || k === 'waiting_period_days' || k === 'display_order')) continue
+    }
+    if ((URL_FIELDS as readonly string[]).includes(k) && typeof v === 'string') v = v.trim() || null
+    out[k] = v
+  }
+  return out
+}
+
 export default async function insuranceRoutes(app: FastifyInstance) {
 
   // Inline admin check
@@ -86,13 +130,18 @@ export default async function insuranceRoutes(app: FastifyInstance) {
 
   // POST /admin/insurance/providers
   app.post('/admin/insurance/providers', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
-    const provider = await prisma.insuranceProvider.create({ data: req.body })
+    const data = pickFields(req.body, PROVIDER_FIELDS)
+    if (!URL_FIELDS.every(k => isSafeUrl(data[k]))) return reply.code(400).send({ message: 'Μη έγκυρη διεύθυνση (URL)' })
+    if (!data.name) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    const provider = await prisma.insuranceProvider.create({ data })
     return reply.code(201).send({ data: provider })
   })
 
   // PATCH /admin/insurance/providers/:id
   app.patch('/admin/insurance/providers/:id', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
-    const provider = await prisma.insuranceProvider.update({ where: { id: req.params.id }, data: req.body })
+    const data = pickFields(req.body, PROVIDER_FIELDS)
+    if (!URL_FIELDS.every(k => isSafeUrl(data[k]))) return reply.code(400).send({ message: 'Μη έγκυρη διεύθυνση (URL)' })
+    const provider = await prisma.insuranceProvider.update({ where: { id: req.params.id }, data })
     return reply.send({ data: provider })
   })
 
@@ -104,13 +153,17 @@ export default async function insuranceRoutes(app: FastifyInstance) {
 
   // POST /admin/insurance/plans
   app.post('/admin/insurance/plans', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
-    const plan = await prisma.insurancePlan.create({ data: req.body })
+    const data = pickFields(req.body, PLAN_FIELDS)
+    if (!data.provider_id || !data.name || !data.tier || data.price_monthly == null) {
+      return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    }
+    const plan = await prisma.insurancePlan.create({ data })
     return reply.code(201).send({ data: plan })
   })
 
   // PATCH /admin/insurance/plans/:id
   app.patch('/admin/insurance/plans/:id', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
-    const plan = await prisma.insurancePlan.update({ where: { id: req.params.id }, data: req.body })
+    const plan = await prisma.insurancePlan.update({ where: { id: req.params.id }, data: pickFields(req.body, PLAN_FIELDS) })
     return reply.send({ data: plan })
   })
 
@@ -129,6 +182,7 @@ export default async function insuranceRoutes(app: FastifyInstance) {
       const row = providers[i]
       try {
         if (!row.name) throw new Error('Λείπει το όνομα εταιρείας')
+        if (!isSafeUrl(row.website) || !isSafeUrl(row.logo_url)) throw new Error('Μη έγκυρη διεύθυνση (URL)')
         await prisma.insuranceProvider.upsert({
           where: { name: row.name },
           update: { name_el: row.name_el, website: row.website, phone: row.phone, email: row.email, description: row.description, logo_url: row.logo_url, display_order: parseInt(row.display_order) || 0 },

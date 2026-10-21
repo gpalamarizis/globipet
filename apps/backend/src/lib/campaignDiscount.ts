@@ -11,7 +11,8 @@ import prisma from './prisma.js'
  *
  * ΚΑΝΟΝΕΣ
  *   · Μία έκπτωση ανά γραμμή — η μεγαλύτερη σε ευρώ. Δεν σωρεύονται.
- *   · Ο πάροχος εκπτώνει μόνο τα δικά του (εκτός από καμπάνιες πλατφόρμας).
+ *   · Ο πάροχος εκπτώνει μόνο τα δικά του. Οι καμπάνιες της πλατφόρμας δεν
+ *     ισχύουν εδώ (μόνο για την τιμή συνδρομής).
  *   · Στοχευμένη καμπάνια (με κοινό) μόνο για τους πελάτες του κοινού.
  *   · Ελάχιστο ποσό: η καμπάνια ισχύει μόνο αν η γραμμή το φτάνει.
  *   · Το ποσό που μένει δεν πέφτει κάτω από MIN_CHARGE: το Viva δεν δέχεται
@@ -43,8 +44,11 @@ export async function bestDiscount(
      WHERE c.is_active
        AND now() BETWEEN c.starts_at AND c.ends_at
        AND c.discount_type IS NOT NULL
-       AND (c.owner_type = 'platform'
-            OR (${type} = 'product' AND EXISTS (
+       -- Απόφαση ιδιοκτήτη: καμπάνια της πλατφόρμας ισχύει ΜΟΝΟ για την τιμή
+       -- συνδρομής — ποτέ για προϊόντα/υπηρεσίες/κρατήσεις παρόχων (η έκπτωση
+       -- θα έβγαινε από τα χρήματα του παρόχου χωρίς τη συγκατάθεσή του).
+       AND c.owner_type <> 'platform'
+       AND ((${type} = 'product' AND EXISTS (
                   SELECT 1 FROM products p WHERE p.id = ${id} AND p.provider_email = c.owner_email))
             OR (${type} = 'service' AND EXISTS (
                   SELECT 1 FROM services s WHERE s.id = ${id} AND s.provider_email = c.owner_email))
@@ -60,11 +64,14 @@ export async function bestDiscount(
 
   // Η μεγαλύτερη έκπτωση σε ευρώ κερδίζει — όχι το μεγαλύτερο ποσοστό,
   // γιατί 10% σε 200 € είναι περισσότερα από 5 € σταθερά.
+  // Έκπτωση «ποσό» ανά τεμάχιο, όχι πάνω από την τιμή του τεμαχίου.
   let best: any = null, bestOff = 0
+  const units = Math.max(1, qty)
+  const unitPrice = lineR / units
   for (const c of found) {
     const off = c.discount_type === 'percent'
       ? lineR * (Number(c.discount_value) / 100)
-      : Number(c.discount_value) * Math.max(1, qty)
+      : Math.min(Number(c.discount_value), unitPrice) * units
     if (off > bestOff) { bestOff = off; best = c }
   }
   if (!best) return { discount: 0, final: lineR, campaign: null }
@@ -90,7 +97,8 @@ export async function bookingBasePrice(
   if (!service) return null
   const ids = requested.map(p => p.package_id).filter(Boolean)
   if (!ids.length) return round2(service.price)
-  const found = await prisma.servicePackage.findMany({ where: { id: { in: ids }, service_id: serviceId } })
+  // Μόνο ενεργά πακέτα — ίδιο φίλτρο με το POST /bookings.
+  const found = await prisma.servicePackage.findMany({ where: { id: { in: ids }, service_id: serviceId, is_active: true } })
   const byId = new Map(found.map(p => [p.id, p]))
   let total = 0
   for (const r of requested) {

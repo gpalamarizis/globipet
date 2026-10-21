@@ -151,8 +151,17 @@ export default function AiEmotion() {
         lang: i18n.language,
       })
       setLiveResult(data)
-    } catch { /* silent fail for live */ }
-  }, [captureFrame, species, i18n.language])
+    } catch (err: any) {
+      // Ημερήσιο όριο (429) ή χωρίς συνδρομή (402): κάθε επόμενο καρέ θα
+      // αποτύγχανε το ίδιο — σταματά και δείχνει το μήνυμα του server.
+      const status = err?.response?.status
+      if (status === 429 || status === 402) {
+        stopLive()
+        toast.error(err?.response?.data?.message || t('pgEmotion.errAnalysis'))
+      }
+      // Άλλο σφάλμα (δίκτυο, ένα κακό καρέ): σιωπηλά, συνεχίζει στο επόμενο.
+    }
+  }, [captureFrame, species, i18n.language, stopLive, t])
 
   const startAnalysis = () => {
     setFrameCount(0)
@@ -205,8 +214,8 @@ export default function AiEmotion() {
       })
       setResult(data)
       setMode('result_upload')
-    } catch {
-      toast.error(t('pgEmotion.errAnalysis'))
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || t('pgEmotion.errAnalysis'))
       setMode('upload_image')
     }
   }
@@ -247,7 +256,7 @@ export default function AiEmotion() {
       setResult(data)
       setMode('result_upload')
     } catch (err: any) {
-      toast.error(t('pgEmotion.errVideo'))
+      toast.error(err?.response?.data?.message || t('pgEmotion.errVideo'))
       setMode('upload_video')
     }
   }

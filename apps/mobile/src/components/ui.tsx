@@ -318,12 +318,14 @@ type InputProps = {
   keyboardType?: KeyboardTypeOptions
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
   editable?: boolean
+  /** Όριο χαρακτήρων (π.χ. τα πεδία AI: ίδιο με το όριο του server). */
+  maxLength?: number
   style?: ViewStyle
 }
 
 export function Input({
   label, value, onChangeText, placeholder, hint, error,
-  multiline, secureTextEntry, keyboardType, autoCapitalize, editable = true, style,
+  multiline, secureTextEntry, keyboardType, autoCapitalize, editable = true, maxLength, style,
 }: InputProps) {
   return (
     <View style={[{ marginBottom: space.lg }, style]}>
@@ -338,6 +340,7 @@ export function Input({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         editable={editable}
+        maxLength={maxLength}
         style={[
           s.input,
           multiline && { height: 104, textAlignVertical: 'top' },

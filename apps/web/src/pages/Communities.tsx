@@ -247,7 +247,7 @@ export default function Communities() {
             {/* Members strip */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
               {community.members?.map((m: any) => (
-                <div key={m.user_email} className="flex flex-col items-center gap-1 shrink-0">
+                <div key={m.id ?? m.user_name} className="flex flex-col items-center gap-1 shrink-0">
                   <div className="w-9 h-9 rounded-full bg-purple-100 overflow-hidden flex items-center justify-center">
                     {m.user_photo ? <img src={m.user_photo} className="w-full h-full object-cover" /> : <span className="text-purple-700 text-xs font-bold">{m.user_name[0]}</span>}
                   </div>
@@ -281,7 +281,8 @@ export default function Communities() {
                 <div className="text-center py-8 text-gray-400 text-sm">{t('pgCommunities.noMessages')}</div>
               )}
               {community.messages?.map((msg: any) => {
-                const isMe = msg.author_email === myEmail
+                // is_mine από τον server: τα author_email δεν επιστρέφονται πια.
+                const isMe = msg.is_mine === true
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
                     <div className="w-7 h-7 rounded-full bg-purple-100 overflow-hidden flex items-center justify-center shrink-0">

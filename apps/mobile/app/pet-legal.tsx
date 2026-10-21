@@ -105,7 +105,7 @@ export default function PetLegalScreen() {
         {ask.isPending && <SkeletonRows count={2} />}
 
         <Input value={question} onChangeText={setQuestion}
-          placeholder={t('legal.placeholder')} multiline />
+          placeholder={t('legal.placeholder')} multiline maxLength={2000} />
         <Button label={t('legal.ask')} icon={<Send size={18} color={colors.textOnDark} />}
           disabled={!question.trim() || ask.isPending} loading={ask.isPending}
           onPress={() => send(question)} full />

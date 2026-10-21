@@ -139,7 +139,7 @@ export default function AdminRefundsPage() {
             <RefreshCw size={14} className={cn(isFetching && 'animate-spin')} /> {t('adminRefunds.refresh')}
           </button>
           <button onClick={() => { if (check) done(); else setCheck(true) }} disabled={isFetching}
-            className="btn-primary border border-transparent text-sm inline-flex items-center gap-1.5">
+            className="btn-primary text-sm inline-flex items-center gap-1.5">
             <Search size={14} /> {isFetching && check ? t('adminRefunds.checking') : t('adminRefunds.checkViva')}
           </button>
         </div>
@@ -200,7 +200,7 @@ export default function AdminRefundsPage() {
                     <div className="flex justify-end gap-2">
                       {r.can_retry && (
                         <button onClick={() => setRetrying(r)}
-                          className="btn-primary border border-transparent text-xs whitespace-nowrap inline-flex items-center gap-1">
+                          className="btn-primary text-xs whitespace-nowrap inline-flex items-center gap-1">
                           <RotateCcw size={12} /> {t('adminRefunds.retry')}
                         </button>
                       )}
@@ -229,7 +229,7 @@ export default function AdminRefundsPage() {
               <button onClick={() => setRetrying(null)} disabled={retry.isPending} className="btn-secondary text-sm">
                 {t('adminRefunds.cancel')}
               </button>
-              <button onClick={() => retry.mutate(retrying)} disabled={retry.isPending} className="btn-primary border border-transparent text-sm">
+              <button onClick={() => retry.mutate(retrying)} disabled={retry.isPending} className="btn-primary text-sm">
                 {retry.isPending ? t('adminRefunds.sending') : t('adminRefunds.retryAction', { amount: money(retrying.amount) })}
               </button>
             </div>
@@ -266,7 +266,7 @@ export default function AdminRefundsPage() {
               <button onClick={() => setResolving(null)} disabled={resolve.isPending} className="btn-secondary text-sm">
                 {t('adminRefunds.cancel')}
               </button>
-              <button onClick={() => resolve.mutate(resolving)} disabled={resolve.isPending || !noteOk} className="btn-primary border border-transparent text-sm">
+              <button onClick={() => resolve.mutate(resolving)} disabled={resolve.isPending || !noteOk} className="btn-primary text-sm">
                 {resolve.isPending ? t('adminRefunds.sending') : t('adminRefunds.resolve')}
               </button>
             </div>

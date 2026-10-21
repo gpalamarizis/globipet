@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, Image } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, MapPin, Users } from 'lucide-react-native'
+import { CalendarDays, MapPin, Users, Plus } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Chips } from '@/components/Chips'
-import { Screen, Card, Badge, EmptyState, SkeletonRows } from '@/components/ui'
+import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { ErrorState } from '@/components/ErrorState'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
 
@@ -23,7 +24,7 @@ export default function EventsScreen() {
   const [filter, setFilter] = useState<'all' | 'mine'>('all')
   const mine = isAuthenticated && filter === 'mine'
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['events', { mine }],
     queryFn: () => api.get('/events', { params: mine ? { mine: 'true' } : undefined })
       .then(r => r.data?.data ?? r.data ?? []),
@@ -33,8 +34,11 @@ export default function EventsScreen() {
     setRefreshing(true); await qc.invalidateQueries({ queryKey: ['events'] }); setRefreshing(false)
   }, [qc])
 
+  // Νέα εκδήλωση (POST /events): κάθε συνδεδεμένος χρήστης, όπως στο web· οι υπόλοιποι πάνε στη σύνδεση.
   return (
-    <Screen title={t('events.title')} back onRefresh={onRefresh} refreshing={refreshing}>
+    <Screen title={t('events.title')} back onRefresh={onRefresh} refreshing={refreshing}
+      action={<Button size="sm" label={t('eventForm.newButton')} icon={<Plus size={icon.sm} color={colors.textOnDark} />}
+        onPress={() => router.push((isAuthenticated ? '/event-form' : '/auth/login') as any)} />}>
       {isAuthenticated && (
         <Chips<'all' | 'mine'> value={filter} onChange={setFilter} options={[
           { value: 'all', label: t('common.all') },
@@ -42,6 +46,7 @@ export default function EventsScreen() {
         ]} />
       )}
       {isLoading ? <SkeletonRows count={3} /> :
+       isError && events.length === 0 ? <ErrorState onRetry={() => refetch()} retrying={isFetching} /> :
        events.length === 0 ? (mine
          ? <EmptyState icon={CalendarDays} title={t('events.mineEmpty')} />
          : <EmptyState icon={CalendarDays} title={t('events.empty')} message={t('events.emptyHint')} />) :

@@ -2,19 +2,38 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { identityOf } from '../lib/userName.js'
 
+/**
+ * Δημόσια προβολή. Οι λίστες και τα νήματα είναι ανοιχτά σε όλους, και
+ * επέστρεφαν το author_email κάθε συντάκτη — κατάλογος διευθύνσεων για
+ * όποιον έκανε ένα GET. Το email φεύγει· το «είναι δικό μου;» (κουμπιά
+ * επεξεργασίας/διαγραφής) υπολογίζεται εδώ από το JWT, αν υπάρχει, ως is_mine.
+ */
+async function viewerEmail(req: any): Promise<string | null> {
+  if (!req.headers?.authorization) return null
+  try { await req.jwtVerify(); return (req.user as any)?.email ?? null } catch { return null }
+}
+function publicRow<T extends { author_email?: string | null }>(row: T, viewer: string | null) {
+  const { author_email, ...rest } = row
+  return { ...rest, is_mine: !!viewer && author_email === viewer }
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async (req: any) => {
     const { page = 1, limit = 20, category, q } = req.query
-    const skip = (Number(page) - 1) * Number(limit)
+    // Ανώτατο όριο: ?limit=1000000 φόρτωνε ολόκληρο τον πίνακα σε μία κλήση.
+    const take = Math.min(Math.max(1, Number(limit) || 20), 100)
+    const pageNo = Math.max(1, Number(page) || 1)
+    const skip = (pageNo - 1) * take
     const where: any = {}
     if (category) where.category = category
     if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { content: { contains: q, mode: 'insensitive' } }]
     const [data, total] = await Promise.all([
-      prisma.forumTopic.findMany({ where, skip, take: Number(limit), orderBy: [{ is_pinned: 'desc' }, { created_at: 'desc' }] }),
+      prisma.forumTopic.findMany({ where, skip, take, orderBy: [{ is_pinned: 'desc' }, { created_at: 'desc' }] }),
       prisma.forumTopic.count({ where })
     ])
-    return { data, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) }
+    const viewer = await viewerEmail(req)
+    return { data: data.map(t => publicRow(t, viewer)), total, page: pageNo, totalPages: Math.ceil(total / take) }
   })
 
   app.get('/:id', async (req: any, reply) => {
@@ -27,7 +46,9 @@ const routes: FastifyPluginAsync = async (app) => {
     })
     if (!topic) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
     await prisma.forumTopic.update({ where: { id: req.params.id }, data: { views_count: { increment: 1 } } })
-    return topic
+    const viewer = await viewerEmail(req)
+    const { replies, ...rest } = topic
+    return { ...publicRow(rest, viewer), replies: replies.map(r => publicRow(r, viewer)) }
   })
 
   // ─── Replies ───────────────────────────────────────────────────────
@@ -42,7 +63,8 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: [{ is_answer: 'desc' }, { created_at: 'asc' }],
       take: 200,
     })
-    return { data }
+    const viewer = await viewerEmail(req)
+    return { data: data.map(r => publicRow(r, viewer)) }
   })
 
   app.post('/:id/replies', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -72,7 +94,8 @@ const routes: FastifyPluginAsync = async (app) => {
         data: { replies_count: { increment: 1 } },
       }),
     ])
-    return reply.code(201).send({ data: created })
+    // Η απάντηση πάει μόνο στον συντάκτη της: το email του είναι δικό του.
+    return reply.code(201).send({ data: { ...created, is_mine: true } })
   })
 
   app.patch('/replies/:replyId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
@@ -88,7 +111,7 @@ const routes: FastifyPluginAsync = async (app) => {
       where: { id: existing.id },
       data: { content: String(content).trim().slice(0, 10000) },
     })
-    return { data: updated }
+    return { data: { ...updated, is_mine: existing.author_email === user.email } }
   })
 
   /**
@@ -150,7 +173,7 @@ const routes: FastifyPluginAsync = async (app) => {
     const topic = await prisma.forumTopic.create({
       data: { author_email: email, author_name: author.name, title, content, category, tags: tags || [] }
     })
-    return reply.code(201).send(topic)
+    return reply.code(201).send({ ...topic, is_mine: true })
   })
 
   /**
@@ -191,7 +214,8 @@ const routes: FastifyPluginAsync = async (app) => {
     if (Object.keys(data).length === 0) {
       return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
     }
-    return prisma.forumTopic.update({ where: { id: topic.id }, data })
+    const updated = await prisma.forumTopic.update({ where: { id: topic.id }, data })
+    return { ...updated, is_mine: isAuthor }
   })
 
   // Delete — author or admin, so moderation is possible from the admin panel.

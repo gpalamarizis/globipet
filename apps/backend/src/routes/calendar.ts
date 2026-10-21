@@ -67,6 +67,42 @@ function frontendUrl() {
 }
 const redirectUri = (p: Provider) => `${apiBase()}/calendar/${p}/callback`
 
+/**
+ * Ε12 — ΤΟ STATE ΔΕΝΕΤΑΙ ΜΕ ΤΟΝ BROWSER (υπογεγραμμένο httpOnly cookie).
+ *
+ *   Πριν, το state ζούσε μόνο στη βάση. Όποιος ξεκινούσε τη ροή από τον δικό
+ *   του λογαριασμό μπορούσε να στείλει το URL της Google/Microsoft σε ένα
+ *   θύμα: το θύμα ενέκρινε, και το ΗΜΕΡΟΛΟΓΙΟ ΤΟΥ θύματος συνδεόταν στον
+ *   λογαριασμό του επιτιθέμενου (όλες οι μελλοντικές κρατήσεις του, με
+ *   ονόματα πελατών, γράφονταν εκεί και αντίστροφα).
+ *
+ *   Τώρα το /connect επιστρέφει ένα URL ΤΟΥ ΔΙΚΟΥ ΜΑΣ server (/start). Ο
+ *   browser που το ανοίγει (popup στο web, εξωτερικός browser στο κινητό)
+ *   παίρνει το state σε υπογεγραμμένο, httpOnly cookie, και μόνο μετά
+ *   πηγαίνει στον πάροχο. Στην επιστροφή το cookie ΠΡΕΠΕΙ να ταιριάζει.
+ *   Το cookie μπαίνει με πλήρη πλοήγηση (όχι από XHR), γιατί το API είναι
+ *   σε άλλο site από το web — cookie από XHR θα ήταν third-party και θα
+ *   το έκοβε ο browser. Οι clients δεν αλλάζουν: ανοίγουν ό,τι URL πάρουν.
+ *
+ *   Ίδιο μοτίβο με το gp_oauth_state του routes/auth.ts.
+ *
+ *   ΟΡΙΟ ΤΗΣ ΛΥΣΗΣ: ο σύνδεσμος /start είναι μίας χρήσης (startedStates),
+ *   αλλά ένας σύνδεσμος που ο επιτιθέμενος ΔΕΝ άνοιξε ο ίδιος και έστειλε στο
+ *   θύμα παραμένει χρήσιμος για 10′. Πλήρες δέσιμο με τη συνεδρία θέλει βήμα
+ *   ολοκλήρωσης από τον συνδεδεμένο client (POST με JWT) — αλλαγή στο
+ *   ProviderDashboard του web και στο (provider)/calendar του κινητού.
+ */
+const startedStates = new Map<string, number>()
+const CAL_STATE_COOKIE = 'gp_cal_state'
+const CAL_STATE_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 600,
+  signed: true,
+}
+
 /** Exchange an authorisation code, or a refresh token, for an access token. */
 async function requestToken(p: Provider, body: Record<string, string>) {
   const cfg = PROVIDERS[p]
@@ -244,8 +280,32 @@ const calendarRoutes: FastifyPluginAsync = async (app) => {
       data: { state, user_email: email, provider, expires_at: new Date(Date.now() + 10 * 60_000) },
     })
 
+    // Ε12: όχι κατευθείαν το URL του παρόχου — ο σύνδεσμος προς το /start,
+    // που δένει το state με τον browser (βλ. CAL_STATE_COOKIE).
+    return { data: { url: `${apiBase()}/calendar/${provider}/start?s=${state}` } }
+  })
+
+  /**
+   * Ο browser που θα ολοκληρώσει τη ροή περνά πρώτα από εδώ: παίρνει το state
+   * σε cookie και ανακατευθύνεται στον πάροχο (βλ. CAL_STATE_COOKIE).
+   */
+  app.get('/:provider/start', async (req: any, reply) => {
+    const provider = req.params.provider as Provider
+    const cfg = PROVIDERS[provider]
+    const state = String((req.query as any)?.s ?? '')
+    const back = (status: string) => reply.redirect(`${frontendUrl()}/provider?calendar=${status}`)
+    if (!cfg || !/^[a-f0-9]{48}$/.test(state)) return back('failed')
+    const row = await prisma.oAuthState.findUnique({ where: { state } })
+    if (!row || row.provider !== provider || row.expires_at < new Date()) return back('failed')
+    // Μία χρήση ανά διεργασία: δεύτερο άνοιγμα του ίδιου συνδέσμου → αποτυχία.
+    const now = Date.now()
+    for (const [k, exp] of startedStates) if (exp < now) startedStates.delete(k)
+    if (startedStates.has(state)) return back('failed')
+    startedStates.set(state, row.expires_at.getTime())
+
+    reply.setCookie(CAL_STATE_COOKIE, state, CAL_STATE_COOKIE_OPTS)
     const params = new URLSearchParams({
-      client_id: cfg.clientId()!,
+      client_id: cfg.clientId() || '',
       redirect_uri: redirectUri(provider),
       response_type: 'code',
       scope: cfg.scope,
@@ -254,7 +314,7 @@ const calendarRoutes: FastifyPluginAsync = async (app) => {
       // dies at the first expiry.
       ...(provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : {}),
     })
-    return { data: { url: `${cfg.authUrl}?${params}` } }
+    return reply.redirect(`${cfg.authUrl}?${params}`)
   })
 
   /** Where the provider sends the browser back. No session here — the state carries the identity. */
@@ -263,7 +323,17 @@ const calendarRoutes: FastifyPluginAsync = async (app) => {
     const { code, state } = req.query as any
     const back = (status: string) => reply.redirect(`${frontendUrl()}/provider?calendar=${status}`)
 
+    // Ε12: το state πρέπει να ταιριάζει με το cookie ΑΥΤΟΥ του browser.
+    const raw = req.cookies?.[CAL_STATE_COOKIE]
+    reply.clearCookie(CAL_STATE_COOKIE, { path: '/' })
+    const unsigned = raw ? req.unsignCookie(raw) : null
+    const cookieOk = !!unsigned?.valid && typeof state === 'string' && unsigned.value === state
+
     if (!PROVIDERS[provider] || !code || !state) return back('failed')
+    if (!cookieOk) {
+      console.warn('[calendar] callback state not bound to this browser — rejected')
+      return back('failed')
+    }
 
     try {
       const row = await prisma.oAuthState.findUnique({ where: { state } })

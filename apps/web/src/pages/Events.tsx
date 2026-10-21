@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban, UserCheck, AlertTriangle } from 'lucide-react'
+import { Calendar, MapPin, Search, Users, Ticket, Sparkles, Ban, UserCheck, AlertTriangle, Plus } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import EventFormModal from '@/components/features/events/EventFormModal'
 
 /**
  * Events listing.
@@ -38,6 +39,10 @@ export default function Events() {
   const { isAuthenticated } = useAuthStore()
   const [mineOnly, setMineOnly] = useState(false)
   const mine = isAuthenticated && mineOnly
+  // Νέα εκδήλωση (POST /events): κάθε συνδεδεμένος χρήστης· οι υπόλοιποι πάνε στη σύνδεση.
+  const navigate = useNavigate()
+  const [creating, setCreating] = useState(false)
+  const onNewEvent = () => { if (!isAuthenticated) { navigate('/login'); return } setCreating(true) }
 
   const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
   const locale = localeMap[i18n.language] || 'el-GR'
@@ -76,12 +81,22 @@ export default function Events() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8">
-      <div className="mb-6">
-        <h1 className="section-title mb-1">{t('nav.events')}</h1>
-        <p className="text-gray-500 text-sm">
-          {t('events.subtitle')}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="section-title mb-1">{t('nav.events')}</h1>
+          <p className="text-gray-500 text-sm">
+            {t('events.subtitle')}
+          </p>
+        </div>
+        <button onClick={onNewEvent} className="btn-primary text-sm inline-flex items-center gap-1.5 shrink-0">
+          <Plus size={15} /> {t('eventForm.newButton')}
+        </button>
       </div>
+
+      {creating && (
+        <EventFormModal onClose={() => setCreating(false)}
+          onSaved={(ev: any) => { setCreating(false); if (ev?.id) navigate(`/events/${ev.id}`) }} />
+      )}
 
       {/* Search */}
       <div className="flex gap-3 mb-4 flex-wrap">

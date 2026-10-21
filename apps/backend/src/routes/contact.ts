@@ -50,7 +50,8 @@ const contactRoutes: FastifyPluginAsync = async (app) => {
       return { success: true }
     }
 
-    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() || req.ip || null
+    // req.ip (trustProxy, index.ts) — όχι το X-Forwarded-For που γράφει ο client.
+    const ip = req.ip || null
 
     const saved = await prisma.contactMessage.create({
       data: {

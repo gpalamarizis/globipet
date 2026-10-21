@@ -1,16 +1,19 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Users, Ticket,
-  Mail, PawPrint, Check, UserPlus, CreditCard, Hourglass, Ban,
+  PawPrint, Check, UserPlus, CreditCard, Hourglass, Ban, Pencil,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import EventFormModal from '@/components/features/events/EventFormModal'
+import EventAttendees, { hasMoneyAtStake } from '@/components/features/events/EventAttendees'
 
 /**
  * A single event.
@@ -85,12 +88,20 @@ export default function EventDetail() {
 
   // ── Διοργανωτής/διαχειριστής: ακύρωση εκδήλωσης με επιστροφές ──
   const isOrganizer = isAuthenticated && !!event
-    && (user?.email === event.organizer_email || user?.role === 'admin')
+    // is_mine από τον server: το organizer_email δεν επιστρέφεται πια δημόσια.
+    && ((event as any).is_mine === true || user?.role === 'admin')
   const { data: cancelPreview, refetch: refetchCancelPreview } = useQuery({
     queryKey: ['event-cancel-preview', id],
     queryFn: () => api.get(`/events/${id}/cancel-preview`).then(r => r.data?.data),
     enabled: !!id && isOrganizer,
   })
+  // Συμμετέχοντες (μόνο διοργανωτής/διαχειριστής) και επεξεργασία της εκδήλωσης.
+  const { data: registrations = [], isLoading: regsLoading, isError: regsError } = useQuery({
+    queryKey: ['event-registrations', id],
+    queryFn: () => api.get(`/events/${id}/registrations`).then(r => r.data?.data ?? []),
+    enabled: !!id && isOrganizer,
+  })
+  const [editing, setEditing] = useState(false)
 
   const cancelEvent = useMutation({
     mutationFn: () => api.post(`/events/${id}/cancel`, {}),
@@ -101,6 +112,7 @@ export default function EventDetail() {
       queryClient.invalidateQueries({ queryKey: ['events'] })
       queryClient.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
       queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+      queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
       queryClient.invalidateQueries({ queryKey: ['event', id] })
       if (res?.data?.settled ?? res?.data?.deleted) {
         toast.success(t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
@@ -366,22 +378,24 @@ export default function EventDetail() {
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-3">
             {t('events.organizer')}
           </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{event.organizer}</p>
-          <div className="flex gap-2 flex-wrap">
-            {event.organizer_email && (
-              <a href={`mailto:${event.organizer_email}?subject=${encodeURIComponent(event.title)}`}
-                className="btn-primary text-sm inline-flex items-center gap-1.5">
-                <Mail size={14} /> {t('events.contactOrganizer')}
-              </a>
-            )}
-          </div>
+          {/* Το organizer_email δεν επιστρέφεται πια δημόσια — καμία επαφή με mailto. */}
+          <p className="text-sm text-gray-700 dark:text-gray-300">{event.organizer}</p>
         </div>
 
         {isOrganizer && (
           <div className="card p-5 mt-5">
-            <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-              {t('events.manageEvent')}
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h2 className="font-semibold text-sm text-gray-900 dark:text-white">
+                {t('events.manageEvent')}
+              </h2>
+              {/* Ακυρωμένη: ο server αρνείται κάθε αλλαγή (409). */}
+              {!eventCancelled && (
+                <button onClick={() => setEditing(true)} disabled={regsLoading}
+                  className="btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
+                  <Pencil size={13} /> {t('eventForm.editButton')}
+                </button>
+              )}
+            </div>
             {cancelSettled ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('events.cancelEventSettled')}
@@ -404,9 +418,21 @@ export default function EventDetail() {
                 </button>
               </>
             )}
+            <EventAttendees registrations={registrations} isLoading={regsLoading} isError={regsError} />
           </div>
         )}
       </motion.div>
+
+      {editing && isOrganizer && (
+        <EventFormModal event={event} lockTerms={hasMoneyAtStake(registrations)}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false)
+            queryClient.invalidateQueries({ queryKey: ['event-registration', id] })
+            queryClient.invalidateQueries({ queryKey: ['event-registrations', id] })
+            queryClient.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
+          }} />
+      )}
     </div>
   )
 }

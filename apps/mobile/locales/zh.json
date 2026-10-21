@@ -811,7 +811,8 @@
     "crt_prolonged": "2-3 秒（异常）",
     "crt_critical": "> 3 秒（危急）",
     "destCountry": "目的地国家",
-    "bcsRange": "体况评分（BCS）必须在 1 到 9 之间。"
+    "bcsRange": "体况评分（BCS）必须在 1 到 9 之间。",
+    "st_expired": "已过期"
   },
   "play": {
     "create_first": "创建第一个并邀请其他主人。",
@@ -2263,5 +2264,164 @@
     "providerRefunded": "客户将获得 €{{amount}} 全额退款。",
     "refunding": "退款处理中",
     "contactSupport": "该问诊已付款；如需取消，请联系客服。"
+  },
+  "emailVerify": {
+    "title": "请确认您的邮箱",
+    "sentTo": "我们已向 {{email}} 发送了链接。打开链接即可确认账户并激活免费 AI 试用。",
+    "successTitle": "您的邮箱已确认",
+    "successBody": "谢谢！您的账户已完全激活，免费 AI 试用已开始。",
+    "continue": "继续使用应用",
+    "resend": "重新发送",
+    "iVerified": "我已确认",
+    "notYet": "尚未确认。请打开邮件中的链接后重试。",
+    "alreadyVerified": "您的邮箱已确认",
+    "sent": "我们已向您发送新的确认邮件",
+    "bannerText": "请确认您的邮箱——我们已向您发送了链接。"
+  },
+  "aiSub": {
+    "activeTitle": "你的 AI 订阅已生效",
+    "cancelledTitle": "你的 AI 订阅已取消",
+    "plan": "方案：{{plan}}",
+    "paymentFailedHint": "你的银行卡最近一次扣款失败，AI 功能将暂停，直到付款成功。",
+    "confirmText": "AI 订阅将立即取消，你的银行卡不会再被扣款。AI 功能的使用权限即刻停止。已扣除的费用不予退还。你可以随时重新订阅。"
+  },
+  "providerPay": {
+    "awaitingPayment": "等待付款"
+  },
+  "ordersPay": {
+    "pay": "付款",
+    "cancel": "取消订单",
+    "confirmCancel": "要取消此订单吗？该订单尚未付款，因此不会产生任何扣款。",
+    "cancelled": "订单已取消",
+    "unpaidHint": "此订单尚未付款。"
+  },
+  "providerAccount": {
+    "verifyAccount": "账户认证",
+    "verifyTitle": "认证您的账户",
+    "verifyRejectedTitle": "您的认证申请被拒绝——请重新提交",
+    "verifyDesc": "通过认证的服务商会显示认证标识，更易获得客户信任。"
+  },
+  "trialVerify": {
+    "confirmEmail": "请先验证您的邮箱，以开始免费试用。"
+  },
+  "loadState": {
+    "notFound": "未找到"
+  },
+  "oauthErrors": {
+    "inProgress": "正在登录中",
+    "playServices": "Google Play 服务不可用",
+    "facebookToken": "未收到 Facebook 的访问令牌",
+    "googleToken": "未收到 Google 的登录信息，请重试。"
+  },
+  "notifChannel": {
+    "name": "GlobiPet 通知"
+  },
+  "reviewReply": {
+    "tab": "评价",
+    "providerReply": "服务商回复",
+    "yourReply": "你的回复",
+    "placeholder": "给客户写一条礼貌的回复…",
+    "publicHint": "回复将公开显示在评价下方",
+    "reply": "回复",
+    "edit": "编辑回复",
+    "remove": "删除回复",
+    "confirmRemove": "要删除你对这条评价的回复吗？",
+    "saved": "回复已保存",
+    "removed": "回复已删除",
+    "count": "评价：{{count}}",
+    "unansweredCount": "未回复：{{count}}",
+    "onlyUnanswered": "未回复",
+    "allAnswered": "你已回复所有评价。",
+    "empty": "你还没有收到任何评价。",
+    "product": "产品",
+    "service": "服务",
+    "noComment": "仅评分，无评论。",
+    "showLess": "收起"
+  },
+  "staffPrices": {
+    "title": "按服务/套餐定价",
+    "hint": "仅在该专业人员价格不同时填写。留空 = 套餐基础价格。",
+    "loadError": "无法加载价格，请重试。",
+    "noPackages": "该服务还没有套餐。请先添加套餐，再为专业人员设置价格。",
+    "base": "基础价：{{price}}",
+    "priceFor": "“{{name}}”的价格",
+    "invalid": "价格无效：请输入欧元金额（如 35 或 35.50），或留空。",
+    "save": "保存价格",
+    "saved": "价格已保存",
+    "afterSave": "保存成员后即可按服务/套餐设置价格。",
+    "unsaved": "价格尚未保存"
+  },
+  "eventForm": {
+    "newButton": "新建活动",
+    "editButton": "编辑",
+    "newTitle": "新建活动",
+    "editTitle": "编辑活动",
+    "title": "标题",
+    "type": "类别",
+    "description": "描述",
+    "termsLocked": "已有付费报名：日期、时间和价格不能再修改。如需更改，请联系客服。",
+    "date": "开始日期",
+    "time": "开始时间",
+    "endDate": "结束日期",
+    "endDateHint": "仅适用于多日活动；时间为希腊当地时间。",
+    "location": "地点",
+    "locationPlaceholder": "例如：Tritsis 公园",
+    "city": "城市",
+    "capacity": "容量（人数）",
+    "capacityPlaceholder": "不限",
+    "price": "每人价格",
+    "pricePlaceholder": "免费",
+    "priceHint": "留空 = 免费。通过 Viva 付款，仅限欧元。在开始前至少 {{hours}} 小时取消可全额退款；如果你取消活动，所有付款都会退还。",
+    "image": "图片",
+    "addImage": "添加图片",
+    "changeImage": "更换图片",
+    "errRequired": "请填写标题、日期、时间、地点和城市。",
+    "errDate": "日期格式必须为 YYYY-MM-DD（如 2026-11-15）。",
+    "errPast": "开始日期已过。",
+    "errTime": "时间格式必须为 HH:MM（如 18:30）。",
+    "errEndDate": "结束日期须为 YYYY-MM-DD，且不得早于开始日期。",
+    "errPrice": "价格无效：请输入欧元金额（如 15 或 15.50），或留空。",
+    "errPaidFormat": "付费活动需要 YYYY-MM-DD 格式的日期和 HH:MM 格式的时间。",
+    "errCapacity": "容量必须是不小于 1 的整数，留空表示不限。",
+    "errCapacityBelow": "容量不能少于已报名人数（{{count}}）。",
+    "created": "活动已创建",
+    "updated": "活动已更新",
+    "create": "创建活动",
+    "notAllowed": "只有主办方可以编辑此活动。",
+    "errPermission": "需要照片访问权限才能添加图片。",
+    "types": {
+      "meetup": "聚会",
+      "show": "展会",
+      "adoption": "领养",
+      "training": "训练",
+      "charity": "慈善",
+      "competition": "比赛"
+    }
+  },
+  "eventAttendees": {
+    "title": "参与者",
+    "summary": "报名：{{count}} · 人数：{{people}}",
+    "loadError": "无法加载参与者列表，请重试。",
+    "empty": "暂无报名。",
+    "people_one": "{{count}} 人",
+    "people": "{{count}} 人",
+    "statusPaid": "已付款",
+    "statusFree": "免费",
+    "statusPending": "待付款",
+    "statusRefunding": "退款处理中",
+    "statusRefundFailed": "退款待处理",
+    "statusRefunded": "已退款",
+    "statusCancelled": "已取消"
+  },
+  "aiGate": {
+    "paymentFailedTitle": "你的 AI 订阅付款失败",
+    "cancelledText": "选择一个方案，继续使用 AI 功能。",
+    "subscriptionLabel": "AI 订阅",
+    "paymentFailedShort": "付款失败",
+    "required": "需要 AI 订阅"
+  },
+  "orderOos": {
+    "refunded": "商品已售罄——款项已退还",
+    "refundDelayed": "商品已售罄——退款有所延迟，我们的团队会完成退款"
   }
 }

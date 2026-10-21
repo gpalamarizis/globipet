@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import i18n from './i18n'
 
@@ -44,9 +45,28 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+/**
+ * Ε12 — νέο τοκεν από τον server.
+ *
+ * Η αλλαγή κωδικού (POST /users/me/password) ακυρώνει ΟΛΑ τα τοκεν που
+ * υπήρχαν (token_version+1) και επιστρέφει νέο για αυτή τη συσκευή. Ο
+ * χειριστής (store/auth.ts) το βάζει στη συνεδρία· χωρίς αυτό, το επόμενο
+ * αίτημα θα έφευγε με το παλιό τοκεν και ο χρήστης θα αποσυνδεόταν.
+ */
+const TOKEN_ROTATING_ENDPOINTS = ['/users/me/password']
+let onTokenRotated: ((token: string) => void) | null = null
+export function setTokenRotationHandler(fn: (token: string) => void) { onTokenRotated = fn }
+
 // Response interceptor — handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const url: string = response.config?.url || ''
+    const token = (response.data as any)?.token
+    if (typeof token === 'string' && token && TOKEN_ROTATING_ENDPOINTS.some(p => url.includes(p))) {
+      onTokenRotated?.(token)
+    }
+    return response
+  },
   async (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message || i18n.t('apiMsg.generic')
@@ -59,7 +79,10 @@ api.interceptors.response.use(
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }
-    } else if (status === 429) {
+    } else if (status === 429 && !error.response?.data?.message) {
+      // Γενικό μήνυμα ΜΟΝΟ όταν ο server δεν έστειλε δικό του: αλλιώς η
+      // σελίδα δείχνει το μήνυμα του server (π.χ. ημερήσιο όριο AI) και ο
+      // χρήστης έβλεπε δύο toasts.
       toast.error(i18n.t('apiMsg.tooMany'))
     }
     // Don't show global toast for 500 errors - let components handle them
@@ -103,5 +126,69 @@ export async function uploadFile(file: File, folder = 'general'): Promise<string
   const { data } = await api.post(`/upload?folder=${encodeURIComponent(folder)}`, formData, {
     headers: { 'Content-Type': undefined as any },
   })
+  // Ιδιωτικό αρχείο: ο server δίνει ήδη προσωρινό σύνδεσμο προεπισκόπησης.
+  if (data?.private && data.preview_url && data.preview_expires_at) {
+    privateCache.set(data.url, { url: data.preview_url, exp: Date.parse(data.preview_expires_at) })
+  }
   return data.url
+}
+
+/**
+ * Ιδιωτικά αρχεία (ιατρικά, εικόνες AI).
+ *
+ * Το upload στους φακέλους medical / ai-health / stool-urine επιστρέφει
+ * αναφορά `r2priv://…` αντί για δημόσιο URL. Για εμφάνιση ζητάμε από το
+ * GET /upload/private-url σύνδεσμο που λήγει σε 10 λεπτά και τον κρατάμε
+ * μέχρι 30" πριν τη λήξη. Στα endpoints AI η αναφορά στέλνεται ΟΠΩΣ ΕΙΝΑΙ —
+ * τη λύνει ο server.
+ *
+ * `petId`: όταν το αρχείο το βλέπει κτηνίατρος μέσα από το διαβατήριο του ζώου.
+ */
+const privateCache = new Map<string, { url: string; exp: number }>()
+const privatePending = new Map<string, Promise<string | null>>()
+
+export const isPrivateRef = (v: unknown): v is string => typeof v === 'string' && v.startsWith('r2priv://')
+
+export async function getPrivateUrl(ref: string, petId?: string | null): Promise<string | null> {
+  if (!isPrivateRef(ref)) return ref || null
+  const hit = privateCache.get(ref)
+  if (hit && hit.exp - 30_000 > Date.now()) return hit.url
+  const k = ref + '|' + (petId || '')
+  let p = privatePending.get(k)
+  if (!p) {
+    p = api.get('/upload/private-url', { params: { ref, ...(petId ? { pet_id: petId } : {}) } })
+      .then(({ data }) => {
+        if (!data?.url) return null
+        privateCache.set(ref, { url: data.url, exp: Date.parse(data.expires_at) || Date.now() + 300_000 })
+        return data.url as string
+      })
+      .catch(() => null)
+      .finally(() => { privatePending.delete(k) })
+    privatePending.set(k, p)
+  }
+  return p
+}
+
+/** Hook: URL για `<img src>` / `<a href>`. Δημόσιο URL → το ίδιο· `r2priv://` → προσωρινό (ανανεώνεται πριν λήξει). */
+export function usePrivateUrl(ref: string | null | undefined, petId?: string | null): string | null {
+  const direct = ref && !isPrivateRef(ref) ? ref : null
+  const [url, setUrl] = useState<string | null>(() => {
+    if (!isPrivateRef(ref)) return null
+    const hit = privateCache.get(ref)
+    return hit && hit.exp - 30_000 > Date.now() ? hit.url : null
+  })
+  useEffect(() => {
+    if (!isPrivateRef(ref)) { setUrl(null); return }
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const load = () => getPrivateUrl(ref, petId).then(u => {
+      if (!alive) return
+      setUrl(u)
+      const exp = privateCache.get(ref)?.exp
+      if (u && exp) timer = setTimeout(load, Math.max(exp - 30_000 - Date.now(), 5_000))
+    })
+    load()
+    return () => { alive = false; if (timer) clearTimeout(timer) }
+  }, [ref, petId])
+  return direct ?? url
 }

@@ -99,7 +99,8 @@ export default function ForumTopic() {
   )
 
   const replies = topic.replies ?? []
-  const isTopicAuthor = user?.email === topic.author_email
+  // is_mine: από τον server (το author_email δεν επιστρέφεται πια δημόσια).
+  const isTopicAuthor = !!user && topic.is_mine === true
   const isAdmin = (user as any)?.role === 'admin'
 
   return (
@@ -228,14 +229,14 @@ export default function ForumTopic() {
                     <Check size={14} />
                   </button>
                 )}
-                {(r.author_email === user?.email || isAdmin) && editingReplyId !== r.id && (
+                {((!!user && r.is_mine === true) || isAdmin) && editingReplyId !== r.id && (
                   <button onClick={() => { setEditReplyText(r.content ?? ''); setEditingReplyId(r.id) }}
                     title={t('common.edit')}
                     className="text-gray-400 hover:text-brand-900 p-1">
                     <Pencil size={14} />
                   </button>
                 )}
-                {(r.author_email === user?.email || isAdmin) && (
+                {((!!user && r.is_mine === true) || isAdmin) && (
                   <button onClick={() => {
                       if (confirm(t('forum.confirmDelete'))) deleteReply.mutate(r.id)
                     }}

@@ -8,6 +8,7 @@ import { Search, X, Star, MapPin, CheckCircle } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
+import { ErrorState } from '@/components/ErrorState'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -78,7 +79,7 @@ export default function ServicesScreen() {
   const [onlyEmergency, setOnlyEmergency] = useState(false)
   const [minRating, setMinRating] = useState(0)
 
-  const { data: services = [], isLoading } = useQuery({
+  const { data: services = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['services', serviceType, search, city, onlyVerified, onlyEmergency, minRating],
     queryFn: () => api.get('/services', {
       params: {
@@ -210,7 +211,10 @@ export default function ServicesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }
         ListEmptyComponent={
-          isLoading
+          // Σφάλμα δικτύου ≠ «καμία υπηρεσία»: επανάληψη.
+          isError
+            ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+            : isLoading
             ? <View>{[0, 1, 2, 3].map(i => (
                 <View key={i} style={s.card}>
                   <View style={[s.avatar, s.skeleton]} />

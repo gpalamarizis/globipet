@@ -50,6 +50,43 @@ function notifyTelehealthCancelled(c: any, by: CancelBy, refund: number) {
 const CALL_OPENS_BEFORE_MS = 30 * 60_000
 const CALL_CLOSES_AFTER_MS = 3 * 3_600_000
 
+const MSG_SCHEDULE_INVALID = 'Μη έγκυρη ημερομηνία ή ώρα συνεδρίας'
+const MSG_SCHEDULE_PAST = 'Η ημερομηνία και η ώρα της συνεδρίας πρέπει να είναι στο μέλλον'
+const MSG_NO_PRICE = 'Ο κτηνίατρος δεν έχει ορίσει τιμή για την τηλεϊατρική'
+const MSG_SERVICE_UNAVAILABLE = 'Η υπηρεσία τηλεϊατρικής δεν είναι διαθέσιμη'
+
+/**
+ * Ημερομηνία YYYY-MM-DD (πραγματική — όχι 2026-02-31) + ώρα, ώρα Ελλάδας.
+ *   strict  → ώρα ακριβώς HH:MM (νέες συνεδρίες/μεταθέσεις· έτσι στέλνουν
+ *             web και κινητό)
+ *   lenient → και H:MM / HH:MM:SS, και ημερομηνία με ίχνος ώρας (παλιές
+ *             εγγραφές) — για το παράθυρο της κλήσης.
+ */
+function parseSchedule(date: unknown, time: unknown, strict = false): Date | null {
+  const ds = String(date ?? '').trim()
+  const d = (strict ? /^(\d{4})-(\d{2})-(\d{2})$/ : /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/).exec(ds)
+  if (!d) return null
+  const y = Number(d[1]), m = Number(d[2]), day = Number(d[3])
+  const probe = new Date(Date.UTC(y, m - 1, day))
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== day) return null
+  const t = (strict ? /^([01]\d|2[0-3]):([0-5]\d)$/ : /^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/).exec(String(time ?? '').trim())
+  if (!t || Number(t[1]) > 23) return null
+  return bookingStart(`${d[1]}-${d[2]}-${d[3]}`, `${t[1]}:${t[2]}`)
+}
+
+/**
+ * Πόσο πίσω στον χρόνο δεκτή η ώρα μιας ΝΕΑΣ συνεδρίας.
+ *
+ * Η «άμεση κλήση» (web Telehealth.tsx, κινητό telehealth.tsx) στέλνει ως ώρα
+ * τη στιγμή της κράτησης, στην ώρα της ΣΥΣΚΕΥΗΣ (όχι της Ελλάδας). Γενικά:
+ * ανοχή 15 λεπτών. Για κτηνίατρο που είναι διαθέσιμος τώρα (μόνο αυτοί
+ * εμφανίζονται στην «άμεση»), ανοχή 12 ωρών — συσκευή σε ζώνη ώρας δυτικά
+ * της Ελλάδας στέλνει ώρα «στο παρελθόν»· το παράθυρο κλήσης μετρά τότε από
+ * τη στιγμή της κράτησης (created_at).
+ */
+const SCHEDULE_GRACE_MS = 15 * 60_000
+const IMMEDIATE_GRACE_MS = 12 * 3_600_000
+
 // Fires once when a consultation is confirmed paid: generates the meeting room,
 // sends customer + provider emails, and notifies the provider in-app.
 // Exported (top-level) so orders.ts's shared Viva webhook can call it as a fallback
@@ -182,8 +219,9 @@ export async function verifyConsultationPayment(consultationId: string, transact
       return 'invalid'
     }
 
+    // Μη αριθμητικό ποσό (NaN) = άκυρη, όχι «περνά» (πριν ο έλεγχος ήταν fail-open).
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
-    if (Number.isFinite(paid) && paid + 0.01 < c.price) {
+    if (!Number.isFinite(paid) || paid + 0.01 < c.price) {
       console.error(`[viva] transaction ${transactionId} paid ${paid}, session costs ${c.price}`)
       return 'invalid'
     }
@@ -210,9 +248,21 @@ const routes: FastifyPluginAsync = async (app) => {
 
   // GET /telehealth/available-now — public, returns vets currently online
   app.get('/available-now', async (_req, reply) => {
+    // Ρητά πεδία, χωρίς contact_email / contact_phone: δημόσιο endpoint (ο
+    // κατάλογος έδινε τα στοιχεία επικοινωνίας σε οποιονδήποτε). Το
+    // provider_email μένει: το web και το κινητό το στέλνουν στην κράτηση.
     const vets = await prisma.service.findMany({
       where: { service_type: 'veterinary', is_active: true, is_available_now: true },
       orderBy: { available_since: 'asc' },
+      select: {
+        id: true, provider_email: true, provider_name: true, title: true, description: true,
+        city: true, location: true, country: true, image_url: true, cover_image: true,
+        specializations: true, pet_types: true, languages: true, years_experience: true,
+        is_verified: true, is_active: true, rating: true, reviews_count: true, price: true,
+        service_type: true, category: true, emergency_available: true, home_visits: true,
+        is_available_now: true, available_since: true, available_days: true,
+        created_at: true, updated_at: true,
+      },
     })
     return reply.send({ data: vets })
   })
@@ -297,9 +347,13 @@ const routes: FastifyPluginAsync = async (app) => {
 
     // Παράθυρο εισόδου (ώρα Ελλάδας). Άμεση κλήση = συνεδρία με ώρα τη
     // στιγμή της κράτησης (ή νωρίτερα): το παράθυρο ανοίγει αμέσως και
-    // κλείνει 3 ώρες μετά την κράτηση. Αδιάβαστη ημερομηνία: δεν μπλοκάρει.
-    const start = bookingStart(c.scheduled_date, c.scheduled_time)
-    if (start) {
+    // κλείνει 3 ώρες μετά την κράτηση. Αδιάβαστη ημερομηνία/ώρα: άρνηση
+    // (πριν δεν μπλοκάρε — το δωμάτιο έμενε ανοιχτό για πάντα).
+    const start = parseSchedule(c.scheduled_date, c.scheduled_time)
+    if (!start) {
+      return reply.code(409).send({ message: MSG_SCHEDULE_INVALID })
+    }
+    {
       const opensAt = start.getTime() - CALL_OPENS_BEFORE_MS
       const closesAt = Math.max(start.getTime(), c.created_at.getTime()) + CALL_CLOSES_AFTER_MS
       const now = Date.now()
@@ -346,7 +400,7 @@ const routes: FastifyPluginAsync = async (app) => {
     // A client-supplied `price` previously went straight into the Viva charge,
     // so a consultation could be booked for a cent.
     const service = service_id
-      ? await prisma.service.findUnique({ where: { id: service_id } })
+      ? await prisma.service.findUnique({ where: { id: String(service_id) } })
       : await prisma.service.findFirst({
           where: { provider_email, service_type: 'veterinary', is_active: true },
         })
@@ -356,6 +410,27 @@ const routes: FastifyPluginAsync = async (app) => {
     }
     if (service.provider_email !== provider_email) {
       return reply.code(400).send({ message: 'Η υπηρεσία δεν ανήκει στον συγκεκριμένο πάροχο' })
+    }
+    // Με ρητό service_id: μόνο ΕΝΕΡΓΗ ΚΤΗΝΙΑΤΡΙΚΗ υπηρεσία. Πριν, οποιαδήποτε
+    // υπηρεσία του παρόχου (π.χ. ανενεργή ή κούρεμα με άλλη τιμή) γινόταν
+    // «τηλεϊατρική» με την τιμή της.
+    if (service.service_type !== 'veterinary' || !service.is_active) {
+      return reply.code(400).send({ message: MSG_SERVICE_UNAVAILABLE })
+    }
+
+    // Ημερομηνία/ώρα: πραγματική ημερομηνία YYYY-MM-DD, ώρα HH:MM, όχι στο
+    // παρελθόν (βλ. SCHEDULE_GRACE_MS για την «άμεση κλήση»).
+    const start = parseSchedule(scheduled_date, scheduled_time, true)
+    if (!start) return reply.code(400).send({ message: MSG_SCHEDULE_INVALID })
+    const grace = service.is_available_now ? IMMEDIATE_GRACE_MS : SCHEDULE_GRACE_MS
+    if (start.getTime() < Date.now() - grace) {
+      return reply.code(400).send({ message: MSG_SCHEDULE_PAST })
+    }
+
+    // Χωρίς τιμή δεν υπάρχει πληρωμή: πριν δημιουργούνταν συνεδρία των 0 €
+    // που το Viva απέρριπτε — ορφανή εγγραφή «αναμένει πληρωμή» για πάντα.
+    if (!(Number(service.price) > 0)) {
+      return reply.code(400).send({ message: MSG_NO_PRICE })
     }
 
     // Booking a consultation with yourself would create a payment loop where
@@ -372,7 +447,7 @@ const routes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const sessionPrice = service.price ?? 0
+    const sessionPrice = service.price
     const { rate, platformFee, providerPayout } = await calculateCommission(sessionPrice, 'telehealth')
     const clientName = full_name || await fullNameOf(email)
 
@@ -384,7 +459,7 @@ const routes: FastifyPluginAsync = async (app) => {
         client_email: email, client_name: clientName,
         pet_id: pet_id || null, pet_name: pet_name || null,
         service_id: service.id,
-        scheduled_date, scheduled_time,
+        scheduled_date: String(scheduled_date).trim(), scheduled_time: String(scheduled_time).trim(),
         duration: parseInt(duration) || 30,
         notes: notes || null,
         price: sessionPrice,
@@ -558,6 +633,10 @@ const routes: FastifyPluginAsync = async (app) => {
     // Μετάθεση πληρωμένης συνεδρίας: πολιτική ακύρωσης (lib/cancellation rescheduleBlock).
     if ((data.scheduled_date !== undefined && data.scheduled_date !== existing.scheduled_date)
       || (data.scheduled_time !== undefined && data.scheduled_time !== existing.scheduled_time)) {
+      // Ίδιος αυστηρός έλεγχος με τη δημιουργία: πραγματική ημερομηνία, HH:MM, στο μέλλον.
+      const next = parseSchedule(data.scheduled_date ?? existing.scheduled_date, data.scheduled_time ?? existing.scheduled_time, true)
+      if (!next) return reply.code(400).send({ message: MSG_SCHEDULE_INVALID })
+      if (next.getTime() < Date.now() - SCHEDULE_GRACE_MS) return reply.code(400).send({ message: MSG_SCHEDULE_PAST })
       const block = rescheduleBlock(existing.payment_status, isClient,
         { date: existing.scheduled_date, time: existing.scheduled_time },
         { date: data.scheduled_date ?? existing.scheduled_date, time: data.scheduled_time ?? existing.scheduled_time })

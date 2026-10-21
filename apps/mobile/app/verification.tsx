@@ -8,6 +8,7 @@ import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, Input, SectionHeader } from '@/components/ui'
 import { colors, space, type, weight, icon } from '@/theme'
+import { ErrorState } from '@/components/ErrorState'
 
 /**
  * Αίτηση επαλήθευσης παρόχου.
@@ -48,7 +49,7 @@ export default function VerificationScreen() {
     website: '',
   })
 
-  const { data: request, isLoading } = useQuery({
+  const { data: request, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['my-verification'],
     queryFn: () => api.get('/provider/verification-request').then(r => r.data?.data),
     enabled: isAuthenticated,
@@ -74,6 +75,13 @@ export default function VerificationScreen() {
         title={t('auth.login_to_continue')}
         action={<Button label={t('auth.sign_in')} onPress={() => router.push('/auth/login' as any)} />}
       />
+    </Screen>
+  )
+
+  // Χωρίς την κατάσταση δεν ξέρουμε αν υπάρχει ήδη αίτηση — όχι φόρμα (όπως web).
+  if (isError && !request) return (
+    <Screen title={t('ver.verification')}>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
     </Screen>
   )
 

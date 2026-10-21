@@ -105,7 +105,9 @@ export default function RegisterScreen() {
         birth_date: age.iso,
         terms_accepted: true,
       })
-      router.replace('/(tabs)')
+      // Ε12: ο λογαριασμός είναι ενεργός· η οθόνη εξηγεί το email επιβεβαίωσης
+      // (με «Συνέχεια στην εφαρμογή» — δεν μπλοκάρει).
+      router.replace('/auth/verify-email?from=register' as any)
     } catch (err: any) {
       Alert.alert(t('auth.register_error'), msg(err, t('common.try_again')))
     }

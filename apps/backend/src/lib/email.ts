@@ -45,6 +45,18 @@ async function langOf(email: string): Promise<Lang> {
 /** Επιλογή κειμένου ανά γλώσσα, με πτώση στα ελληνικά. */
 const pick = <T,>(lang: Lang, table: Record<Lang, T>): T => table[lang] ?? table.el
 
+/**
+ * Διαφυγή HTML για κάθε τιμή που έρχεται από χρήστη (όνομα πελάτη/παρόχου,
+ * προϊόντος, ημερομηνία κ.λπ.). Πριν έμπαιναν ωμά: ένα «όνομα» με <a href> ή
+ * <img> γινόταν σύνδεσμος/εικόνα μέσα σε email με τη δική μας διεύθυνση.
+ * Το θέμα (subject) είναι απλό κείμενο — εκεί αφαιρούνται μόνο τα CR/LF (sendEmail).
+ */
+function esc(v: unknown): string {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 // Σταθερά κομμάτια που επαναλαμβάνονται σε πολλά email.
 const T = {
   hi:        { el: 'Γεια σου', en: 'Hi', es: 'Hola', fr: 'Bonjour', zh: '你好' },
@@ -95,7 +107,8 @@ async function sendEmail(opts: { to: string; subject: string; html: string; lang
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from, to: opts.to, subject: opts.subject, html: opts.html }),
+      // Θέμα σε μία γραμμή: CR/LF από όνομα χρήστη δεν «σπάνε» την κεφαλίδα.
+      body: JSON.stringify({ from, to: opts.to, subject: String(opts.subject).replace(/[\r\n]+/g, ' '), html: opts.html }),
     })
     if (!res.ok) {
       const text = await res.text()
@@ -119,11 +132,11 @@ export async function sendOrderConfirmedEmail(to: string, opts: { orderId: strin
     fr: { subj: `Confirmation de commande #${opts.orderId.slice(0, 8)}`, h: 'Votre commande est confirmée 🎉', p: 'merci pour votre commande.' },
     zh: { subj: `订单确认 #${opts.orderId.slice(0, 8)}`, h: '您的订单已确认 🎉', p: '感谢您的订单。' },
   })
-  const rows = opts.items.map(i => `<tr><td style="padding:6px 0;color:#374151;font-size:14px;">${i.name} ×${i.quantity}</td><td style="padding:6px 0;text-align:right;color:#111827;font-size:14px;font-weight:600;">${money(i.price * i.quantity)}</td></tr>`).join('')
+  const rows = opts.items.map(i => `<tr><td style="padding:6px 0;color:#374151;font-size:14px;">${esc(i.name)} ×${esc(i.quantity)}</td><td style="padding:6px 0;text-align:right;color:#111827;font-size:14px;font-weight:600;">${money(i.price * i.quantity)}</td></tr>`).join('')
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p}</p>
       <table width="100%" style="margin:16px 0;border-top:1px solid #F0F0F0;padding-top:12px;">${rows}</table>
       <table width="100%" style="border-top:2px solid #111827;padding-top:8px;"><tr><td style="font-weight:800;color:#111827;">${pick(lang, T.total)}</td><td style="text-align:right;font-weight:800;color:${BRAND_ORANGE};font-size:16px;">${money(opts.total)}</td></tr></table>
     `, lang)
@@ -142,8 +155,8 @@ export async function sendProviderNewOrderEmail(to: string, opts: { providerName
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.providerName}, ${t.p}</p>
-      <p style="font-size:15px;color:#111827;font-weight:600;margin:12px 0;">${opts.productName} ×${opts.quantity}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.providerName)}, ${t.p}</p>
+      <p style="font-size:15px;color:#111827;font-weight:600;margin:12px 0;">${esc(opts.productName)} ×${esc(opts.quantity)}</p>
       <p style="font-size:14px;color:#6B7280;">${pick(lang, T.yourPay)}: <strong style="color:#16A34A;">${money(opts.payoutAmount)}</strong> ${pick(lang, T.afterFee)}</p>
     `, lang)
   })
@@ -163,8 +176,8 @@ export async function sendBookingConfirmedEmail(to: string, opts: { customerName
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p} <strong>${opts.providerName}</strong> ${t.p2}</p>
-      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${opts.date} ${pick(lang, T.at)} ${opts.time}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p} <strong>${esc(opts.providerName)}</strong> ${t.p2}</p>
+      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${esc(opts.date)} ${pick(lang, T.at)} ${esc(opts.time)}</p>
       <p style="font-size:14px;color:#6B7280;">${t.cost}: <strong>${money(opts.price)}</strong></p>
     `, lang)
   })
@@ -182,8 +195,8 @@ export async function sendProviderNewBookingEmail(to: string, opts: { providerNa
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.providerName}, <strong>${opts.customerName}</strong> ${t.p}</p>
-      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${opts.date} ${pick(lang, T.at)} ${opts.time}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.providerName)}, <strong>${esc(opts.customerName)}</strong> ${t.p}</p>
+      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${esc(opts.date)} ${pick(lang, T.at)} ${esc(opts.time)}</p>
       <p style="font-size:14px;color:#6B7280;">${pick(lang, T.yourPay)}: <strong style="color:#16A34A;">${money(opts.payoutAmount)}</strong> ${pick(lang, T.afterFee)}</p>
     `, lang)
   })
@@ -203,8 +216,8 @@ export async function sendTelehealthConfirmedEmail(to: string, opts: { customerN
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p} <strong>${opts.providerName}</strong> ${t.p2}</p>
-      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${opts.date} ${pick(lang, T.at)} ${opts.time}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p} <strong>${esc(opts.providerName)}</strong> ${t.p2}</p>
+      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${esc(opts.date)} ${pick(lang, T.at)} ${esc(opts.time)}</p>
       <p style="font-size:14px;color:#6B7280;">${t.note}</p>
     `, lang)
   })
@@ -222,8 +235,8 @@ export async function sendProviderNewTelehealthEmail(to: string, opts: { provide
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.providerName}, <strong>${opts.customerName}</strong> ${t.p}</p>
-      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${opts.date} ${pick(lang, T.at)} ${opts.time}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.providerName)}, <strong>${esc(opts.customerName)}</strong> ${t.p}</p>
+      <p style="font-size:14px;color:#111827;margin:12px 0;">📅 ${esc(opts.date)} ${pick(lang, T.at)} ${esc(opts.time)}</p>
       <p style="font-size:14px;color:#6B7280;">${pick(lang, T.yourPay)}: <strong style="color:#16A34A;">${money(opts.payoutAmount)}</strong> ${pick(lang, T.afterFee)}</p>
     `, lang)
   })
@@ -243,7 +256,7 @@ export async function sendSubscriptionStartedEmail(to: string, opts: { customerN
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p} <strong>${opts.productName}</strong> ${t.p2}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p} <strong>${esc(opts.productName)}</strong> ${t.p2}</p>
       <p style="font-size:14px;color:#6B7280;">${t.m}: <strong>${money(opts.monthlyPrice)}</strong></p>
     `, lang)
   })
@@ -252,16 +265,16 @@ export async function sendSubscriptionStartedEmail(to: string, opts: { customerN
 export async function sendSubscriptionRenewedEmail(to: string, opts: { customerName: string; productName: string; deliveryNumber: number }) {
   const lang = await langOf(to)
   const t = pick(lang, {
-    el: { subj: 'Η μηνιαία παράδοση προγραμματίστηκε', h: 'Νέα παράδοση ετοιμάζεται 📦', p: 'η πληρωμή για', p2: `(παράδοση #${opts.deliveryNumber}) ολοκληρώθηκε επιτυχώς.` },
-    en: { subj: 'Your monthly delivery is scheduled', h: 'A new delivery is on its way 📦', p: 'the payment for', p2: `(delivery #${opts.deliveryNumber}) went through successfully.` },
-    es: { subj: 'Tu entrega mensual está programada', h: 'Nueva entrega en preparación 📦', p: 'el pago de', p2: `(entrega #${opts.deliveryNumber}) se completó correctamente.` },
-    fr: { subj: 'Votre livraison mensuelle est programmée', h: 'Une nouvelle livraison se prépare 📦', p: 'le paiement de', p2: `(livraison #${opts.deliveryNumber}) a été effectué avec succès.` },
-    zh: { subj: '您的月度配送已安排', h: '新的配送正在准备 📦', p: '', p2: `（第 ${opts.deliveryNumber} 次配送）的付款已成功完成。` },
+    el: { subj: 'Η μηνιαία παράδοση προγραμματίστηκε', h: 'Νέα παράδοση ετοιμάζεται 📦', p: 'η πληρωμή για', p2: `(παράδοση #${esc(opts.deliveryNumber)}) ολοκληρώθηκε επιτυχώς.` },
+    en: { subj: 'Your monthly delivery is scheduled', h: 'A new delivery is on its way 📦', p: 'the payment for', p2: `(delivery #${esc(opts.deliveryNumber)}) went through successfully.` },
+    es: { subj: 'Tu entrega mensual está programada', h: 'Nueva entrega en preparación 📦', p: 'el pago de', p2: `(entrega #${esc(opts.deliveryNumber)}) se completó correctamente.` },
+    fr: { subj: 'Votre livraison mensuelle est programmée', h: 'Une nouvelle livraison se prépare 📦', p: 'le paiement de', p2: `(livraison #${esc(opts.deliveryNumber)}) a été effectué avec succès.` },
+    zh: { subj: '您的月度配送已安排', h: '新的配送正在准备 📦', p: '', p2: `（第 ${esc(opts.deliveryNumber)} 次配送）的付款已成功完成。` },
   })
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p} <strong>${opts.productName}</strong> ${t.p2}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p} <strong>${esc(opts.productName)}</strong> ${t.p2}</p>
     `, lang)
   })
 }
@@ -278,7 +291,7 @@ export async function sendSubscriptionFailedEmail(to: string, opts: { customerNa
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p} <strong>${opts.productName}</strong> ${t.p2}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p} <strong>${esc(opts.productName)}</strong> ${t.p2}</p>
       <p style="font-size:14px;color:#6B7280;">${t.note}</p>
     `, lang)
   })
@@ -296,7 +309,37 @@ export async function sendAiTrialStartedEmail(to: string, opts: { customerName: 
   await sendEmail({
     to, subject: t.subj, lang,
     html: wrapper(t.h, `
-      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${opts.customerName}, ${t.p}</p>
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${esc(opts.customerName)}, ${t.p}</p>
+    `, lang)
+  })
+}
+
+// ─── Επαλήθευση email (Ε12) ──────────────────────────────────────────
+//
+// Δικό της escape (όνομα που δεν συγκρούεται με τυχόν κοινό helper): το
+// όνομα το γράφει ο ίδιος ο χρήστης στην εγγραφή, και χωρίς escape ένα
+// «όνομα» με HTML θα γινόταν σύνδεσμος/εικόνα μέσα σε email με το λογότυπό μας.
+const escVerifyHtml = (v: string) => String(v ?? '').replace(/[&<>"']/g, ch => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+)[ch])
+
+export async function sendEmailVerificationEmail(to: string, opts: { name: string; url: string }) {
+  const lang = await langOf(to)
+  const t = pick(lang, {
+    el: { subj: 'Επιβεβαίωσε το email σου — GlobiPet', h: 'Επιβεβαίωσε το email σου', p: 'πάτησε το κουμπί για να επιβεβαιώσεις ότι αυτό το email είναι δικό σου.', cta: 'Επιβεβαίωση email', note: 'Ο σύνδεσμος λήγει σε 48 ώρες. Αν δεν δημιούργησες λογαριασμό στο GlobiPet, αγνόησε αυτό το email.' },
+    en: { subj: 'Confirm your email — GlobiPet', h: 'Confirm your email', p: 'tap the button to confirm that this email address is yours.', cta: 'Confirm email', note: 'The link expires in 48 hours. If you did not create a GlobiPet account, please ignore this email.' },
+    es: { subj: 'Confirma tu email — GlobiPet', h: 'Confirma tu email', p: 'pulsa el botón para confirmar que esta dirección de email es tuya.', cta: 'Confirmar email', note: 'El enlace caduca en 48 horas. Si no creaste una cuenta en GlobiPet, ignora este email.' },
+    fr: { subj: 'Confirmez votre e-mail — GlobiPet', h: 'Confirmez votre e-mail', p: 'cliquez sur le bouton pour confirmer que cette adresse e-mail vous appartient.', cta: 'Confirmer l\'e-mail', note: 'Ce lien expire dans 48 heures. Si vous n\'avez pas créé de compte GlobiPet, ignorez cet e-mail.' },
+    zh: { subj: '确认您的邮箱 — GlobiPet', h: '确认您的邮箱', p: '请点击下方按钮，确认此邮箱地址属于您。', cta: '确认邮箱', note: '该链接将在 48 小时后失效。如果您没有注册 GlobiPet 账户，请忽略此邮件。' },
+  })
+  const url = escVerifyHtml(opts.url)
+  await sendEmail({
+    to, subject: t.subj, lang,
+    html: wrapper(t.h, `
+      <p style="color:#6B7280;font-size:14px;">${pick(lang, T.hi)} ${escVerifyHtml(opts.name)}, ${t.p}</p>
+      <p style="margin:24px 0;"><a href="${url}" style="display:inline-block;background:${BRAND_ORANGE};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">${t.cta}</a></p>
+      <p style="font-size:12px;color:#9CA3AF;word-break:break-all;">${url}</p>
+      <p style="font-size:13px;color:#6B7280;">${t.note}</p>
     `, lang)
   })
 }

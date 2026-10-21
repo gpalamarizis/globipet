@@ -8,6 +8,7 @@ import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscri
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { auditSystem } from '../lib/audit.js'
+import { AI_SUB_ACTIVATED_ACTION, currentAiStripeSubscriptionId, otherLiveAiSubscriptions, cancelStripeSubscription } from '../lib/stripeSubscriptions.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 
@@ -81,6 +82,149 @@ async function ensureProductSubscription(
 const idOf = (v: string | { id: string } | null | undefined): string | null =>
   typeof v === 'string' ? v : v?.id ?? null
 
+/**
+ * ΣΥΝΔΡΟΜΗ AI (Stripe)
+ *
+ * Το POST /ai-subscriptions/create-checkout βάζει στη συνδρομή του Stripe
+ * metadata { user_id, ai_plan_id, billing }. Εδώ χειριζόταν μόνο το
+ * `product_id` (τροφή): ο χρήστης χρεωνόταν κάθε μήνα και η συνδρομή AI δεν
+ * ενεργοποιούνταν ποτέ.
+ *
+ * Ο χρήστης δεν έχει στήλη για το id της συνδρομής του Stripe (το σχήμα δεν
+ * αλλάζει). Η ενεργή συνδρομή κάθε χρήστη είναι η τελευταία καταγραφή audit
+ * `ai_subscription_activated` (metadata.stripe_subscription_id). Έτσι ένα
+ * καθυστερημένο γεγονός μιας ΠΑΛΙΑΣ συνδρομής (π.χ. deleted της
+ * προηγούμενης) δεν αγγίζει τη νέα.
+ */
+// Κοινά με το /ai-subscriptions/cancel και τη διαγραφή λογαριασμού.
+export { AI_SUB_ACTIVATED_ACTION, currentAiStripeSubscriptionId }
+
+const isAiSubscription = (s: Stripe.Subscription | null | undefined) =>
+  !!s?.metadata?.ai_plan_id && !!s?.metadata?.user_id
+
+/**
+ * Ενεργοποίηση/ανανέωση: μόνο αν η συνδρομή είναι ζωντανή ΣΤΟ STRIPE (η
+ * κατάσταση διαβάζεται από το Stripe, όχι από το γεγονός — το Stripe δεν
+ * εγγυάται σειρά, και μια ήδη ακυρωμένη δεν ξαναγίνεται «ενεργή»).
+ * Ιδεμποτική: ίδια συνδρομή, ήδη ενεργή, ίδιο πλάνο → τίποτα.
+ */
+async function activateAiSubscription(subscription: Stripe.Subscription): Promise<void> {
+  const userId = String(subscription.metadata.user_id)
+  const planId = String(subscription.metadata.ai_plan_id)
+  if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+    console.warn(`[stripe] AI subscription ${subscription.id} is ${subscription.status} — not activated`)
+    return
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, ai_subscription_status: true, ai_subscription_plan_id: true },
+  })
+  if (!user) {
+    console.error(`[stripe] AI subscription ${subscription.id}: user ${userId} missing — not activated`)
+    return
+  }
+  const current = await currentAiStripeSubscriptionId(userId)
+  if (current === subscription.id && user.ai_subscription_status === 'active' && user.ai_subscription_plan_id === planId) return
+
+  // Διπλή συνδρομή (δύο checkout που ολοκληρώθηκαν, ή νέα ενώ ζούσε η
+  // παλιά): μία συνδρομή AI ανά χρήστη, κρατιέται η ΝΕΟΤΕΡΗ (created στο
+  // Stripe). Οι άλλες ακυρώνονται αμέσως, χωρίς επιστροφή — όπως η ακύρωση
+  // από τον πελάτη. Αν ΑΥΤΗ είναι η παλιότερη (π.χ. ανανέωση της παλιάς
+  // μετά την αγορά νέας), ακυρώνεται αυτή και δεν ενεργοποιείται.
+  // Σφάλμα του Stripe εδώ δεν μπλοκάρει την ενεργοποίηση (η πληρωμή έγινε).
+  let older: string[] = []
+  try {
+    const others = await otherLiveAiSubscriptions(userId, subscription.id)
+    // «Νεότερη» μετρά μόνο αν πληρώνεται (active/trialing/past_due) — μια
+    // ημιτελής (incomplete) δεν εκτοπίζει πληρωμένη.
+    const newer = others.filter(o => o.created > subscription.created && ['active', 'trialing', 'past_due'].includes(o.status))
+    if (newer.length) {
+      const ok = await cancelStripeSubscription(subscription.id)
+      await auditSystem({
+        action: 'ai_subscription_duplicate_cancelled', resource: 'user', resource_id: userId, subject_email: user.email,
+        outcome: ok ? 'success' : 'error',
+        metadata: { kept: newer.sort((x, y) => y.created - x.created)[0].id, cancelled: ok ? [subscription.id] : [], failed: ok ? [] : [subscription.id] },
+      })
+      return
+    }
+    older = others.map(o => o.id)
+  } catch (err: any) {
+    console.error(`[stripe] AI duplicate check for ${userId} failed:`, err?.message)
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { ai_subscription_status: 'active', ai_subscription_plan_id: planId },
+  })
+  if (current !== subscription.id) {
+    await auditSystem({
+      action: AI_SUB_ACTIVATED_ACTION, resource: 'user', resource_id: userId, subject_email: user.email,
+      metadata: {
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: idOf(subscription.customer as any),
+        plan_id: planId,
+        billing: subscription.metadata.billing ?? null,
+        current_period_start: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+        current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+      },
+    })
+  }
+  // Οι παλιότερες ακυρώνονται ΜΕΤΑ την καταγραφή ενεργοποίησης της νέας, ώστε
+  // το customer.subscription.deleted τους να μη βρει «τρέχουσα» τη δική τους
+  // και να μη σημειώσει τον χρήστη ακυρωμένο.
+  if (older.length) {
+    const cancelled: string[] = [], failed: string[] = []
+    for (const id of older) ((await cancelStripeSubscription(id)) ? cancelled : failed).push(id)
+    await auditSystem({
+      action: 'ai_subscription_duplicate_cancelled', resource: 'user', resource_id: userId, subject_email: user.email,
+      outcome: failed.length ? 'error' : 'success',
+      metadata: { kept: subscription.id, cancelled, failed },
+    })
+  }
+}
+
+/**
+ * Αλλαγή κατάστασης (payment_failed / cancelled) ΜΟΝΟ για την τρέχουσα
+ * συνδρομή του χρήστη και μόνο από τις καταστάσεις `from` (ατομικά).
+ */
+async function setAiSubscriptionStatus(
+  subscriptionId: string, userId: string, to: 'payment_failed' | 'cancelled', from: string[],
+  /** Πλάνο από τα metadata του Stripe: fallback όταν δεν υπάρχει καμία καταγραφή ενεργοποίησης. */
+  fallbackPlanId?: string,
+): Promise<void> {
+  const current = await currentAiStripeSubscriptionId(userId)
+  if (current === null && fallbackPlanId) {
+    // Καμία καταγραφή ενεργοποίησης (π.χ. συνδρομή πριν διορθωθεί το
+    // webhook): δεκτό μόνο αν ο χρήστης έχει ΑΚΟΜΑ αυτό το πλάνο — αλλιώς
+    // μια παλιά συνδρομή θα ακύρωνε άλλη. Η ατομική συνθήκη το επιβάλλει.
+    const r = await prisma.user.updateMany({
+      where: { id: userId, ai_subscription_status: { in: from }, ai_subscription_plan_id: fallbackPlanId },
+      data: { ai_subscription_status: to },
+    })
+    if (r.count > 0) {
+      await auditSystem({
+        action: `ai_subscription_${to}`, resource: 'user', resource_id: userId,
+        metadata: { stripe_subscription_id: subscriptionId, matched_by: 'metadata' },
+      })
+    }
+    return
+  }
+  if (current !== subscriptionId) {
+    console.warn(`[stripe] AI subscription ${subscriptionId} is not the current one of user ${userId} — ${to} ignored`)
+    return
+  }
+  const r = await prisma.user.updateMany({
+    where: { id: userId, ai_subscription_status: { in: from } },
+    data: { ai_subscription_status: to },
+  })
+  if (r.count > 0) {
+    await auditSystem({
+      action: `ai_subscription_${to}`, resource: 'user', resource_id: userId,
+      metadata: { stripe_subscription_id: subscriptionId },
+    })
+  }
+}
+
 /** Κλείδωμα βάσης ανά συνδρομή Stripe (σειριακή επεξεργασία πληρωμών της). */
 const SUB_LOCK_SPACE = 'globipet:stripe-subscription'
 
@@ -95,8 +239,16 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
     const sig = req.headers['stripe-signature']
     let event: Stripe.Event
 
+    // Χωρίς μυστικό δεν επαληθεύεται τίποτα: 503 (το Stripe ξαναστέλνει
+    // όταν ρυθμιστεί), ποτέ επεξεργασία ανυπόγραφου γεγονότος.
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+    if (!webhookSecret) {
+      console.error('Stripe webhook rejected: STRIPE_WEBHOOK_SECRET is not set')
+      return reply.code(503).send({ received: false })
+    }
+
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET || '')
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
     } catch (err: any) {
       console.error('Stripe webhook signature error:', err.message)
       return reply.code(400).send(`Webhook Error: ${err.message}`)
@@ -108,7 +260,8 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
           const session = event.data.object as Stripe.Checkout.Session
           if (session.mode === 'subscription' && session.subscription) {
             const subscription = await stripe.subscriptions.retrieve(idOf(session.subscription as any) as string)
-            await ensureProductSubscription(subscription, idOf(session.customer as any))
+            if (isAiSubscription(subscription)) await activateAiSubscription(subscription)
+            else await ensureProductSubscription(subscription, idOf(session.customer as any))
           }
           break
         }
@@ -126,6 +279,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               // εκεί). Πριν, η παράδοση #1 χανόταν σιωπηλά. Σε σφάλμα του
               // Stripe/βάσης → 500 και το Stripe ξαναστέλνει.
               const subscription = await stripe.subscriptions.retrieve(subId)
+              // Συνδρομή AI: ενεργοποίηση/ανανέωση (και επαναφορά μετά από
+              // αποτυχημένη πληρωμή) — καμία παραγγελία παράδοσης.
+              if (isAiSubscription(subscription)) {
+                await activateAiSubscription(subscription)
+                break
+              }
               await ensureProductSubscription(subscription, idOf(subscription.customer as any) ?? idOf(invoice.customer as any))
               exists = await prisma.productSubscription.findUnique({
                 where: { stripe_subscription_id: subId }, select: { id: true },
@@ -293,7 +452,20 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
 
         case 'invoice.payment_failed': {
           const invoice = event.data.object as Stripe.Invoice
-          const subId = invoice.subscription as string
+          const subId = idOf(invoice.subscription as any)
+          // Συνδρομή AI: ο χρήστης βρίσκεται από την καταγραφή ενεργοποίησης
+          // (πρώτη πληρωμή που αποτυγχάνει δεν ενεργοποίησε ποτέ τίποτα).
+          if (subId) {
+            const act = await prisma.auditLog.findFirst({
+              where: { action: AI_SUB_ACTIVATED_ACTION, resource: 'user', metadata: { path: ['stripe_subscription_id'], equals: subId } },
+              orderBy: { created_at: 'desc' },
+              select: { resource_id: true },
+            })
+            if (act?.resource_id) {
+              await setAiSubscriptionStatus(subId, act.resource_id, 'payment_failed', ['active'])
+              break
+            }
+          }
           if (subId) {
             const productSub = await prisma.productSubscription.findUnique({
               where: { stripe_subscription_id: subId },
@@ -342,6 +514,11 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
 
         case 'customer.subscription.deleted': {
           const subscription = event.data.object as Stripe.Subscription
+          if (isAiSubscription(subscription)) {
+            await setAiSubscriptionStatus(subscription.id, String(subscription.metadata.user_id), 'cancelled', ['active', 'payment_failed'],
+              String(subscription.metadata.ai_plan_id))
+            break
+          }
           // Όχι πάνω σε 'completed': μετά τη 12η παράδοση ακυρώνουμε εμείς τη
           // συνδρομή στο Stripe, και το γεγονός αυτό την έγραφε «ακυρωμένη».
           await prisma.productSubscription.updateMany({

@@ -1,12 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { assertSeedAllowed, seedPassword } from './seed-guard.js'
 
 const prisma = new PrismaClient()
 
 async function main() {
+  // ΣΒΗΝΕΙ χρήστες, κρατήσεις, ζώα… — μόνο σε τοπική βάση (seed-guard).
+  assertSeedAllowed('seed-launch-data')
   console.log('🌱 Seeding GlobiPet launch data...')
 
-  const password_hash = await bcrypt.hash('GlobiPet2026!', 12)
+  // Κωδικός από SEED_PASSWORD — όχι σταθερός στον κώδικα (θα ήταν γνωστός
+  // κωδικός admin σε όποια βάση έτρεχε το script).
+  const password_hash = await bcrypt.hash(seedPassword('seed-launch-data'), 12)
 
   // ───────── CLEAR PREVIOUS SEED DATA ─────────────────────────────────────
   console.log('🧹 Clearing previous data...')
@@ -801,9 +806,9 @@ async function main() {
 
   console.log('\n🎉 Seeding COMPLETE!')
   console.log('─────────────────────────────────────────')
-  console.log('  Admin:       admin@globipet.com / GlobiPet2026!')
-  console.log('  Demo user:   demo@globipet.com  / GlobiPet2026!')
-  console.log('  Vet:         vet@globipet.com   / GlobiPet2026!')
+  console.log('  Admin:       admin@globipet.com')
+  console.log('  Demo user:   demo@globipet.com')
+  console.log('  Vet:         vet@globipet.com')
   console.log('  Groomer:     groomer@globipet.com')
   console.log('  Clinic:      clinic@globipet.com')
   console.log('  Walker:      walker@globipet.com')
@@ -813,7 +818,7 @@ async function main() {
   console.log('  Transport:   transport@globipet.com')
   console.log('  Photographer: photographer@globipet.com')
   console.log('─────────────────────────────────────────')
-  console.log('  (All passwords: GlobiPet2026!)')
+  console.log('  (Κωδικός όλων: η τιμή του SEED_PASSWORD)')
 }
 
 main()

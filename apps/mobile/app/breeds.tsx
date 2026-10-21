@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dog } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
+import { ErrorState } from '@/components/ErrorState'
 import { colors, space, radius, type, weight } from '@/theme'
 
 /** Εξερεύνηση ρατσών. */
@@ -17,7 +18,7 @@ export default function BreedsScreen() {
   const [search, setSearch] = useState('')
   const [species, setSpecies] = useState('')
 
-  const { data: breeds = [], isLoading } = useQuery({
+  const { data: breeds = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['breeds'],
     queryFn: () => api.get('/breeds').then(r => r.data?.data ?? r.data ?? []),
   })
@@ -53,6 +54,7 @@ export default function BreedsScreen() {
       </View>
 
       {isLoading ? <SkeletonRows count={4} /> :
+       isError && breeds.length === 0 ? <ErrorState onRetry={() => refetch()} retrying={isFetching} /> :
        filtered.length === 0 ? <EmptyState icon={Dog} title={t('common.no_results')} /> :
        filtered.map((b: any) => (
         <Card key={b.id} onPress={() => router.push(`/breeds/${b.id}` as any)}>

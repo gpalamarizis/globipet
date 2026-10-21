@@ -135,8 +135,9 @@ async function verifyBookingTransaction(booking: { id: string; total_price: numb
       console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not booking ${booking.id}`)
       return 'invalid'
     }
+    // Μη αριθμητικό ποσό (NaN) = άκυρη, όχι «περνά» (πριν ο έλεγχος ήταν fail-open).
     const paid = Number(tx.amount ?? tx.Amount ?? 0)
-    if (Number.isFinite(paid) && paid + 0.01 < booking.total_price) {
+    if (!Number.isFinite(paid) || paid + 0.01 < booking.total_price) {
       console.error(`[viva] transaction ${transactionId} paid ${paid}, booking needs ${booking.total_price}`)
       return 'invalid'
     }

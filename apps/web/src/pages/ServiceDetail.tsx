@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ReviewReply from '@/components/provider/ReviewReply'
 
 // #6: illustration fallback per service type (instead of one generic 🐾 emoji)
 const typeIllustration: Record<string, { Icon: typeof Stethoscope, bg: string, fg: string }> = {
@@ -382,6 +383,10 @@ export default function ServiceDetail() {
                         </div>
                       </div>
                       {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
+                      {/* Απάντηση παρόχου (δημόσια)· ο ίδιος ο πάροχος της κριτικής απαντά/διορθώνει από εδώ. */}
+                      <ReviewReply review={r}
+                        canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                        invalidate={[['service-reviews', id], ['provider-reviews']]} />
                     </div>
                   ))}
                 </div>

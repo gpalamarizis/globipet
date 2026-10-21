@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client'
+import { assertSeedAllowed } from './seed-guard.js'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Σβήνει ΟΛΑ τα πλάνα και τις εταιρείες πριν τα ξαναγράψει (seed-guard).
+  assertSeedAllowed('seed-insurance')
   console.log('Seeding insurance providers and plans...')
 
   // Clear existing

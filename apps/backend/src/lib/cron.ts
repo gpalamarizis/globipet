@@ -1,4 +1,5 @@
 import cron from 'node-cron'
+import { createHash } from 'crypto'
 import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
@@ -6,6 +7,8 @@ import { broadcastToUser } from '../routes/notifications.js'
 import { sendPushToUser } from './push.js'
 import { resolveStuckBookingRefunds, resolveStuckTelehealthRefunds } from './cancellation.js'
 import { resolveStuckEventRefunds } from '../routes/events.js'
+import { deleteUserUploads } from './storage.js'
+import { cancelAllStripeSubscriptionsOfUser, StripeCancelError, AI_SUB_ACTIVATED_ACTION } from './stripeSubscriptions.js'
 
 export function startAiTrialExpiryCron() {
   // Runs once a day at 09:00 server time
@@ -114,12 +117,27 @@ const DELETE_MAP: DeleteEntry[] = [
   { accessor: 'calendarConnection',   field: 'user_email' },
   { accessor: 'oAuthState',           field: 'user_email' },
   { accessor: 'contactMessage',       field: 'user_email' },
+  // Μηνύματα φόρμας επικοινωνίας χωρίς σύνδεση: το email είναι στη στήλη `email`.
+  { accessor: 'contactMessage',       field: 'email' },
+  // Αίτηση επαλήθευσης παρόχου: ΑΦΜ, τηλέφωνο, βιογραφικό — καμία λογιστική αξία.
+  { accessor: 'providerVerificationRequest', field: 'user_email' },
   // Ο κατάλογος στόχευσης μιας καμπάνιας είναι λίστα μάρκετινγκ με το
   // πρόσωπο μέσα — φεύγει ολόκληρη η εγγραφή.
   { accessor: 'campaign_audience',    field: 'customer_email' },
   // Σημειώσεις που κράτησε ο πάροχος για αυτόν τον πελάτη.
   { accessor: 'customer_notes',       field: 'customer_email' },
+  // Ο χρήστης ως ΠΑΡΟΧΟΣ: οι σημειώσεις του για πελάτες είναι προσωπικά
+  // δεδομένα τρίτων χωρίς πλέον κάτοχο — διαγράφονται, δεν ανωνυμοποιούνται.
+  { accessor: 'customer_notes',       field: 'provider_email' },
 ]
+
+/**
+ * Μοντέλα με user_id (όχι email). Οι γραμμές έχουν ξένο κλειδί προς users με
+ * onDelete: Cascade, άρα δεν μπορούν να επιζήσουν του χρήστη με ψεύτικο id —
+ * διαγράφονται ρητά. (Πριν ήταν στον ANONYMIZE_MAP με σύγκριση user_id = email,
+ * που δεν ταίριαζε ποτέ, και το cascade τις έσβηνε σιωπηλά.)
+ */
+const DELETE_BY_ID: string[] = ['productSubscription', 'userInsuranceSubscription', 'pushSubscription']
 
 /**
  * ΔΕΝ διαγράφονται — ανωνυμοποιούνται.
@@ -127,12 +145,22 @@ const DELETE_MAP: DeleteEntry[] = [
  * υπόκεινται σε φορολογική υποχρέωση διατήρησης. Το άρθρο 17 παρ. 3 στοιχ. β΄
  * επιτρέπει τη διατήρηση όταν υπάρχει νομική υποχρέωση.
  */
-const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string }[] = [
-  // Λογιστική / συμβατική αξία — διατηρούνται ανωνυμοποιημένα
-  { accessor: 'order',                  field: 'user_email' },
+const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string; set?: Record<string, any> }[] = [
+  // Λογιστική / συμβατική αξία — διατηρούνται ανωνυμοποιημένα (τα ποσά μένουν).
+  // Η διεύθυνση αποστολής της παραγγελίας καθαρίζεται πριν (eraseUserAccount).
+  { accessor: 'order',                  field: 'user_email', nameField: 'user_name' },
   { accessor: 'booking',                field: 'customer_email', nameField: 'customer_name' },
   { accessor: 'review',                 field: 'customer_email', nameField: 'customer_name' },
-  { accessor: 'telehealthConsultation', field: 'client_email' },
+  // Οι σημειώσεις της συνεδρίας είναι ελεύθερο κείμενο για το ζώο/τον άνθρωπο.
+  { accessor: 'telehealthConsultation', field: 'client_email', nameField: 'client_name', set: { notes: null } },
+
+  // Ο χρήστης ως ΠΑΡΟΧΟΣ: οι κρατήσεις/συνεδρίες/κριτικές μένουν για τους
+  // πελάτες και τα φορολογικά, χωρίς το όνομα και το email του παρόχου.
+  { accessor: 'booking',                field: 'provider_email', nameField: 'provider_name' },
+  { accessor: 'telehealthConsultation', field: 'provider_email', nameField: 'provider_name' },
+  { accessor: 'review',                 field: 'provider_email' },
+  // Πρόσβαση στο διαβατήριο ζώων τρίτων: ανακαλείται.
+  { accessor: 'petPassportAccess',      field: 'provider_email', nameField: 'provider_name', set: { status: 'revoked' } },
   // Περιεχόμενο που ΑΝΗΚΕΙ σε άλλους χρήστες — δεν διαγράφεται.
   // Μια κοινότητα με μέλη, μια εκδήλωση με συμμετέχοντες, ή προϊόν που
   // κάποιος αγόρασε δεν μπορούν να εξαφανιστούν επειδή έφυγε ο δημιουργός.
@@ -140,15 +168,14 @@ const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string }[] =
   { accessor: 'event',                  field: 'organizer_email' },
   { accessor: 'playdateEvent',          field: 'creator_email' },
   { accessor: 'product',                field: 'provider_email' },
-  { accessor: 'service',                field: 'provider_email' },
+  // Η υπηρεσία μένει για το ιστορικό κρατήσεων, αλλά χωρίς στοιχεία
+  // επικοινωνίας και εκτός καταλόγου (κανείς δεν θα την εξυπηρετήσει).
+  { accessor: 'service',                field: 'provider_email', set: { contact_email: null, contact_phone: null, is_active: false } },
 
   // ── Προστέθηκαν μετά τον αρχικό χάρτη ──────────────────────────────
   // Συμμετοχή σε εκδήλωση: ο διοργανωτής πρέπει να κρατά τον αριθμό
   // συμμετεχόντων και το ιστορικό, όχι το όνομα.
   { accessor: 'eventRegistration',      field: 'user_email', nameField: 'user_name' },
-  // Οικονομικές συνδρομές — φορολογική υποχρέωση διατήρησης.
-  { accessor: 'productSubscription',    field: 'user_id' },
-  { accessor: 'userInsuranceSubscription', field: 'user_id' },
   // Καμπάνιες παρόχου: ανήκουν στη δραστηριότητά του, όπως οι υπηρεσίες.
   { accessor: 'campaigns',              field: 'owner_email' },
   // Μηνύματα παρόχου↔πελάτη: το νήμα ανήκει και στους δύο, οπότε
@@ -158,6 +185,141 @@ const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string }[] =
 ]
 
 const ANON_EMAIL = (id: string) => `deleted-${id}@anonymized.invalid`
+
+/** Τα πεδία της διεύθυνσης αποστολής που ταυτοποιούν (ίδια με orders.ts ADDRESS_PII). */
+const ADDRESS_PII = ['full_name', 'phone', 'street', 'address', 'city', 'postal_code', 'notes']
+
+/**
+ * Ψευδώνυμο email για αρχεία ελέγχου που επιζούν της διαγραφής: ο έλεγχος
+ * «διαγράφηκε ο Χ;» γίνεται με το ίδιο hash, χωρίς να μένει το email.
+ */
+export function emailHash(email: string): string {
+  return 'sha256:' + createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex')
+}
+
+/**
+ * Οριστική διαγραφή λογαριασμού (άρθρο 17) — ΚΟΙΝΗ για το cron και για τη
+ * διαγραφή από τη διαχείριση (admin.ts). Πριν, η διαχείριση έσβηνε μόνο τη
+ * γραμμή users και άφηνε ζώα, ιατρικά, μηνύματα, παραγγελίες με διεύθυνση.
+ *
+ * Ιδεμποτική: κάθε βήμα είναι updateMany/deleteMany, οπότε μια επανάληψη μετά
+ * από αποτυχία στη μέση συνεχίζει από εκεί. Πετά σφάλμα αν αποτύχει.
+ *
+ * ΣΕΙΡΑ
+ *   0) Ακύρωση ΚΑΘΕ ζωντανής συνδρομής στο Stripe (τροφής + AI). Αν έστω μία
+ *      αποτύχει → StripeCancelError ΠΡΙΝ από οποιαδήποτε διαγραφή (το cron
+ *      ξαναδοκιμάζει την επόμενη μέρα, η διαχείριση απαντά 502). Αλλιώς ο
+ *      λογαριασμός σβηνόταν και η κάρτα χρεωνόταν κάθε μήνα.
+ *   1–6) Βάση.
+ *   7) Αρχεία R2 — ΜΕΤΑ τη διαγραφή του χρήστη (αν σβήνονταν πριν και η βάση
+ *      αποτύγχανε, ο χρήστης θα έμενε χωρίς φωτογραφίες/ιατρικά). Αποτυχία
+ *      εδώ δεν ακυρώνει τη διαγραφή: log + audit για τον διαχειριστή.
+ */
+export async function eraseUserAccount(userId: string, email: string): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {}
+
+  // 0) Συνδρομές Stripe. Πετά StripeCancelError — τίποτα δεν έχει διαγραφεί ακόμα
+  //    (μόνο όσες συνδρομές τροφής ακυρώθηκαν σημειώνονται 'cancelled').
+  const subs = await cancelAllStripeSubscriptionsOfUser(userId)
+  if (subs.food) counts['stripe_food_cancelled'] = subs.food
+  if (subs.ai) counts['stripe_ai_cancelled'] = subs.ai
+
+  // 0α) Ακύρωση κάθε ενεργής συνεδρίας (token_version: πεδίο της s1). Αν το
+  //    πεδίο δεν υπάρχει ακόμα, απλώς παραλείπεται.
+  await prisma.user.update({ where: { id: userId }, data: { token_version: { increment: 1 } } as any })
+    .catch(() => {})
+
+  // 1α) Διεύθυνση αποστολής: φεύγουν τα στοιχεία του ανθρώπου, μένουν
+  //     μέθοδος/κόστος αποστολής (λογιστικά). Ανά γραμμή, γιατί είναι Json.
+  const orders = await prisma.order.findMany({ where: { user_email: email }, select: { id: true, shipping_address: true } })
+  for (const o of orders) {
+    const addr: any = o.shipping_address && typeof o.shipping_address === 'object' && !Array.isArray(o.shipping_address)
+      ? { ...(o.shipping_address as any) } : {}
+    for (const k of ADDRESS_PII) delete addr[k]
+    addr.anonymized = true
+    await prisma.order.update({ where: { id: o.id }, data: { shipping_address: addr } })
+  }
+  if (orders.length) counts['anon:order_address'] = orders.length
+
+  // 1) Ανωνυμοποίηση όσων πρέπει να διατηρηθούν
+  for (const a of ANONYMIZE_MAP) {
+    const model = (prisma as any)[a.accessor]
+    if (!model?.updateMany) { console.error(`[deletion] άγνωστο μοντέλο ${a.accessor}`); continue }
+    const data: any = { ...(a.set ?? {}), [a.field]: ANON_EMAIL(userId) }
+    if (a.nameField) data[a.nameField] = 'Διαγραμμένος χρήστης'
+    const r = await model.updateMany({ where: { [a.field]: email }, data })
+    if (r.count) counts['anon:' + a.accessor + '.' + a.field] = r.count
+  }
+
+  // 2) Διαγραφή προσωπικών δεδομένων
+  for (const d of DELETE_MAP) {
+    const model = (prisma as any)[d.accessor]
+    if (!model?.deleteMany) { console.error(`[deletion] άγνωστο μοντέλο ${d.accessor}`); continue }
+    const r = await model.deleteMany({ where: { [d.field]: email } })
+    if (r.count) counts[d.accessor + '.' + d.field] = r.count
+  }
+  for (const accessor of DELETE_BY_ID) {
+    const model = (prisma as any)[accessor]
+    if (!model?.deleteMany) { console.error(`[deletion] άγνωστο μοντέλο ${accessor}`); continue }
+    const r = await model.deleteMany({ where: { user_id: userId } })
+    if (r.count) counts[accessor] = r.count
+  }
+
+  // 3) Προσωπικό παρόχου.
+  //    Η γραμμή ανήκει στον εργοδότη — το μητρώο του δεν πρέπει να
+  //    χάσει τη θέση. Φεύγει ο άνθρωπος από μέσα: αποσυνδέεται ο
+  //    λογαριασμός και σβήνονται όνομα, email και τηλέφωνο.
+  const staff = await (prisma as any).providerStaff.updateMany({
+    where: { OR: [{ user_id: userId }, { email }] },
+    data: { user_id: null, email: null, phone: null, full_name: 'Διαγραμμένος χρήστης' },
+  }).catch(() => ({ count: 0 }))
+  if (staff.count) counts['anon:providerStaff'] = staff.count
+
+  // 4) Επαναϋπολογισμός μετρητών.
+  //    Τα σχόλια και οι απαντήσεις του διαγράφηκαν παραπάνω, αλλά τα
+  //    posts και τα νήματα κρατούν denormalised μετρητές. Χωρίς αυτό
+  //    μια δημοσίευση θα έλεγε «3 σχόλια» και θα εμφάνιζε ένα.
+  await prisma.$executeRaw`
+    UPDATE posts p SET
+      comments_count = (SELECT count(*) FROM post_comments c WHERE c.post_id = p.id),
+      likes_count    = (SELECT count(*) FROM post_likes    l WHERE l.post_id = p.id)`
+    .catch((e: any) => console.error('[deletion] post counters:', e?.message))
+  await prisma.$executeRaw`
+    UPDATE forum_topics t SET
+      replies_count = (SELECT count(*) FROM forum_replies r WHERE r.topic_id = t.id)`
+    .catch((e: any) => console.error('[deletion] forum counters:', e?.message))
+  await prisma.$executeRaw`
+    UPDATE communities c SET
+      member_count = (SELECT count(*) FROM community_members m WHERE m.community_id = c.id)`
+    .catch((e: any) => console.error('[deletion] community counters:', e?.message))
+
+  // 5) Συναινέσεις
+  await prisma.userConsent.deleteMany({ where: { user_id: userId } })
+
+  // 6) Ο ίδιος ο χρήστης — τελευταίος στη βάση. Το αίτημα διαγραφής φεύγει
+  //    μαζί του (onDelete: Cascade).
+  await prisma.user.delete({ where: { id: userId } })
+
+  // 7) Αρχεία στο R2 (φωτογραφίες, ιατρικά) — lib/storage. Ο χρήστης έχει ήδη
+  //    διαγραφεί, οπότε αποτυχία εδώ ΔΕΝ αποτυγχάνει το αίτημα: καταγράφεται
+  //    (μετρητές + audit) για να τα σβήσει ο διαχειριστής χειροκίνητα.
+  let r2Problem: string | null = null
+  try {
+    const { deleted, failed } = await deleteUserUploads(email)
+    if (deleted) counts['r2_deleted'] = deleted
+    if (failed) { counts['r2_failed'] = failed; r2Problem = `${failed} objects not deleted` }
+  } catch (err: any) {
+    counts['r2_error'] = 1
+    r2Problem = String(err?.message ?? err).slice(0, 500)
+  }
+  if (r2Problem) {
+    console.error(`[deletion] uploads of ${userId}: ${r2Problem}`)
+    await auditSystem({ action: 'deletion_uploads_failed', resource: 'user', resource_id: userId,
+                        subject_email: emailHash(email), outcome: 'error', error_message: r2Problem })
+      .catch(() => {})
+  }
+  return counts
+}
 
 export function startAccountDeletionCron() {
   // Κάθε μέρα στις 03:00 — ώρα χαμηλού φόρτου
@@ -184,75 +346,27 @@ export function startAccountDeletionCron() {
           continue
         }
 
-        const counts: Record<string, number> = {}
         try {
-          // 1) Ανωνυμοποίηση όσων πρέπει να διατηρηθούν
-          for (const a of ANONYMIZE_MAP) {
-            const model = (prisma as any)[a.accessor]
-            if (!model?.updateMany) { console.error(`[deletion] άγνωστο μοντέλο ${a.accessor}`); continue }
-            const data: any = { [a.field]: ANON_EMAIL(userId) }
-            if (a.nameField) data[a.nameField] = 'Διαγραμμένος χρήστης'
-            const r = await model.updateMany({ where: { [a.field]: email }, data })
-            if (r.count) counts['anon:' + a.accessor] = r.count
-          }
-
-          // 2) Διαγραφή προσωπικών δεδομένων
-          for (const d of DELETE_MAP) {
-            const model = (prisma as any)[d.accessor]
-            if (!model?.deleteMany) { console.error(`[deletion] άγνωστο μοντέλο ${d.accessor}`); continue }
-            const r = await model.deleteMany({ where: { [d.field]: email } })
-            if (r.count) counts[d.accessor] = r.count
-          }
-
-          // 3) Προσωπικό παρόχου.
-          //    Η γραμμή ανήκει στον εργοδότη — το μητρώο του δεν πρέπει να
-          //    χάσει τη θέση. Φεύγει ο άνθρωπος από μέσα: αποσυνδέεται ο
-          //    λογαριασμός και σβήνονται όνομα, email και τηλέφωνο.
-          const staff = await (prisma as any).providerStaff.updateMany({
-            where: { OR: [{ user_id: userId }, { email }] },
-            data: { user_id: null, email: null, phone: null, full_name: 'Διαγραμμένος χρήστης' },
-          }).catch(() => ({ count: 0 }))
-          if (staff.count) counts['anon:providerStaff'] = staff.count
-
-          // 4) Επαναϋπολογισμός μετρητών.
-          //    Τα σχόλια και οι απαντήσεις του διαγράφηκαν παραπάνω, αλλά τα
-          //    posts και τα νήματα κρατούν denormalised μετρητές. Χωρίς αυτό
-          //    μια δημοσίευση θα έλεγε «3 σχόλια» και θα εμφάνιζε ένα.
-          await prisma.$executeRaw`
-            UPDATE posts p SET
-              comments_count = (SELECT count(*) FROM post_comments c WHERE c.post_id = p.id),
-              likes_count    = (SELECT count(*) FROM post_likes    l WHERE l.post_id = p.id)`
-            .catch((e: any) => console.error('[deletion] post counters:', e?.message))
-          await prisma.$executeRaw`
-            UPDATE forum_topics t SET
-              replies_count = (SELECT count(*) FROM forum_replies r WHERE r.topic_id = t.id)`
-            .catch((e: any) => console.error('[deletion] forum counters:', e?.message))
-          await prisma.$executeRaw`
-            UPDATE communities c SET
-              member_count = (SELECT count(*) FROM community_members m WHERE m.community_id = c.id)`
-            .catch((e: any) => console.error('[deletion] community counters:', e?.message))
-
-          // 5) Συναινέσεις
-          await prisma.userConsent.deleteMany({ where: { user_id: userId } })
-
-          // 6) Ο ίδιος ο χρήστης — τελευταίος
-          await prisma.user.delete({ where: { id: userId } })
-
-          // 7) Το αίτημα διαγράφεται μαζί με τον χρήστη (onDelete: Cascade),
-          //    οπότε δεν χρειάζεται update εδώ.
+          const counts = await eraseUserAccount(userId, email)
           // Η οριστική διαγραφή είναι η πιο μη αναστρέψιμη ενέργεια της
-          // πλατφόρμας. Η καταγραφή επιβιώνει του χρήστη — γι' αυτό
-          // κρατάμε το email ως κείμενο, όχι ως ξένο κλειδί.
+          // πλατφόρμας. Η καταγραφή επιβιώνει του χρήστη — με hash του
+          // email, όχι το ίδιο το email (αλλιώς το «διαγραμμένο» email θα
+          // έμενε στη βάση για 180 μέρες ακόμα).
           auditSystem({ action: 'deletion_executed', resource: 'user',
-                        resource_id: userId, subject_email: email,
+                        resource_id: userId, subject_email: emailHash(email),
                         metadata: counts })
           console.log(`   ✓ ${userId} διαγράφηκε — ${JSON.stringify(counts)}`)
 
         } catch (err: any) {
           auditSystem({ action: 'deletion_executed', resource: 'user',
-                        resource_id: userId, subject_email: email,
-                        outcome: 'error', error_message: err?.message })
+                        resource_id: userId, subject_email: emailHash(email),
+                        outcome: 'error', error_message: String(err?.message ?? err).slice(0, 500) })
           console.error(`   ✗ ${userId} απέτυχε: ${err?.message}`)
+          // Συνδρομή του Stripe που δεν ακυρώθηκε: τίποτα δεν άλλαξε στη βάση·
+          // το αίτημα μένει 'pending' και ξαναδοκιμάζεται στην επόμενη
+          // εκτέλεση (το cron διαλέγει μόνο pending). Τα 'failed' δεν
+          // ξαναπιάνονται ποτέ — εκεί πήγαινε πριν και αυτή η περίπτωση.
+          if (err instanceof StripeCancelError) continue
           await prisma.accountDeletionRequest.update({
             where: { id: req.id },
             data: { status: 'failed' },
@@ -289,11 +403,45 @@ type RetentionRule = {
   extra?: string
 }
 
+/**
+ * Καταγραφές audit που ο κώδικας διαβάζει ως ΚΑΤΑΣΤΑΣΗ (όχι απλό ιστορικό) —
+ * ΔΕΝ σβήνονται στις 180 ημέρες. Αν σβήνονταν:
+ *  · ai_subscription_activated — η «τρέχουσα συνδρομή AI» του χρήστη
+ *    (lib/stripeSubscriptions): μετά από 6 μήνες τα webhooks ανανέωσης/
+ *    ακύρωσης/αποτυχίας δεν θα έβρισκαν τον χρήστη.
+ *  · order_stock_reserved — ότι το απόθεμα δεσμεύτηκε (admin.ts): χωρίς αυτό
+ *    η ακύρωση θα επέστρεφε απόθεμα δεύτερη φορά ή καθόλου.
+ *  · *_refund / *_claim / *_resolved / *_unresolved / *_cancel — «ήδη
+ *    επιστράφηκε», «αξίωση επιστροφής σε εξέλιξη» (lib/cancellation,
+ *    lib/bookingPayment, lib/extraPaymentRefund, routes/events,
+ *    routes/admin-refunds): χωρίς αυτά μια επανάληψη θα έκανε ΔΕΥΤΕΡΗ
+ *    επιστροφή χρημάτων.
+ *  · event_cancel — ακύρωση εκδήλωσης πριν υπάρξει η στήλη cancelled_at.
+ * Είναι οικονομικά/συμβατικά στοιχεία (άρθρο 17 παρ. 3 στοιχ. β΄). Κάθε νέα
+ * `auditLog.findFirst/findMany` με action ως κατάσταση ΠΡΕΠΕΙ να μπαίνει εδώ.
+ */
+export const AUDIT_STATE_ACTIONS: readonly string[] = [
+  AI_SUB_ACTIVATED_ACTION,                    // routes/webhooks.ts, lib/stripeSubscriptions.ts
+  'order_stock_reserved',                     // routes/orders.ts ORDER_STOCK_RESERVED_ACTION, admin.ts
+  'order_out_of_stock_cancel',                // routes/orders.ts (αιτία επιστροφής)
+  'refund', 'refund_failure_resolved', 'admin_refund_claim',      // routes/admin-refunds.ts, lib/cancellation.ts
+  'booking_duplicate_refund', 'order_duplicate_refund', 'telehealth_duplicate_refund', // lib/bookingPayment, lib/extraPaymentRefund
+  'booking_cancel', 'booking_cancel_refund', 'booking_refund_unresolved',              // lib/cancellation.ts
+  'telehealth_cancel', 'telehealth_cancel_refund', 'telehealth_refund_claim', 'telehealth_refund_unresolved',
+  'event_registration_refund', 'event_registration_auto_refund', 'event_registration_refund_claim',
+  'event_registration_refunding_seen', 'event_registration_refunding_resolved',        // routes/events.ts
+  'event_cancel',                             // routes/events.ts legacyCancelledAt
+  'subscription_paid_while_paused',           // routes/admin-refunds.ts FAILURE_ACTIONS
+]
+
+const sqlList = (xs: readonly string[]) => xs.map(x => `'${x.replace(/'/g, "''")}'`).join(',')
+
 /** Οι κανόνες ΠΡΕΠΕΙ να ταυτίζονται με την πολιτική απορρήτου. */
 const RETENTION: RetentionRule[] = [
   { label: 'Ιστορικό τοποθεσίας',   table: 'pet_locations', column: 'created_at', days: 90 },
   { label: 'Ειδοποιήσεις',          table: 'notifications', column: 'created_at', days: 365 },
-  { label: 'Αρχεία καταγραφής',     table: 'audit_logs',    column: 'created_at', days: 180 },
+  { label: 'Αρχεία καταγραφής',     table: 'audit_logs',    column: 'created_at', days: 180,
+    extra: `action NOT IN (${sqlList(AUDIT_STATE_ACTIONS)})` },
   { label: 'Αιτήματα διαγραφής',    table: 'account_deletion_requests', column: 'created_at',
     days: 1095, extra: "status IN ('cancelled','executed','failed')" },
 
@@ -308,6 +456,18 @@ const RETENTION: RetentionRule[] = [
   // Μηνύματα επικοινωνίας: κρατούν IP. Δύο χρόνια αρκούν για follow-up.
   { label: 'Μηνύματα επικοινωνίας', table: 'contact_messages',     column: 'created_at',
     days: 730, extra: "status IN ('replied','archived')" },
+  // Πολιτική (web/src/lib/legal.ts §8): «Συγκαταθέσεις: πέντε έτη μετά την
+  // ανάκληση». Κάθε αλλαγή προτιμήσεων είναι νέα γραμμή, οπότε μια γραμμή
+  // «ανακλήθηκε/αντικαταστάθηκε» όταν υπάρχει νεότερη για τον ίδιο χρήστη
+  // (ή το ίδιο cookie, για ανώνυμους). Σβήνεται όταν η νεότερη είναι άνω των
+  // 5 ετών. Η ΤΡΕΧΟΥΣΑ (τελευταία) γραμμή δεν σβήνεται ποτέ από εδώ.
+  { label: 'Ιστορικό συγκαταθέσεων', table: 'user_consents', column: 'created_at',
+    days: 1825, extra: `EXISTS (SELECT 1 FROM user_consents n
+                                 WHERE n.created_at > user_consents.created_at
+                                   AND n.created_at < now() - interval '1825 days'
+                                   AND ((user_consents.user_id IS NOT NULL AND n.user_id = user_consents.user_id)
+                                     OR (user_consents.user_id IS NULL AND user_consents.cookie_id IS NOT NULL
+                                         AND n.cookie_id = user_consents.cookie_id)))` },
 ]
 
 const BATCH = 5000

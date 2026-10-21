@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 import { Package, Plus, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
+import { ErrorState } from '@/components/ErrorState'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { effectivePrice } from '@/lib/price'
 
@@ -23,7 +24,7 @@ export default function ProviderProducts() {
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['provider-products'],
     queryFn: () => api.get('/products/my').then(r => r.data?.data ?? r.data ?? []),
   })
@@ -38,6 +39,7 @@ export default function ProviderProducts() {
         full style={{ marginBottom: space.md }} onPress={() => router.push('/(provider)/product-form' as any)} />
 
       {isLoading ? <SkeletonRows count={3} /> :
+       isError && products.length === 0 ? <ErrorState onRetry={() => refetch()} retrying={isFetching} /> :
        products.length === 0 ? <EmptyState icon={Package} title={t('providerDash.noProducts')} /> :
        products.map((p: any) => {
         const img = p.image_url || p.images?.[0]

@@ -1,7 +1,24 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
-import { decryptUserFields, encryptField } from '../lib/crypto.js'
+import { decryptUserFields, encryptField, decryptField } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { parseBody } from '../lib/validate.js'
+import { profileSchema } from './users.js'
+
+/**
+ * Διεύθυνση αποστολής παραγγελίας: τα πεδία του ανθρώπου αποθηκεύονται
+ * κρυπτογραφημένα (orders.ts encryptAddress). Ίδια λίστα και ίδια λογική με
+ * το decryptAddress του orders.ts — εκεί δεν εξάγεται, γι' αυτό αντίγραφο.
+ */
+const ADDRESS_PII = ['full_name', 'phone', 'street', 'address', 'city', 'postal_code', 'notes'] as const
+function decryptAddress(addr: any): any {
+  if (!addr || typeof addr !== 'object') return addr
+  const out: any = { ...addr }
+  for (const k of ADDRESS_PII) {
+    if (out[k]) out[k] = decryptField(String(out[k]))
+  }
+  return out
+}
 
 /**
  * User Rights router — GDPR Articles 15-22
@@ -45,9 +62,23 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
     const userId = (req.user as any).id
     const email = (req.user as any).email
 
+    // ΠΛΗΡΗΣ εξαγωγή (άρθρο 15/20). Πριν έλειπαν τα περισσότερα ιατρικά, η
+    // κοινότητα, το καλάθι, οι συνδρομές κ.ά. Κάθε ερώτημα φιλτράρει ΜΟΝΟ με
+    // το email/id του ίδιου χρήστη, και ποτέ δεν επιστρέφει hashes/tokens:
+    // ρητό select όπου ο πίνακας έχει τέτοια πεδία (tracker, ημερολόγιο, push).
+    const byOwner = { where: { owner_email: email } }
     const [
       user, pets, bookings, orders, posts, reviews, notifications,
       healthRecords, vaccinations, telehealth, consents, deletionRequests,
+      medications, allergies, labResults, imaging, surgeries, chronicConditions,
+      dentalRecords, weightRecords, geneticTests, vitalSigns, travelDocuments, pedigrees,
+      passportAccessGranted, passportAccessReceived, petLocations, petTrackers,
+      forumTopics, forumReplies, postComments, postLikes,
+      communityMemberships, communityMessages, communitiesCreated,
+      playdatesCreated, playdateInvitations, eventRegistrations, eventsOrganized,
+      cartItems, wishlist, loyalty, productSubscriptions, insuranceSubscriptions,
+      calendarConnections, contactMessages, providerMessages, verificationRequests,
+      pushSubscriptions, staffProfiles, services, products,
     ] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -55,6 +86,7 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
           id: true, email: true, full_name: true, phone: true, address: true,
           role: true, preferred_language: true, profile_photo: true,
           city: true, country: true, bio: true, website: true,
+          birth_date: true, latitude: true, longitude: true,
           loyalty_tier: true, total_points: true, is_verified: true,
           ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true,
           created_at: true, updated_at: true,
@@ -71,16 +103,84 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       prisma.telehealthConsultation.findMany({ where: { client_email: email } }),
       prisma.userConsent.findMany({ where: { user_id: userId } }),
       prisma.accountDeletionRequest.findMany({ where: { user_id: userId } }),
+      // Ιατρικός φάκελος
+      prisma.petMedication.findMany(byOwner),
+      prisma.petAllergy.findMany(byOwner),
+      prisma.petLabResult.findMany(byOwner),
+      prisma.petImaging.findMany(byOwner),
+      prisma.petSurgery.findMany(byOwner),
+      prisma.petChronicCondition.findMany(byOwner),
+      prisma.petDentalRecord.findMany(byOwner),
+      prisma.petWeightRecord.findMany(byOwner),
+      prisma.petGeneticTest.findMany(byOwner),
+      prisma.petVitalSigns.findMany(byOwner),
+      prisma.petTravelDocument.findMany(byOwner),
+      prisma.petPedigree.findMany(byOwner),
+      // Πρόσβαση στο διαβατήριο: όσες έδωσα (ιδιοκτήτης) και όσες έλαβα (κτηνίατρος).
+      prisma.petPassportAccess.findMany(byOwner),
+      prisma.petPassportAccess.findMany({ where: { provider_email: email } }),
+      prisma.petLocation.findMany(byOwner),
+      prisma.petTracker.findMany({
+        where: { owner_email: email },
+        // Χωρίς device_token: είναι το μυστικό της συσκευής, όχι δεδομένο του χρήστη.
+        select: {
+          id: true, pet_id: true, device_id: true, name: true, brand: true, model: true,
+          battery_percent: true, signal_strength: true, last_seen_at: true,
+          is_active: true, created_at: true, updated_at: true,
+        },
+      }),
+      // Κοινότητα
+      prisma.forumTopic.findMany({ where: { author_email: email } }),
+      prisma.forumReply.findMany({ where: { author_email: email } }),
+      prisma.postComment.findMany({ where: { author_email: email } }),
+      prisma.postLike.findMany({ where: { user_email: email } }),
+      prisma.communityMember.findMany({ where: { user_email: email } }),
+      prisma.communityMessage.findMany({ where: { author_email: email } }),
+      prisma.community.findMany({ where: { creator_email: email } }),
+      // Βόλτες: όσες οργάνωσα (χωρίς τα στοιχεία των συμμετεχόντων — είναι
+      // δεδομένα τρίτων) και οι δικές μου προσκλήσεις/συμμετοχές.
+      prisma.playdateEvent.findMany({ where: { creator_email: email } }),
+      prisma.playdateInvitation.findMany({ where: { invitee_email: email } }),
+      prisma.eventRegistration.findMany({ where: { user_email: email } }),
+      prisma.event.findMany({ where: { organizer_email: email } }),
+      // Αγορές
+      prisma.cartItem.findMany({ where: { user_email: email } }),
+      prisma.wishlist.findMany({ where: { user_email: email } }),
+      prisma.loyaltyPoints.findMany({ where: { user_email: email } }),
+      prisma.productSubscription.findMany({ where: { user_id: userId } }),
+      prisma.userInsuranceSubscription.findMany({ where: { user_id: userId } }),
+      // Συνδέσεις ημερολογίου — ΧΩΡΙΣ access/refresh token.
+      prisma.calendarConnection.findMany({
+        where: { user_email: email },
+        select: {
+          id: true, provider: true, calendar_id: true, account_email: true, is_active: true,
+          expires_at: true, last_synced_at: true, created_at: true, updated_at: true,
+        },
+      }),
+      // Μηνύματα: φόρμα επικοινωνίας (συνδεδεμένος ή με το ίδιο email) και
+      // μηνύματα παρόχου↔πελάτη όπου συμμετέχω.
+      prisma.contactMessage.findMany({ where: { OR: [{ user_email: email }, { email }] } }),
+      prisma.provider_messages.findMany({ where: { OR: [{ customer_email: email }, { provider_email: email }] } }),
+      prisma.providerVerificationRequest.findMany({ where: { user_email: email } }),
+      // Συσκευές ειδοποιήσεων — ΧΩΡΙΣ token/endpoint/κλειδιά.
+      prisma.pushSubscription.findMany({
+        where: { user_id: userId },
+        select: { id: true, platform: true, device_name: true, last_seen_at: true, created_at: true },
+      }),
+      (prisma as any).providerStaff.findMany({ where: { user_id: userId } }),
+      prisma.service.findMany({ where: { provider_email: email } }),
+      prisma.product.findMany({ where: { provider_email: email } }),
     ])
 
     const payload = {
       export_generated_at: new Date().toISOString(),
-      export_version: '1.1',
+      export_version: '1.2',
       gdpr_article: 'Article 15 / 20',
       user,
       pets,
       bookings,
-      orders,
+      // Διεύθυνση αποστολής αποκρυπτογραφημένη (στη βάση είναι κρυπτογραφημένη).
+      orders: orders.map(o => ({ ...o, shipping_address: decryptAddress(o.shipping_address) })),
       posts,
       reviews,
       notifications,
@@ -89,6 +189,49 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       telehealth_consultations: telehealth,
       consent_history: consents,
       deletion_requests: deletionRequests,
+      medications,
+      allergies,
+      lab_results: labResults,
+      imaging,
+      surgeries,
+      chronic_conditions: chronicConditions,
+      dental_records: dentalRecords,
+      weight_records: weightRecords,
+      genetic_tests: geneticTests,
+      vital_signs: vitalSigns,
+      travel_documents: travelDocuments,
+      pedigrees,
+      passport_access_granted: passportAccessGranted,
+      passport_access_received: passportAccessReceived,
+      pet_locations: petLocations,
+      pet_trackers: petTrackers,
+      forum_topics: forumTopics,
+      forum_replies: forumReplies,
+      post_comments: postComments,
+      post_likes: postLikes,
+      community_memberships: communityMemberships,
+      community_messages: communityMessages,
+      communities_created: communitiesCreated,
+      playdates_created: playdatesCreated,
+      playdate_invitations: playdateInvitations,
+      event_registrations: eventRegistrations,
+      events_organized: eventsOrganized,
+      cart: cartItems,
+      wishlist,
+      loyalty,
+      product_subscriptions: productSubscriptions,
+      insurance_subscriptions: insuranceSubscriptions,
+      calendar_connections: calendarConnections,
+      contact_messages: contactMessages,
+      provider_messages: providerMessages,
+      // ΑΦΜ αποκρυπτογραφημένο: είναι δικό του στοιχείο.
+      provider_verification_requests: verificationRequests.map(v => ({
+        ...v, tax_number: v.tax_number ? decryptField(v.tax_number) : null,
+      })),
+      push_devices: pushSubscriptions,
+      staff_profiles: staffProfiles,
+      services,
+      products,
     }
 
     // Force download as JSON attachment
@@ -179,12 +322,16 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
   // Whitelist prevents privilege escalation (no role/email/password changes here).
   app.patch('/rectify', async (req: any, reply) => {
     const userId = (req.user as any).id
-    const body = req.body ?? {}
+    // Ε12: ίδιοι έλεγχοι τιμών με το PATCH /users/me (profileSchema): μήκη,
+    // website μόνο http(s), profile_photo μόνο από το R2. Strip: άγνωστα
+    // πεδία αγνοούνται, όπως με την παλιά λίστα.
+    const body = parseBody(profileSchema.strip(), req.body, reply)
+    if (!body) return
     // profile_photo is the real column; the old whitelist said avatar_url,
     // which does not exist and made the write fail.
-    const allowed = ['full_name', 'phone', 'address', 'preferred_language', 'profile_photo', 'bio', 'city', 'country', 'website']
+    const allowed = ['full_name', 'phone', 'address', 'preferred_language', 'profile_photo', 'bio', 'city', 'country', 'website'] as const
     const data: any = {}
-    for (const f of allowed) if (f in body) data[f] = body[f]
+    for (const f of allowed) if ((body as any)[f] !== undefined) data[f] = (body as any)[f]
     if (Object.keys(data).length === 0) {
       return reply.code(400).send({ message: 'Κανένα επιτρεπόμενο πεδίο για ενημέρωση' })
     }

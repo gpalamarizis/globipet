@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, MapPin, Users, Euro } from 'lucide-react-native'
+import { CalendarDays, MapPin, Users, Euro, Pencil } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ErrorState } from '@/components/ErrorState'
+import { EventAttendees } from '@/components/EventAttendees'
 
 // 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη (όπως στο
 // event-confirmation): το new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω
@@ -32,7 +34,7 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { isAuthenticated, user } = useAuthStore()
 
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['event', id],
     queryFn: () => api.get(`/events/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
@@ -90,10 +92,17 @@ export default function EventDetailScreen() {
 
   // ── Διοργανωτής/διαχειριστής: ακύρωση εκδήλωσης με επιστροφές (όπως στο web) ──
   const isOrganizer = isAuthenticated && !!event
-    && (user?.email === event.organizer_email || user?.role === 'admin')
+    // is_mine από τον server: το organizer_email δεν επιστρέφεται πια δημόσια.
+    && ((event as any).is_mine === true || user?.role === 'admin')
   const { data: cancelPreview, refetch: refetchCancelPreview } = useQuery({
     queryKey: ['event-cancel-preview', id],
     queryFn: () => api.get(`/events/${id}/cancel-preview`).then(r => r.data?.data ?? r.data),
+    enabled: !!id && isOrganizer,
+  })
+  // Συμμετέχοντες (μόνο διοργανωτής/διαχειριστής), όπως στο web.
+  const { data: registrations = [], isLoading: regsLoading, isError: regsError } = useQuery({
+    queryKey: ['event-registrations', id],
+    queryFn: () => api.get(`/events/${id}/registrations`).then(r => r.data?.data ?? []),
     enabled: !!id && isOrganizer,
   })
 
@@ -106,6 +115,7 @@ export default function EventDetailScreen() {
       qc.invalidateQueries({ queryKey: ['events'] })
       qc.invalidateQueries({ queryKey: ['event-cancel-preview', id] })
       qc.invalidateQueries({ queryKey: ['event-registration', id] })
+      qc.invalidateQueries({ queryKey: ['event-registrations', id] })
       qc.invalidateQueries({ queryKey: ['event', id] })
       if (r?.data?.settled ?? r?.data?.deleted) {
         Alert.alert(t('events.cancelEvent'), t('events.cancelEventDone', { count: report?.refunded ?? 0, amount }))
@@ -156,6 +166,12 @@ export default function EventDetailScreen() {
   }
 
   if (isLoading) return <Screen title={t('events.title')} back><SkeletonRows count={3} /></Screen>
+  // Σφάλμα δικτύου ≠ «δεν βρέθηκε»: επανάληψη.
+  if (isError && !event) return (
+    <Screen title={t('events.title')} back>
+      <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+    </Screen>
+  )
   if (!event) return (
     <Screen title={t('events.title')} back>
       <EmptyState icon={CalendarDays} title={t('events.notFound')} />
@@ -303,7 +319,15 @@ export default function EventDetailScreen() {
 
         {isOrganizer && (
           <Card>
-            <Text style={s.cardTitle}>{t('events.manageEvent')}</Text>
+            <View style={s.manageHead}>
+              <Text style={s.cardTitle}>{t('events.manageEvent')}</Text>
+              {/* Ακυρωμένη: ο server αρνείται κάθε αλλαγή (409). */}
+              {!eventCancelled && (
+                <Button size="sm" variant="secondary" label={t('eventForm.editButton')}
+                  icon={<Pencil size={icon.xs} color={colors.text} />}
+                  onPress={() => router.push({ pathname: '/event-form', params: { id: String(id) } } as any)} />
+              )}
+            </View>
             {cancelSettled ? (
               <Text style={[s.note, s.manageHint]}>{t('events.cancelEventSettled')}</Text>
             ) : cancelBlocked ? (
@@ -318,6 +342,7 @@ export default function EventDetailScreen() {
                   label={cancelPreview?.already_cancelled ? t('events.completeRefunds') : t('events.cancelEvent')} />
               </>
             )}
+            <EventAttendees registrations={registrations} isLoading={regsLoading} isError={regsError} />
           </Card>
         )}
       </ScrollView>
@@ -336,5 +361,6 @@ const s = StyleSheet.create({
   note: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   cancelledTxt: { ...type.body, color: colors.danger, fontWeight: weight.semibold, textAlign: 'center' },
   cardTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  manageHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   manageHint: { textAlign: 'left', marginTop: space.xs, marginBottom: space.md },
 })

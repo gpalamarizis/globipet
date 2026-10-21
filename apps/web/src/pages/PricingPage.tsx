@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Heart, Sparkles, Activity, Check, Zap, X } from 'lucide-react'
+import { Heart, Sparkles, Activity, Check, Zap, X, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
@@ -31,6 +31,84 @@ const FEATURE_META = [
   { key: 'includes_emotion_ai',       icon: Sparkles, tKey: 'pricing.features.emotion' },
   { key: 'includes_wellness_tracker', icon: Activity, tKey: 'pricing.features.wellness' },
 ] as const
+
+/**
+ * Διαχείριση πληρωμένης συνδρομής AI (Stripe): κατάσταση και «Ακύρωση
+ * συνδρομής» με επιβεβαίωση — ίδιο μοτίβο με τη συνδρομή τροφής
+ * (MySubscriptionsCard). Χρησιμοποιείται εδώ και στο PetMedicalCenter.
+ * Δεν δείχνει τίποτα αν ο χρήστης δεν έχει πληρωμένη/ακυρωμένη συνδρομή.
+ */
+export function AiSubscriptionManage({ dark = false }: { dark?: boolean }) {
+  const { t, i18n } = useTranslation()
+  const qc = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
+  const [confirming, setConfirming] = useState(false)
+
+  const { data: status } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
+    enabled: isAuthenticated,
+  })
+
+  const cancel = useMutation({
+    mutationFn: () => api.post('/ai-subscriptions/cancel', {}),
+    onSuccess: () => {
+      setConfirming(false)
+      qc.invalidateQueries({ queryKey: ['ai-subscription-status'] })
+      toast.success(t('mySubs.cancelledToast'))
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('common.error')),
+  })
+
+  const st = status?.ai_subscription_status
+  if (!isAuthenticated || (st !== 'active' && st !== 'payment_failed' && st !== 'cancelled')) return null
+  const canCancel = status?.can_cancel ?? (st === 'active' || st === 'payment_failed')
+  const planName = status?.plan ? localName(status.plan, i18n.language) : null
+
+  return (
+    <div className={cn('rounded-xl border p-4 space-y-3 text-left',
+      dark ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700')}>
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className={cn('font-semibold text-sm', dark ? 'text-white' : 'text-gray-900 dark:text-white')}>
+            {st === 'cancelled' ? t('aiSub.cancelledTitle') : t('aiSub.activeTitle')}
+          </p>
+          {!!planName && <p className="text-xs text-gray-500 mt-0.5">{t('aiSub.plan', { plan: planName })}</p>}
+        </div>
+        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium shrink-0',
+          st === 'active' ? 'bg-green-100 text-green-700' : st === 'payment_failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600')}>
+          {t(`mySubs.status_${st}`)}
+        </span>
+      </div>
+
+      {st === 'payment_failed' && (
+        <p className="text-xs text-red-600 flex items-start gap-1.5">
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {t('aiSub.paymentFailedHint')}
+        </p>
+      )}
+
+      {canCancel && (confirming ? (
+        <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 space-y-3">
+          <p className="text-sm text-gray-700 dark:text-gray-300">{t('aiSub.confirmText')}</p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirming(false)} disabled={cancel.isPending}
+              className="btn-ghost border border-gray-300 dark:border-gray-600 text-sm flex-1">
+              {t('mySubs.keep')}
+            </button>
+            <button onClick={() => cancel.mutate()} disabled={cancel.isPending}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white rounded-xl px-4 py-2 text-sm font-medium flex-1">
+              {cancel.isPending ? t('common.loading') : t('mySubs.confirmCancel')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setConfirming(true)} className="text-red-600 hover:text-red-700 text-sm font-medium">
+          {t('mySubs.cancel')}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 export default function PricingPage() {
   const { t, i18n } = useTranslation()
@@ -111,6 +189,11 @@ export default function PricingPage() {
             </span>
           </button>
         </div>
+      </section>
+
+      {/* Πληρωμένη συνδρομή AI: κατάσταση και ακύρωση */}
+      <section className="max-w-xl mx-auto px-4 pb-6 empty:hidden">
+        <AiSubscriptionManage />
       </section>
 
       {/* Plans grid */}

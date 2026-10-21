@@ -39,16 +39,18 @@ const LANGS: { code: LangCode; label: string; flag: string }[] = [
 // Where to fetch the list of records for each entity, and which fields to
 // show as the record's label in the picker. Everything is admin-visible
 // (provider-owned entities also list all records for the admin).
-const LIST_ADAPTERS: Record<EntityKey, {
+//
+// Χωρίς adapter = δεν υπάρχει endpoint λίστας· η οντότητα δεν εμφανίζεται
+// (π.χ. achievement: δεν υπάρχει GET /achievements — η καρτέλα έδινε 404).
+const LIST_ADAPTERS: Partial<Record<EntityKey, {
   url: string
   labelField: string
   extractor?: (raw: any) => any[]
-}> = {
+}>> = {
   breed:              { url: '/breeds',                       labelField: 'name' },
-  achievement:        { url: '/achievements',                 labelField: 'name' },
   insurance_provider: { url: '/insurance/providers',          labelField: 'name' },
   insurance_plan:     { url: '/insurance/plans',              labelField: 'name' },
-  ai_plan:            { url: '/ai-plans',                     labelField: 'name' },
+  ai_plan:            { url: '/admin/ai-plans',               labelField: 'name' },
   catalog_template:   { url: '/admin/catalog/templates',      labelField: 'name' },
   specialty:          { url: '/specialties',                  labelField: 'name' },
   service:            { url: '/services?limit=500',           labelField: 'title' },
@@ -83,8 +85,9 @@ export default function AdminTranslationsPage() {
   const adapter = LIST_ADAPTERS[entity]
   const listQuery = useQuery({
     queryKey: ['translations-list', entity],
+    enabled: !!adapter,
     queryFn: async () => {
-      const { data } = await api.get(adapter.url)
+      const { data } = await api.get(adapter!.url)
       // Backends are inconsistent: some return { data: [] }, some return []
       const raw = data?.data ?? data ?? []
       return Array.isArray(raw) ? raw : (raw.data ?? [])
@@ -107,10 +110,10 @@ export default function AdminTranslationsPage() {
     const all = listQuery.data ?? []
     const q = search.trim().toLowerCase()
     return all
-      .filter((r: any) => !q || String(r[adapter.labelField] ?? '').toLowerCase().includes(q))
+      .filter((r: any) => !q || String(r[adapter?.labelField ?? 'name'] ?? '').toLowerCase().includes(q))
       .filter((r: any) => !missingLang || missingQuery.data?.has(r.id))
       .slice(0, 500)
-  }, [listQuery.data, missingQuery.data, adapter.labelField, missingLang, search])
+  }, [listQuery.data, missingQuery.data, adapter?.labelField, missingLang, search])
 
   return (
     <div className="page-container py-6">
@@ -131,7 +134,7 @@ export default function AdminTranslationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <select value={entity} onChange={e => { setEntity(e.target.value as EntityKey); setSelected(null) }}
                   className="input text-sm">
-            {configQuery.data?.entities.map(e => (
+            {configQuery.data?.entities.filter(e => LIST_ADAPTERS[e.entity]).map(e => (
               <option key={e.entity} value={e.entity}>
                 {t(`adminTranslations.entities.${e.entity}`, e.entity)}
                 {e.providerOwned ? ' ★' : ''}
@@ -180,12 +183,12 @@ export default function AdminTranslationsPage() {
               {rows.map((r: any) => (
                 <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                   <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                    {r[adapter.labelField] || <span className="text-gray-400">—</span>}
+                    {r[adapter?.labelField ?? 'name'] || <span className="text-gray-400">—</span>}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-gray-500 truncate max-w-[240px]">{r.id}</td>
                   <td className="px-3 py-2 text-right">
                     <button
-                      onClick={() => setSelected({ id: r.id, label: r[adapter.labelField] || r.id })}
+                      onClick={() => setSelected({ id: r.id, label: r[adapter?.labelField ?? 'name'] || r.id })}
                       className="btn-secondary text-xs px-3 py-1">
                       {t('adminTranslations.edit')}
                     </button>

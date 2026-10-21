@@ -3,8 +3,51 @@ import Anthropic from '@anthropic-ai/sdk'
 import prisma from '../lib/prisma.js'
 import { serverError } from '../lib/errors.js'
 import { normLang } from '../lib/i18n.js'
+import { audit } from '../lib/audit.js'
+import { bookingStart } from '../lib/cancellation.js'
+import { resolveForAi } from '../lib/storage.js'
 
 const TRIAL_DAYS = 30
+
+/**
+ * ΚΟΣΤΟΣ AI — κάθε κλήση χρεώνει τον λογαριασμό Anthropic της πλατφόρμας.
+ *
+ *   · Ημερήσιο όριο κλήσεων ανά χρήστη (ώρα Ελλάδας): δοκιμαστική 15,
+ *     ενεργή συνδρομή 60, διαχειριστής χωρίς όριο. Χωρίς νέο πίνακα: κάθε
+ *     κλήση γράφει audit `ai_call` και η μέτρηση γίνεται εκεί.
+ *   · Όριο μήκους σε κάθε κείμενο εισόδου (ερώτηση/πλαίσιο/σημειώσεις 2000,
+ *     τα υπόλοιπα 400) — ένα τεράστιο κείμενο ήταν τεράστια χρέωση.
+ *   · Το web_search έως 3 αναζητήσεις ανά κλήση (κάθε αναζήτηση χρεώνεται
+ *     και φέρνει χιλιάδες tokens αποτελεσμάτων στην είσοδο).
+ */
+const AI_DAILY_LIMIT: Record<string, number> = { trial: 15, active: 60 }
+const AI_CALL_ACTION = 'ai_call'
+const MSG_AI_DAILY_LIMIT = 'Έφτασες το ημερήσιο όριο χρήσης AI — δοκίμασε ξανά αύριο'
+const MSG_TEXT_TOO_LONG = 'Κάποιο κείμενο είναι πολύ μεγάλο'
+const LONG_TEXT = 2000
+const SHORT_TEXT = 400
+
+/** Τα μεσάνυχτα της σημερινής μέρας στην Ελλάδα (θερινή/χειμερινή ώρα). */
+function athensDayStart(now = new Date()): Date {
+  const ymd = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Athens', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now)
+  return bookingStart(ymd, '00:00') ?? new Date(now.getTime() - 86_400_000)
+}
+
+/**
+ * Πεδία κειμένου του σώματος με όριο. Σφάλμα αν κάποιο υπερβαίνει το όριο ή
+ * δεν είναι απλή τιμή (αντικείμενο/πίνακας θα γινόταν κείμενο στο prompt).
+ */
+function textLimitError(body: any, limits: Record<string, number>): { message: string; field: string; max: number } | null {
+  for (const [field, max] of Object.entries(limits)) {
+    const v = body?.[field]
+    if (v === undefined || v === null) continue
+    if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') return { message: MSG_TEXT_TOO_LONG, field, max }
+    if (String(v).length > max) return { message: MSG_TEXT_TOO_LONG, field, max }
+  }
+  return null
+}
 
 const aiRoutes: FastifyPluginAsync = async (app) => {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -19,9 +62,47 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
    *
    * Admins pass through so support can reproduce and test.
    */
+  /**
+   * Ημερήσιο όριο. Μετρά τις επιτυχείς καταγραφές `ai_call` του χρήστη από
+   * τα μεσάνυχτα (ώρα Ελλάδας). Ο διαχειριστής χωρίς όριο. Η καταγραφή
+   * γράφεται από τον handler (recordAiCall) ακριβώς πριν την κλήση στο
+   * Anthropic — ένα αίτημα που απορρίπτεται στον έλεγχο (400) δεν μετρά.
+   */
+  const endpointOf = (req: any) => String(req.routeOptions?.url ?? req.url ?? '').slice(0, 100)
+
+  async function enforceAiDailyLimit(req: any, reply: any, status: string | null) {
+    const u = req.user as any
+    if (u?.role === 'admin') { req.aiDailyLimit = null; return }
+    const kind = status === 'active' ? 'active' : 'trial'
+    // Ρυθμίσιμο χωρίς νέα έκδοση: app_settings `ai_daily_limit_trial` /
+    // `ai_daily_limit_active` (ακέραιος ≥ 0). Χωρίς ρύθμιση → 15 / 60.
+    let limit = AI_DAILY_LIMIT[kind]
+    const setting = await prisma.appSetting.findUnique({ where: { key: `ai_daily_limit_${kind}` } }).catch(() => null)
+    const override = setting ? Number(setting.value) : NaN
+    if (Number.isInteger(override) && override >= 0) limit = override
+    req.aiDailyLimit = limit
+    const used = await prisma.auditLog.count({
+      where: {
+        actor_email: u.email, action: AI_CALL_ACTION, outcome: 'success',
+        created_at: { gte: athensDayStart() },
+      },
+    })
+    if (used >= limit) {
+      await audit(req, {
+        action: AI_CALL_ACTION, resource: 'ai', outcome: 'blocked', status_code: 429,
+        metadata: { endpoint: endpointOf(req), limit, used },
+      })
+      return reply.code(429).send({ message: MSG_AI_DAILY_LIMIT, code: 'ai_daily_limit', limit })
+    }
+  }
+
+  /** Καταγραφή μιας κλήσης στο Anthropic (μετρά στο ημερήσιο όριο). */
+  const recordAiCall = (req: any) =>
+    audit(req, { action: AI_CALL_ACTION, resource: 'ai', metadata: { endpoint: endpointOf(req), limit: req.aiDailyLimit ?? null } })
+
   async function requireAiAccess(req: any, reply: any) {
     const u = req.user as any
-    if (u?.role === 'admin') return
+    if (u?.role === 'admin') return enforceAiDailyLimit(req, reply, null)
 
     const user = await prisma.user.findUnique({
       where: { id: u.id },
@@ -29,11 +110,11 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     })
     if (!user) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' })
 
-    if (user.ai_subscription_status === 'active') return
+    if (user.ai_subscription_status === 'active') return enforceAiDailyLimit(req, reply, 'active')
 
     if (user.ai_subscription_status === 'trial' && user.ai_trial_started_at) {
       const elapsedDays = (Date.now() - new Date(user.ai_trial_started_at).getTime()) / 86_400_000
-      if (elapsedDays < TRIAL_DAYS) return
+      if (elapsedDays < TRIAL_DAYS) return enforceAiDailyLimit(req, reply, 'trial')
       // Expired mid-session — record it so the rest of the app agrees.
       await prisma.user.update({
         where: { id: user.id },
@@ -67,7 +148,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1))
   }
 
-  const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const }
+  const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 3 }
 
   /**
    * Εικόνα σε base64 (data: URI του /upload ή image_base64): μόνο οι τύποι
@@ -125,10 +206,12 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   app.post('/pet-health', { preHandler: aiGuard }, async (req: any, reply) => {
     const { image_url, analysis_type, breed, species } = req.body as { image_url: string; analysis_type: 'skin' | 'eye'; breed?: string; species?: string }
     if (!image_url || !analysis_type) return reply.code(400).send({ message: 'Απαιτούνται image_url και analysis_type' })
+    const tooLong = textLimitError(req.body, { analysis_type: SHORT_TEXT, breed: SHORT_TEXT, species: SHORT_TEXT })
+    if (tooLong) return reply.code(400).send(tooLong)
 
     // The /upload endpoint falls back to a base64 data: URI when no storage (R2) is configured.
     // Claude's "url" image source can't fetch data: URIs — convert those to a base64 image block instead.
-    const img = imageBlockFromUrl(image_url)
+    const img = imageBlockFromUrl(await resolveForAi(image_url, (req.user as any)?.email))
     if ('error' in img) return reply.code(400).send({ message: img.error })
     const imageContent = img.block
 
@@ -142,6 +225,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 {"severity":"low"|"medium"|"high","findings":["..."],"conditions":["..."],"comparison_sources":["σύντομη αναφορά πηγής 1","σύντομη αναφορά πηγής 2"],"recommendation":"","urgency":"","disclaimer":"Αυτή η ανάλυση είναι ενδεικτική και δεν υποκαθιστά την επίσκεψη σε κτηνίατρο."}`
 
     try {
+      await recordAiCall(req)
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
@@ -162,12 +246,14 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     const { image_url, image_base64, media_type, species, context } = req.body as any
 
     if (!image_url && !image_base64) return reply.code(400).send({ message: 'Απαιτείται εικόνα' })
+    const tooLong = textLimitError(req.body, { species: SHORT_TEXT, context: LONG_TEXT })
+    if (tooLong) return reply.code(400).send(tooLong)
     // Το κινητό στέλνει image_url από το /upload, που χωρίς R2 επιστρέφει
     // data: URI — η πηγή "url" του Claude δεν το διαβάζει. Μετατροπή σε
     // base64 (με έλεγχο τύπου/μεγέθους), όπως στο /pet-health και στο /stool-urine.
     const img = image_base64
       ? base64ImageBlock(media_type || 'image/jpeg', image_base64)
-      : imageBlockFromUrl(image_url)
+      : imageBlockFromUrl(await resolveForAi(image_url, (req.user as any)?.email))
     if ('error' in img) return reply.code(400).send({ message: img.error })
 
     const systemPrompt = `Είσαι ειδικός AI στη συναισθηματική νοημοσύνη ζώων συντροφιάς.
@@ -203,6 +289,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
     try {
       const imageContent = img.block
 
+      await recordAiCall(req)
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
@@ -223,16 +310,22 @@ ${context ? `Πλαίσιο: ${context}` : ''}
     const { frames, species, duration_seconds } = req.body as any
     // frames: array of base64 strings (extracted from video on frontend)
     if (!frames || !Array.isArray(frames) || frames.length === 0) return reply.code(400).send({ message: 'Απαιτούνται frames' })
+    const tooLong = textLimitError(req.body, { species: SHORT_TEXT, duration_seconds: SHORT_TEXT })
+    if (tooLong) return reply.code(400).send(tooLong)
 
     const systemPrompt = `Είσαι ειδικός AI στη συναισθηματική νοημοσύνη ζώων. Αναλύεις πολλαπλά frames βίντεο για να αξιολογήσεις τη συνολική συναισθηματική κατάσταση. Όταν χρειάζεται, αναζητάς στο διαδίκτυο δημόσιες πηγές για συμπεριφορά της ράτσας/είδους. Απαντάς ΜΟΝΟ JSON στο τελικό σου μήνυμα.`
 
     // Αναλύουμε έως 5 frames
     const framesToAnalyze = frames.slice(0, 5)
 
-    const imageContents = framesToAnalyze.map((f: string) => ({
-      type: 'image' as const,
-      source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: f }
-    }))
+    // Κάθε frame με τον ίδιο έλεγχο τύπου/μεγέθους με τις μεμονωμένες εικόνες
+    // (πριν περνούσε οτιδήποτε, οποιουδήποτε μεγέθους).
+    const imageContents: any[] = []
+    for (const f of framesToAnalyze) {
+      const img = base64ImageBlock('image/jpeg', f)
+      if ('error' in img) return reply.code(400).send({ message: img.error })
+      imageContents.push(img.block)
+    }
 
     const userPrompt = `Αυτά είναι ${framesToAnalyze.length} frames από βίντεο διάρκειας ${duration_seconds || '?'} δευτερολέπτων ${species ? `ενός ${species}` : 'ενός κατοικίδιου'}.
 Ανάλυσε τη συναισθηματική κατάσταση συνολικά.
@@ -253,6 +346,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
 }`
 
     try {
+      await recordAiCall(req)
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
@@ -288,8 +382,15 @@ ${context ? `Πλαίσιο: ${context}` : ''}
     if (!image_url || !sample_type || !species) {
       return reply.code(400).send({ message: 'Απαιτούνται image_url, sample_type, species' })
     }
+    const tooLong = textLimitError(req.body, {
+      sample_type: SHORT_TEXT, species: SHORT_TEXT, breed: SHORT_TEXT, age_years: SHORT_TEXT, weight_kg: SHORT_TEXT,
+      is_sterilized: SHORT_TEXT, ate_from_street: SHORT_TEXT, recent_medications: SHORT_TEXT,
+      diet_change: SHORT_TEXT, last_normal_stool: SHORT_TEXT,
+      symptoms: LONG_TEXT, additional_notes: LONG_TEXT,
+    })
+    if (tooLong) return reply.code(400).send(tooLong)
 
-    const img = imageBlockFromUrl(image_url)
+    const img = imageBlockFromUrl(await resolveForAi(image_url, (req.user as any)?.email))
     if ('error' in img) return reply.code(400).send({ message: img.error })
     const imageContent = img.block
 
@@ -342,6 +443,7 @@ ${contextParts}
 }`
 
     try {
+      await recordAiCall(req)
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
@@ -360,6 +462,8 @@ ${contextParts}
   app.post('/legal', { preHandler: aiGuard }, async (req: any, reply) => {
     const { question, country = 'GR', context } = req.body as any
     if (!question) return reply.code(400).send({ message: 'Απαιτείται ερώτηση' })
+    const tooLong = textLimitError(req.body, { question: LONG_TEXT, context: LONG_TEXT, country: SHORT_TEXT })
+    if (tooLong) return reply.code(400).send(tooLong)
 
     const systemPrompt = `Είσαι εξειδικευμένος νομικός σύμβουλος σε θέματα νομοθεσίας κατοικιδίων ζώων στην Ελλάδα.
 Έχεις πλήρη γνώση της ελληνικής νομοθεσίας:
@@ -437,6 +541,7 @@ ${contextParts}
     const userPrompt = `${context ? `Πλαίσιο: ${context}\n` : ''}Ερώτηση: ${question}`
 
     try {
+      await recordAiCall(req)
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,

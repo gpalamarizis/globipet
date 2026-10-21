@@ -36,6 +36,16 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
 // Οι κοινότητες μένουν, όπως πριν, περιορισμένες στην Ελλάδα.
 const geocode = (address: string) => geocodeAddress(address, 'gr')
 
+/**
+ * Μηνύματα χωρίς email συντάκτη. Κάθε μέλος έβλεπε το author_email όλων των
+ * άλλων· το μόνο που χρειάζεται η εφαρμογή είναι «δικό μου;» (στοίχιση
+ * φούσκας), που υπολογίζεται εδώ ως is_mine.
+ */
+function publicMessage<T extends { author_email: string }>(m: T, viewer: string) {
+  const { author_email, ...rest } = m
+  return { ...rest, is_mine: author_email === viewer }
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   // GET nearby communities by lat/lng or user's location
@@ -121,20 +131,28 @@ const routes: FastifyPluginAsync = async (app) => {
     const community = await prisma.community.findUnique({
       where: { id: req.params.id },
       include: {
-        members: { select: { user_email: true, user_name: true, user_photo: true, role: true } },
+        members: { select: { id: true, user_email: true, user_name: true, user_photo: true, role: true } },
       }
     })
     if (!community) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
 
     const isMember = community.members.some(m => m.user_email === email)
 
+    // Κανένα email προς κανέναν: ούτε του δημιουργού (το έβλεπαν και μη μέλη)
+    // ούτε των μελών (κάθε μέλος έβλεπε το email όλων). Αντί για αυτά:
+    // is_me ανά μέλος και is_creator για την κοινότητα.
+    const { members, creator_email, ...publicFields } = community
+    const roster = members.map(m => ({
+      id: m.id, user_name: m.user_name, user_photo: m.user_photo, role: m.role, is_me: m.user_email === email,
+    }))
+
     if (!isMember) {
       // Non-members see the community exists and who runs it, but not the
       // roster's email addresses and not the conversation.
-      const { members, ...publicFields } = community
       return {
         ...publicFields,
-        members: members.map(m => ({ user_name: m.user_name, user_photo: m.user_photo, role: m.role })),
+        is_creator: creator_email === email,
+        members: roster,
         messages: [],
         isMember: false,
       }
@@ -145,7 +163,13 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'asc' },
       take: 100,
     })
-    return { ...community, messages, isMember: true }
+    return {
+      ...publicFields,
+      is_creator: creator_email === email,
+      members: roster,
+      messages: messages.map(m => publicMessage(m, email)),
+      isMember: true,
+    }
   })
 
   // POST create community
@@ -301,7 +325,7 @@ const routes: FastifyPluginAsync = async (app) => {
         image_url,
       }
     })
-    return reply.code(201).send(message)
+    return reply.code(201).send({ ...message, is_mine: true })
   })
 
   // GET messages
@@ -323,7 +347,7 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       take,
     })
-    return { messages: messages.reverse() }
+    return { messages: messages.reverse().map(m => publicMessage(m, email)) }
   })
 }
 

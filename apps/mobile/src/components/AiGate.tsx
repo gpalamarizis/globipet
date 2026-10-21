@@ -22,7 +22,8 @@ const typo = theme.type
  *   3. Όσο φορτώνει η κατάσταση → σκελετός (όχι πύλη που αναβοσβήνει).
  *   4. Αποτυχία ελέγχου χωρίς καμία γνωστή κατάσταση → σφάλμα με επανάληψη.
  *   5. 'trial' ή 'active' → η οθόνη.
- *   6. Αλλιώς → έναρξη δοκιμής ή, αν έληξε, πλάνα.
+ *   6. Αλλιώς → έναρξη δοκιμής (μόνο από 'none', όπως ο server) ή πλάνα
+ *      (ληγμένη δοκιμή, ακυρωμένη, αποτυχημένη πληρωμή — όπως το web).
  */
 export default function AiGate({ title, children }: { title: string; children: ReactNode }) {
   const { t } = useTranslation()
@@ -99,23 +100,32 @@ export default function AiGate({ title, children }: { title: string; children: R
 
   // ── Πύλη: χωρίς ενεργή δοκιμή ή συνδρομή ─────────────────────────
   if (!canUseAi) {
-    const expired = status?.ai_subscription_status === 'expired'
+    const st = status?.ai_subscription_status
+    // Ο server δίνει δοκιμή μόνο από 'none'· κάθε άλλη μη ενεργή → πλάνα.
+    const expired = !!st && st !== 'none'
     return (
       <Screen title={title}>
         <View style={s.gate}>
           <View style={s.gateIcon}><Brain size={icon.xl} color={colors.brand} /></View>
           <Text style={s.gateTitle}>
-            {expired ? t('ai.trial_over') : t('ai.try_free')}
+            {st === 'payment_failed' ? t('aiGate.paymentFailedTitle')
+              : st === 'cancelled' ? t('aiSub.cancelledTitle')
+              : st === 'expired' ? t('ai.trial_over')
+              : expired ? t('aiGate.required') : t('ai.try_free')}
           </Text>
           <Text style={s.gateText}>
-            {expired
-              ? t('ai.trial_sub')
+            {st === 'payment_failed' ? t('aiSub.paymentFailedHint')
+              : st === 'expired' ? t('ai.trial_sub')
+              : expired ? t('aiGate.cancelledText')
               : t('ai.trial_desc')}
           </Text>
           {expired ? (
             <Button label={t('ai.see_plans')} full
               onPress={() => router.push('/pricing' as any)}
               style={{ marginTop: space.xl }} />
+          ) : (user as any)?.email_verified === false ? (
+            // Η δοκιμή ξεκινά με την επιβεβαίωση του email — όχι κουμπί (όπως web).
+            <Text style={[s.gateText, { marginTop: space.xl, fontWeight: weight.semibold }]}>{t('trialVerify.confirmEmail')}</Text>
           ) : (
             <Button label={t('ai.start_trial')} full
               loading={startTrial.isPending}

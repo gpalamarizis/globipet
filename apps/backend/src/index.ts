@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import cookie from '@fastify/cookie'
 import { Prisma } from '@prisma/client'
+import prisma from './lib/prisma.js'
 import adminCatalogRoutes from './routes/admin-catalog.js'
 import insuranceRoutes from './routes/insurance.js'
 
@@ -55,6 +56,7 @@ import registryRoutes from './routes/registry.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
 import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron, startStuckRefundsCron } from './lib/cron.js'
 import { registerMessageTranslation } from './lib/apiMessages.js'
+import { assertProductionEnv } from './lib/envCheck.js'
 import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
@@ -84,6 +86,11 @@ const app = Fastify({
   logger: process.env.NODE_ENV === 'development',
   trustProxy: (_address: string, hop: number) => hop < 1,
 })
+
+// ─── Έλεγχος μεταβλητών περιβάλλοντος (lib/envCheck.ts) ──
+// Σε παραγωγή: throw μόνο για DATABASE_URL / JWT_SECRET / ENCRYPTION_KEY_V2·
+// Stripe/Viva → δυνατό console.error και συνέχεια.
+assertProductionEnv()
 
 // ─── JWT secret hardening ─────────────────────────────
 // Refuse to start in production without a strong secret (min 32 chars, no default fallback)
@@ -141,35 +148,105 @@ await app.register(cors, {
  */
 await app.register(cookie, { secret: JWT_SECRET })
 
-await app.register(jwt, { secret: JWT_SECRET })
+/**
+ * ΑΝΑΚΛΗΣΗ JWT (Ε12) — ο ρόλος και η «έκδοση» διαβάζονται ΑΠΟ ΤΗ ΒΑΣΗ.
+ *
+ *   Πριν, ένα JWT επτά ημερών ίσχυε ό,τι κι αν γινόταν: αλλαγή κωδικού,
+ *   υποβιβασμός διαχειριστή, διαγραφή λογαριασμού. Και ο ρόλος διαβαζόταν από
+ *   το ίδιο το τοκεν, οπότε ένας πρώην διαχειριστής κρατούσε το /api/admin.
+ *
+ *   Τώρα κάθε τοκεν φέρει `tv` (users.token_version). Η τιμή αυξάνεται σε
+ *   αλλαγή/επαναφορά κωδικού, «αποσύνδεση παντού», αλλαγή ρόλου/διαγραφή από
+ *   διαχειριστή — και κάθε τοκεν με παλιό `tv` απορρίπτεται (401).
+ *
+ *   Το `trusted` του @fastify/jwt τρέχει σε ΚΑΘΕ req.jwtVerify() — και στο
+ *   decorator `authenticate` και στα routes που καλούν απευθείας jwtVerify —
+ *   οπότε ο έλεγχος δεν παρακάμπτεται από κανένα σημείο.
+ *
+ *   Συμβατότητα: τοκεν χωρίς `tv` (εκδόθηκαν πριν από αυτή την αλλαγή, π.χ.
+ *   από ήδη εγκατεστημένη εφαρμογή) γίνονται δεκτά όσο το token_version του
+ *   χρήστη είναι 0. Ο ρόλος, όμως, έρχεται ΠΑΝΤΑ από τη βάση.
+ *
+ *   Cache 30″ ανά χρήστη στη μνήμη: ένα ερώτημα ανά χρήστη ανά μισό λεπτό, όχι
+ *   ανά αίτημα. Οι αλλαγές σε αυτή τη διεργασία καθαρίζουν αμέσως το cache
+ *   (app.invalidateAuthCache)· σε άλλη διεργασία ισχύουν το πολύ σε 30″.
+ */
+const AUTH_CACHE_TTL_MS = 30_000
+const authCache = new Map<string, { at: number; state: { tv: number; role: string } | null }>()
 
-// ─── Rate limiting: generic default + strict for auth ───
-await app.register(rateLimit, {
-  max: 200,               // generic ceiling per IP per window
-  timeWindow: '1 minute',
-  errorResponseBuilder: (_req, ctx) => ({
-    statusCode: 429,
-    message: `Πολλά αιτήματα. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 1000)} δευτερόλεπτα.`,
-  }),
+async function loadAuthState(userId: string) {
+  const now = Date.now()
+  const hit = authCache.get(userId)
+  if (hit && now - hit.at < AUTH_CACHE_TTL_MS) return hit.state
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { token_version: true, role: true } })
+  const state = u ? { tv: u.token_version, role: u.role } : null
+  if (authCache.size > 20_000) {
+    for (const [k, v] of authCache) if (now - v.at >= AUTH_CACHE_TTL_MS) authCache.delete(k)
+  }
+  authCache.set(userId, { at: now, state })
+  return state
+}
+
+await app.register(jwt, {
+  secret: JWT_SECRET,
+  trusted: async (_req: any, decoded: any) => {
+    const id = decoded?.id
+    if (typeof id !== 'string' || !id) return false
+    const state = await loadAuthState(id)
+    if (!state) return false                       // ο λογαριασμός διαγράφηκε
+    const tv = decoded.tv === undefined ? 0 : decoded.tv
+    if (tv !== state.tv) return false              // ανακλήθηκε
+    decoded.role = state.role                      // req.user.role = ρόλος της βάσης
+    return true
+  },
 })
-// 25 MB: όσο και το MAX_VIDEO_SIZE του routes/upload.ts.
-//
-// Ήταν 10 MB, οπότε κάθε βίντεο 10–25 MB απορριπτόταν ΕΔΩ, πριν φτάσει
-// στον έλεγχο της διαδρομής — και η ανάλυση συναισθήματος από βίντεο
-// αποτύγχανε χωρίς κατανοητό μήνυμα. Τα δύο όρια πρέπει να συμφωνούν:
-// το multipart είναι η εξωτερική πύλη, ο έλεγχος της διαδρομής κρίνει
-// εικόνα ή βίντεο και επιβάλλει το σωστό όριο για το καθένα.
-await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } })
+
+app.decorate('invalidateAuthCache', (userId: string) => { authCache.delete(userId) })
+
+/**
+ * Κλειδί ορίου «ανά χρήστη»: το id από ΕΠΑΛΗΘΕΥΜΕΝΟ JWT, αλλιώς η IP.
+ * Μόνο υπογραφή/λήξη εδώ (συγχρονικά, χωρίς βάση) — αρκεί για να μην μπορεί
+ * κανείς να κατασκευάσει ψεύτικα id και να πολλαπλασιάσει τους «κουβάδες».
+ */
+function userOrIpKey(req: any): string {
+  const h = req.headers?.authorization
+  if (typeof h === 'string' && h.startsWith('Bearer ')) {
+    try {
+      const p: any = app.jwt.verify(h.slice(7))
+      if (p?.id) return `u:${p.id}`
+    } catch { /* άκυρο τοκεν → IP */ }
+  }
+  return `ip:${req.ip}`
+}
 
 // ─── Αυστηρά όρια στα ευαίσθητα endpoints ───────────────
 // Το γενικό όριο των 200/λεπτό δεν προστατεύει από brute force σε
 // login / register / forgot-password. Εδώ ορίζονται ανά διαδρομή.
-const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
-  '/api/auth/login':           { max: 8,  window: '15 minutes' },
+//
+// ΣΕΙΡΑ (Ε12): το hook onRoute που γράφει το `config.rateLimit` ΠΡΕΠΕΙ να
+// μπει ΠΡΙΝ το register του @fastify/rate-limit. Το plugin διαβάζει το config
+// στο δικό του onRoute, και τα onRoute τρέχουν με τη σειρά που προστέθηκαν.
+// Πριν, το hook ήταν μετά: το plugin έβλεπε κενό config, έβαζε μόνο το γενικό
+// 200/λεπτό, και ΚΑΝΕΝΑ από τα παρακάτω όρια δεν ίσχυε.
+//
+// key: 'ip' (προεπιλογή) ή 'user' (id από επαληθευμένο JWT, αλλιώς IP).
+// Το login έχει ΕΠΙΠΛΕΟΝ ανεξάρτητο όριο ανά email (LOGIN_PER_EMAIL, πιο
+// κάτω): επίθεση από πολλές IP σε έναν λογαριασμό μετράει κι αυτή.
+// register / contact / forgot-password: ΜΟΝΟ ανά IP (ένα όριο ανά email θα
+// επέτρεπε σε τρίτο να «κλειδώσει» την επαναφορά κωδικού κάποιου άλλου).
+type LimitRule = { max: number; window: string; key?: 'ip' | 'user' }
+const STRICT_LIMITS: Record<string, LimitRule> = {
+  '/api/auth/login':           { max: 20, window: '15 minutes' },
   '/api/auth/register':        { max: 5,  window: '1 hour' },
   '/api/auth/forgot-password': { max: 4,  window: '1 hour' },
   '/api/auth/reset-password':  { max: 6,  window: '1 hour' },
   '/api/auth/google/mobile':   { max: 20, window: '15 minutes' },
+  '/api/auth/facebook/mobile': { max: 20, window: '15 minutes' },
+  '/api/auth/refresh':         { max: 30, window: '15 minutes', key: 'user' },
+  '/api/auth/verify-email':    { max: 10, window: '1 hour' },
+  '/api/auth/resend-verification': { max: 3, window: '1 hour', key: 'user' },
+  '/api/auth/logout-all':      { max: 10, window: '1 hour', key: 'user' },
+  '/api/users/me/password':    { max: 5,  window: '15 minutes', key: 'user' },
   '/api/user-rights/export':   { max: 5,  window: '1 hour' },
   // GPS collars report on a schedule, not continuously. This is generous for
   // a real device and still caps how fast an unauthenticated caller can probe
@@ -185,33 +262,92 @@ const STRICT_LIMITS: Record<string, { max: number; window: string }> = {
   '/api/communities/geocode':  { max: 20, window: '1 minute' },
   // Δημόσιο: κάθε κλήση ρωτά τη Viva.
   '/api/payments/return':      { max: 30, window: '1 minute' },
+  // Δημόσιο webhook της Viva (POST ειδοποίηση + GET επαλήθευση κλειδιού).
+  '/api/orders/viva/webhook':  { max: 120, window: '1 minute' },
 }
+// Κάθε κλήση AI κοστίζει (Anthropic/OpenAI): 20/λεπτό ανά χρήστη, για όλα τα POST /api/ai/*.
+const AI_LIMIT: LimitRule = { max: 20, window: '1 minute', key: 'user' }
+// Δεύτερο, ανεξάρτητο όριο του login ανά email (μετά την ανάλυση του σώματος).
+const LOGIN_PER_EMAIL = { max: 8, window: '15 minutes' }
+
+const strictError = (_req: any, ctx: any) => ({
+  statusCode: 429,
+  message: `Πολλές προσπάθειες. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 60000)} λεπτά.`,
+})
+
+let loginEmailLimiter: ((req: any, opts?: { increment?: boolean }) => Promise<any>) | null = null
 
 app.addHook('onRoute', (route) => {
+  const methods = Array.isArray(route.method) ? route.method : [route.method]
   const rule = STRICT_LIMITS[route.url]
+    ?? (route.url.startsWith('/api/ai/') && methods.includes('POST') ? AI_LIMIT : undefined)
   if (!rule) return
   route.config = {
     ...(route.config || {}),
     rateLimit: {
       max: rule.max,
       timeWindow: rule.window,
-      // Το κλειδί περιλαμβάνει και το email όπου υπάρχει, ώστε επίθεση από
-      // πολλές IP σε έναν λογαριασμό να μετράει επίσης.
-      keyGenerator: (req: any) => {
-        const email = (req.body && (req.body as any).email) || ''
-        return `${req.ip}:${String(email).toLowerCase().slice(0, 80)}`
-      },
-      errorResponseBuilder: (_req: any, ctx: any) => ({
-        statusCode: 429,
-        message: `Πολλές προσπάθειες. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 60000)} λεπτά.`,
-      }),
+      ...(rule.key === 'user' ? { keyGenerator: userOrIpKey } : {}),
+      errorResponseBuilder: strictError,
     },
+  } as any
+
+  if (route.url === '/api/auth/login') {
+    // Το σώμα έχει αναλυθεί πια στο preHandler — στο onRequest (όπου τρέχει
+    // το plugin) το req.body είναι ακόμα undefined.
+    //
+    // Μετρά ΜΟΝΟ τις αποτυχημένες προσπάθειες: εδώ γίνεται μόνο ανάγνωση
+    // (increment:false) και η αύξηση γίνεται στο onResponse όταν η απάντηση
+    // είναι 401 (λάθος στοιχεία). Πριν μετρούσε κάθε login, οπότε ένας
+    // χρήστης με πολλές συσκευές/επανασυνδέσεις κλειδωνόταν χωρίς λάθος.
+    // Η 9η προσπάθεια μετά από 8 αποτυχίες μέσα σε 15' → 429.
+    const loginEmail = (req: any) => String(req.body?.email ?? '').trim().toLowerCase().slice(0, 255)
+    const perEmail = async (req: any, reply: any) => {
+      if (!loginEmail(req) || !loginEmailLimiter) return
+      const r = await loginEmailLimiter(req, { increment: false })
+      // Η απάντηση δεν δίνει `current`· remaining = max − αποτυχίες.
+      if (r && !r.isAllowed && r.remaining <= 0) {
+        reply.header('retry-after', r.ttlInSeconds)
+        return reply.code(429).send(strictError(req, r))
+      }
+    }
+    const countFailure = async (req: any, reply: any) => {
+      if (reply.statusCode !== 401 || !loginEmail(req) || !loginEmailLimiter) return
+      await loginEmailLimiter(req).catch(() => {})
+    }
+    const ph = route.preHandler
+    route.preHandler = Array.isArray(ph) ? [perEmail, ...ph] : ph ? [perEmail, ph] : [perEmail]
+    const or = route.onResponse
+    route.onResponse = Array.isArray(or) ? [...or, countFailure] : or ? [or, countFailure] : [countFailure]
   }
 })
 
-// Auth decorator
+// ─── Rate limiting: generic default + strict for auth ───
+await app.register(rateLimit, {
+  max: 200,               // generic ceiling per IP per window
+  timeWindow: '1 minute',
+  errorResponseBuilder: (_req, ctx) => ({
+    statusCode: 429,
+    message: `Πολλά αιτήματα. Δοκίμασε ξανά σε ${Math.ceil(ctx.ttl / 1000)} δευτερόλεπτα.`,
+  }),
+})
+loginEmailLimiter = (app as any).createRateLimit({
+  max: LOGIN_PER_EMAIL.max,
+  timeWindow: LOGIN_PER_EMAIL.window,
+  keyGenerator: (req: any) => `login-email:${String(req.body?.email ?? '').trim().toLowerCase().slice(0, 255)}`,
+})
+// 25 MB: όσο και το MAX_VIDEO_SIZE του routes/upload.ts.
+//
+// Ήταν 10 MB, οπότε κάθε βίντεο 10–25 MB απορριπτόταν ΕΔΩ, πριν φτάσει
+// στον έλεγχο της διαδρομής — και η ανάλυση συναισθήματος από βίντεο
+// αποτύγχανε χωρίς κατανοητό μήνυμα. Τα δύο όρια πρέπει να συμφωνούν:
+// το multipart είναι η εξωτερική πύλη, ο έλεγχος της διαδρομής κρίνει
+// εικόνα ή βίντεο και επιβάλλει το σωστό όριο για το καθένα.
+await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } })
+
+// Auth decorator — ο έλεγχος έκδοσης/ρόλου γίνεται στο `trusted` του jwt (πιο πάνω).
 app.decorate('authenticate', async (req: any, reply: any) => {
-  try { await req.jwtVerify() } catch { reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' }) }
+  try { await req.jwtVerify() } catch { return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' }) }
 })
 
 // Register all routes

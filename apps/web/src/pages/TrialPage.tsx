@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Sparkles, Heart, Activity, Check, Clock, ArrowRight } from 'lucide-react'
+import { Sparkles, Heart, Activity, Check, Clock, ArrowRight, MailCheck } from 'lucide-react'
 import { api } from '@/lib/api'
 import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
@@ -27,7 +27,7 @@ interface AiPlan {
 }
 
 interface AiStatus {
-  ai_subscription_status: 'none' | 'trial' | 'active' | 'expired'
+  ai_subscription_status: 'none' | 'trial' | 'active' | 'expired' | 'payment_failed' | 'cancelled'
   trial_days_left: number | null
   plan: { id: string; name: string; name_el: string | null } | null
 }
@@ -42,7 +42,7 @@ export default function TrialPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   const { data: plans = [], isLoading: plansLoading } = useQuery<AiPlan[]>({
@@ -80,6 +80,10 @@ export default function TrialPage() {
 
   // Special case: already in trial, active or expired — show banner instead of CTAs
   const alreadySubscribed = isAuthenticated && status && status.ai_subscription_status !== 'none'
+  // Η δοκιμή ξεκινά με την επιβεβαίωση του email (backend). Ανεπιβεβαίωτος
+  // λογαριασμός: μήνυμα αντί για κουμπί που δεν θα έκανε τίποτα. Μόνο ρητό
+  // false — παλιά απάντηση χωρίς το πεδίο κρατά την προηγούμενη συμπεριφορά.
+  const emailUnverified = isAuthenticated && !alreadySubscribed && (user as any)?.email_verified === false
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
@@ -109,6 +113,12 @@ export default function TrialPage() {
             </div>
           </div>
         )}
+        {emailUnverified && (
+          <div className="mt-8 max-w-lg mx-auto bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5 flex items-center gap-4">
+            <MailCheck size={28} className="text-blue-600 shrink-0" aria-hidden="true" />
+            <p className="text-left flex-1 text-sm font-medium text-gray-900 dark:text-white">{t('trialVerify.confirmEmail')}</p>
+          </div>
+        )}
         {alreadySubscribed && status.ai_subscription_status === 'active' && (
           <div className="mt-8 max-w-lg mx-auto bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-2xl p-5 flex items-center gap-4">
             <Check size={28} className="text-green-600 shrink-0" />
@@ -124,6 +134,21 @@ export default function TrialPage() {
           <div className="mt-8 max-w-lg mx-auto bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-2xl p-5">
             <p className="font-bold text-gray-900 dark:text-white mb-1">{t('trial.status.expiredTitle')}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{t('trial.status.expiredDesc')}</p>
+            <Link to="/pricing" className="btn-primary inline-flex items-center gap-2 text-sm">
+              {t('trial.status.seePricing')} <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
+        {/* Αποτυχημένη πληρωμή / ακυρωμένη: η δωρεάν δοκιμή δεν ξαναδίνεται
+            (start-trial μόνο από 'none') — επιλογή πλάνου, όπως στο κινητό. */}
+        {alreadySubscribed && (status.ai_subscription_status === 'payment_failed' || status.ai_subscription_status === 'cancelled') && (
+          <div className="mt-8 max-w-lg mx-auto bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-2xl p-5">
+            <p className="font-bold text-gray-900 dark:text-white mb-1">
+              {status.ai_subscription_status === 'payment_failed' ? t('aiGate.paymentFailedTitle') : t('aiSub.cancelledTitle')}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              {status.ai_subscription_status === 'payment_failed' ? t('aiSub.paymentFailedHint') : t('aiGate.cancelledText')}
+            </p>
             <Link to="/pricing" className="btn-primary inline-flex items-center gap-2 text-sm">
               {t('trial.status.seePricing')} <ArrowRight size={14} />
             </Link>
@@ -183,6 +208,11 @@ export default function TrialPage() {
                     })}
                   </div>
 
+                  {emailUnverified ? (
+                    <p className="w-full text-center text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-3">
+                      {t('trialVerify.confirmEmail')}
+                    </p>
+                  ) : (
                   <button onClick={() => handleStart(plan.id)}
                     disabled={startTrial.isPending && selectedPlanId === plan.id}
                     className={cn('w-full btn-primary flex items-center justify-center gap-2',
@@ -191,6 +221,7 @@ export default function TrialPage() {
                       ? t('trial.starting')
                       : (<><Sparkles size={16} /> {t('trial.startFree')}</>)}
                   </button>
+                  )}
                 </motion.div>
               )
             })}

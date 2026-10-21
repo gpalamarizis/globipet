@@ -120,6 +120,11 @@ const TITLES: Record<string, Row> = {
     el: 'Η συνεδρία τηλεϊατρικής ακυρώθηκε', en: 'Telehealth session cancelled', es: 'Sesión de telemedicina cancelada',
     fr: 'Séance de télémédecine annulée', zh: '远程问诊已取消',
   },
+  /** Μήνυμα παρόχου προς πελάτη (customers.ts POST /message) — ανοίγει το /inbox. */
+  provider_message: {
+    el: 'Νέο μήνυμα από πάροχο', en: 'New message from a provider', es: 'Nuevo mensaje de un proveedor',
+    fr: 'Nouveau message d\u2019un prestataire', zh: '服务商发来新消息',
+  },
   /** Ακύρωση κράτησης/συνεδρίας που είχε μείνει «σε εξέλιξη»: η επιστροφή ολοκληρώθηκε. */
   cancel_refund_completed: {
     el: 'Η επιστροφή χρημάτων ολοκληρώθηκε', en: 'Your refund is complete', es: 'Tu reembolso se ha completado',
@@ -306,6 +311,20 @@ export const notifyMsg = {
         fr: `La séance de télémédecine du ${date} à ${time} a été annulée.`,
         zh: `${date} ${time} 的远程问诊已取消。`,
       }),
+
+  /**
+   * Μήνυμα παρόχου: «Όνομα: θέμα» ή, χωρίς θέμα, η αρχή του κειμένου.
+   * Το κείμενο είναι του παρόχου, όχι μεταφρασμένο· μόνο το πλαίσιο αλλάζει.
+   */
+  providerMessage: (lang: Lang, who: string, subject: string | null, body: string) => {
+    const s = (subject || '').trim()
+    const b = body.replace(/\s+/g, ' ').trim()
+    const preview = s || (b.length > 120 ? `${b.slice(0, 117)}…` : b)
+    return preview ? `${who}: ${preview}` : p(lang, {
+      el: `${who} σου έστειλε μήνυμα.`, en: `${who} sent you a message.`, es: `${who} te ha enviado un mensaje.`,
+      fr: `${who} vous a envoyé un message.`, zh: `${who} 给您发送了一条消息。`,
+    })
+  },
 
   /** Η ακύρωση κράτησης που ήταν σε εξέλιξη ολοκληρώθηκε· ποσό που επιστράφηκε. */
   bookingRefundCompleted: (lang: Lang, who: string, date: string, time: string, amount: string) => p(lang, {

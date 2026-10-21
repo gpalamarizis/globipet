@@ -1,5 +1,6 @@
 import { LoginManager, AccessToken, Settings } from 'react-native-fbsdk-next'
 import Constants from 'expo-constants'
+import i18n from 'i18next'
 
 let isConfigured = false
 
@@ -59,7 +60,7 @@ export async function signInWithFacebook(): Promise<FacebookSignInResult | null>
 
   const tokenData = await AccessToken.getCurrentAccessToken()
   if (!tokenData?.accessToken) {
-    throw new Error('Δεν λάβαμε access token από το Facebook')
+    throw new Error(i18n.t('oauthErrors.facebookToken'))
   }
 
   return {

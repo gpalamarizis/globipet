@@ -3,14 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight, Video, Clock } from 'lucide-react-native'
+import { CalendarDays, TrendingUp, Scissors, Star, LogOut, Languages, ChevronRight, Video, Clock, BadgeCheck } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
-import { useAuthStore } from '../../src/store/auth'
+import { useAuthStore, isEmailUnverified } from '../../src/store/auth'
+import EmailVerifyBanner from '../../src/components/EmailVerifyBanner'
 import { Screen, Card, EmptyState, Button } from '@/components/ui'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { confirmTelehealthCancel, postTelehealthCancel } from '@/lib/telehealthCancel'
 import { colors, space, radius, type, weight, icon, font } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
+import { ProviderReviews } from '@/components/ProviderReviews'
 
 /**
  * Επισκόπηση παρόχου — ίδια με την καρτέλα «Επισκόπηση» του web.
@@ -31,6 +33,15 @@ export default function ProviderOverview() {
     queryKey: ['provider-bookings'],
     queryFn: () => api.get('/provider/bookings').then(r => r.data?.data ?? []),
   })
+
+  // Επαλήθευση: χωρίς αίτηση (ή με απορριφθείσα) δείχνουμε κάρτα — ίδια με
+  // την κάρτα του ProviderLayout στο web. Ίδιο κλειδί με την οθόνη verification.
+  const { data: verification, isSuccess: verificationLoaded } = useQuery({
+    queryKey: ['my-verification'],
+    queryFn: () => api.get('/provider/verification-request').then(r => r.data?.data ?? null),
+    enabled: user?.role !== 'admin',
+  })
+  const needsVerification = user?.role !== 'admin' && verificationLoaded && (!verification || verification.status === 'rejected')
 
   // Τηλεϊατρική — ίδιο κουμπί με το web, μόνο για κτηνιάτρους.
   const { data: myServices = [] } = useQuery({
@@ -123,6 +134,8 @@ export default function ProviderOverview() {
     await qc.invalidateQueries({ queryKey: ['my-services-all'] })
     await qc.invalidateQueries({ queryKey: ['provider-stats'] })
     await qc.invalidateQueries({ queryKey: ['provider-bookings'] })
+    await qc.invalidateQueries({ queryKey: ['my-verification'] })
+    await qc.invalidateQueries({ queryKey: ['provider-reviews'] })
     setRefreshing(false)
   }, [qc])
 
@@ -143,6 +156,13 @@ export default function ProviderOverview() {
       subtitle={user?.full_name || user?.email}
       onRefresh={onRefresh} refreshing={refreshing}>
 
+      {/* Επιβεβαίωση email — ίδια μπάρα με την Αρχική και το web. */}
+      {isEmailUnverified(user) && (
+        <View style={{ marginBottom: space.md }}>
+          <EmailVerifyBanner />
+        </View>
+      )}
+
       {isVet && (
         <TouchableOpacity activeOpacity={0.8} disabled={toggleAvailability.isPending}
           onPress={() => toggleAvailability.mutate(!isAvailableNow)}
@@ -153,6 +173,20 @@ export default function ProviderOverview() {
           <Text style={[s.teleTxt, isAvailableNow && s.teleTxtOn]}>
             {isAvailableNow ? t('providerDash.teleAvailable') : t('providerDash.teleOff')}
           </Text>
+        </TouchableOpacity>
+      )}
+
+      {needsVerification && (
+        <TouchableOpacity activeOpacity={0.8} style={s.verify}
+          onPress={() => router.push('/verification' as any)} accessibilityRole="button">
+          <BadgeCheck size={icon.lg} color={colors.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.verifyTitle}>
+              {verification?.status === 'rejected' ? t('providerAccount.verifyRejectedTitle') : t('providerAccount.verifyTitle')}
+            </Text>
+            <Text style={s.verifyDesc}>{t('providerAccount.verifyDesc')}</Text>
+          </View>
+          <ChevronRight size={icon.sm} color={colors.brand} />
         </TouchableOpacity>
       )}
 
@@ -253,6 +287,9 @@ export default function ProviderOverview() {
         </Card>
       ))}
 
+      {/* Κριτικές με απάντηση — ίδιο με την καρτέλα «Κριτικές» του web. */}
+      <ProviderReviews />
+
       <View style={s.footer}>
         <TouchableOpacity style={s.footerBtn} onPress={() => router.push('/language' as any)}>
           <Languages size={icon.sm} color={colors.textMuted} />
@@ -268,6 +305,13 @@ export default function ProviderOverview() {
 }
 
 const s = StyleSheet.create({
+  verify: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    padding: space.md, marginBottom: space.md, borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.brand, backgroundColor: colors.brandTint,
+  },
+  verifyTitle: { ...type.body, color: colors.text, fontWeight: weight.semibold },
+  verifyDesc: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   tele: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
     minHeight: 48, paddingHorizontal: space.lg, marginBottom: space.md, borderRadius: radius.lg,

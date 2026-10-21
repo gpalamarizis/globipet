@@ -811,7 +811,8 @@
     "crt_prolonged": "2-3 s (Anormal)",
     "crt_critical": "> 3 s (Critique)",
     "destCountry": "Pays de destination",
-    "bcsRange": "L'état corporel (BCS) doit être compris entre 1 et 9."
+    "bcsRange": "L'état corporel (BCS) doit être compris entre 1 et 9.",
+    "st_expired": "Expiré"
   },
   "play": {
     "create_first": "Créez la première et invitez d'autres propriétaires.",
@@ -2263,5 +2264,164 @@
     "providerRefunded": "Le client est intégralement remboursé de €{{amount}}.",
     "refunding": "Remboursement en cours",
     "contactSupport": "La séance a été payée ; pour l’annuler, contactez le support."
+  },
+  "emailVerify": {
+    "title": "Confirmez votre e-mail",
+    "sentTo": "Nous avons envoyé un lien à {{email}}. Ouvrez-le pour confirmer votre compte et activer votre essai IA gratuit.",
+    "successTitle": "Votre e-mail est confirmé",
+    "successBody": "Merci ! Votre compte est entièrement actif et votre essai IA gratuit a démarré.",
+    "continue": "Continuer vers l'application",
+    "resend": "Renvoyer",
+    "iVerified": "Je l'ai confirmé",
+    "notYet": "Pas encore confirmé. Ouvrez le lien reçu par e-mail et réessayez.",
+    "alreadyVerified": "Votre e-mail est déjà confirmé",
+    "sent": "Nous vous avons envoyé un nouvel e-mail de confirmation",
+    "bannerText": "Confirmez votre e-mail — nous vous avons envoyé un lien."
+  },
+  "aiSub": {
+    "activeTitle": "Votre abonnement IA est actif",
+    "cancelledTitle": "Votre abonnement IA a été résilié",
+    "plan": "Formule : {{plan}}",
+    "paymentFailedHint": "Le dernier prélèvement sur votre carte a échoué : les fonctions IA sont suspendues jusqu’à ce que le paiement aboutisse.",
+    "confirmText": "Votre abonnement IA est résilié immédiatement et votre carte ne sera plus débitée. L’accès aux fonctions IA s’arrête maintenant. Les montants déjà prélevés ne sont pas remboursés. Vous pouvez souscrire un nouvel abonnement quand vous le souhaitez."
+  },
+  "providerPay": {
+    "awaitingPayment": "En attente de paiement"
+  },
+  "ordersPay": {
+    "pay": "Payer",
+    "cancel": "Annuler la commande",
+    "confirmCancel": "Annuler cette commande ? Elle n’a pas été payée, donc rien ne sera prélevé.",
+    "cancelled": "La commande a été annulée",
+    "unpaidHint": "Cette commande n’a pas encore été payée."
+  },
+  "providerAccount": {
+    "verifyAccount": "Vérification du compte",
+    "verifyTitle": "Vérifiez votre compte",
+    "verifyRejectedTitle": "Votre demande de vérification a été refusée — envoyez-en une nouvelle",
+    "verifyDesc": "Les prestataires vérifiés affichent le badge vérifié et gagnent la confiance des clients."
+  },
+  "trialVerify": {
+    "confirmEmail": "Confirmez votre e-mail pour démarrer l’essai gratuit."
+  },
+  "loadState": {
+    "notFound": "Introuvable"
+  },
+  "oauthErrors": {
+    "inProgress": "La connexion est déjà en cours",
+    "playServices": "Les services Google Play ne sont pas disponibles",
+    "facebookToken": "Nous n’avons pas reçu de jeton d’accès de Facebook",
+    "googleToken": "Nous n’avons pas reçu les informations de connexion de Google. Veuillez réessayer."
+  },
+  "notifChannel": {
+    "name": "Notifications GlobiPet"
+  },
+  "reviewReply": {
+    "tab": "Avis",
+    "providerReply": "Réponse du prestataire",
+    "yourReply": "Votre réponse",
+    "placeholder": "Rédigez une réponse courtoise au client…",
+    "publicHint": "La réponse s’affiche publiquement sous l’avis",
+    "reply": "Répondre",
+    "edit": "Modifier la réponse",
+    "remove": "Supprimer la réponse",
+    "confirmRemove": "Supprimer votre réponse à cet avis ?",
+    "saved": "Réponse enregistrée",
+    "removed": "Réponse supprimée",
+    "count": "Avis : {{count}}",
+    "unansweredCount": "Sans réponse : {{count}}",
+    "onlyUnanswered": "Sans réponse",
+    "allAnswered": "Vous avez répondu à tous les avis.",
+    "empty": "Vous n’avez encore reçu aucun avis.",
+    "product": "Produit",
+    "service": "Service",
+    "noComment": "Note uniquement, sans commentaire.",
+    "showLess": "Voir moins"
+  },
+  "staffPrices": {
+    "title": "Tarifs par service/forfait",
+    "hint": "Indiquez un tarif uniquement s’il diffère pour ce professionnel. Champ vide = tarif de base du forfait.",
+    "loadError": "Impossible de charger les tarifs. Réessayez.",
+    "noPackages": "Ce service n’a pas encore de forfaits. Ajoutez-en pour définir des tarifs par professionnel.",
+    "base": "Base : {{price}}",
+    "priceFor": "Tarif pour « {{name}} »",
+    "invalid": "Tarif invalide : saisissez un montant en euros (ex. 35 ou 35,50) ou laissez vide.",
+    "save": "Enregistrer les tarifs",
+    "saved": "Tarifs enregistrés",
+    "afterSave": "Vous pourrez définir les tarifs par service/forfait après avoir enregistré le membre.",
+    "unsaved": "Tarifs non enregistrés"
+  },
+  "eventForm": {
+    "newButton": "Nouvel événement",
+    "editButton": "Modifier",
+    "newTitle": "Nouvel événement",
+    "editTitle": "Modifier l’événement",
+    "title": "Titre",
+    "type": "Catégorie",
+    "description": "Description",
+    "termsLocked": "Des inscriptions ont été payées : la date, l’heure et le tarif ne peuvent plus être modifiés. Contactez le support pour tout changement.",
+    "date": "Date de début",
+    "time": "Heure de début",
+    "endDate": "Date de fin",
+    "endDateHint": "Uniquement pour les événements sur plusieurs jours ; heures en heure grecque.",
+    "location": "Lieu",
+    "locationPlaceholder": "ex. Parc Tritsis",
+    "city": "Ville",
+    "capacity": "Capacité (personnes)",
+    "capacityPlaceholder": "Sans limite",
+    "price": "Tarif par personne",
+    "pricePlaceholder": "Gratuit",
+    "priceHint": "Vide = gratuit. Les paiements passent par Viva, uniquement en euros. Toute annulation jusqu’à {{hours}} heures avant le début est intégralement remboursée ; si vous annulez l’événement, tous les paiements sont remboursés.",
+    "image": "Image",
+    "addImage": "Ajouter une image",
+    "changeImage": "Changer l’image",
+    "errRequired": "Renseignez le titre, la date, l’heure, le lieu et la ville.",
+    "errDate": "La date doit être au format AAAA-MM-JJ (ex. 2026-11-15).",
+    "errPast": "La date de début est déjà passée.",
+    "errTime": "L’heure doit être au format HH:MM (ex. 18:30).",
+    "errEndDate": "La date de fin doit être au format AAAA-MM-JJ et pas avant le début.",
+    "errPrice": "Tarif invalide : saisissez un montant en euros (ex. 15 ou 15,50) ou laissez vide.",
+    "errPaidFormat": "Un événement payant nécessite une date AAAA-MM-JJ et une heure HH:MM.",
+    "errCapacity": "La capacité doit être un nombre entier d’au moins 1, ou vide pour aucune limite.",
+    "errCapacityBelow": "La capacité ne peut pas être inférieure au nombre de personnes déjà inscrites ({{count}}).",
+    "created": "Événement créé",
+    "updated": "Événement mis à jour",
+    "create": "Créer l’événement",
+    "notAllowed": "Seul l’organisateur peut modifier cet événement.",
+    "errPermission": "L’accès aux photos est nécessaire pour ajouter une image.",
+    "types": {
+      "meetup": "Rencontre",
+      "show": "Exposition",
+      "adoption": "Adoption",
+      "training": "Éducation",
+      "charity": "Caritatif",
+      "competition": "Concours"
+    }
+  },
+  "eventAttendees": {
+    "title": "Participants",
+    "summary": "Inscriptions : {{count}} · Personnes : {{people}}",
+    "loadError": "Impossible de charger la liste des participants. Réessayez.",
+    "empty": "Aucune inscription pour le moment.",
+    "people_one": "{{count}} personne",
+    "people": "{{count}} personnes",
+    "statusPaid": "Payée",
+    "statusFree": "Gratuite",
+    "statusPending": "Paiement en attente",
+    "statusRefunding": "Remboursement en cours",
+    "statusRefundFailed": "Remboursement en attente",
+    "statusRefunded": "Remboursée",
+    "statusCancelled": "Annulée"
+  },
+  "aiGate": {
+    "paymentFailedTitle": "Le paiement de votre abonnement IA a échoué",
+    "cancelledText": "Choisissez une formule pour continuer à utiliser les fonctions IA.",
+    "subscriptionLabel": "Abonnement IA",
+    "paymentFailedShort": "Échec du paiement",
+    "required": "Abonnement IA requis"
+  },
+  "orderOos": {
+    "refunded": "Le produit est épuisé — vous avez été remboursé",
+    "refundDelayed": "Le produit est épuisé — le remboursement est retardé et sera finalisé par notre équipe"
   }
 }

@@ -221,7 +221,7 @@ export default function Social() {
                 {/* Το «⋯» δεν έκανε τίποτα. Η μόνη ενέργεια που υποστηρίζει το
                     backend εδώ είναι η διαγραφή, για τον συντάκτη ή τον admin —
                     στους υπόλοιπους δεν εμφανίζεται. */}
-                {isAuthenticated && (post.author_email === user?.email || user?.role === 'admin') && (
+                {isAuthenticated && (post.is_mine === true || user?.role === 'admin') && (
                   <div className="relative">
                     <button onClick={() => setMenuFor(menuFor === post.id ? null : post.id)} aria-label={t('common.actions')} className="btn-ghost p-1.5"><MoreHorizontal size={16} className="text-gray-400" /></button>
                     {menuFor === post.id && (
@@ -272,7 +272,7 @@ export default function Social() {
                         <p className="text-[11px] text-gray-400 mt-0.5 ml-3">{formatRelativeTime(c.created_at)}</p>
                       </div>
                       {/* The comment's author, and the post's author, can remove it. */}
-                      {(c.author_email === user?.email || post.author_email === user?.email) && (
+                      {isAuthenticated && (c.is_mine === true || post.is_mine === true) && (
                         <button onClick={() => deleteComment.mutate(c.id)}
                           className="text-gray-300 hover:text-red-500 p-1 shrink-0 self-start">
                           <Trash2 size={12} />

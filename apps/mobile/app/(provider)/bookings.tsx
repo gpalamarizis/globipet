@@ -98,15 +98,22 @@ export default function ProviderBookings() {
 
           {isOpen(b) && (
             <View style={s.actions}>
-              {b.status === 'pending' && (
+              {/* Επιβεβαίωση / «δεν προσήλθε» μόνο για πληρωμένη (ο server απαντά
+                  400 αλλιώς) — όπως στο web. Απλήρωτη: «Αναμένει πληρωμή». */}
+              {b.status === 'pending' && b.payment_status === 'paid' && (
                 <Button label={t('bookingPolicy.confirm')} style={s.actionBtn} size="sm"
                   disabled={setStatus.isPending} onPress={() => setStatus.mutate({ id: b.id, status: 'confirmed' })} />
+              )}
+              {b.status === 'pending' && b.payment_status !== 'paid' && (
+                <View style={[s.actionBtn, s.awaiting]}>
+                  <Badge label={t('providerPay.awaitingPayment')} tone="warning" />
+                </View>
               )}
               {b.status === 'confirmed' && b.payment_status === 'paid' && (
                 <Button label={t('bookingPolicy.complete')} style={s.actionBtn} size="sm"
                   disabled={setStatus.isPending} onPress={() => setStatus.mutate({ id: b.id, status: 'completed' })} />
               )}
-              {b.status === 'confirmed' && (
+              {b.status === 'confirmed' && b.payment_status === 'paid' && (
                 <Button label={t('bookingPolicy.noShow')} variant="secondary" style={s.actionBtn} size="sm"
                   disabled={setStatus.isPending} onPress={() => setStatus.mutate({ id: b.id, status: 'no_show' })} />
               )}
@@ -161,6 +168,7 @@ const s = StyleSheet.create({
   // Ίσες στήλες για όσα κουμπιά υπάρχουν (2 ή 3).
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.borderLight },
   actionBtn: { flex: 1 },
+  awaiting: { alignItems: 'center', justifyContent: 'center' },
   reassign: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.sm, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: colors.borderLight },
   reassignTxt: { ...type.caption, color: colors.brand, fontWeight: weight.semibold },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },

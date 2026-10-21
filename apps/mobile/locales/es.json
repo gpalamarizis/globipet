@@ -811,7 +811,8 @@
     "crt_prolonged": "2-3 s (Anormal)",
     "crt_critical": "> 3 s (Crítico)",
     "destCountry": "País de destino",
-    "bcsRange": "La condición corporal (BCS) debe estar entre 1 y 9."
+    "bcsRange": "La condición corporal (BCS) debe estar entre 1 y 9.",
+    "st_expired": "Caducado"
   },
   "play": {
     "create_first": "Crea la primera e invita a otros propietarios.",
@@ -2263,5 +2264,164 @@
     "providerRefunded": "El cliente recibe el reembolso completo de €{{amount}}.",
     "refunding": "Reembolso en curso",
     "contactSupport": "La sesión ya está pagada; para cancelarla, contacta con soporte."
+  },
+  "emailVerify": {
+    "title": "Confirma tu email",
+    "sentTo": "Te hemos enviado un enlace a {{email}}. Ábrelo para confirmar tu cuenta y activar tu prueba gratuita de IA.",
+    "successTitle": "Tu email está confirmado",
+    "successBody": "¡Gracias! Tu cuenta está totalmente activa y tu prueba gratuita de IA ha comenzado.",
+    "continue": "Continuar a la app",
+    "resend": "Reenviar",
+    "iVerified": "Ya lo confirmé",
+    "notYet": "Todavía no está confirmado. Abre el enlace de tu email e inténtalo de nuevo.",
+    "alreadyVerified": "Tu email ya está confirmado",
+    "sent": "Te hemos enviado un nuevo email de confirmación",
+    "bannerText": "Confirma tu email: te hemos enviado un enlace."
+  },
+  "aiSub": {
+    "activeTitle": "Tu suscripción de IA está activa",
+    "cancelledTitle": "Tu suscripción de IA se ha cancelado",
+    "plan": "Plan: {{plan}}",
+    "paymentFailedHint": "El último cargo a tu tarjeta ha fallado, así que las funciones de IA quedan en espera hasta que se complete el pago.",
+    "confirmText": "Tu suscripción de IA se cancela de inmediato y no se volverá a cobrar a tu tarjeta. El acceso a las funciones de IA termina ahora. No se reembolsa lo que ya se ha cobrado. Puedes empezar una nueva suscripción cuando quieras."
+  },
+  "providerPay": {
+    "awaitingPayment": "Pendiente de pago"
+  },
+  "ordersPay": {
+    "pay": "Pagar",
+    "cancel": "Cancelar pedido",
+    "confirmCancel": "¿Cancelar este pedido? No se ha pagado, así que no se cobrará nada.",
+    "cancelled": "El pedido se ha cancelado",
+    "unpaidHint": "Este pedido aún no se ha pagado."
+  },
+  "providerAccount": {
+    "verifyAccount": "Verificación de la cuenta",
+    "verifyTitle": "Verifica tu cuenta",
+    "verifyRejectedTitle": "Tu solicitud de verificación fue rechazada: envía una nueva",
+    "verifyDesc": "Los proveedores verificados aparecen con el sello de verificación y se ganan la confianza de los clientes."
+  },
+  "trialVerify": {
+    "confirmEmail": "Confirma tu correo electrónico para empezar la prueba gratuita."
+  },
+  "loadState": {
+    "notFound": "No encontrado"
+  },
+  "oauthErrors": {
+    "inProgress": "El inicio de sesión ya está en curso",
+    "playServices": "Google Play Services no está disponible",
+    "facebookToken": "No hemos recibido un token de acceso de Facebook",
+    "googleToken": "No hemos recibido los datos de inicio de sesión de Google. Inténtalo de nuevo."
+  },
+  "notifChannel": {
+    "name": "Notificaciones de GlobiPet"
+  },
+  "reviewReply": {
+    "tab": "Reseñas",
+    "providerReply": "Respuesta del proveedor",
+    "yourReply": "Tu respuesta",
+    "placeholder": "Escribe una respuesta cordial al cliente…",
+    "publicHint": "La respuesta se muestra públicamente bajo la reseña",
+    "reply": "Responder",
+    "edit": "Editar respuesta",
+    "remove": "Eliminar respuesta",
+    "confirmRemove": "¿Eliminar tu respuesta a esta reseña?",
+    "saved": "Respuesta guardada",
+    "removed": "Respuesta eliminada",
+    "count": "Reseñas: {{count}}",
+    "unansweredCount": "Sin respuesta: {{count}}",
+    "onlyUnanswered": "Sin respuesta",
+    "allAnswered": "Has respondido a todas las reseñas.",
+    "empty": "Aún no has recibido reseñas.",
+    "product": "Producto",
+    "service": "Servicio",
+    "noComment": "Solo valoración, sin comentario.",
+    "showLess": "Ver menos"
+  },
+  "staffPrices": {
+    "title": "Precios por servicio/paquete",
+    "hint": "Indica un precio solo donde sea distinto para este profesional. Campo vacío = precio base del paquete.",
+    "loadError": "No se pudieron cargar los precios. Inténtalo de nuevo.",
+    "noPackages": "Este servicio aún no tiene paquetes. Añade paquetes para fijar precios por profesional.",
+    "base": "Base: {{price}}",
+    "priceFor": "Precio de «{{name}}»",
+    "invalid": "Precio no válido: escribe un importe en euros (p. ej. 35 o 35,50) o déjalo vacío.",
+    "save": "Guardar precios",
+    "saved": "Precios guardados",
+    "afterSave": "Podrás fijar precios por servicio/paquete después de guardar al miembro.",
+    "unsaved": "Precios sin guardar"
+  },
+  "eventForm": {
+    "newButton": "Nuevo evento",
+    "editButton": "Editar",
+    "newTitle": "Nuevo evento",
+    "editTitle": "Editar evento",
+    "title": "Título",
+    "type": "Categoría",
+    "description": "Descripción",
+    "termsLocked": "Hay inscripciones pagadas: la fecha, la hora y el precio ya no se pueden cambiar. Contacta con soporte si necesitas un cambio.",
+    "date": "Fecha de inicio",
+    "time": "Hora de inicio",
+    "endDate": "Fecha de fin",
+    "endDateHint": "Solo para eventos de varios días; horas en hora de Grecia.",
+    "location": "Lugar",
+    "locationPlaceholder": "p. ej. Parque Tritsis",
+    "city": "Ciudad",
+    "capacity": "Aforo (personas)",
+    "capacityPlaceholder": "Sin límite",
+    "price": "Precio por persona",
+    "pricePlaceholder": "Gratis",
+    "priceHint": "Vacío = gratis. Los pagos se hacen a través de Viva, solo en euros. Quien cancele hasta {{hours}} horas antes del inicio recibe el reembolso completo; si cancelas tú el evento, se reembolsan todos los pagos.",
+    "image": "Imagen",
+    "addImage": "Añadir imagen",
+    "changeImage": "Cambiar imagen",
+    "errRequired": "Completa título, fecha, hora, lugar y ciudad.",
+    "errDate": "La fecha debe tener el formato AAAA-MM-DD (p. ej. 2026-11-15).",
+    "errPast": "La fecha de inicio ya ha pasado.",
+    "errTime": "La hora debe tener el formato HH:MM (p. ej. 18:30).",
+    "errEndDate": "La fecha de fin debe ser AAAA-MM-DD y no anterior al inicio.",
+    "errPrice": "Precio no válido: escribe un importe en euros (p. ej. 15 o 15,50) o déjalo vacío.",
+    "errPaidFormat": "Un evento de pago necesita fecha AAAA-MM-DD y hora HH:MM.",
+    "errCapacity": "El aforo debe ser un número entero mayor o igual que 1, o vacío para sin límite.",
+    "errCapacityBelow": "El aforo no puede ser inferior a las personas ya inscritas ({{count}}).",
+    "created": "Evento creado",
+    "updated": "Evento actualizado",
+    "create": "Crear evento",
+    "notAllowed": "Solo el organizador puede editar este evento.",
+    "errPermission": "Se necesita permiso de acceso a las fotos para añadir una imagen.",
+    "types": {
+      "meetup": "Quedada",
+      "show": "Exposición",
+      "adoption": "Adopción",
+      "training": "Adiestramiento",
+      "charity": "Benéfico",
+      "competition": "Competición"
+    }
+  },
+  "eventAttendees": {
+    "title": "Participantes",
+    "summary": "Inscripciones: {{count}} · Personas: {{people}}",
+    "loadError": "No se pudo cargar la lista de participantes. Inténtalo de nuevo.",
+    "empty": "Aún no hay inscripciones.",
+    "people_one": "{{count}} persona",
+    "people": "{{count}} personas",
+    "statusPaid": "Pagada",
+    "statusFree": "Gratis",
+    "statusPending": "Pago pendiente",
+    "statusRefunding": "Reembolso en curso",
+    "statusRefundFailed": "Reembolso pendiente",
+    "statusRefunded": "Reembolsada",
+    "statusCancelled": "Cancelada"
+  },
+  "aiGate": {
+    "paymentFailedTitle": "El pago de tu suscripción de IA ha fallado",
+    "cancelledText": "Elige un plan para seguir usando las funciones de IA.",
+    "subscriptionLabel": "Suscripción de IA",
+    "paymentFailedShort": "Pago fallido",
+    "required": "Se requiere suscripción de IA"
+  },
+  "orderOos": {
+    "refunded": "El producto se agotó: se te ha devuelto el dinero",
+    "refundDelayed": "El producto se agotó: el reembolso se está retrasando y nuestro equipo lo completará"
   }
 }

@@ -25,6 +25,9 @@ export default function AdminMessagesPage() {
   const [selectedRole, setSelectedRole] = useState('all')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  // Υπηρεσιακό μήνυμα: σε όλους, χωρίς έλεγχο συγκατάθεσης marketing και
+  // χωρίς απεγγραφή. Default: εμπορικό (μόνο σε όσους έχουν συναινέσει).
+  const [transactional, setTransactional] = useState(false)
   const [result, setResult] = useState<any>(null)
 
   const { data: searchResults = [] } = useQuery({
@@ -35,7 +38,7 @@ export default function AdminMessagesPage() {
 
   const sendEmail = useMutation({
     mutationFn: () => {
-      const payload: any = { subject, body }
+      const payload: any = { subject, body, transactional }
       if (mode === 'single') {
         payload.to_email = selectedUser.email
       } else {
@@ -175,6 +178,16 @@ export default function AdminMessagesPage() {
             className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white resize-none" />
           <p className="text-xs text-gray-400 mt-1">{t('adminMessages.chars', { count: body.length })}</p>
         </div>
+
+        {/* Είδος μηνύματος */}
+        <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" checked={transactional} onChange={e => setTransactional(e.target.checked)}
+            className="mt-0.5 shrink-0" />
+          <span>
+            <span className="font-medium">{t('adminMessages.transactional')}</span>
+            <span className="block text-xs text-gray-500">{transactional ? t('adminMessages.transactionalHint') : t('adminMessages.marketingHint')}</span>
+          </span>
+        </label>
 
         {/* Send button */}
         <button

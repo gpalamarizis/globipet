@@ -7,6 +7,7 @@ import { Camera } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -26,7 +27,7 @@ export default function ProductFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>()
   const isNew = !id
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['provider-products'],
     queryFn: () => api.get('/products/my').then(r => r.data?.data ?? r.data ?? []),
     enabled: !isNew,
@@ -99,8 +100,12 @@ export default function ProductFormScreen() {
     } finally { setUploading(false) }
   }
 
-  if (!isNew && (isLoading || !existing)) return (
-    <Screen title={t('providerEdit.editProduct')} back><Loading /></Screen>
+  if (!isNew && !existing) return (
+    <Screen title={t('providerEdit.editProduct')} back>
+      {/* Σφάλμα δικτύου → επανάληψη· φόρτωσε αλλά λείπει → «δεν βρέθηκε»· αλλιώς φόρτωση. */}
+      {isError ? <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        : isLoading || isFetching ? <Loading /> : <NotFoundState />}
+    </Screen>
   )
 
   return (

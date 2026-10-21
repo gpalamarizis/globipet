@@ -6,6 +6,7 @@ import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
 import { api } from './api'
+import i18n from 'i18next'
 
 /**
  * Ειδοποιήσεις push.
@@ -49,7 +50,10 @@ let cachedToken: string | null = null
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Ειδοποιήσεις GlobiPet',
+    // Το όνομα του καναλιού φαίνεται στις ρυθμίσεις του Android· στη γλώσσα
+    // της εφαρμογής (ενημερώνεται σε κάθε κλήση, π.χ. μετά από αλλαγή γλώσσας).
+    // Πριν φορτώσει η γλώσσα (πολύ νωρίς στην εκκίνηση): απλώς «GlobiPet».
+    name: i18n.isInitialized ? i18n.t('notifChannel.name') : 'GlobiPet',
     importance: Notifications.AndroidImportance.DEFAULT,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#E65100',

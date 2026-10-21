@@ -64,7 +64,7 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     const b = req.body ?? {}
     const data: any = {}
     if ('ai_subscription_status' in b) {
-      const valid = ['none','trial','active','expired']
+      const valid = ['none','trial','active','expired','payment_failed','cancelled']
       if (!valid.includes(b.ai_subscription_status)) {
         return reply.code(400).send({ message: 'Μη έγκυρη κατάσταση' })
       }

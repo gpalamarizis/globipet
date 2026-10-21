@@ -3,7 +3,7 @@ import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, RefreshControl, Alert, Platform, StatusBar } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Minus, Plus, Trash2, ShoppingCart, Package } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
@@ -43,6 +43,13 @@ export default function CartScreen() {
     queryFn: () => api.get('/cart').then(r => r.data),
     enabled: isAuthenticated,
   })
+
+  // Το καλάθι αδειάζει (μόνο τα είδη της παραγγελίας) όταν επιβεβαιωθεί η
+  // πληρωμή — όχι στη δημιουργία της παραγγελίας. Η καρτέλα μένει
+  // φορτωμένη, οπότε ανανεώνεται κάθε φορά που εμφανίζεται.
+  useFocusEffect(useCallback(() => {
+    if (isAuthenticated) qc.invalidateQueries({ queryKey: ['cart'] })
+  }, [isAuthenticated, qc]))
 
   const items = data?.data ?? []
   const subtotal = data?.total ?? 0
