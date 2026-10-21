@@ -224,13 +224,14 @@ export default function MyBookings() {
                     to cancel anything the provider had accepted. */}
                 {(booking.status === 'pending' || booking.status === 'confirmed') && (
                   <button onClick={() => askCancel(booking)}
-                    className="flex-1 btn-secondary text-xs py-2 text-red-600 border-red-200 hover:bg-red-50">
+                    className="flex-1 btn-secondary text-xs py-[7px] text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50">
                     {t('bookings.cancel')}
                   </button>
                 )}
                 {/* The booking row carries its own rating once reviewed —
-                    there is no review_id column. */}
-                {booking.status === 'completed' && booking.rating == null && (
+                    there is no review_id column. can_review (GET /bookings/my)
+                    applies the server's rule; missing → as before. */}
+                {booking.status === 'completed' && booking.rating == null && booking.can_review !== false && (
                   <button onClick={() => setReviewBooking(booking)}
                     className="flex-1 btn-primary text-xs py-2 flex items-center justify-center gap-1.5">
                     <Star size={13}/> {t('bookings.rate')}

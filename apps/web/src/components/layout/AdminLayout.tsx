@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -19,6 +19,7 @@ const tabs = [
   // Οι αιτήσεις παρόχων έφταναν σε endpoint που δεν υπήρχε· τώρα καταλήγουν
   // εδώ και χρειάζονται σημείο εισόδου στο μενού.
   { path: '/admin/verifications', labelKey: 'adminLayout.verifications', icon: BadgeCheck },
+  { path: '/admin/refunds',       labelKey: 'adminLayout.refunds',       icon: RotateCcw },
 ]
 
 export default function AdminLayout() {

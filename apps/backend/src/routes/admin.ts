@@ -3,7 +3,10 @@ import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import bcrypt from 'bcryptjs'
 import { audit } from '../lib/audit.js'
-import { refundVivaTransaction } from '../lib/viva.js'
+import { refundVivaTransaction, isRefundOutcomeUnknown } from '../lib/viva.js'
+import { withRefundLock } from '../lib/refundLock.js'
+import { REFUND_IN_PROGRESS_MESSAGE, TELEHEALTH_REFUND_CLAIM_ACTION } from '../lib/cancellation.js'
+import { ADMIN_REFUND_CLAIM_ACTION, adminRefundLockKey, adminRefundDone } from './admin-refunds.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { sendPushToUser } from '../lib/push.js'
 
@@ -424,6 +427,14 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
    *   · Η κατάσταση γράφεται ΜΕΤΑ την επιβεβαίωση του Viva, ποτέ πριν.
    *     Αντίστροφα, μια αποτυχία θα άφηνε εγγραφή που λέει «επιστράφηκε»
    *     ενώ τα χρήματα δεν κουνήθηκαν.
+   *   · ΜΙΑ επιστροφή (διπλό κλικ, δύο admins, ακύρωση πελάτη μαζί):
+   *     ατομική διεκδίκηση paid → refunding ΠΡΙΝ τη Viva, withRefundLock με
+   *     το ΙΔΙΟ κλειδί με τις άλλες ροές του ίδιου πόρου (adminRefundLockKey),
+   *     μέσα στο κλείδωμα έλεγχος audit «ήδη επιστράφηκε» για τη συναλλαγή,
+   *     τελική εγγραφή υπό συνθήκη (μόνο από refunding).
+   *   · Οριστική άρνηση της Viva → πίσω σε paid, 502. ΑΓΝΩΣΤΗ έκβαση
+   *     (timeout/δίκτυο/5xx) → μένει refunding (η επιστροφή ίσως έγινε),
+   *     εμφανίζεται στις «Αποτυχημένες επιστροφές» για έλεγχο στη Viva.
    */
   app.post('/refund', async (req: any, reply) => {
     const { type, id, amount, reason } = (req.body ?? {}) as any
@@ -444,6 +455,9 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     const record = await loaders[type]()
     if (!record) return reply.code(404).send({ message: 'Η συναλλαγή δεν βρέθηκε' })
 
+    if (record.payment_status === 'refunding') {
+      return reply.code(409).send({ message: 'Η επιστροφή είναι ήδη σε εξέλιξη' })
+    }
     if (record.payment_status !== 'paid') {
       return reply.code(400).send({ message: 'Η συναλλαγή δεν είναι πληρωμένη' })
     }
@@ -472,38 +486,108 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    let result
-    try {
-      result = await refundVivaTransaction(String(record.payment_ref), refundAmount)
-    } catch (err: any) {
-      await audit(req, {
-        action: 'refund', resource: type, resource_id: id, outcome: 'failure',
-        metadata: { amount: refundAmount ?? paid, error: err?.message },
-      })
-      return reply.code(502).send({ message: 'Η επιστροφή απορρίφθηκε από το Viva', detail: err?.message })
-    }
-
     // Μερική επιστροφή δεν κάνει τη συναλλαγή επιστραμμένη: ο πελάτης έχει
     // ακόμα πληρώσει κάτι, και το λογιστικό αποτύπωμα πρέπει να το δείχνει.
     const full = refundAmount === undefined || refundAmount >= paid - 0.005
     const newStatus = full ? 'refunded' : 'partially_refunded'
+    const txn = String(record.payment_ref)
+    const admin = String(req.user?.email ?? '')
+    const amountOut = refundAmount ?? paid
 
-    const writers: Record<string, () => Promise<any>> = {
-      order: () => prisma.order.update({ where: { id }, data: { payment_status: newStatus } }),
-      booking: () => prisma.booking.update({ where: { id }, data: { payment_status: newStatus } }),
-      telehealth: () => prisma.telehealthConsultation.update({ where: { id }, data: { payment_status: newStatus } }),
+    const models: Record<string, any> = {
+      order: prisma.order, booking: prisma.booking, telehealth: prisma.telehealthConsultation,
     }
-    await writers[type]()
+    const model = models[type]
 
+    // Ατομική διεκδίκηση: μόνο ένα αίτημα περνά paid → refunding.
+    const claimed = await model.updateMany({
+      where: { id, payment_status: 'paid', payment_ref: record.payment_ref },
+      data: { payment_status: 'refunding' },
+    })
+    if (claimed.count === 0) return reply.code(409).send({ message: 'Η επιστροφή είναι ήδη σε εξέλιξη' })
     await audit(req, {
-      action: 'refund', resource: type, resource_id: id,
-      metadata: {
-        amount: refundAmount ?? paid, full, reason: reason ? String(reason).slice(0, 500) : null,
-        viva_refund_transaction: result.transactionId,
-      },
+      action: ADMIN_REFUND_CLAIM_ACTION, resource: type, resource_id: id,
+      metadata: { transaction_id: txn, amount: amountOut, full, new_status: newStatus, admin },
+    })
+    if (type === 'telehealth') {
+      // Η συνεδρία δεν έχει updated_at: η ώρα της διεκδίκησης για την
+      // εργασία των κολλημένων (lib/cancellation.ts), όπως η cancelTelehealth.
+      await audit(req, {
+        action: TELEHEALTH_REFUND_CLAIM_ACTION, resource: 'telehealth', resource_id: id,
+        metadata: { transaction_id: txn, by: 'admin', admin_refund: true },
+      })
+    }
+    const backToPaid = () => model.updateMany({
+      where: { id, payment_status: 'refunding', payment_ref: record.payment_ref },
+      data: { payment_status: 'paid' },
     })
 
-    return { success: true, amount: refundAmount ?? paid, full, refund_transaction: result.transactionId }
+    type Out = { out: 'refunded' | 'already' | 'failed' | 'unknown'; refundTx?: string | null; error?: string; done?: any }
+    let lock: { locked: true; value: Out } | { locked: false }
+    try {
+      lock = await withRefundLock(adminRefundLockKey(type, id, txn), async (): Promise<Out> => {
+        const done = await adminRefundDone(type, id, txn)
+        if (done) return { out: 'already', refundTx: done.viva_refund_transaction ?? null, done }
+        try {
+          const r = await refundVivaTransaction(txn, refundAmount)
+          await audit(req, {
+            action: 'refund', resource: type, resource_id: id,
+            metadata: {
+              amount: amountOut, full, reason: reason ? String(reason).slice(0, 500) : null,
+              viva_refund_transaction: r.transactionId, transaction_id: txn, admin,
+            },
+          })
+          return { out: 'refunded', refundTx: r.transactionId }
+        } catch (err: any) {
+          const error = String(err?.message ?? err).slice(0, 500)
+          if (!isRefundOutcomeUnknown(err)) return { out: 'failed', error }
+          // Άγνωστη έκβαση: καταγραφή ΠΡΙΝ λυθεί το κλείδωμα (για τη σελίδα
+          // «Αποτυχημένες επιστροφές» και τη «Σήμανση ως λυμένο»).
+          await audit(req, {
+            action: 'refund', resource: type, resource_id: id, outcome: 'failure', status_code: 502,
+            error_message: error,
+            metadata: { amount: amountOut, full, new_status: newStatus, error, transaction_id: txn, admin, unknown_outcome: true },
+          })
+          return { out: 'unknown', error }
+        }
+      })
+    } catch (err: any) {
+      // Η διεκδίκηση στη βάση δεν έγινε: καμία κλήση στη Viva.
+      console.error('[admin] refund lock error', type, id, err?.message)
+      await backToPaid().catch(() => {})
+      return reply.code(503).send({ message: 'Προσωρινό σφάλμα — δοκίμασε ξανά σε λίγο' })
+    }
+    if (!lock.locked) {
+      await backToPaid()
+      return reply.code(409).send({ message: 'Η επιστροφή είναι ήδη σε εξέλιξη' })
+    }
+    const { out, refundTx, error, done } = lock.value
+
+    if (out === 'unknown') {
+      // Η επιστροφή ίσως έγινε: ΜΕΝΕΙ refunding — ποτέ πίσω σε paid (θα
+      // επέτρεπε δεύτερη επιστροφή), ποτέ νέα κλήση στα τυφλά.
+      return reply.code(502).send({ message: REFUND_IN_PROGRESS_MESSAGE, detail: error, in_progress: true })
+    }
+    if (out === 'failed') {
+      await backToPaid()
+      await audit(req, {
+        action: 'refund', resource: type, resource_id: id, outcome: 'failure',
+        metadata: { amount: amountOut, error, transaction_id: txn, admin },
+      })
+      return reply.code(502).send({ message: 'Η επιστροφή απορρίφθηκε από το Viva', detail: error })
+    }
+
+    // Ήδη επιστραμμένη (audit): ισχύει ό,τι καταγράφηκε τότε, όχι το νέο αίτημα.
+    const doneAmount = done && done.amount != null && Number.isFinite(Number(done.amount)) ? Number(done.amount) : null
+    const finalAmount = doneAmount ?? amountOut
+    const finalFull = done ? (typeof done.full === 'boolean' ? done.full : finalAmount >= paid - 0.005) : full
+    // Υπό συνθήκη: μόνο από refunding και για την ίδια συναλλαγή.
+    await model.updateMany({
+      where: { id, payment_status: 'refunding', payment_ref: record.payment_ref },
+      data: { payment_status: finalFull ? 'refunded' : 'partially_refunded' },
+    })
+
+    return { success: true, amount: finalAmount, full: finalFull, refund_transaction: refundTx ?? null }
   })
 
   app.post('/query', async (req: any, reply) => {

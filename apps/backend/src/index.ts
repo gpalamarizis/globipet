@@ -59,6 +59,7 @@ import settingsRoutes from './routes/settings.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import webhooksRoutes from './routes/webhooks.js'
 import adminSubscriptionsRoutes from './routes/admin-subscriptions.js'
+import adminRefundsRoutes from './routes/admin-refunds.js'
 import adminAiPlansRoutes from './routes/ai-plans-admin.js'
 import userRightsRoutes from './routes/user-rights.js'
 import userConsentsRoutes from './routes/user-consents.js'
@@ -266,6 +267,7 @@ const routes = [
   { prefix: '/api/subscriptions', handler: subscriptionsRoutes },
   { prefix: '/api/webhooks', handler: webhooksRoutes },
   { prefix: '/api/admin/subscriptions', handler: adminSubscriptionsRoutes },
+  { prefix: '/api/admin/refunds', handler: adminRefundsRoutes },
   { prefix: '/api/admin/ai-plans', handler: adminAiPlansRoutes },
   { prefix: '/api/user-rights', handler: userRightsRoutes },
   { prefix: '/api/user-consents', handler: userConsentsRoutes },

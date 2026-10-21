@@ -8,11 +8,43 @@ import { broadcastToUser } from './notifications.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { getJaasConfig, signJaasJwt } from '../lib/jaas.js'
-import { bookingStart } from '../lib/cancellation.js'
+import {
+  bookingStart, cancelTelehealth, telehealthCancellationTerms, CancelError, type CancelBy,
+  rescheduleBlock, TELEHEALTH_LATE_CANCEL_USE_APP_MESSAGE,
+} from '../lib/cancellation.js'
 import { fullNameOf } from '../lib/userName.js'
 import { refundExtraVivaPayment } from '../lib/extraPaymentRefund.js'
 
-const TELEHEALTH_PAID_NO_CANCEL = 'Η συνεδρία έχει πληρωθεί· για ακύρωση επικοινώνησε με την υποστήριξη.'
+const TELEHEALTH_PAID_NO_DELETE = 'Η συνεδρία έχει πληρωθεί και δεν διαγράφεται. Χρησιμοποίησε ακύρωση.'
+
+/**
+ * Ειδοποίηση (in-app + push) για ακύρωση συνεδρίας: στον άλλον — ο πελάτης
+ * ακυρώνει → ο πάροχος· ο πάροχος → ο πελάτης· ο admin → και οι δύο. Ο
+ * πελάτης μαθαίνει και το ποσό που επιστρέφεται.
+ */
+function notifyTelehealthCancelled(c: any, by: CancelBy, refund: number) {
+  const targets: Array<{ email: string; link: string; refund: string | null }> = []
+  if (by !== 'customer') targets.push({ email: c.client_email, link: '/telehealth', refund: refund > 0 ? refund.toFixed(2) : null })
+  if (by !== 'provider') targets.push({ email: c.provider_email, link: '/provider', refund: null })
+  for (const tg of targets) {
+    void (async () => {
+      const lang = await langOfUser(tg.email)
+      const notification = await prisma.notification.create({
+        data: {
+          user_email: tg.email,
+          title: notifyTitle('telehealth_cancelled', lang),
+          message: notifyMsg.telehealthCancelled(lang, c.scheduled_date, c.scheduled_time, tg.refund),
+          type: 'telehealth_cancelled',
+          link: tg.link,
+        },
+      })
+      broadcastToUser(tg.email, { type: 'notification', notification })
+      void sendPushToUser(tg.email, {
+        title: notification.title, body: notification.message, url: notification.link ?? '/',
+      })
+    })().catch(() => {})
+  }
+}
 
 // Παράθυρο κλήσης: από 30 λεπτά πριν την ώρα της συνεδρίας έως 3 ώρες μετά.
 const CALL_OPENS_BEFORE_MS = 30 * 60_000
@@ -251,11 +283,16 @@ const routes: FastifyPluginAsync = async (app) => {
     const isClient = c.client_email === email
     const isProvider = c.provider_email === email
     if (!isClient && !isProvider) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
-    if (c.payment_status !== 'paid' || !c.meeting_url) {
-      return reply.code(409).send({ message: 'Η συνεδρία δεν έχει πληρωθεί ακόμα' })
-    }
+    // Ακυρωμένη (ή ακύρωση σε εξέλιξη): πρώτα, ώστε το μήνυμα να λέει την
+    // αιτία και όχι «δεν έχει πληρωθεί» (μετά την επιστροφή payment_status ≠ paid).
     if (c.status === 'cancelled') {
       return reply.code(409).send({ message: 'Η συνεδρία έχει ακυρωθεί' })
+    }
+    if (c.payment_status === 'refunding') {
+      return reply.code(409).send({ message: 'Η ακύρωση είναι ήδη σε εξέλιξη' })
+    }
+    if (c.payment_status !== 'paid' || !c.meeting_url) {
+      return reply.code(409).send({ message: 'Η συνεδρία δεν έχει πληρωθεί ακόμα' })
     }
 
     // Παράθυρο εισόδου (ώρα Ελλάδας). Άμεση κλήση = συνεδρία με ώρα τη
@@ -427,6 +464,58 @@ const routes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  // Ποιος ακυρώνει: admin, ο πελάτης ή ο πάροχος της συνεδρίας (αλλιώς null).
+  const cancelRole = (c: any, user: any): CancelBy | null =>
+    user?.role === 'admin' ? 'admin'
+      : c.client_email === user?.email ? 'customer'
+      : c.provider_email === user?.email ? 'provider'
+      : null
+
+  /**
+   * GET /telehealth/:id/cancel-preview — τι θα γίνει αν ακυρωθεί τώρα
+   * (ίδια πολιτική με τις κρατήσεις). Το web και το κινητό το δείχνουν ΠΡΙΝ
+   * την επιβεβαίωση.
+   */
+  app.get('/:id/cancel-preview', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const c = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
+    if (!c) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    const by = cancelRole(c, req.user)
+    if (!by) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const terms = telehealthCancellationTerms(c, by)
+    // Ακύρωση σε εξέλιξη: όχι ξανά (το POST θα έδινε 409).
+    if (c.payment_status === 'refunding') return { data: { ...terms, allowed: false, reason: 'in_progress' } }
+    // Μερικώς επιστραμμένη ή «πληρωμένη» χωρίς αναφορά πληρωμής: η POST
+    // απαντά 409 (μόνο από την υποστήριξη) — το ίδιο και εδώ, πριν την επιβεβαίωση.
+    if (terms.allowed && !terms.paid && !['unpaid', 'refunded'].includes(c.payment_status)) {
+      return { data: { ...terms, allowed: false, reason: 'contact_support' } }
+    }
+    return { data: terms }
+  })
+
+  // Κοινή εκτέλεση ακύρωσης για POST /:id/cancel και PATCH { status: 'cancelled' }.
+  // POST: { data, refund, fee }. PATCH (συμβατότητα): η συνεδρία όπως πριν, με refund/fee.
+  const runCancel = async (req: any, reply: any, c: any, by: CancelBy, shape: 'post' | 'patch') => {
+    try {
+      const r = await cancelTelehealth(req, c.id, by)
+      notifyTelehealthCancelled(r.consultation, by, r.terms.refund)
+      return shape === 'post'
+        ? { data: r.consultation, refund: r.terms.refund, fee: r.terms.fee }
+        : { ...r.consultation, refund: r.terms.refund, fee: r.terms.fee }
+    } catch (err: any) {
+      if (err instanceof CancelError) return reply.code(err.code).send({ message: err.message })
+      return serverError(reply, err, 'telehealth-cancel')
+    }
+  }
+
+  /** POST /telehealth/:id/cancel — πελάτης ή πάροχος της συνεδρίας ή admin, με την πολιτική (lib/cancellation). */
+  app.post('/:id/cancel', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
+    const c = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
+    if (!c) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
+    const by = cancelRole(c, req.user)
+    if (!by) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    return runCancel(req, reply, c, by, 'post')
+  })
+
   // PATCH — whitelisted fields only.
   //
   // The previous version passed req.body straight into the update, so a client
@@ -443,12 +532,37 @@ const routes: FastifyPluginAsync = async (app) => {
     if (!isClient && !isProvider) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const body = (req.body ?? {}) as any
+
+    // Ακύρωση: ίδια λογική με το POST /:id/cancel (πολιτική και επιστροφή
+    // πληρωμένης). Συμβατότητα με όσους στέλνουν PATCH { status: 'cancelled' }:
+    // η απάντηση είναι η συνεδρία όπως πριν, με refund/fee επιπλέον.
+    if (body.status === 'cancelled') {
+      const by: CancelBy = isClient ? 'customer' : 'provider'
+      // Η παλιά εφαρμογή δεν δείχνει τους όρους πριν την ακύρωση: αργή
+      // ακύρωση πληρωμένης (με χρέωση) δεν γίνεται από εδώ — ο χρήστης θα
+      // έχανε ποσό χωρίς να το έχει δει. Δωρεάν (fee 0) → κανονικά, 100%.
+      // Το POST /:id/cancel (νέες εφαρμογές, με προεπισκόπηση) μένει ως έχει.
+      const terms = telehealthCancellationTerms(existing, by)
+      if (existing.payment_status !== 'refunding' && terms.allowed && terms.paid && terms.fee > 0) {
+        return reply.code(409).send({ message: TELEHEALTH_LATE_CANCEL_USE_APP_MESSAGE })
+      }
+      return runCancel(req, reply, existing, by, 'patch')
+    }
+
     const data: any = {}
 
     // Both sides may reschedule and leave notes. These are the only free-text
     // and scheduling fields the model actually has.
     if (body.scheduled_date !== undefined) data.scheduled_date = body.scheduled_date
     if (body.scheduled_time !== undefined) data.scheduled_time = body.scheduled_time
+    // Μετάθεση πληρωμένης συνεδρίας: πολιτική ακύρωσης (lib/cancellation rescheduleBlock).
+    if ((data.scheduled_date !== undefined && data.scheduled_date !== existing.scheduled_date)
+      || (data.scheduled_time !== undefined && data.scheduled_time !== existing.scheduled_time)) {
+      const block = rescheduleBlock(existing.payment_status, isClient,
+        { date: existing.scheduled_date, time: existing.scheduled_time },
+        { date: data.scheduled_date ?? existing.scheduled_date, time: data.scheduled_time ?? existing.scheduled_time })
+      if (block) return reply.code(block.code).send({ message: block.message })
+    }
     if (body.notes !== undefined) data.notes = body.notes || null
     if (body.duration !== undefined) data.duration = parseInt(body.duration) || existing.duration
 
@@ -456,14 +570,7 @@ const routes: FastifyPluginAsync = async (app) => {
     // where that makes sense. Everything else is driven by the payment flow.
     if (body.status !== undefined) {
       const paid = existing.payment_status === 'paid'
-      if (body.status === 'cancelled') {
-        // Πληρωμένη συνεδρία δεν ακυρώνεται εδώ: δεν υπάρχει (ακόμη) πολιτική
-        // επιστροφής, και η ακύρωση θα κρατούσε τα χρήματα χωρίς υπηρεσία.
-        if (existing.payment_status !== 'unpaid') {
-          return reply.code(409).send({ message: TELEHEALTH_PAID_NO_CANCEL })
-        }
-        data.status = 'cancelled'
-      } else if (body.status === 'completed' && isProvider && paid) {
+      if (body.status === 'completed' && isProvider && paid) {
         data.status = 'completed'
       } else {
         return reply.code(400).send({ message: 'Μη έγκυρη αλλαγή κατάστασης' })
@@ -474,17 +581,6 @@ const routes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
     }
 
-    // Ακύρωση: ατομικά, μόνο όσο είναι ακόμη απλήρωτη. Αν η πληρωμή φτάσει
-    // ταυτόχρονα, είτε προλαβαίνει (εδώ count 0 → 409) είτε βρίσκει την
-    // ακυρωμένη συνεδρία και επιστρέφεται αυτόματα (markTelehealthPaid).
-    if (data.status === 'cancelled') {
-      const r = await prisma.telehealthConsultation.updateMany({
-        where: { id: existing.id, payment_status: 'unpaid' }, data,
-      })
-      if (r.count === 0) return reply.code(409).send({ message: TELEHEALTH_PAID_NO_CANCEL })
-      return prisma.telehealthConsultation.findUnique({ where: { id: existing.id } })
-    }
-
     return prisma.telehealthConsultation.update({ where: { id: existing.id }, data })
   })
 
@@ -493,10 +589,12 @@ const routes: FastifyPluginAsync = async (app) => {
     const existing = await prisma.telehealthConsultation.findUnique({ where: { id: req.params.id } })
     if (!existing || existing.client_email !== email) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
     // A paid consultation is a financial record — cancel it instead of erasing
-    // it, so the payment, commission and payout trail stay intact.
-    if (existing.payment_status === 'paid') {
+    // it, so the payment, commission and payout trail stay intact. Το ίδιο και
+    // για ακύρωση σε εξέλιξη ή επιστραμμένη (αλλιώς η εργασία των κολλημένων
+    // επιστροφών και το ίχνος της επιστροφής θα έχαναν τη συνεδρία).
+    if (['paid', 'refunding', 'refunded', 'partially_refunded'].includes(existing.payment_status)) {
       return reply.code(400).send({
-        message: TELEHEALTH_PAID_NO_CANCEL,
+        message: TELEHEALTH_PAID_NO_DELETE,
       })
     }
     await prisma.telehealthConsultation.delete({ where: { id: existing.id } })

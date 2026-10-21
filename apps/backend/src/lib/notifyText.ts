@@ -112,6 +112,19 @@ const TITLES: Record<string, Row> = {
     el: 'Η συμμετοχή σου επιβεβαιώθηκε', en: 'Your registration is confirmed', es: 'Tu inscripción está confirmada',
     fr: 'Votre inscription est confirmée', zh: '您的报名已确认',
   },
+  event_refund_completed: {
+    el: 'Τα χρήματα επιστράφηκαν', en: 'Your refund is complete', es: 'Tu reembolso se ha completado',
+    fr: 'Votre remboursement est effectué', zh: '退款已完成',
+  },
+  telehealth_cancelled: {
+    el: 'Η συνεδρία τηλεϊατρικής ακυρώθηκε', en: 'Telehealth session cancelled', es: 'Sesión de telemedicina cancelada',
+    fr: 'Séance de télémédecine annulée', zh: '远程问诊已取消',
+  },
+  /** Ακύρωση κράτησης/συνεδρίας που είχε μείνει «σε εξέλιξη»: η επιστροφή ολοκληρώθηκε. */
+  cancel_refund_completed: {
+    el: 'Η επιστροφή χρημάτων ολοκληρώθηκε', en: 'Your refund is complete', es: 'Tu reembolso se ha completado',
+    fr: 'Votre remboursement est effectué', zh: '退款已完成',
+  },
 }
 
 // ─── Μηνύματα ────────────────────────────────────────────────────────
@@ -267,4 +280,48 @@ export const notifyMsg = {
         fr: `L’événement « ${title} » a été annulé par l’organisateur.`,
         zh: `活动“${title}”已被组织者取消。`,
       }),
+
+  /** Η επιστροφή χρημάτων μιας συμμετοχής σε εκδήλωση ολοκληρώθηκε. */
+  eventRefundCompleted: (lang: Lang, title: string, amount: string) => p(lang, {
+    el: `Τα χρήματα της συμμετοχής σου στην εκδήλωση "${title}" (${amount}€) επιστράφηκαν στον τρόπο πληρωμής σου.`,
+    en: `Your payment for the event "${title}" (${amount}€) has been refunded to your payment method.`,
+    es: `El pago de tu inscripción en el evento "${title}" (${amount}€) se ha reembolsado a tu método de pago.`,
+    fr: `Le paiement de votre inscription à l’événement « ${title} » (${amount}€) a été remboursé sur votre moyen de paiement.`,
+    zh: `您报名活动“${title}”支付的 ${amount}€ 已退回原支付方式。`,
+  }),
+
+  /** Ακύρωση συνεδρίας τηλεϊατρικής· με ποσό > 0, και η επιστροφή στον πελάτη. */
+  telehealthCancelled: (lang: Lang, date: string, time: string, refund: string | null) => p(lang, refund
+    ? {
+        el: `Η συνεδρία τηλεϊατρικής στις ${date} ${time} ακυρώθηκε. Επιστρέφονται ${refund}€ στον τρόπο πληρωμής σου.`,
+        en: `The telehealth session on ${date} at ${time} was cancelled. ${refund}€ is being refunded to your payment method.`,
+        es: `La sesión de telemedicina del ${date} a las ${time} se ha cancelado. Se te reembolsan ${refund}€ en tu método de pago.`,
+        fr: `La séance de télémédecine du ${date} à ${time} a été annulée. ${refund}€ vous sont remboursés sur votre moyen de paiement.`,
+        zh: `${date} ${time} 的远程问诊已取消。${refund}€ 将退回您的原支付方式。`,
+      }
+    : {
+        el: `Η συνεδρία τηλεϊατρικής στις ${date} ${time} ακυρώθηκε.`,
+        en: `The telehealth session on ${date} at ${time} was cancelled.`,
+        es: `La sesión de telemedicina del ${date} a las ${time} se ha cancelado.`,
+        fr: `La séance de télémédecine du ${date} à ${time} a été annulée.`,
+        zh: `${date} ${time} 的远程问诊已取消。`,
+      }),
+
+  /** Η ακύρωση κράτησης που ήταν σε εξέλιξη ολοκληρώθηκε· ποσό που επιστράφηκε. */
+  bookingRefundCompleted: (lang: Lang, who: string, date: string, time: string, amount: string) => p(lang, {
+    el: `Η ακύρωση της κράτησής σου (${who} · ${date} ${time}) ολοκληρώθηκε. Επιστράφηκαν ${amount}€ στον τρόπο πληρωμής σου.`,
+    en: `The cancellation of your booking (${who} · ${date} ${time}) is complete. ${amount}€ has been refunded to your payment method.`,
+    es: `La cancelación de tu reserva (${who} · ${date} ${time}) se ha completado. Se han reembolsado ${amount}€ en tu método de pago.`,
+    fr: `L’annulation de votre réservation (${who} · ${date} ${time}) est terminée. ${amount}€ ont été remboursés sur votre moyen de paiement.`,
+    zh: `您的预约（${who} · ${date} ${time}）已取消完成。${amount}€ 已退回原支付方式。`,
+  }),
+
+  /** Η ακύρωση συνεδρίας τηλεϊατρικής που ήταν σε εξέλιξη ολοκληρώθηκε. */
+  telehealthRefundCompleted: (lang: Lang, date: string, time: string, amount: string) => p(lang, {
+    el: `Η ακύρωση της συνεδρίας τηλεϊατρικής στις ${date} ${time} ολοκληρώθηκε. Επιστράφηκαν ${amount}€ στον τρόπο πληρωμής σου.`,
+    en: `The cancellation of the telehealth session on ${date} at ${time} is complete. ${amount}€ has been refunded to your payment method.`,
+    es: `La cancelación de la sesión de telemedicina del ${date} a las ${time} se ha completado. Se han reembolsado ${amount}€ en tu método de pago.`,
+    fr: `L’annulation de la séance de télémédecine du ${date} à ${time} est terminée. ${amount}€ ont été remboursés sur votre moyen de paiement.`,
+    zh: `${date} ${time} 的远程问诊已取消完成。${amount}€ 已退回原支付方式。`,
+  }),
 }

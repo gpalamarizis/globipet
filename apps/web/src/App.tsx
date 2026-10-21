@@ -81,6 +81,7 @@ const AdminAuditLogPage    = lazy(() => import('@/pages/admin/AdminAuditLogPage'
 const AdminGovernancePage  = lazy(() => import('@/pages/admin/AdminGovernancePage'))
 const AdminTranslationsPage = lazy(() => import('@/pages/admin/AdminTranslationsPage'))
 const AdminVerificationsPage = lazy(() => import('@/pages/admin/AdminVerificationsPage'))
+const AdminRefundsPage    = lazy(() => import('@/pages/admin/AdminRefundsPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
@@ -294,6 +295,7 @@ export default function App() {
                     dashboard, so the page was unreachable. */}
                 <Route path="/admin/translations"  element={<AdminTranslationsPage />} />
                 <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
+                <Route path="/admin/refunds"       element={<AdminRefundsPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

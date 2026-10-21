@@ -10,6 +10,7 @@ import { cn, getInitials } from '@/lib/utils'
 import { useWsStore } from '@/store/ws'
 import toast from 'react-hot-toast'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
+import { canAskTelehealthCancel, telehealthCancelQuestion, postTelehealthCancel } from '@/components/features/telehealth/telehealthCancel'
 
 // Τοπικό 'YYYY-MM-DD' (όχι toISOString, που δίνει UTC → λάθος μέρα κοντά στα μεσάνυχτα).
 const localYmd = (d: Date = new Date()) =>
@@ -53,11 +54,17 @@ export default function Telehealth() {
     queryKey: ['telehealth-mine'],
     queryFn: () => api.get('/telehealth').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
+    // Όσο μια επιστροφή είναι σε εξέλιξη, ανανέωση ανά 60″ ώστε να φανεί η ολοκλήρωσή της.
+    refetchInterval: (q: any) => ((q?.state?.data ?? []) as any[]).some(c => c?.payment_status === 'refunding') ? 60_000 : false,
   })
   const today = localYmd()
+  // Ακυρωμένη πληρωμένη (με επιστροφή) μένει ορατή με την ετικέτα της, ώστε ο
+  // πελάτης να βλέπει τι επιστράφηκε· η ακυρωμένη απλήρωτη κρύβεται όπως πριν.
+  const refundedStatus = (c: any) => c.payment_status === 'refunded' || c.payment_status === 'partially_refunded'
   const mySessions = (mySessionsAll as any[])
     .filter(c => c.client_email === user?.email
-      && c.status !== 'cancelled' && c.status !== 'completed'
+      && c.status !== 'completed'
+      && (c.status !== 'cancelled' || refundedStatus(c))
       && String(c.scheduled_date) >= today)
     .sort((a, b) => `${a.scheduled_date} ${a.scheduled_time}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time}`))
   // 'YYYY-MM-DD' → τοπική ημερομηνία χωρίς new Date('YYYY-MM-DD') (UTC).
@@ -67,6 +74,36 @@ export default function Telehealth() {
     return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
   }
   const [activeCall, setActiveCall] = useState<any>(null)
+
+  // Ακύρωση συνεδρίας — ίδια ροή με την ακύρωση κράτησης (MyBookings).
+  const cancelSession = useMutation({
+    mutationFn: (id: string) => postTelehealthCancel(id),
+    onSuccess: (r: any, id: string) => {
+      queryClient.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      queryClient.invalidateQueries({ queryKey: ['telehealth', id] })
+      toast.success(t('teleCancel.cancelled'))
+      if (r?.refund > 0) toast.success(t('bookingPolicy.refundStarted', { refund: Number(r.refund).toFixed(2) }))
+    },
+    onError: (err: any, id: string) => {
+      queryClient.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      queryClient.invalidateQueries({ queryKey: ['telehealth', id] })
+      toast.error(err?.response?.data?.message || err?.message || t('common.error'))
+    },
+  })
+  // Όσο φορτώνει το cancel-preview το κουμπί είναι ανενεργό (διπλό πάτημα → δύο ερωτήσεις).
+  const [asking, setAsking] = useState(false)
+  const askCancel = async (c: any) => {
+    if (asking) return
+    setAsking(true)
+    let msg: string | null = null
+    try {
+      msg = await telehealthCancelQuestion(String(c.id), false, t,
+        () => queryClient.invalidateQueries({ queryKey: ['telehealth-mine'] }))
+    } finally {
+      setAsking(false)
+    }
+    if (msg && confirm(msg)) cancelSession.mutate(String(c.id))
+  }
 
   const wsLastMsg = useWsStore?.((s: any) => s.lastMessage)
   useEffect(() => {
@@ -197,11 +234,17 @@ export default function Telehealth() {
             <div className="space-y-2">
               {mySessions.map((c: any) => {
                 const paid = c.payment_status === 'paid'
+                const cancelled = c.status === 'cancelled'
+                const refunding = c.payment_status === 'refunding'
+                // Ακυρωμένη / σε επιστροφή: όχι στην επιβεβαίωση πληρωμής (θα έδειχνε «σε εκκρεμότητα»).
+                const closed = cancelled || refunding
+                const open = () => { if (!closed) navigate(`/telehealth/${c.id}/confirmation`) }
                 return (
-                  <div key={c.id} role="button" tabIndex={0}
-                    onClick={() => navigate(`/telehealth/${c.id}/confirmation`)}
-                    onKeyDown={e => { if (e.key === 'Enter') navigate(`/telehealth/${c.id}/confirmation`) }}
-                    className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
+                  <div key={c.id} role={closed ? undefined : 'button'} tabIndex={closed ? undefined : 0}
+                    onClick={open}
+                    onKeyDown={e => { if (e.key === 'Enter') open() }}
+                    className={cn('p-3 rounded-xl border border-gray-100 dark:border-gray-800 transition-colors',
+                      !closed && 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer')}>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{c.provider_name}</p>
@@ -210,14 +253,33 @@ export default function Telehealth() {
                           <span className="truncate">{fmtDay(c.scheduled_date)} · {c.scheduled_time}{c.pet_name ? ` · ${c.pet_name}` : ''}</span>
                         </p>
                       </div>
-                      <span className={cn('shrink-0', paid ? 'badge-green' : 'badge-orange')}>
-                        {paid ? t('bookingPolicy.stConfirmed') : t('pgOrderConfirm.pendingTitle')}
-                      </span>
+                      {cancelled ? (
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="badge-red">{t('bookingPolicy.stCancelled')}</span>
+                          {refundedStatus(c) && (
+                            <span className="badge-blue">
+                              {c.payment_status === 'refunded' ? t('bookingPolicy.refunded') : t('bookingPolicy.partiallyRefunded')}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={cn('shrink-0', paid ? 'badge-green' : 'badge-orange')}>
+                          {refunding ? t('teleCancel.refunding') : paid ? t('bookingPolicy.stConfirmed') : t('pgOrderConfirm.pendingTitle')}
+                        </span>
+                      )}
                     </div>
-                    {paid && !!c.meeting_url && (
+                    {paid && !!c.meeting_url && !cancelled && (
                       <button onClick={e => { e.stopPropagation(); setActiveCall(c) }}
                         className="btn-primary w-full mt-3 py-2 text-sm flex items-center justify-center gap-1.5">
                         <Video size={14} /> {t('pgTeleConfirm.joinCall')}
+                      </button>
+                    )}
+                    {canAskTelehealthCancel(c) && (
+                      <button onClick={e => { e.stopPropagation(); askCancel(c) }}
+                        disabled={cancelSession.isPending || asking}
+                        className={cn('btn-secondary w-full py-[7px] text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 disabled:opacity-60',
+                          paid && !!c.meeting_url ? 'mt-2' : 'mt-3')}>
+                        {t('bookingPolicy.cancel')}
                       </button>
                     )}
                   </div>

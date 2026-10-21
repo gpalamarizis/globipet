@@ -53,15 +53,36 @@ const REFUND_LOCK_SPACE = 'globipet:refund'
 let lockQueue: Promise<void> = Promise.resolve()
 const insideLock = new AsyncLocalStorage<true>()
 
+/**
+ * Μέγιστη αναμονή στην ουρά. Πέρα από αυτή το αίτημα αποτυγχάνει με
+ * προσωρινό σφάλμα ΧΩΡΙΣ κλήση στη Viva (ο χρήστης ξαναδοκιμάζει), αντί να
+ * περιμένει επ' αόριστον πίσω από μια αργή επιστροφή.
+ */
+const QUEUE_WAIT_MS = 60_000
+
+/** Η ουρά των επιστροφών είναι απασχολημένη: τίποτα δεν έγινε — προσωρινό. */
+export class RefundQueueBusyError extends Error {
+  constructor() { super('Προσωρινό σφάλμα — δοκίμασε ξανά σε λίγο') }
+}
+
 async function serialised<R>(run: () => Promise<R>): Promise<R> {
   if (insideLock.getStore()) return run()
   const prev = lockQueue
   let release!: () => void
-  lockQueue = new Promise<void>(r => { release = r })
+  const mine = new Promise<void>(r => { release = r })
+  // Ο επόμενος περιμένει ΚΑΙ τον προηγούμενο: αν εμείς εγκαταλείψουμε την
+  // αναμονή, η σειρά δεν σπάει (δεν τρέχει ταυτόχρονα με τον prev).
+  lockQueue = prev.then(() => mine)
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    await prev
+    const ready = await Promise.race([
+      prev.then(() => true),
+      new Promise<false>(r => { timer = setTimeout(() => r(false), QUEUE_WAIT_MS) }),
+    ])
+    if (!ready) throw new RefundQueueBusyError()
     return await insideLock.run(true, run)
   } finally {
+    if (timer) clearTimeout(timer)
     release()
   }
 }

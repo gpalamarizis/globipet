@@ -222,25 +222,56 @@ export async function refundVivaTransaction(
 
   // Όριο 90″ — μικρότερο από το timeout (120″) της συναλλαγής του
   // lib/refundLock, ώστε το κλείδωμα να κρατιέται όσο διαρκεί η κλήση.
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: { Authorization: `Basic ${auth}` },
-    signal: AbortSignal.timeout(90_000),
-  })
-
-  const text = await res.text()
+  // Timeout / abort / σφάλμα δικτύου (και στην ανάγνωση της απάντησης): το
+  // αίτημα ίσως έφτασε και η επιστροφή ίσως έγινε → ΑΓΝΩΣΤΗ έκβαση.
+  let res: Response
+  let text: string
+  try {
+    res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Basic ${auth}` },
+      signal: AbortSignal.timeout(90_000),
+    })
+    text = await res.text()
+  } catch (err: any) {
+    throw new VivaRefundError(`Viva refund outcome unknown: ${err?.name ?? ''} ${err?.message ?? err}`, true)
+  }
   let body: any = null
   try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
 
   if (!res.ok) {
-    throw new Error(`Viva refund error: ${res.status} ${text}`)
+    // 5xx: σφάλμα στη μεριά της Viva — δεν ξέρουμε αν η επιστροφή έγινε.
+    // 4xx: οριστική άρνηση, καμία επιστροφή.
+    throw new VivaRefundError(`Viva refund error: ${res.status} ${text}`, res.status >= 500, res.status)
   }
-  // Το Viva σηματοδοτεί σφάλμα και με 200 όταν ο ErrorCode δεν είναι μηδέν.
+  // Το Viva σηματοδοτεί σφάλμα και με 200 όταν ο ErrorCode δεν είναι μηδέν
+  // (οριστική άρνηση).
   if (body && typeof body.ErrorCode === 'number' && body.ErrorCode !== 0) {
-    throw new Error(`Viva refund refused: ${body.ErrorCode} ${body.ErrorText ?? ''}`)
+    throw new VivaRefundError(`Viva refund refused: ${body.ErrorCode} ${body.ErrorText ?? ''}`, false, res.status)
   }
 
   return { transactionId: body?.TransactionId ?? null, raw: body }
+}
+
+/**
+ * Αποτυχία της κλήσης επιστροφής στη Viva.
+ *
+ *   unknownOutcome = false → ΟΡΙΣΤΙΚΗ άρνηση (HTTP 4xx ή 200 με ErrorCode ≠ 0):
+ *                            καμία επιστροφή δεν έγινε.
+ *   unknownOutcome = true  → ΑΓΝΩΣΤΗ έκβαση (timeout/abort, σφάλμα δικτύου,
+ *                            HTTP 5xx): η επιστροφή ΙΣΩΣ έγινε. Ο καλών δεν
+ *                            επαναφέρει την κατάσταση σε «πληρωμένη» και δεν
+ *                            ξαναδοκιμάζει στα τυφλά — αφήνει `refunding` για
+ *                            την εργασία των κολλημένων / τον διαχειριστή.
+ * Σφάλματα πριν την κλήση (διαπιστευτήρια, ποσό) είναι απλό Error: οριστικά.
+ */
+export class VivaRefundError extends Error {
+  constructor(message: string, public unknownOutcome: boolean, public status?: number) { super(message) }
+}
+
+/** Η αποτυχία επιστροφής είναι «άγνωστη έκβαση» (η επιστροφή ίσως έγινε); */
+export function isRefundOutcomeUnknown(err: unknown): boolean {
+  return !!(err as any)?.unknownOutcome
 }
 
 /** Σφάλμα HTTP από τη Viva, με τον κωδικό της απάντησης. */
@@ -265,8 +296,12 @@ export async function getVivaTransaction(transactionId: string): Promise<any> {
   const token = await getVivaAccessToken()
   const { api } = getBaseUrls()
 
+  // Όριο 15″: η κλήση γίνεται και μέσα σε κλείδωμα επιστροφής (lib/refundLock)
+  // — χωρίς όριο μια Viva που δεν απαντά κρατούσε το κλείδωμα και την ουρά.
+  // Timeout = σφάλμα επαλήθευσης («δεν ξέρουμε ακόμη»), όχι οριστική άρνηση.
   const res = await fetch(`${api}/checkout/v2/transactions/${encodeURIComponent(String(transactionId))}`, {
     headers: { 'Authorization': `Bearer ${token}` },
+    signal: AbortSignal.timeout(15_000),
   })
 
   if (!res.ok) {

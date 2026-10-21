@@ -8,7 +8,8 @@ import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, EmptyState, Button } from '@/components/ui'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
-import { colors, space, radius, type, weight, icon } from '@/theme'
+import { confirmTelehealthCancel, postTelehealthCancel } from '@/lib/telehealthCancel'
+import { colors, space, radius, type, weight, icon, font } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
 
 /**
@@ -68,6 +69,12 @@ export default function ProviderOverview() {
       && c.status !== 'cancelled' && c.status !== 'completed'
       && String(c.scheduled_date) === todayKey)
     .sort((a, b) => String(a.scheduled_time).localeCompare(String(b.scheduled_time)))
+  // Επόμενες συνεδρίες: επιβεβαιωμένες, από αύριο και μετά, ώστε ο πάροχος
+  // να μπορεί να τις ακυρώσει εγκαίρως — ίδιο με το web (ProviderTelehealthToday).
+  const teleUpcoming = (teleSessions as any[])
+    .filter(c => c.provider_email === user?.email && c.status === 'scheduled'
+      && String(c.scheduled_date) > todayKey)
+    .sort((a, b) => `${a.scheduled_date} ${a.scheduled_time}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time}`))
 
   const [joiningId, setJoiningId] = useState<string | null>(null)
   const joinCall = async (id: string) => {
@@ -79,6 +86,34 @@ export default function ProviderOverview() {
       Alert.alert(t('common.error'), e?.response?.data?.message || t('teleConfirm.err_open_call'))
     } finally {
       setJoiningId(null)
+    }
+  }
+
+  // Ακύρωση από τον πάροχο: πάντα πλήρης επιστροφή στον πελάτη — ίδιο με το web.
+  const cancelSession = useMutation({
+    mutationFn: (id: string) => postTelehealthCancel(id),
+    onSuccess: (r: any, id: string) => {
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
+      Alert.alert(t('teleCancel.cancelled'), r?.refund > 0
+        ? t('teleCancel.providerRefunded', { amount: Number(r.refund).toFixed(2) }) : undefined)
+    },
+    onError: (e: any, id: string) => {
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
+      Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('common.something_wrong'))
+    },
+  })
+  // Όσο φορτώνει το cancel-preview το κουμπί είναι ανενεργό (διπλό πάτημα → δύο ερωτήσεις).
+  const [asking, setAsking] = useState(false)
+  const askCancel = async (id: string) => {
+    if (asking) return
+    setAsking(true)
+    try {
+      await confirmTelehealthCancel(id, true, t, () => cancelSession.mutate(id),
+        () => qc.invalidateQueries({ queryKey: ['telehealth-mine'] }))
+    } finally {
+      setAsking(false)
     }
   }
 
@@ -150,10 +185,49 @@ export default function ProviderOverview() {
                     </Text>
                   </View>
                 </View>
+                {/* Ίδιο ύψος με το κουμπί κλήσης (Button sm) και ίδια όψη με το web (κόκκινο περίγραμμα). */}
+                <TouchableOpacity style={[s.teleCancelBtn, (cancelSession.isPending || asking) && { opacity: 0.5 }]} activeOpacity={0.8}
+                  disabled={cancelSession.isPending || asking}
+                  onPress={() => askCancel(String(c.id))}>
+                  <Text style={s.teleCancelText}>{t('bookingPolicy.cancel')}</Text>
+                </TouchableOpacity>
                 <Button label={t('providerTele.join')} size="sm"
                   icon={<Video size={icon.sm} color={colors.textOnDark} />}
                   loading={joiningId === c.id} disabled={!!joiningId}
                   onPress={() => joinCall(c.id)} />
+              </View>
+            </Card>
+          ))}
+          <View style={{ height: space.sm }} />
+        </>
+      )}
+
+      {teleUpcoming.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>{t('providerTele.upcomingTitle')}</Text>
+          {teleUpcoming.map((c: any) => (
+            <Card key={c.id} style={s.teleCard}>
+              <View style={s.row}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.bookingTitle} numberOfLines={1}>
+                    {c.client_name}{c.pet_name ? ` · ${c.pet_name}` : ''}
+                  </Text>
+                  <View style={s.teleMeta}>
+                    <Clock size={icon.xs} color={colors.textLight} />
+                    <Text style={s.bookingMeta} numberOfLines={1}>
+                      {fmtYmd(c.scheduled_date, i18n.language)} · {c.scheduled_time}{c.duration ? ` · ${t('providerTele.minutes', { count: c.duration })}` : ''}
+                    </Text>
+                  </View>
+                </View>
+                {c.payment_status === 'refunding' ? (
+                  <Text style={s.teleRefunding}>{t('teleCancel.refunding')}</Text>
+                ) : (
+                  <TouchableOpacity style={[s.teleCancelBtn, (cancelSession.isPending || asking) && { opacity: 0.5 }]} activeOpacity={0.8}
+                    disabled={cancelSession.isPending || asking}
+                    onPress={() => askCancel(String(c.id))}>
+                    <Text style={s.teleCancelText}>{t('bookingPolicy.cancel')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </Card>
           ))}
@@ -215,6 +289,15 @@ const s = StyleSheet.create({
   bookingMeta: { ...type.caption, color: colors.textLight },
   teleCard: { marginBottom: space.sm },
   teleMeta: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: 2 },
+  teleRefunding: { ...type.caption, color: colors.warning, fontWeight: weight.semibold },
+  // = Button sm (paddingVertical space.sm, radius.md, font.sm) με περίγραμμα 1px:
+  // paddingVertical − 1 ώστε το ύψος να είναι ίδιο με το κουμπί κλήσης.
+  teleCancelBtn: {
+    paddingVertical: space.sm - 1, paddingHorizontal: space.md - 1,
+    borderRadius: radius.md, borderWidth: 1, borderColor: '#FECACA', backgroundColor: colors.surface,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+  },
+  teleCancelText: { fontSize: font.sm, color: '#DC2626', fontWeight: weight.semibold },
   footer: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
   footerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xs, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   footerTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },

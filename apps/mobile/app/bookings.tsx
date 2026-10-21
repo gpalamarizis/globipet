@@ -323,7 +323,7 @@ export default function BookingsScreen() {
                   {/* Κριτική μόνο σε ολοκληρωμένη και μόνο μία φορά: ο server
                       απορρίπτει τη δεύτερη, αλλά δεν έχει νόημα να τη ζητήσουμε. */}
                   {/* Η κράτηση κρατά τη βαθμολογία της μετά την κριτική (όπως στο web). */}
-                  {item.status === 'completed' && item.rating == null && (
+                  {item.status === 'completed' && item.rating == null && item.can_review !== false && (
                     <TouchableOpacity style={s.reviewBtn} activeOpacity={0.7}
                       onPress={() => setReviewing(item)}>
                       <Star size={14} color={colors.warning} />

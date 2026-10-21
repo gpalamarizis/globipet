@@ -7,8 +7,13 @@ import { Stethoscope, Star, X, Video } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
+import { canAskTelehealthCancel, confirmTelehealthCancel, postTelehealthCancel } from '@/lib/telehealthCancel'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
-import { colors, space, radius, type, weight, icon, touch } from '@/theme'
+import { colors, space, radius, type, weight, icon, touch, font } from '@/theme'
+
+// Κουμπί ακύρωσης όπως στο web (text-red-600 / border-red-200).
+const CANCEL_TEXT = '#DC2626'
+const CANCEL_BORDER = '#FECACA'
 
 // Τοπική ημερομηνία YYYY-MM-DD. Το toISOString() δίνει UTC: στην Ελλάδα,
 // 00:00–03:00 η συνεδρία γραφόταν με την προηγούμενη μέρα.
@@ -71,11 +76,17 @@ export default function TelehealthScreen() {
     queryKey: ['telehealth-mine'],
     queryFn: () => api.get('/telehealth').then(r => r.data?.data ?? []),
     enabled: isAuthenticated,
+    // Όσο μια επιστροφή είναι σε εξέλιξη, ανανέωση ανά 60″ — όπως στο web.
+    refetchInterval: (q: any) => ((q?.state?.data ?? []) as any[]).some(c => c?.payment_status === 'refunding') ? 60_000 : false,
   })
   const today = localYmd()
+  // Ακυρωμένη πληρωμένη (με επιστροφή) μένει ορατή με την ετικέτα της — όπως
+  // στο web· η ακυρωμένη απλήρωτη κρύβεται όπως πριν.
+  const refundedStatus = (c: any) => c.payment_status === 'refunded' || c.payment_status === 'partially_refunded'
   const mySessions = (mySessionsAll as any[])
     .filter(c => c.client_email === user?.email
-      && c.status !== 'cancelled' && c.status !== 'completed'
+      && c.status !== 'completed'
+      && (c.status !== 'cancelled' || refundedStatus(c))
       && String(c.scheduled_date) >= today)
     .sort((a, b) => `${a.scheduled_date} ${a.scheduled_time}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time}`))
   // 'YYYY-MM-DD' → τοπική ημερομηνία χωρίς new Date('YYYY-MM-DD') (UTC).
@@ -94,6 +105,34 @@ export default function TelehealthScreen() {
       Alert.alert(t('common.error'), e?.response?.data?.message || t('teleConfirm.err_open_call'))
     } finally {
       setJoiningId(null)
+    }
+  }
+
+  // Ακύρωση συνεδρίας — ίδια ροή με την ακύρωση κράτησης (app/bookings.tsx) και το web.
+  const cancelSession = useMutation({
+    mutationFn: (id: string) => postTelehealthCancel(id),
+    onSuccess: (r: any, id: string) => {
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
+      Alert.alert(t('teleCancel.cancelled'), r?.refund > 0
+        ? t('bookingPolicy.refundStarted', { refund: Number(r.refund).toFixed(2) }) : undefined)
+    },
+    onError: (e: any, id: string) => {
+      qc.invalidateQueries({ queryKey: ['telehealth-mine'] })
+      qc.invalidateQueries({ queryKey: ['telehealth-session', id] })
+      Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('common.something_wrong'))
+    },
+  })
+  // Όσο φορτώνει το cancel-preview το κουμπί είναι ανενεργό (διπλό πάτημα → δύο ερωτήσεις).
+  const [asking, setAsking] = useState(false)
+  const askCancel = async (id: string) => {
+    if (asking) return
+    setAsking(true)
+    try {
+      await confirmTelehealthCancel(id, false, t, () => cancelSession.mutate(id),
+        () => qc.invalidateQueries({ queryKey: ['telehealth-mine'] }))
+    } finally {
+      setAsking(false)
     }
   }
 
@@ -169,8 +208,12 @@ export default function TelehealthScreen() {
           <Text style={s.mineTitle}>{t('tele.my_sessions')}</Text>
           {mySessions.map((c: any) => {
             const paid = c.payment_status === 'paid'
+            const cancelled = c.status === 'cancelled'
+            const refunding = c.payment_status === 'refunding'
             return (
-              <Card key={c.id} onPress={() => router.push({ pathname: '/telehealth-confirmation', params: { id: String(c.id) } } as any)}>
+              // Ακυρωμένη / σε επιστροφή: όχι στην επιβεβαίωση πληρωμής (θα έδειχνε «εκκρεμεί»).
+              <Card key={c.id} onPress={cancelled || refunding ? undefined
+                : () => router.push({ pathname: '/telehealth-confirmation', params: { id: String(c.id) } } as any)}>
                 <View style={s.row}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={s.name} numberOfLines={1}>{c.provider_name}</Text>
@@ -178,15 +221,34 @@ export default function TelehealthScreen() {
                       {fmtDay(c.scheduled_date)} · {c.scheduled_time}{c.pet_name ? ` · ${c.pet_name}` : ''}
                     </Text>
                   </View>
-                  <Badge label={paid ? t('status.confirmed') : t('teleConfirm.pending')}
-                    tone={paid ? 'success' : 'warning'} />
+                  {cancelled ? (
+                    <View style={s.badges}>
+                      <Badge label={t('bookingPolicy.stCancelled')} tone="danger" style={s.badgeEnd} />
+                      {refundedStatus(c) && (
+                        <Badge label={c.payment_status === 'refunded' ? t('bookingPolicy.refunded') : t('bookingPolicy.partiallyRefunded')}
+                          tone="info" style={s.badgeEnd} />
+                      )}
+                    </View>
+                  ) : (
+                    <Badge label={refunding ? t('teleCancel.refunding') : paid ? t('status.confirmed') : t('teleConfirm.pending')}
+                      tone={paid ? 'success' : 'warning'} />
+                  )}
                 </View>
-                {paid && !!c.meeting_url && (
+                {paid && !!c.meeting_url && !cancelled && (
                   <Button label={t('providerTele.join')} full
                     icon={<Video size={icon.sm} color={colors.textOnDark} />}
                     loading={joiningId === c.id} disabled={!!joiningId}
                     onPress={() => joinCall(String(c.id))}
                     style={{ marginTop: space.md }} />
+                )}
+                {/* Ίδιο ύψος/στρογγύλεμα με το κουμπί εισόδου (Button md) και ίδια όψη με
+                    το web: κόκκινο περίγραμμα (το Button δεν έχει τέτοιο variant). */}
+                {canAskTelehealthCancel(c) && (
+                  <TouchableOpacity style={[s.cancelBtn, (cancelSession.isPending || asking) && { opacity: 0.5 }]} activeOpacity={0.8}
+                    disabled={cancelSession.isPending || asking}
+                    onPress={() => askCancel(String(c.id))}>
+                    <Text style={s.cancelText}>{t('bookingPolicy.cancel')}</Text>
+                  </TouchableOpacity>
                 )}
               </Card>
             )
@@ -345,6 +407,18 @@ const s = StyleSheet.create({
   petTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.medium },
   petTxtOn: { color: colors.brand, fontWeight: weight.bold },
   mine: { gap: space.md, marginBottom: space.lg },
+  badges: { alignItems: 'flex-end', gap: space.xs },
+  // Το Badge έχει alignSelf: 'flex-start' — εδώ δεξιά στοίχιση, όπως στο web.
+  badgeEnd: { alignSelf: 'flex-end' },
+  // = Button md (minHeight touch.min, radius.md, paddingVertical space.md) με
+  // περίγραμμα 1px: paddingVertical − 1 ώστε το ύψος να μένει ίδιο.
+  cancelBtn: {
+    marginTop: space.md, minHeight: touch.min,
+    paddingVertical: space.md - 1, paddingHorizontal: space.xl,
+    borderRadius: radius.md, borderWidth: 1, borderColor: CANCEL_BORDER, backgroundColor: colors.surface,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+  },
+  cancelText: { fontSize: font.base, color: CANCEL_TEXT, fontWeight: weight.semibold },
   mineTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.bold },
   tabs: { flexDirection: 'row', gap: space.sm, marginBottom: space.lg },
   tab: {

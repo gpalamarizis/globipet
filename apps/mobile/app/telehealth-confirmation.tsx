@@ -27,6 +27,8 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *   λίστα «Οι συνεδρίες μου»), και παρακολούθηση κάθε 3" όσο εκκρεμεί.
  *   Deep link: globipet://telehealth-confirmation?id=<συνεδρία>&transactionId=<t>
  */
+const REFUND_STATES = ['refunded', 'partially_refunded', 'refunding']
+
 export default function TelehealthConfirmationScreen() {
   const { t, i18n } = useTranslation()
   const router = useRouter()
@@ -45,9 +47,12 @@ export default function TelehealthConfirmationScreen() {
     enabled: !!id,
     // Όσο δεν έχει κριθεί η πληρωμή, το webhook μπορεί να την επιβεβαιώσει
     // οποιαδήποτε στιγμή — όπως το web, ξαναδιαβάζουμε κάθε 3".
+    // Ακυρωμένη ή με επιστροφή (σε εξέλιξη/ολοκληρωμένη): τελική κατάσταση,
+    // όχι άλλο polling — όπως το web.
     refetchInterval: (q) => {
-      const ps = (q.state.data as any)?.payment_status
-      return ps === 'paid' || ps === 'failed' ? false : 3000
+      const d = q.state.data as any
+      const ps = d?.payment_status
+      return ps === 'paid' || ps === 'failed' || d?.status === 'cancelled' || REFUND_STATES.includes(ps) ? false : 3000
     },
   })
 
@@ -75,14 +80,30 @@ export default function TelehealthConfirmationScreen() {
   useEffect(() => {
     if (verified.current || verifying.current || !id) return
     if ((session as any)?.payment_status === 'paid') { verified.current = true; return }
+    // Ακυρωμένη / με επιστροφή: τίποτα άλλο να επαληθευτεί.
+    if ((session as any)?.status === 'cancelled' || REFUND_STATES.includes((session as any)?.payment_status)) {
+      verified.current = true; return
+    }
     verifying.current = true
     verify.mutate()
   }, [id, transactionId, dataUpdatedAt])
 
   if (isLoading) return <Screen title={t('teleConfirm.title')}><SkeletonRows count={3} /></Screen>
 
-  const paid = session?.payment_status === 'paid'
-  const failed = session?.payment_status === 'failed'
+  const cancelled = session?.status === 'cancelled'
+  const ended = cancelled || REFUND_STATES.includes(session?.payment_status)
+  const paid = session?.payment_status === 'paid' && !cancelled
+  const failed = session?.payment_status === 'failed' && !cancelled
+  const ps = session?.payment_status
+  const heroTitle = ended
+    ? (cancelled ? t('teleCancel.cancelled') : ps === 'refunding' ? t('teleCancel.refunding') : t('teleConfirm.refundedTitle'))
+    : paid ? t('teleConfirm.paid') : failed ? t('teleConfirm.failed') : t('teleConfirm.pending')
+  const heroHint = ended
+    ? (ps === 'refunding' ? t('teleConfirm.refundingHint')
+      : ps === 'refunded' ? t('teleConfirm.refundedHint')
+      : ps === 'partially_refunded' ? t('teleConfirm.partialRefundHint')
+      : t('teleConfirm.cancelledUnpaidHint'))
+    : paid ? t('teleConfirm.paidHint') : failed ? t('teleConfirm.failedHint') : t('teleConfirm.pendingHint')
 
   // Ίδιο δωμάτιο με το web, από GET /telehealth/:id/call (JaaS 8x8.vc με JWT,
   // ή meet.jit.si όταν το JaaS δεν είναι ρυθμισμένο). Ανοίγει στην εφαρμογή
@@ -116,16 +137,13 @@ export default function TelehealthConfirmationScreen() {
       <ScrollView contentContainerStyle={s.body}>
         <View style={s.hero}>
           <View style={[s.heroIcon, paid && s.heroOk, failed && s.heroBad]}>
-            {paid ? <CheckCircle2 size={40} color={colors.success} />
+            {ended ? <XCircle size={40} color={colors.textMuted} />
+             : paid ? <CheckCircle2 size={40} color={colors.success} />
              : failed ? <XCircle size={40} color={colors.danger} />
              : <Clock size={40} color={colors.warning} />}
           </View>
-          <Text style={s.heroTitle}>
-            {paid ? t('teleConfirm.paid') : failed ? t('teleConfirm.failed') : t('teleConfirm.pending')}
-          </Text>
-          <Text style={s.heroTxt}>
-            {paid ? t('teleConfirm.paidHint') : failed ? t('teleConfirm.failedHint') : t('teleConfirm.pendingHint')}
-          </Text>
+          <Text style={s.heroTitle}>{heroTitle}</Text>
+          <Text style={s.heroTxt}>{heroHint}</Text>
         </View>
 
         {!!session && (
@@ -145,7 +163,7 @@ export default function TelehealthConfirmationScreen() {
             <View style={s.kv}>
               <Text style={s.k}>{t('providerDash.booking')}</Text>
               <Badge label={t(`status.${session.status}`, { defaultValue: session.status })}
-                tone={paid ? 'success' : 'warning'} />
+                tone={paid ? 'success' : ended ? 'neutral' : 'warning'} />
             </View>
           </Card>
         )}

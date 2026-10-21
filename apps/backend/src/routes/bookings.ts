@@ -7,9 +7,10 @@ import { fullNameOf } from '../lib/userName.js'
 import { calculateCommission } from '../lib/commission.js'
 import { bestDiscount } from '../lib/campaignDiscount.js'
 import { createVivaPaymentOrder } from '../lib/viva.js'
-import { cancelBooking, cancellationTerms, CancelError } from '../lib/cancellation.js'
+import { cancelBooking, cancellationTerms, CancelError, rescheduleBlock } from '../lib/cancellation.js'
 import { serverError } from '../lib/errors.js'
 import { isBookingPayable, confirmBookingPayment } from '../lib/bookingPayment.js'
+import { reviewableBookingIds } from './reviews.js'
 
 /** Μορφή του transaction id της Viva (GUID). */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -131,7 +132,14 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     })
     // Προσθετικό πεδίο `payable`: ο server αποφασίζει αν η κράτηση είναι
     // απλήρωτη ΚΑΙ πληρώσιμη (κουμπί «Πληρωμή» σε web και κινητό).
-    return { data: data.map(b => ({ ...b, payable: isBookingPayable(b) })), total: data.length }
+    // Προσθετικό `can_review`: ο ΙΔΙΟΣ κανόνας με το POST /reviews
+    // (routes/reviews.ts → reviewableBookingIds), ώστε το «Γράψε κριτική» να
+    // μην οδηγεί σε 409 (π.χ. παλιές κριτικές χωρίς booking_id).
+    const reviewable = await reviewableBookingIds(email, data.map(b => b.service_id))
+    return {
+      data: data.map(b => ({ ...b, payable: isBookingPayable(b), can_review: reviewable.has(b.id) })),
+      total: data.length,
+    }
   })
 
   /**
@@ -558,6 +566,16 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     // Rescheduling and notes are open to both sides.
     if (body.booking_date !== undefined) data.booking_date = String(body.booking_date)
     if (body.booking_time !== undefined) data.booking_time = String(body.booking_time)
+    // Μετάθεση πληρωμένης κράτησης από τον πελάτη: πολιτική ακύρωσης
+    // (lib/cancellation rescheduleBlock). Ο πάροχος/admin (και η αλλαγή
+    // επαγγελματία) δεν επηρεάζονται — εκτός από ακύρωση σε εξέλιξη.
+    if ((data.booking_date !== undefined && data.booking_date !== existing.booking_date)
+      || (data.booking_time !== undefined && data.booking_time !== existing.booking_time)) {
+      const block = rescheduleBlock(existing.payment_status, isCustomer && !isAdmin && !isProvider,
+        { date: existing.booking_date, time: existing.booking_time },
+        { date: data.booking_date ?? existing.booking_date, time: data.booking_time ?? existing.booking_time })
+      if (block) return reply.code(block.code).send({ message: block.message })
+    }
     if (body.notes !== undefined) data.notes = body.notes || null
 
     // Status transitions. Cancelling is available to both parties; marking a

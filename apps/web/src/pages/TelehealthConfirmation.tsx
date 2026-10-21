@@ -50,19 +50,32 @@ export default function TelehealthConfirmation() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isAuthenticated])
 
+  // Ακυρωμένη ή με επιστροφή χρημάτων (σε εξέλιξη ή ολοκληρωμένη): τελική
+  // κατάσταση για αυτή τη σελίδα — όχι «σε εκκρεμότητα», όχι άλλο polling.
+  const isCancelled = consultation?.status === 'cancelled'
+  const refundState = ['refunded', 'partially_refunded', 'refunding'].includes(String(consultation?.payment_status ?? ''))
+  const isEnded = isCancelled || refundState
+
   // Poll every 3s while still unpaid (covers webhook-confirmed-before-redirect cases)
   useEffect(() => {
-    if (!isAuthenticated || consultation?.payment_status === 'paid') return
+    if (!isAuthenticated || consultation?.payment_status === 'paid' || isEnded) return
     const interval = setInterval(() => {
       if (!verified.current && transactionId) { if (!verifying.current) { verifying.current = true; verify.mutate() } }
       else refetch()
     }, 3000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, consultation?.payment_status, refetch, transactionId])
+  }, [isAuthenticated, consultation?.payment_status, isEnded, refetch, transactionId])
 
-  const isPaid = consultation?.payment_status === 'paid'
-  const isPending = !consultation || consultation.payment_status === 'unpaid'
+  const isPaid = consultation?.payment_status === 'paid' && !isCancelled
+  const isPending = !consultation || (consultation.payment_status === 'unpaid' && !isCancelled)
+  const endedTitle = isCancelled ? t('teleCancel.cancelled')
+    : consultation?.payment_status === 'refunding' ? t('teleCancel.refunding')
+    : t('pgTeleConfirm.refundedTitle')
+  const endedDesc = consultation?.payment_status === 'refunding' ? t('pgTeleConfirm.refundingDesc')
+    : consultation?.payment_status === 'refunded' ? t('pgTeleConfirm.refundedDesc')
+    : consultation?.payment_status === 'partially_refunded' ? t('pgTeleConfirm.partialRefundDesc')
+    : t('pgTeleConfirm.cancelledUnpaidDesc')
 
   // Όποιος πλήρωσε από την εφαρμογή κινητού καταλήγει εδώ στον browser του
   // τηλεφώνου, συνήθως χωρίς σύνδεση στο web: σύνδεσμος πίσω στην εφαρμογή
@@ -93,7 +106,14 @@ export default function TelehealthConfirmation() {
 
   return (
     <div className="page-container py-16 max-w-md mx-auto text-center">
-      {isPaid ? (
+      {isEnded ? (
+        <>
+          <XCircle size={56} className="mx-auto text-gray-400 mb-4" />
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{endedTitle}</h1>
+          <p className="text-sm text-gray-500 mb-6">{endedDesc}</p>
+          <button onClick={() => navigate('/telehealth')} className="btn-primary w-full">{t('pgTeleConfirm.back')}</button>
+        </>
+      ) : isPaid ? (
         <>
           <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('pgTeleConfirm.paidTitle')}</h1>

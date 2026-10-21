@@ -1707,7 +1707,12 @@
     "failedHint": "Inténtalo de nuevo desde telemedicina.",
     "sessionNumber": "Número de sesión",
     "join_call": "Unirse a la videollamada",
-    "err_open_call": "No se pudo abrir la videollamada."
+    "err_open_call": "No se pudo abrir la videollamada.",
+    "refundedTitle": "Reembolso realizado",
+    "refundingHint": "Tu reembolso está en curso: te avisaremos.",
+    "refundedHint": "Tu pago se ha reembolsado a tu método de pago.",
+    "partialRefundHint": "Se ha reembolsado parte del importe a tu método de pago, según la política de cancelación.",
+    "cancelledUnpaidHint": "La sesión no se realizará. Si se te ha cobrado, el importe se reembolsa automáticamente."
   },
   "medical": {
     "title": "Centro de salud",
@@ -2201,7 +2206,8 @@
     "todayTitle": "Telemedicina hoy",
     "minutes_one": "{{count}} minuto",
     "minutes": "{{count}} minutos",
-    "join": "Entrar en la llamada"
+    "join": "Entrar en la llamada",
+    "upcomingTitle": "Próximas sesiones"
   },
   "svcLocation": {
     "title": "Ubicación en el mapa",
@@ -2243,5 +2249,19 @@
     "failedHint": "Tu reserva sigue sin pagar. Puedes volver a pagar desde «Mis reservas».",
     "duplicateRefunded": "La reserva ya estaba pagada, así que el cargo adicional se devolvió automáticamente a tu tarjeta.",
     "duplicateRefundDelayed": "La reserva ya estaba pagada. La devolución automática del cargo adicional se está retrasando; la completaremos nosotros. Si necesitas algo, contáctanos."
+  },
+  "teleCancel": {
+    "confirm": "¿Cancelar esta sesión?",
+    "free": "La cancelación es gratuita: se reembolsarán €{{refund}}. ¿Cancelar esta sesión?",
+    "late": "Quedan menos de 24 horas para la sesión. Se reembolsará el 50 % (€{{refund}}) y se retendrán €{{fee}}. ¿Cancelar esta sesión?",
+    "unpaid": "¿Cancelar esta sesión? No se ha realizado ningún cargo.",
+    "providerPaid": "¿Cancelar esta sesión? El cliente recibirá el reembolso completo de €{{amount}}.",
+    "started": "La hora de la sesión ya ha pasado: la sesión ya no se puede cancelar.",
+    "notAllowed": "Esta sesión no se puede cancelar en su estado actual.",
+    "inProgress": "La cancelación ya está en curso.",
+    "cancelled": "Sesión cancelada",
+    "providerRefunded": "El cliente recibe el reembolso completo de €{{amount}}.",
+    "refunding": "Reembolso en curso",
+    "contactSupport": "La sesión ya está pagada; para cancelarla, contacta con soporte."
   }
 }

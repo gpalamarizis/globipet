@@ -2,8 +2,8 @@ import type { FastifyPluginAsync } from 'fastify'
 import { randomBytes } from 'node:crypto'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
-import { createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
-import { bookingStart } from '../lib/cancellation.js'
+import { createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection, isRefundOutcomeUnknown } from '../lib/viva.js'
+import { bookingStart, REFUND_IN_PROGRESS_MESSAGE } from '../lib/cancellation.js'
 import { audit, auditSystem } from '../lib/audit.js'
 import { serverError } from '../lib/errors.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
@@ -88,10 +88,10 @@ export function eventRegistrationIdFromTrns(merchantTrns: string): string | null
 const REFUND_ACTIONS = ['event_registration_auto_refund', 'event_registration_refund']
 
 /** Λόγος (metadata.reason) των επιστροφών λόγω ακύρωσης της εκδήλωσης. */
-const EVENT_CANCELLED_REASON = 'event_cancelled'
+export const EVENT_CANCELLED_REASON = 'event_cancelled'
 
 /** Έχει ήδη επιστραφεί (με επιτυχία) αυτή η συναλλαγή για αυτή την εγγραφή; */
-async function alreadyRefunded(registrationId: string, transactionId: string): Promise<boolean> {
+export async function alreadyRefunded(registrationId: string, transactionId: string): Promise<boolean> {
   const row = await prisma.auditLog.findFirst({
     where: {
       resource: 'event_registration', resource_id: registrationId, outcome: 'success',
@@ -110,7 +110,7 @@ async function alreadyRefunded(registrationId: string, transactionId: string): P
  *   'event_cancelled' — ακύρωσε ο διοργανωτής ολόκληρη την εκδήλωση
  *   null        — δεν προκύπτει
  */
-async function refundReason(reg: { id: string; status: string; viva_transaction_id: string | null }): Promise<'full' | 'cancelled' | 'event_cancelled' | null> {
+export async function refundReason(reg: { id: string; status: string; viva_transaction_id: string | null }): Promise<'full' | 'cancelled' | 'event_cancelled' | null> {
   // Αυτο-ακύρωση: η τελευταία καταγραφή επιστροφής για ΑΥΤΗ τη συναλλαγή
   // είναι το σημάδι διεκδίκησης (DELETE /:id/register) ή η επιστροφή του
   // χρήστη. Καλύπτει και το `refunding` (σε εξέλιξη) και το `refund_failed`
@@ -536,7 +536,7 @@ async function eventCancelledAt(eventId: string, known?: { cancelled_at: Date | 
 }
 
 /** Ακύρωση από την εποχή πριν τη στήλη: πρώτη καταγραφή event_cancel στο audit. */
-async function legacyCancelledAt(eventId: string): Promise<Date | null> {
+export async function legacyCancelledAt(eventId: string): Promise<Date | null> {
   const row = await prisma.auditLog.findFirst({
     where: { action: EVENT_CANCEL_ACTION, resource: 'event', resource_id: eventId, outcome: 'success' },
     orderBy: { created_at: 'asc' },
@@ -587,6 +587,35 @@ async function notifyRegistrationConfirmed(email: string, eventId: string, amoun
     })
   } catch (err: any) {
     console.error(`[events] registration confirmed notification to ${email} failed:`, err?.message)
+  }
+}
+
+/**
+ * Ειδοποίηση (in-app + live + push) στον χρήστη ότι τα χρήματα της
+ * συμμετοχής του επιστράφηκαν — π.χ. μετά από νέα απόπειρα του διαχειριστή
+ * (routes/admin-refunds.ts). Ποτέ δεν πετά.
+ */
+export async function notifyRegistrationRefunded(email: string, eventId: string, amount: number | null) {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, title: true } })
+    if (!event) return
+    const nLang = await langOfUser(email)
+    const notification = await prisma.notification.create({
+      data: {
+        user_email: email,
+        title: notifyTitle('event_refund_completed', nLang),
+        message: notifyMsg.eventRefundCompleted(nLang, event.title, Number(amount ?? 0).toFixed(2)),
+        type: 'event_refund_completed',
+        link: `/events/${event.id}`,
+      },
+    })
+    broadcastToUser(email, { type: 'notification', notification })
+    void sendPushToUser(email, {
+      title: notification.title, body: notification.message, url: notification.link ?? '/',
+      data: { type: 'event_refund_completed' },
+    })
+  } catch (err: any) {
+    console.error(`[events] refund completed notification to ${email} failed:`, err?.message)
   }
 }
 
@@ -881,6 +910,54 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
           where: { id: reg.id, status: 'refund_failed' }, data: { status: 'refunding' },
         })
         if (claimed.count === 0) { report.in_progress.push(problem(reg, 'changed')); continue }
+        // Πριν από νέα απόπειρα: επιστροφή που έγινε ήδη (π.χ. άγνωστη έκβαση
+        // που τελικά πέρασε, ή από τον πίνακα της Viva) δεν φαίνεται στο
+        // audit — η Viva το λέει (statusId 'R'). Όπως στο «Ξαναδοκίμασε» του
+        // admin: 'R' → refunded χωρίς κλήση· η Viva δεν απαντά → καμία
+        // επιστροφή στα τυφλά, μένει refund_failed.
+        const preTxn = String(reg.viva_transaction_id)
+        let pre: 'go' | 'viva_refunded' | 'changed' | 'error' = 'go'
+        try {
+          const lk = await withRefundLock(eventRefundLockKey(reg.id, preTxn), async (): Promise<typeof pre> => {
+            if (await alreadyRefunded(reg.id, preTxn)) return 'go' // η refundForCancelledEvent το βλέπει ('already')
+            try {
+              const tx = await getVivaTransaction(preTxn)
+              if (tx?.statusId !== 'R') return 'go'
+            } catch {
+              return 'error'
+            }
+            const r = await prisma.eventRegistration.updateMany({
+              where: { id: reg.id, status: 'refunding', viva_transaction_id: preTxn }, data: { status: 'refunded' },
+            })
+            if (r.count === 0) return 'changed'
+            // Καταγραφή ΕΠΙΤΥΧΙΑΣ (alreadyRefunded): καμία μεταγενέστερη ροή δεν
+            // ξαναεπιστρέφει τη συναλλαγή· ίδιος λόγος, ώστε το refundReason να μείνει event_cancelled.
+            await auditSystem({
+              action: 'event_registration_auto_refund', resource: 'event_registration', resource_id: reg.id,
+              subject_email: reg.user_email,
+              metadata: { transaction_id: preTxn, refund_tx: null, reason: EVENT_CANCELLED_REASON, amount: reg.amount_paid, source: 'viva_status_R' },
+            })
+            return 'viva_refunded'
+          })
+          if (lk.locked) pre = lk.value
+        } catch (err: any) {
+          console.error(`[events] refund pre-check for registration ${reg.id} failed:`, err?.message)
+          pre = 'error'
+        }
+        if (pre === 'viva_refunded') {
+          report.refunded++
+          report.refunded_amount = round2(report.refunded_amount + (reg.amount_paid ?? 0))
+          await notifyEventCancelled(reg.user_email, event, 'refunded', reg.amount_paid)
+          continue
+        }
+        if (pre === 'changed') { report.in_progress.push(problem(reg, 'changed')); continue }
+        if (pre === 'error') {
+          await prisma.eventRegistration.updateMany({
+            where: { id: reg.id, status: 'refunding', viva_transaction_id: preTxn }, data: { status: 'refund_failed' },
+          })
+          report.failed.push(problem(reg, 'refund_failed'))
+          continue
+        }
         // Η θέση δεν μετριέται σε refund_failed (ούτε στο «γέμισε» ούτε μετά
         // από αποτυχημένη απόπειρα ακύρωσης, που την αφαίρεσε ήδη).
         if (await refundForCancelledEvent(reg, false)) {
@@ -937,7 +1014,7 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
 // «γέμισε» η θέση δεν μετρήθηκε ποτέ· στην ακυρωμένη εκδήλωση το
 // registered_count δεν έχει πια σημασία.
 
-const EVENT_REFUND_CLAIM_ACTION = 'event_registration_refund_claim'
+export const EVENT_REFUND_CLAIM_ACTION = 'event_registration_refund_claim'
 const EVENT_REFUNDING_SEEN_ACTION = 'event_registration_refunding_seen'
 const EVENT_REFUND_RESOLVED_ACTION = 'event_registration_refunding_resolved'
 export const STUCK_REFUND_MS = 15 * 60_000
@@ -1633,6 +1710,17 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         }
       } catch (err: any) {
         console.error('[viva] refund failed for event registration', existing.id, err?.message)
+        if (isRefundOutcomeUnknown(err)) {
+          // Άγνωστη έκβαση (timeout/δίκτυο/5xx): η επιστροφή ίσως έγινε. Μένει
+          // `refunding` — η resolveStuckEventRefunds (audit → Viva 'R') την
+          // κλείνει ή τη δίνει στον διαχειριστή. Ποτέ πίσω σε registered.
+          await audit(req, {
+            action: 'event_registration_refund', resource: 'event_registration', resource_id: existing.id,
+            outcome: 'failure', status_code: 502, error_message: String(err?.message ?? err).slice(0, 500),
+            metadata: { event_id: req.params.id, amount: existing.amount_paid, transaction_id: txn, unknown_outcome: true },
+          })
+          return reply.code(502).send({ message: REFUND_IN_PROGRESS_MESSAGE, in_progress: true })
+        }
         await prisma.eventRegistration.updateMany({
           where: { id: existing.id, status: 'refunding' },
           data: { status: 'registered' },

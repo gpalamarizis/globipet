@@ -1707,7 +1707,12 @@
     "failedHint": "Réessayez depuis la télémédecine.",
     "sessionNumber": "Numéro de séance",
     "join_call": "Rejoindre l’appel vidéo",
-    "err_open_call": "Impossible d’ouvrir l’appel vidéo."
+    "err_open_call": "Impossible d’ouvrir l’appel vidéo.",
+    "refundedTitle": "Remboursement effectué",
+    "refundingHint": "Votre remboursement est en cours — nous vous tiendrons informé.",
+    "refundedHint": "Votre paiement a été remboursé sur votre moyen de paiement.",
+    "partialRefundHint": "Une partie du montant a été remboursée sur votre moyen de paiement, conformément à la politique d’annulation.",
+    "cancelledUnpaidHint": "La séance n’aura pas lieu. Si vous avez été débité, le montant est remboursé automatiquement."
   },
   "medical": {
     "title": "Centre de santé",
@@ -2201,7 +2206,8 @@
     "todayTitle": "Téléconsultations du jour",
     "minutes_one": "{{count}} minute",
     "minutes": "{{count}} minutes",
-    "join": "Rejoindre l'appel"
+    "join": "Rejoindre l'appel",
+    "upcomingTitle": "Prochaines séances"
   },
   "svcLocation": {
     "title": "Emplacement sur la carte",
@@ -2243,5 +2249,19 @@
     "failedHint": "Votre réservation n'est toujours pas payée. Vous pouvez payer de nouveau depuis « Mes réservations ».",
     "duplicateRefunded": "La réservation était déjà payée : le débit supplémentaire a été remboursé automatiquement sur votre carte.",
     "duplicateRefundDelayed": "La réservation était déjà payée. Le remboursement automatique du débit supplémentaire est retardé — nous nous en chargerons ; si besoin, contactez-nous."
+  },
+  "teleCancel": {
+    "confirm": "Annuler cette séance ?",
+    "free": "L’annulation est gratuite : €{{refund}} seront remboursés. Annuler cette séance ?",
+    "late": "Il reste moins de 24 heures avant la séance. 50 % (€{{refund}}) seront remboursés et €{{fee}} conservés. Annuler cette séance ?",
+    "unpaid": "Annuler cette séance ? Aucun montant n’a été débité.",
+    "providerPaid": "Annuler cette séance ? Le client sera intégralement remboursé de €{{amount}}.",
+    "started": "L’heure de la séance est passée — la séance ne peut plus être annulée.",
+    "notAllowed": "Cette séance ne peut pas être annulée dans son état actuel.",
+    "inProgress": "L’annulation est déjà en cours.",
+    "cancelled": "Séance annulée",
+    "providerRefunded": "Le client est intégralement remboursé de €{{amount}}.",
+    "refunding": "Remboursement en cours",
+    "contactSupport": "La séance a été payée ; pour l’annuler, contactez le support."
   }
 }

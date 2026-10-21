@@ -1707,7 +1707,12 @@
     "failedHint": "Try again from telehealth.",
     "sessionNumber": "Session number",
     "join_call": "Join the video call",
-    "err_open_call": "The video call could not be opened."
+    "err_open_call": "The video call could not be opened.",
+    "refundedTitle": "Refund issued",
+    "refundingHint": "Your refund is in progress — we will let you know.",
+    "refundedHint": "Your payment has been refunded to your payment method.",
+    "partialRefundHint": "Part of the amount has been refunded to your payment method, in line with the cancellation policy.",
+    "cancelledUnpaidHint": "The session will not take place. If you were charged, the money is refunded automatically."
   },
   "medical": {
     "title": "Health centre",
@@ -2201,7 +2206,8 @@
     "todayTitle": "Telehealth today",
     "minutes_one": "{{count}} minute",
     "minutes": "{{count}} minutes",
-    "join": "Join the call"
+    "join": "Join the call",
+    "upcomingTitle": "Upcoming sessions"
   },
   "svcLocation": {
     "title": "Location on the map",
@@ -2243,5 +2249,19 @@
     "failedHint": "Your booking is still unpaid. You can pay again from “My bookings”.",
     "duplicateRefunded": "The booking had already been paid, so the extra charge was refunded to your card automatically.",
     "duplicateRefundDelayed": "The booking had already been paid. The automatic refund of the extra charge is delayed — we will complete it; if you need anything, contact us."
+  },
+  "teleCancel": {
+    "confirm": "Cancel this session?",
+    "free": "Cancellation is free: €{{refund}} will be refunded. Cancel this session?",
+    "late": "There are less than 24 hours until the session. 50% (€{{refund}}) will be refunded and €{{fee}} retained. Cancel this session?",
+    "unpaid": "Cancel this session? Nothing has been charged.",
+    "providerPaid": "Cancel this session? The customer will receive a full refund of €{{amount}}.",
+    "started": "The session time has passed — the session can no longer be cancelled.",
+    "notAllowed": "This session cannot be cancelled in its current state.",
+    "inProgress": "The cancellation is already in progress.",
+    "cancelled": "Session cancelled",
+    "providerRefunded": "The customer is receiving a full refund of €{{amount}}.",
+    "refunding": "Refund in progress",
+    "contactSupport": "The session has been paid; to cancel it, please contact support."
   }
 }

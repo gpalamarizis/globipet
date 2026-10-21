@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft, Calendar, Euro, Megaphone } from 'lucide-react'
+import { Users, ShoppingBag, TrendingUp, PawPrint, Search, Ban, CheckCircle, Trash2, Eye, EyeOff, Package, ClipboardList, Database, ChevronRight, AlertTriangle, X, Play, Shield, Plus, Key, Globe, Edit2, FileSpreadsheet, Upload, Download, ChevronDown, Layers, ArrowLeft, Calendar, Euro, Megaphone, RotateCcw } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -954,6 +954,12 @@ export default function AdminDashboard() {
     queryFn: () => api.get('/admin/stats').then(r => r.data),
     enabled: user?.role === 'admin',
   })
+  // Εκκρεμείς (αποτυχημένες/κολλημένες) επιστροφές → σελίδα /admin/refunds.
+  const { data: pendingRefunds } = useQuery({
+    queryKey: ['admin-refunds-count'],
+    queryFn: () => api.get('/admin/refunds/pending').then(r => r.data?.count ?? 0),
+    enabled: user?.role === 'admin',
+  })
 
   if (user?.role !== 'admin') return <Navigate to="/" replace />
 
@@ -1046,6 +1052,9 @@ export default function AdminDashboard() {
                 </button>
                 <Link to="/admin/subscriptions" className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <Layers size={15} className="text-gray-400"/> {t('adminDash.sp_subscriptions')} <ChevronRight size={13} className="text-gray-400"/>
+                </Link>
+                <Link to="/admin/refunds" className={cn('flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-colors', pendingRefunds ? 'border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')}>
+                  <RotateCcw size={15} className={pendingRefunds ? 'text-red-500' : 'text-gray-400'}/> {t('adminRefunds.dashCounter', { count: pendingRefunds ?? 0 })} <ChevronRight size={13} className="text-gray-400"/>
                 </Link>
               </div>
             </div>

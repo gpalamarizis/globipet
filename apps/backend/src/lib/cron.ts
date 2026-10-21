@@ -4,7 +4,7 @@ import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
 import { sendPushToUser } from './push.js'
-import { resolveStuckBookingRefunds } from './cancellation.js'
+import { resolveStuckBookingRefunds, resolveStuckTelehealthRefunds } from './cancellation.js'
 import { resolveStuckEventRefunds } from '../routes/events.js'
 
 export function startAiTrialExpiryCron() {
@@ -360,13 +360,13 @@ export function startRetentionCron() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   ΚΟΛΛΗΜΕΝΕΣ ΕΠΙΣΤΡΟΦΕΣ (`refunding`) — κρατήσεις και εκδηλώσεις
+   ΚΟΛΛΗΜΕΝΕΣ ΕΠΙΣΤΡΟΦΕΣ (`refunding`) — κρατήσεις, τηλεϊατρική, εκδηλώσεις
    ═══════════════════════════════════════════════════════════════════════
    Κάθε 15 λεπτά. Βρίσκει ό,τι έμεινε `refunding` πάνω από 15 λεπτά (η
    διεργασία που ξεκίνησε την επιστροφή έπεσε στη μέση) και το τακτοποιεί
    ΧΩΡΙΣ ποτέ νέα επιστροφή στα τυφλά: μόνο με απόδειξη (audit ή Viva) γίνεται
    «επιστράφηκε»· αλλιώς σημειώνεται για τον διαχειριστή. Λεπτομέρειες:
-   lib/cancellation.ts (resolveStuckBookingRefunds) και routes/events.ts
+   lib/cancellation.ts (resolveStuckBookingRefunds, resolveStuckTelehealthRefunds) και routes/events.ts
    (resolveStuckEventRefunds). Ασφαλές με πολλά instances: κάθε τακτοποίηση
    γίνεται υπό κλείδωμα βάσης (lib/refundLock).
    ═══════════════════════════════════════════════════════════════════════ */
@@ -378,9 +378,10 @@ export function startStuckRefundsCron() {
     running = true
     try {
       const b = await resolveStuckBookingRefunds()
+      const th = await resolveStuckTelehealthRefunds()
       const e = await resolveStuckEventRefunds()
-      if (b.completed || b.flagged || e.refunded || e.failed) {
-        console.log(`💶 Κολλημένες επιστροφές: κρατήσεις ${b.completed} ολοκληρώθηκαν / ${b.flagged} για έλεγχο · εκδηλώσεις ${e.refunded} επιστράφηκαν / ${e.failed} για έλεγχο`)
+      if (b.completed || b.flagged || th.completed || th.flagged || e.refunded || e.failed) {
+        console.log(`💶 Κολλημένες επιστροφές: κρατήσεις ${b.completed} ολοκληρώθηκαν / ${b.flagged} για έλεγχο · τηλεϊατρική ${th.completed} ολοκληρώθηκαν / ${th.flagged} για έλεγχο · εκδηλώσεις ${e.refunded} επιστράφηκαν / ${e.failed} για έλεγχο`)
       }
     } catch (err: any) {
       console.error('Stuck refunds cron error:', err?.message ?? err)

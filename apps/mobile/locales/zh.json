@@ -1707,7 +1707,12 @@
     "failedHint": "请从远程问诊页重试。",
     "sessionNumber": "问诊编号",
     "join_call": "加入视频通话",
-    "err_open_call": "无法打开视频通话。"
+    "err_open_call": "无法打开视频通话。",
+    "refundedTitle": "已退款",
+    "refundingHint": "您的退款正在处理中——我们会通知您。",
+    "refundedHint": "您的付款已退回原支付方式。",
+    "partialRefundHint": "已根据取消政策将部分金额退回您的原支付方式。",
+    "cancelledUnpaidHint": "该问诊不会进行。如已扣款，款项将自动退回。"
   },
   "medical": {
     "title": "健康中心",
@@ -2201,7 +2206,8 @@
     "todayTitle": "今日远程问诊",
     "minutes_one": "{{count}} 分钟",
     "minutes": "{{count}} 分钟",
-    "join": "进入通话"
+    "join": "进入通话",
+    "upcomingTitle": "即将进行的问诊"
   },
   "svcLocation": {
     "title": "地图位置",
@@ -2243,5 +2249,19 @@
     "failedHint": "您的预约仍未付款。您可以在“我的预约”中重新付款。",
     "duplicateRefunded": "该预约此前已付款，因此多收的款项已自动退还到您的银行卡。",
     "duplicateRefundDelayed": "该预约此前已付款。多收款项的自动退款有所延迟——我们会处理完成；如有需要，请联系我们。"
+  },
+  "teleCancel": {
+    "confirm": "要取消此问诊吗？",
+    "free": "免费取消：将退还 €{{refund}}。要取消此问诊吗？",
+    "late": "距问诊开始不足 24 小时。将退还 50%（€{{refund}}），保留 €{{fee}}。要取消此问诊吗？",
+    "unpaid": "要取消此问诊吗？尚未产生任何费用。",
+    "providerPaid": "要取消此问诊吗？客户将获得 €{{amount}} 全额退款。",
+    "started": "问诊时间已过——该问诊无法再取消。",
+    "notAllowed": "该问诊在当前状态下无法取消。",
+    "inProgress": "取消已在处理中。",
+    "cancelled": "问诊已取消",
+    "providerRefunded": "客户将获得 €{{amount}} 全额退款。",
+    "refunding": "退款处理中",
+    "contactSupport": "该问诊已付款；如需取消，请联系客服。"
   }
 }
