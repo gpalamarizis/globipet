@@ -17,6 +17,11 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * Οι σύνδεσμοι του web μεταφράζονται σε οθόνες του κινητού. Το βίντεο
  * ανοίγει στον browser: η εφαρμογή δεν έχει player και δεν αξίζει ένα νέο
  * native module για ένα banner.
+ *
+ * Ε16: όπως το web (internalLink) — ΜΟΝΟ εσωτερική διαδρομή /^\/(?![\/\\])/
+ * στο link_url, και μόνο μέσω router· ποτέ εξωτερικό link_url με Linking.
+ * Το βίντεο (media_url) ανοίγει μόνο αν είναι https:// (το web το παίζει σε
+ * <video>/iframe μόνο από http(s)· κανένα άλλο σχήμα, π.χ. intent:, tel:).
  */
 type Placement = {
   id: string; campaign_id: string; page: string; slot: string
@@ -29,8 +34,7 @@ const counted = new Set<string>()
 
 /** Διαδρομή του web → οθόνη του κινητού. null = δεν οδηγεί πουθενά. */
 function mobileRoute(link: string | null): string | null {
-  if (!link) return null
-  if (/^https?:\/\//i.test(link)) return link
+  if (!link || !/^\/(?![\/\\])/.test(link)) return null
   const m = link.match(/^\/(?:marketplace|products)\/([^/?#]+)/)
   if (m) return `/products/${m[1]}`
   const sv = link.match(/^\/services\/([^/?#]+)/)
@@ -39,6 +43,9 @@ function mobileRoute(link: string | null): string | null {
   if (link.startsWith('/marketplace')) return '/(tabs)/marketplace'
   return null
 }
+
+/** Βίντεο καμπάνιας: μόνο https:// (όχι άλλο σχήμα URL). */
+const isHttpsUrl = (u: string | null): u is string => typeof u === 'string' && /^https:\/\/[^\s]+$/i.test(u)
 
 const RATIO: Record<string, number> = { hero: 3, banner: 4, sidebar: 2 / 3, inline: 4, popup: 1 }
 
@@ -67,11 +74,9 @@ export default function CampaignBanner({ page, slot = 'banner' }: { page: string
 
   const open = (it: Placement) => {
     api.post(`/campaigns/${it.campaign_id}/click`).catch(() => {})
-    if (it.media_type === 'video' && it.media_url && !it.link_url) { Linking.openURL(it.media_url).catch(() => {}); return }
+    if (it.media_type === 'video' && isHttpsUrl(it.media_url) && !it.link_url) { Linking.openURL(it.media_url).catch(() => {}); return }
     const to = mobileRoute(it.link_url)
-    if (!to) return
-    if (to.startsWith('http')) Linking.openURL(to).catch(() => {})
-    else router.push(to as any)
+    if (to) router.push(to as any)
   }
 
   return (
@@ -80,7 +85,7 @@ export default function CampaignBanner({ page, slot = 'banner' }: { page: string
         const discount = !it.discount_type ? null
           : it.discount_type === 'percent' ? `−${it.discount_value}%` : `−${it.discount_value}€`
         const left = Math.ceil((new Date(it.ends_at).getTime() - Date.now()) / 864e5)
-        const tappable = !!mobileRoute(it.link_url) || (it.media_type === 'video' && !!it.media_url)
+        const tappable = !!mobileRoute(it.link_url) || (it.media_type === 'video' && isHttpsUrl(it.media_url) && !it.link_url)
         const closable = slot === 'popup' || slot === 'sidebar'
         // Το κάθετο «sidebar» του web δεν χωράει στο πλάτος του κινητού.
         const ratio = slot === 'sidebar' ? 16 / 9 : (RATIO[slot] ?? 4)
@@ -106,7 +111,7 @@ export default function CampaignBanner({ page, slot = 'banner' }: { page: string
                   <Text style={s.leftTxt}>{left === 1 ? t('campaignUi.lastDay') : t('campaignUi.daysLeft', { count: left })}</Text>
                 </View>
               )}
-              {!!it.cta_label && !!it.link_url && (
+              {!!it.cta_label && !!mobileRoute(it.link_url) && (
                 <View style={s.cta}>
                   <Text style={s.ctaTxt}>{it.cta_label}</Text>
                   <ArrowRight size={icon.sm} color={colors.brand} />

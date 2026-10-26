@@ -44,6 +44,55 @@ function decryptAddress(addr: any): any {
  *   the catches are gone so a future schema change fails loudly instead of
  *   quietly handing the user an empty file.
  */
+/** Ε16: ανώτατο πλήθος γραμμών audit στην εξαγωγή (οι πιο πρόσφατες). */
+const AUDIT_EXPORT_MAX = 20_000
+
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+/** Κάθε email ΤΡΙΤΟΥ μέσα σε κείμενο/αντικείμενο → '[redacted]'· το δικό του μένει. */
+function redactForeignEmails(v: any, own: string, depth = 0): any {
+  if (depth > 8) return null
+  if (typeof v === 'string') return v.replace(EMAIL_RE, m => (m.toLowerCase() === own ? m : '[redacted]'))
+  if (Array.isArray(v)) return v.map(x => redactForeignEmails(x, own, depth + 1))
+  if (v && typeof v === 'object') {
+    const out: any = {}
+    for (const [k, x] of Object.entries(v)) out[k] = redactForeignEmails(x, own, depth + 1)
+    return out
+  }
+  return v
+}
+
+/**
+ * Ε16: γραμμή audit για την εξαγωγή. Τα στοιχεία ΑΛΛΩΝ προσώπων δεν φεύγουν:
+ *   · actor άλλος (π.χ. διαχειριστής που ενήργησε στον λογαριασμό) → χωρίς
+ *     id/email/IP/user agent του — μένει μόνο ο ρόλος του.
+ *   · subject άλλος (ο χρήστης ενήργησε σε τρίτον) → χωρίς το email του τρίτου.
+ *   · κάθε άλλο email μέσα σε metadata / error_message / path → '[redacted]'.
+ */
+function redactAuditRow(r: any, userId: string, email: string) {
+  const own = email.toLowerCase()
+  const actorIsMe = r.actor_id === userId || (typeof r.actor_email === 'string' && r.actor_email.toLowerCase() === own)
+  const subjectIsMe = typeof r.subject_email === 'string' && r.subject_email.toLowerCase() === own
+  return {
+    id: r.id,
+    created_at: r.created_at,
+    action: r.action,
+    resource: r.resource,
+    resource_id: r.resource_id,
+    outcome: r.outcome,
+    status_code: r.status_code,
+    method: r.method,
+    path: typeof r.path === 'string' ? redactForeignEmails(r.path, own) : r.path,
+    actor_role: r.actor_role,
+    actor_is_me: actorIsMe,
+    actor_email: actorIsMe ? r.actor_email : null,
+    ip: actorIsMe ? r.ip : null,
+    user_agent: actorIsMe ? r.user_agent : null,
+    subject_email: subjectIsMe ? r.subject_email : (r.subject_email ? '[redacted]' : null),
+    error_message: typeof r.error_message === 'string' ? redactForeignEmails(r.error_message, own) : r.error_message,
+    metadata: r.metadata == null ? null : redactForeignEmails(r.metadata, own),
+  }
+}
+
 const userRightsRoutes: FastifyPluginAsync = async (app) => {
 
   // All endpoints require auth
@@ -79,6 +128,7 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       cartItems, wishlist, loyalty, productSubscriptions, insuranceSubscriptions,
       calendarConnections, contactMessages, providerMessages, verificationRequests,
       pushSubscriptions, staffProfiles, services, products,
+      customerNotes, campaignAudience, auditLogs, providerBookings, providerTelehealth,
     ] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -118,7 +168,8 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       prisma.petPedigree.findMany(byOwner),
       // Πρόσβαση στο διαβατήριο: όσες έδωσα (ιδιοκτήτης) και όσες έλαβα (κτηνίατρος).
       prisma.petPassportAccess.findMany(byOwner),
-      prisma.petPassportAccess.findMany({ where: { provider_email: email } }),
+      // Ε16: χωρίς διάκριση πεζών/κεφαλαίων — το email το πληκτρολόγησε ο ιδιοκτήτης.
+      prisma.petPassportAccess.findMany({ where: { provider_email: { equals: email, mode: 'insensitive' } } }),
       prisma.petLocation.findMany(byOwner),
       prisma.petTracker.findMany({
         where: { owner_email: email },
@@ -157,9 +208,11 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
           expires_at: true, last_synced_at: true, created_at: true, updated_at: true,
         },
       }),
-      // Μηνύματα: φόρμα επικοινωνίας (συνδεδεμένος ή με το ίδιο email) και
-      // μηνύματα παρόχου↔πελάτη όπου συμμετέχω.
-      prisma.contactMessage.findMany({ where: { OR: [{ user_email: email }, { email }] } }),
+      // Μηνύματα: φόρμα επικοινωνίας και μηνύματα παρόχου↔πελάτη όπου συμμετέχω.
+      // Ε16: ΜΟΝΟ user_email (ο αποστολέας ήταν συνδεδεμένος). Το `email` της
+      // φόρμας είναι ελεύθερο κείμενο: οποιοσδήποτε μπορούσε να γράψει εκεί το
+      // email ενός άλλου και τα μηνύματά του θα κατέληγαν στην εξαγωγή εκείνου.
+      prisma.contactMessage.findMany({ where: { user_email: email } }),
       prisma.provider_messages.findMany({ where: { OR: [{ customer_email: email }, { provider_email: email }] } }),
       prisma.providerVerificationRequest.findMany({ where: { user_email: email } }),
       // Συσκευές ειδοποιήσεων — ΧΩΡΙΣ token/endpoint/κλειδιά.
@@ -170,11 +223,28 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       (prisma as any).providerStaff.findMany({ where: { user_id: userId } }),
       prisma.service.findMany({ where: { provider_email: email } }),
       prisma.product.findMany({ where: { provider_email: email } }),
+      // Ε16 — ό,τι έλειπε από την εξαγωγή:
+      // Σημειώσεις παρόχων ΓΙΑ τον χρήστη (customer_notes.customer_email).
+      prisma.customer_notes.findMany({ where: { customer_email: email } }),
+      // Σε ποιο κοινό καμπάνιας ανήκει (campaign_audience.customer_email).
+      prisma.campaign_audience.findMany({
+        where: { customer_email: email },
+        select: { id: true, campaign_id: true, customer_email: true, created_at: true },
+      }),
+      // Ημερολόγιο ελέγχου: ως actor ή ως subject (καθάρισμα τρίτων πιο κάτω).
+      prisma.auditLog.findMany({
+        where: { OR: [{ actor_id: userId }, { actor_email: email }, { subject_email: email }, { resource: 'user', resource_id: userId }] },
+        orderBy: { created_at: 'desc' },
+        take: AUDIT_EXPORT_MAX,
+      }),
+      // Ως πάροχος: κρατήσεις και τηλεσυμβουλευτικές όπου είμαι ο πάροχος.
+      prisma.booking.findMany({ where: { provider_email: email } }),
+      prisma.telehealthConsultation.findMany({ where: { provider_email: email } }),
     ])
 
     const payload = {
       export_generated_at: new Date().toISOString(),
-      export_version: '1.2',
+      export_version: '1.3',
       gdpr_article: 'Article 15 / 20',
       user,
       pets,
@@ -232,6 +302,11 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       staff_profiles: staffProfiles,
       services,
       products,
+      customer_notes_about_me: customerNotes,
+      campaign_audiences: campaignAudience,
+      audit_logs: auditLogs.map(r => redactAuditRow(r, userId, email)),
+      bookings_as_provider: providerBookings,
+      telehealth_as_provider: providerTelehealth,
     }
 
     // Force download as JSON attachment
@@ -291,10 +366,20 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
     if (!pending) {
       return reply.code(404).send({ message: 'Δεν βρέθηκε ενεργό αίτημα διαγραφής' })
     }
-    await prisma.accountDeletionRequest.update({
-      where: { id: pending.id },
+    // Ε16: αίτημα λόγω ηλικίας κάτω των 15 (auth.ts PATCH /me/birth-date) ΔΕΝ
+    // ακυρώνεται από τον ίδιο — μόνο διαχειριστής (admin.ts, λάθος δήλωση).
+    if (pending.reason === 'under_age') {
+      await audit(req, { action: 'cancel_delete_request', resource: 'user', resource_id: userId, outcome: 'denied', metadata: { reason: 'under_age' } })
+      return reply.code(403).send({ message: 'Το αίτημα διαγραφής λόγω ηλικίας ακυρώνεται μόνο από την υποστήριξη.' })
+    }
+    // Ατομικά, υπό συνθήκη: ένα αίτημα που μόλις έγινε under_age (ή εκτελείται) δεν ακυρώνεται.
+    const done = await prisma.accountDeletionRequest.updateMany({
+      where: { id: pending.id, status: 'pending', OR: [{ reason: null }, { reason: { not: 'under_age' } }] },
       data: { status: 'cancelled', cancelled_at: new Date() },
     })
+    if (done.count === 0) {
+      return reply.code(409).send({ message: 'Το αίτημα δεν είναι πλέον ενεργό' })
+    }
     await audit(req, { action: 'cancel_delete_request', resource: 'user', resource_id: userId })
     return { message: 'Το αίτημα διαγραφής ακυρώθηκε' }
   })

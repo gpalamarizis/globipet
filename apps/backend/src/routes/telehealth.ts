@@ -1,7 +1,7 @@
 ﻿import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
-import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
+import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection, isVivaNotFoundYet, vivaForeignTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { sendTelehealthConfirmedEmail, sendProviderNewTelehealthEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
@@ -198,9 +198,11 @@ export async function findTelehealthById(id: string) {
  *                 επαλήθευση δεν ολοκληρώθηκε (Viva
  *                 5xx/429, timeout, δίκτυο, διαπιστευτήρια): πρέπει να ξαναγίνει
  *                 — το webhook απαντά 503 και το verify 503. Πριν ήταν «άκυρη»
- *                 και η πληρωμή χανόταν.
+ *                 και η πληρωμή χανόταν. Επίσης Viva 404 για ΠΡΟΣΦΑΤΟ webhook
+ *                 (`retryNotFound`, lib/viva isVivaNotFoundYet)· το verify του
+ *                 πελάτη δεν το δίνει (εκεί το 404 μένει 'invalid').
  */
-export async function verifyConsultationPayment(consultationId: string, transactionId: string): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
+export async function verifyConsultationPayment(consultationId: string, transactionId: string, retryNotFound = false): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
   let c
   try {
     c = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
@@ -212,6 +214,12 @@ export async function verifyConsultationPayment(consultationId: string, transact
   try {
     const tx = await getVivaTransaction(transactionId)
     if (!tx || tx.statusId !== 'F') return 'invalid'
+    // Κοινός λογαριασμός Viva: άλλη πηγή ή νόμισμα (όταν η Viva δίνει το πεδίο).
+    const foreign = vivaForeignTransaction(tx)
+    if (foreign) {
+      console.error(`[viva] transaction ${transactionId} is not ours (${foreign}) — consultation ${consultationId} not confirmed`)
+      return 'invalid'
+    }
 
     const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
     if (trns !== consultationId) {
@@ -227,6 +235,10 @@ export async function verifyConsultationPayment(consultationId: string, transact
     }
     return 'ok'
   } catch (err: any) {
+    if (isVivaNotFoundYet(err, retryNotFound)) {
+      console.error(`[viva] consultation transaction ${transactionId} not found at Viva yet (recent webhook) — will retry`)
+      return 'error'
+    }
     if (isVivaDefinitiveRejection(err)) {
       console.error('[viva] consultation transaction rejected by Viva:', err?.message)
       return 'invalid'
@@ -676,7 +688,22 @@ const routes: FastifyPluginAsync = async (app) => {
         message: TELEHEALTH_PAID_NO_DELETE,
       })
     }
-    await prisma.telehealthConsultation.delete({ where: { id: existing.id } })
+    // Απλήρωτη: ΑΚΥΡΩΣΗ, όχι διαγραφή. Το checkout της Viva μπορεί να είναι
+    // ακόμη ανοιχτό (30')· με τη γραμμή σβησμένη, μια καθυστερημένη πληρωμή
+    // δεν αντιστοιχούσε σε τίποτα και τα χρήματα έμεναν στον λογαριασμό. Η
+    // συνεδρία μένει `cancelled` με το payment_ref (orderCode) — η πληρωμή
+    // που φτάνει μετά επαληθεύεται και επιστρέφεται αυτόματα
+    // (markTelehealthPaid → lib/extraPaymentRefund). Ατομικά, μόνο αν δεν
+    // πληρώθηκε στο μεταξύ. Web και κινητό κρύβουν ήδη την ακυρωμένη απλήρωτη.
+    if (existing.status !== 'cancelled') {
+      const r = await prisma.telehealthConsultation.updateMany({
+        where: { id: existing.id, payment_status: existing.payment_status, status: existing.status },
+        data: { status: 'cancelled' },
+      })
+      if (r.count === 0) {
+        return reply.code(409).send({ message: 'Η συνεδρία άλλαξε στο μεταξύ — ανανέωσε τη σελίδα και δοκίμασε ξανά.' })
+      }
+    }
     return reply.code(204).send()
   })
 }

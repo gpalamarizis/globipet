@@ -9,8 +9,8 @@ import { Input } from '@/components/ui'
 import { colors, space, radius, type, weight } from '@/theme'
 
 /**
- * Κοινά κομμάτια των δύο οθονών ασφάλισης (app/insurance.tsx και
- * app/(tabs)/insurance.tsx) — ίδια λειτουργία με τη σελίδα /insurance του web.
+ * Κομμάτια της οθόνης ασφάλισης (app/(tabs)/insurance.tsx — η παλιά
+ * app/insurance.tsx αφαιρέθηκε) — ίδια λειτουργία με τη σελίδα /insurance του web.
  *
  * ΤΙ ΕΛΕΙΠΕ ΑΠΟ ΤΟ ΚΙΝΗΤΟ
  *   · Φίλτρα: το web φιλτράρει κατά είδος (σκύλος/γάτα/κουνέλι/πτηνό),

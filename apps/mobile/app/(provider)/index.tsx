@@ -141,14 +141,17 @@ export default function ProviderOverview() {
   }, [qc])
 
   const upcoming = bookings
-    .filter((b: any) => b.status !== 'cancelled' && b.status !== 'completed')
+    // Ε16: και το no_show είναι κλειστή κράτηση — όχι «επερχόμενη».
+    .filter((b: any) => b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'no_show')
     .slice(0, 5)
 
   const STATS = [
     { Icon: CalendarDays, value: stats?.bookings ?? 0, labelKey: 'providerDash.totalBookings', tint: colors.info },
     { Icon: TrendingUp, value: `€${Number(stats?.revenue ?? 0).toFixed(0)}`, labelKey: 'providerDash.totalRevenue', tint: colors.success },
     { Icon: Scissors, value: stats?.services ?? 0, labelKey: 'providerTabs.services', tint: colors.brand },
-    { Icon: Star, value: stats?.rating ? Number(stats.rating).toFixed(1) : '—', labelKey: 'providerDash.rating', tint: colors.warning },
+    // Ε16: ο server στέλνει ήδη κείμενο («4.5 ★» ή «—») — το Number() έδινε NaN.
+    // Όπως το web (ProviderDashboard): εμφάνιση ως έχει· αριθμός μόνο αν έρθει αριθμός.
+    { Icon: Star, value: typeof stats?.rating === 'number' ? stats.rating.toFixed(1) : (stats?.rating || '—'), labelKey: 'providerDash.rating', tint: colors.warning },
   ]
 
   return (

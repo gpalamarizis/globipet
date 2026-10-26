@@ -240,11 +240,11 @@ export default function ProviderTranslationsPage() {
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-900 dark:text-yellow-400 mb-1">{t('providerTrn.english')}</p>
                           {f === 'description' ? (
                             <textarea className="input" rows={4} value={value(f)}
-                              placeholder="English translation…"
+                              placeholder={t('providerTrn.englishPlaceholder')}
                               onChange={e => setDraft({ ...draft, [f]: e.target.value })} />
                           ) : (
                             <input className="input" value={value(f)}
-                              placeholder="English translation…"
+                              placeholder={t('providerTrn.englishPlaceholder')}
                               onChange={e => setDraft({ ...draft, [f]: e.target.value })} />
                           )}
                         </div>

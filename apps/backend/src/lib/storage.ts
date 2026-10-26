@@ -10,9 +10,8 @@ import { createHmac, randomBytes } from 'crypto'
  *   CF_R2_PRIVATE_BUCKET_NAME  ιδιωτικό, χωρίς public access — ιατρικά
  *                              αρχεία και εικόνες ανάλυσης AI
  *
- *   Ίδιο account και ίδια κλειδιά. Χωρίς το ιδιωτικό bucket όλα πάνε στο
- *   δημόσιο όπως πριν (με προειδοποίηση στο log), ώστε η αλλαγή να μπορεί
- *   να ανέβει πριν φτιαχτεί το bucket.
+ *   Ίδιο account και ίδια κλειδιά. Χωρίς το ιδιωτικό bucket τα ανεβάσματα
+ *   στους ιδιωτικούς φακέλους απορρίπτονται (503) — ΔΕΝ πάνε στο δημόσιο.
  *
  * ─── Αναφορά ιδιωτικού αρχείου ─────────────────────────────────────
  *   `r2priv://<folder>/<owner>/<ts>-<random>.<ext>`
@@ -50,7 +49,39 @@ export const PERSONAL_PUBLIC_FOLDERS = ['avatars', 'profiles', 'posts', 'pets', 
 /** Διάρκεια προσωρινού συνδέσμου: 10 λεπτά. */
 export const PRIVATE_URL_TTL = 600
 
+/** 503 όταν ζητείται ιδιωτικός φάκελος χωρίς ιδιωτικό bucket (ίδιο κείμενο με το GET /upload/private-url). */
+export const PRIVATE_STORAGE_UNAVAILABLE_MSG = 'Η ιδιωτική αποθήκευση δεν είναι διαθέσιμη'
+
 const DEFAULT_SALT = 'globipet-upload-owner'
+
+/**
+ * Εικόνα που έστειλε ο χρήστης (post, κοινότητα, μήνυμα κοινότητας): δεκτή
+ * ΜΟΝΟ αν είναι https από το δικό μας δημόσιο R2 — εκεί ανεβάζει το
+ * /api/upload. Αλλιώς μια εξωτερική διεύθυνση γινόταν pixel παρακολούθησης
+ * (IP/ώρα) για όποιον βλέπει το feed, ή javascript:/data: σε <img>.
+ *
+ *   CF_R2_PUBLIC_URL ορισμένο → μόνο ο host του.
+ *   Αλλιώς → <CF_R2_ACCOUNT_ID>.r2.cloudflarestorage.com/<CF_R2_BUCKET_NAME>/…,
+ *   δηλαδή ό,τι επιστρέφει το putObject χωρίς δημόσιο URL.
+ *   Κενό/null = καμία εικόνα (επιτρέπεται).
+ *
+ * Τοπικό ισοδύναμο του isAllowedPhotoUrl (routes/users.ts), που δεν είναι export.
+ */
+export function isAllowedImageUrl(v: unknown): boolean {
+  if (v == null || v === '') return true
+  if (typeof v !== 'string' || v.length > 1000) return false
+  let u: URL
+  try { u = new URL(v) } catch { return false }
+  if (u.protocol !== 'https:' || u.username || u.password) return false
+  const host = u.hostname.toLowerCase()
+  const pub = process.env.CF_R2_PUBLIC_URL?.trim()
+  if (pub) {
+    try { return new URL(pub).hostname.toLowerCase() === host } catch { return false }
+  }
+  const acc = process.env.CF_R2_ACCOUNT_ID?.trim().toLowerCase()
+  const bucket = process.env.CF_R2_BUCKET_NAME?.trim()
+  return !!acc && !!bucket && host === `${acc}.r2.cloudflarestorage.com` && u.pathname.startsWith(`/${bucket}/`)
+}
 
 type R2 = {
   s3: S3Client
@@ -74,7 +105,7 @@ export function r2(): R2 | null {
   const privateBucket = process.env.CF_R2_PRIVATE_BUCKET_NAME?.trim() || null
   if (!privateBucket && !warned) {
     warned = true
-    console.warn('[storage] Δεν έχει οριστεί CF_R2_PRIVATE_BUCKET_NAME — τα ιατρικά αρχεία και οι εικόνες AI αποθηκεύονται στο ΔΗΜΟΣΙΟ bucket.')
+    console.warn('[storage] Δεν έχει οριστεί CF_R2_PRIVATE_BUCKET_NAME — τα ανεβάσματα ιατρικών αρχείων και εικόνων AI υγείας απορρίπτονται (503).')
   }
   const s3 = new S3Client({
     region: 'auto',
@@ -126,7 +157,12 @@ export function parsePrivateRef(v: unknown): { key: string; folder: string; owne
 export async function putObject(c: R2, folder: string, ownerEmail: string | undefined, body: Buffer, mime: string, ext: string) {
   const name = `${Date.now()}-${randomBytes(16).toString('hex')}.${ext}`
   const key = ownerEmail ? `${folder}/${ownerHash(ownerEmail)}/${name}` : `${folder}/${name}`
-  const priv = isPrivateFolder(folder) && !!c.privateBucket && !!ownerEmail
+  // Ιδιωτικός φάκελος χωρίς ιδιωτικό bucket ή χωρίς ιδιοκτήτη: άρνηση, ΟΧΙ
+  // σιωπηλή εγγραφή στο δημόσιο bucket. (Το route απαντά 503 πριν φτάσει εδώ.)
+  if (isPrivateFolder(folder) && (!c.privateBucket || !ownerEmail)) {
+    throw Object.assign(new Error(PRIVATE_STORAGE_UNAVAILABLE_MSG), { statusCode: 503 })
+  }
+  const priv = isPrivateFolder(folder)
   await c.s3.send(new PutObjectCommand({
     Bucket: priv ? c.privateBucket! : c.bucket,
     Key: key,

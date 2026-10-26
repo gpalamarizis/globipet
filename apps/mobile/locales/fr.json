@@ -899,7 +899,9 @@
     "newToken": "Nouvelle clé",
     "tokenHint": "Configurez la nouvelle clé sur l'appareil pour qu'il continue d'envoyer sa position.",
     "tokenOnce": "Clé de l’appareil — copiez-la maintenant, elle ne sera plus affichée",
-    "ingestUrl": "URL d’envoi de position"
+    "ingestUrl": "URL d’envoi de position",
+    "rotateTitle": "Nouvelle clé de l'appareil",
+    "rotateQ": "La clé actuelle cesse de fonctionner immédiatement et l'appareil n'enverra plus sa position tant qu'il n'est pas configuré avec la nouvelle. Continuer ?"
   },
   "ver": {
     "about": "À propos",
@@ -1239,7 +1241,8 @@
     "szXLarge": "Très grand",
     "title": "Forfaits de services",
     "update": "Mettre à jour",
-    "yourPrice": "Votre prix :"
+    "yourPrice": "Votre prix :",
+    "addon": "Supplément"
   },
   "providerStaffNew": {
     "title": "Nouveau membre du personnel",
@@ -1481,7 +1484,11 @@
     "reviews": "Avis"
   },
   "petDetail": {
-    "lostNotice": "Cet animal est déclaré perdu"
+    "lostNotice": "Cet animal est déclaré perdu",
+    "locationHistory": "Historique des positions",
+    "noLocations": "Aucune position enregistrée",
+    "statusLost": "Perdu",
+    "statusSafe": "En sécurité"
   },
   "pricing": {
     "title": "Abonnements IA",
@@ -1573,7 +1580,10 @@
     "acceptedAnswer": "Réponse acceptée",
     "markAnswer": "Marquer comme réponse",
     "confirmDelete": "Supprimer cette réponse ?",
-    "confirmDeleteTopic": "Supprimer ce sujet ainsi que toutes ses réponses ?"
+    "confirmDeleteTopic": "Supprimer ce sujet ainsi que toutes ses réponses ?",
+    "searchPlaceholder": "Rechercher un sujet...",
+    "catTraining": "Éducation",
+    "catAdoption": "Adoption"
   },
   "events": {
     "title": "Événements",
@@ -1621,7 +1631,18 @@
     "mineEmpty": "Vous n’avez créé aucun événement",
     "refundsPending_one": "{{count}} remboursement en attente",
     "refundsPending": "{{count}} remboursements en attente",
-    "completeRefundsQuestion": "Finaliser les remboursements ?"
+    "completeRefundsQuestion": "Finaliser les remboursements ?",
+    "searchPlaceholder": "Rechercher un événement...",
+    "upcomingOnly": "À venir uniquement",
+    "allDates": "Toutes les dates",
+    "types": {
+      "meetup": "Rencontre",
+      "show": "Exposition",
+      "adoption": "Adoption",
+      "training": "Éducation",
+      "charity": "Caritatif",
+      "competition": "Concours"
+    }
   },
   "breeds": {
     "title": "Races",
@@ -1750,7 +1771,9 @@
     "cancelDelete": "Annuler la demande",
     "cancelled": "Annulée",
     "cancelledHint": "Votre compte reste actif.",
-    "legalNote": "Droits au titre des articles 17 et 20 du RGPD."
+    "legalNote": "Droits au titre des articles 17 et 20 du RGPD.",
+    "exportSaved": "Le fichier {{name}} a été enregistré dans le dossier choisi.",
+    "exportFailed": "Impossible d’enregistrer le fichier. Réessayez."
   },
   "reviews": {
     "write": "Laisser un avis",
@@ -2455,5 +2478,8 @@
     "terms": "Conditions d'utilisation",
     "privacy": "Politique de confidentialité",
     "changeDate": "Modifier la date"
+  },
+  "paging": {
+    "loadMore": "Charger plus"
   }
 }

@@ -2,7 +2,7 @@
 import prisma from '../lib/prisma.js'
 import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
-import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection } from '../lib/viva.js'
+import { createVivaPaymentOrder, getVivaTransaction, isVivaDefinitiveRejection, isVivaNotFoundYet, vivaForeignTransaction } from '../lib/viva.js'
 import { calculateCommission } from '../lib/commission.js'
 import { bestDiscount, countRedemptions } from '../lib/campaignDiscount.js'
 import { effectivePrice } from '../lib/price.js'
@@ -11,12 +11,12 @@ import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, verifyConsultationPayment } from './telehealth.js'
 import { confirmEventRegistrationPayment, handleEventPaymentWebhook, refundLegacyOrphanEventPayment } from './events.js'
 import { handleBookingPaymentWebhook } from '../lib/bookingPayment.js'
-import { refundExtraVivaPayment } from '../lib/extraPaymentRefund.js'
+import { refundExtraVivaPayment, extraPaymentRefunded } from '../lib/extraPaymentRefund.js'
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { fullNameOf } from '../lib/userName.js'
 import { audit, auditSystem } from '../lib/audit.js'
-import { handleVivaTransactionReversal } from '../lib/externalRefund.js'
+import { handleVivaTransactionReversal, isRecentWebhook } from '../lib/externalRefund.js'
 
 /**
  * Shipping options, priced on the server.
@@ -459,8 +459,11 @@ const ordersRoutes: FastifyPluginAsync = async (app) => {
  *                 (Viva 5xx/429, timeout, δίκτυο, διαπιστευτήρια): πρέπει να
  *                 ξαναγίνει. Πριν αντιμετωπιζόταν ως άκυρη, το webhook απαντούσε
  *                 200 και η Viva δεν το ξανάστελνε — η πληρωμή χανόταν.
+ *                 Επίσης: Viva 404 για ΠΡΟΣΦΑΤΟ webhook (`retryNotFound`, lib/viva
+ *                 isVivaNotFoundYet) — η συναλλαγή δεν φαίνεται ακόμη στη Viva.
+ *                 Το verify του πελάτη δεν το δίνει: εκεί το 404 μένει 'invalid'.
  */
-async function verifyOrderPayment(orderId: string, transactionId: string): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
+async function verifyOrderPayment(orderId: string, transactionId: string, retryNotFound = false): Promise<'ok' | 'not_found' | 'invalid' | 'error'> {
   // Σφάλμα βάσης ≠ «δεν υπάρχει»: 'error' → το webhook απαντά 503 και η
   // Viva ξαναστέλνει (πριν γινόταν 'not_found' και η πληρωμή αγνοούνταν).
   let order
@@ -474,6 +477,13 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
   try {
     const tx = await getVivaTransaction(transactionId)
     if (!tx || tx.statusId !== 'F') return 'invalid'
+    // Κοινός λογαριασμός Viva: άλλη πηγή (source code) ή νόμισμα ≠ EUR, όταν
+    // η Viva δίνει το πεδίο → όχι πληρωμή αυτής της εφαρμογής.
+    const foreign = vivaForeignTransaction(tx)
+    if (foreign) {
+      console.error(`[viva] transaction ${transactionId} is not ours (${foreign}) — order ${orderId} not confirmed`)
+      return 'invalid'
+    }
 
     // The transaction must name this order. Viva echoes back the
     // merchantTrns we sent when the payment order was created.
@@ -493,6 +503,10 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
     }
     return 'ok'
   } catch (err: any) {
+    if (isVivaNotFoundYet(err, retryNotFound)) {
+      console.error(`[viva] order transaction ${transactionId} not found at Viva yet (recent webhook) — will retry`)
+      return 'error'
+    }
     if (isVivaDefinitiveRejection(err)) {
       console.error('[viva] order transaction rejected by Viva:', err?.message)
       return 'invalid'
@@ -511,6 +525,8 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
  *   'refunded'      — ΑΛΛΗ συναλλαγή για ήδη πληρωμένη/επιστραμμένη/ακυρωμένη
  *                     παραγγελία: επιστράφηκε αυτόματα ολόκληρη, μία φορά
  *   'refund_failed' — όπως πάνω, αλλά η Viva αρνήθηκε (audit για τον admin)
+ *   'refund_pending'— όπως πάνω, αλλά η ίδια επιστροφή τρέχει αυτή τη στιγμή
+ *                     αλλού ('busy'): ΔΕΝ ξέρουμε ακόμη ότι επιστράφηκε
  *   'manual'        — πληρωμένη χωρίς payment_ref: δεν ξέρουμε ποια είναι η
  *                     «πρώτη», καμία αυτόματη επιστροφή
  *
@@ -521,7 +537,7 @@ async function verifyOrderPayment(orderId: string, transactionId: string): Promi
  * ενώ δεύτερη πληρωμή ήδη πληρωμένης έβρισκε count 0 και χανόταν σιωπηλά.
  * Σφάλμα βάσης/κλειδώματος πετιέται: το webhook απαντά 503.
  */
-async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' | 'already' | 'refunded' | 'refund_failed' | 'manual'> {
+async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' | 'already' | 'refunded' | 'refund_failed' | 'refund_pending' | 'manual'> {
   // Διεκδίκηση unpaid → paid ΚΑΙ δέσμευση αποθέματος σε ΜΙΑ συναλλαγή βάσης:
   // κάθε προϊόν μειώνεται ατομικά μόνο αν φτάνει (stock >= ποσότητα). Αν
   // κάποιο δεν φτάνει, τίποτα δεν γράφεται (rollback) και η παραγγελία
@@ -573,14 +589,15 @@ async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' |
         metadata: { transaction_id: txn, product_id: err.productId },
       })
       const r = await refundExtraVivaPayment('order', orderId, txn, 'out of stock at payment time')
-      if (r !== 'failed') {
-        await prisma.order.updateMany({
-          where: { id: orderId, status: 'cancelled', payment_status: 'unpaid' },
-          data: { payment_status: 'refunded' },
-        })
+      // «Επιστράφηκε» γράφεται ΜΟΝΟ με καταγραφή επιτυχίας ('refunded' τώρα ή
+      // 'already' = υπάρχει επιτυχία). 'busy': η ίδια επιστροφή τρέχει αλλού —
+      // όποιος την ολοκληρώσει γράφει την κατάσταση (markOutOfStockRefunded).
+      // 'unknown' (ίσως επιστράφηκε) / 'failed': μένει για τον διαχειριστή.
+      if (r === 'refunded' || r === 'already') {
+        await markOutOfStockRefunded(orderId)
         return 'refunded'
       }
-      return 'refund_failed'
+      return r === 'busy' ? 'refund_pending' : 'refund_failed'
     }
     // Άλλαξε στο μεταξύ (π.χ. πληρώθηκε με άλλη συναλλαγή): κανονική ροή.
   }
@@ -607,7 +624,29 @@ async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' |
     ? 'duplicate payment of an already paid order'
     : `order is ${fresh.status}/${fresh.payment_status}`
   const r = await refundExtraVivaPayment('order', orderId, txn, why)
-  return r === 'failed' ? 'refund_failed' : 'refunded'
+  // Ακυρωμένη λόγω έλλειψης αποθέματος (απλήρωτη) παραγγελία της ΙΔΙΑΣ
+  // συναλλαγής: αν η επιστροφή ολοκληρώθηκε εδώ (ο κλάδος έλλειψης πήρε
+  // 'busy'), γράφεται τώρα «επιστράφηκε» — μόνο με καταγραφή επιτυχίας.
+  if ((r === 'refunded' || r === 'already') && fresh.status === 'cancelled' && fresh.payment_status === 'unpaid') {
+    const oos = await prisma.auditLog.findFirst({
+      where: {
+        action: 'order_out_of_stock_cancel', resource: 'order', resource_id: orderId,
+        metadata: { path: ['transaction_id'], equals: txn },
+      },
+      select: { id: true },
+    })
+    if (oos && await extraPaymentRefunded('order', orderId, txn)) await markOutOfStockRefunded(orderId)
+  }
+  if (r === 'busy') return 'refund_pending'
+  return r === 'failed' || r === 'unknown' ? 'refund_failed' : 'refunded'
+}
+
+/** Ακυρωμένη (έλλειψη αποθέματος), απλήρωτη παραγγελία → payment_status refunded· υπό συνθήκη, ιδεμποτικό. */
+async function markOutOfStockRefunded(orderId: string) {
+  await prisma.order.updateMany({
+    where: { id: orderId, status: 'cancelled', payment_status: 'unpaid' },
+    data: { payment_status: 'refunded' },
+  })
 }
 
 /** Μορφή του transaction id της Viva (UUID) — όπως στο verify των κρατήσεων. */
@@ -646,6 +685,11 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
         if (merchantTrns && statusId === 'F' && transactionId) {
           const ref = String(merchantTrns)
           const txn = String(transactionId)
+          // Πρόσφατο webhook (< 1 ώρα, όπως στην επιστροφή 1797): αν η Viva
+          // απαντήσει 404 για συναλλαγή ΔΙΚΗΣ ΜΑΣ εγγραφής, η συναλλαγή δεν
+          // φαίνεται ακόμη στο API της — 503 ώστε να ξανασταλεί, αντί για
+          // «άκυρη» με 200 (η πληρωμή έμενε χωρίς καταχώριση).
+          const recent = isRecentWebhook(eventData, event.Created)
           let bookingOutcome: Awaited<ReturnType<typeof handleBookingPaymentWebhook>> | 'failed' = 'not_mine'
           let legacyEventOutcome: Awaited<ReturnType<typeof confirmEventRegistrationPayment>> | 'failed' = null
           let orderOutcome: Awaited<ReturnType<typeof verifyOrderPayment>> = 'not_found'
@@ -655,14 +699,14 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             // Εκδηλώσεις (merchantTrns `ev:<εγγραφή>:<nonce>`): εξετάζονται
             // ΜΟΝΟ εδώ, και κανένας άλλος κλάδος δεν πιάνει `ev:`. Αν η
             // εγγραφή δεν υπάρχει πια, η πληρωμή επιστρέφεται αυτόματα.
-            const ev = await handleEventPaymentWebhook(ref, txn).catch((err) => {
+            const ev = await handleEventPaymentWebhook(ref, txn, recent).catch((err) => {
               console.error('handleEventPaymentWebhook error (will retry):', err)
               return 'retry' as const
             })
             // Η επαλήθευση/καταχώριση δεν ολοκληρώθηκε: μη-2xx ώστε η Viva να
             // ξαναστείλει το webhook.
             if (ev === 'retry') return retry()
-          } else if ((orderOutcome = await verifyOrderPayment(ref, txn)) === 'error') {
+          } else if ((orderOutcome = await verifyOrderPayment(ref, txn, recent)) === 'error') {
             // Παραγγελία της οποίας η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx,
             // δίκτυο, βάση): μη-2xx ώστε η Viva να ξαναστείλει το webhook.
             return retry()
@@ -676,7 +720,7 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             // Η εγγραφή/διεκδίκηση δεν έγινε: 503. Στην επανάληψη, αν στο μεταξύ
             // γράφτηκε (π.χ. από το verify), 'already' → καμία δεύτερη παρενέργεια.
             if (!claimed) return retry()
-          } else if ((consultationOutcome = await verifyConsultationPayment(ref, txn)) === 'error') {
+          } else if ((consultationOutcome = await verifyConsultationPayment(ref, txn, recent)) === 'error') {
             // Τηλεϊατρική (η συνεδρία υπάρχει), η επαλήθευση δεν ολοκληρώθηκε: 503.
             return retry()
           } else if (consultationOutcome === 'ok') {
@@ -686,7 +730,7 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             })
             // Ιδεμποτικό στην επανάληψη: updateMany μόνο αν δεν είναι ήδη paid.
             if (!ok) return retry()
-          } else if ((bookingOutcome = await handleBookingPaymentWebhook(ref, txn).catch((err) => {
+          } else if ((bookingOutcome = await handleBookingPaymentWebhook(ref, txn, recent).catch((err) => {
             console.error('handleBookingPaymentWebhook error (will retry):', err)
             return 'failed' as const
           })) !== 'not_mine') {
@@ -696,7 +740,7 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             // Κράτηση της οποίας η επαλήθευση/καταχώριση δεν ολοκληρώθηκε
             // (Viva 5xx, δίκτυο, βάση): μη-2xx ώστε η Viva να ξαναστείλει.
             if (bookingOutcome === 'retry' || bookingOutcome === 'failed') return retry()
-          } else if ((legacyEventOutcome = await confirmEventRegistrationPayment(ref, txn).catch((err) => {
+          } else if ((legacyEventOutcome = await confirmEventRegistrationPayment(ref, txn, recent).catch((err) => {
             console.error('confirmEventRegistrationPayment error (will retry):', err)
             return 'failed' as const
           }))) {
@@ -792,7 +836,7 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
           // το απόθεμα εξαντλήθηκε τη στιγμή της πληρωμής (claimOrderPayment)
           // — από την καταγραφή, ώστε να ισχύει και όταν το webhook πρόλαβε.
           let reason: 'out_of_stock' | undefined
-          if (result === 'refunded' || result === 'refund_failed') {
+          if (result === 'refunded' || result === 'refund_failed' || result === 'refund_pending') {
             const oos = await prisma.auditLog.findFirst({
               where: {
                 action: 'order_out_of_stock_cancel', resource: 'order', resource_id: String(order_id),
@@ -802,7 +846,15 @@ const VIVA_TXN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
             })
             if (oos) reason = 'out_of_stock'
           }
-          return { paid: fresh?.payment_status === 'paid', order_id, result, ...(reason ? { reason } : {}) }
+          // 'refund_pending' (η επιστροφή τρέχει αλλού): ΟΧΙ «επιστράφηκε». Στον
+          // πελάτη ως 'refund_failed', που web και κινητό (και οι ήδη
+          // εγκατεστημένες εκδόσεις) δείχνουν ως «η επιστροφή καθυστερεί — θα
+          // ολοκληρωθεί από εμάς»· `refund_pending` προσθετικό.
+          const pending = result === 'refund_pending'
+          return {
+            paid: fresh?.payment_status === 'paid', order_id, result: pending ? 'refund_failed' : result,
+            ...(pending ? { refund_pending: true } : {}), ...(reason ? { reason } : {}),
+          }
         }
       }
       return { paid: false, order_id }

@@ -81,7 +81,7 @@ export default function PackagesScreen() {
                     <Badge label={`${p.duration_minutes ?? 60}′`} tone="neutral" />
                     {!!p.size && <Badge label={t(`providerPkg.sz${p.size === 'xlarge' ? 'XLarge' : p.size.charAt(0).toUpperCase() + p.size.slice(1)}`)} tone="neutral" />}
                     {!!p.pet_type && <Badge label={t(p.pet_type === 'cat' ? 'providerPkg.petCat' : 'providerPkg.petDog')} tone="neutral" />}
-                    {p.is_addon && <Badge label="Add-on" tone="info" />}
+                    {p.is_addon && <Badge label={t('providerPkg.addon')} tone="info" />}
                   </View>
                 </View>
                 <Switch value={!!p.is_active} onValueChange={v => toggle.mutate({ id: p.id, is_active: v })}

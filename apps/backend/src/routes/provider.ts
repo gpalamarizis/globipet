@@ -7,6 +7,7 @@ const providerRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req: any, reply) => {
     try {
       await (app as any).authenticate(req, reply)
+      if (reply.sent) return reply
       const user = req.user as any
       if (!['service_provider', 'both', 'admin'].includes(user?.role)) {
         return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })

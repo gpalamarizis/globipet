@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
@@ -44,6 +44,9 @@ export default function TrialPage() {
   const queryClient = useQueryClient()
   const { isAuthenticated, user } = useAuthStore()
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+  // Ε16: το πλάνο που διάλεξε πριν την εγγραφή (επιστροφή από /register) — μόνο επισήμανση, όχι αυτόματη έναρξη.
+  const [searchParams] = useSearchParams()
+  const wantedPlanId = searchParams.get('plan')
 
   const { data: plans = [], isLoading: plansLoading } = useQuery<AiPlan[]>({
     queryKey: ['ai-plans-public'],
@@ -68,8 +71,9 @@ export default function TrialPage() {
 
   const handleStart = (planId: string) => {
     if (!isAuthenticated) {
-      // Redirect to register, come back to /trial with autostart hint
-      navigate(`/register?redirect=/trial&plan=${planId}`)
+      // Εγγραφή και επιστροφή στο /trial με το πλάνο. Ε16: όλο το redirect
+      // κωδικοποιημένο — αλλιώς το «&plan=» γινόταν παράμετρος του /register και χανόταν.
+      navigate(`/register?redirect=${encodeURIComponent(`/trial?plan=${encodeURIComponent(planId)}`)}`)
       return
     }
     setSelectedPlanId(planId)
@@ -171,7 +175,7 @@ export default function TrialPage() {
               return (
                 <motion.div key={plan.id}
                   initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  className={cn('card p-6 relative flex flex-col', plan.is_featured && 'ring-2 ring-brand-900 shadow-lg')}>
+                  className={cn('card p-6 relative flex flex-col', (plan.is_featured || plan.id === wantedPlanId) && 'ring-2 ring-brand-900 shadow-lg')}>
                   {plan.is_featured && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-900 text-[10px] font-bold uppercase px-3 py-1 rounded-full whitespace-nowrap">
                       ★ {t('trial.recommended')}

@@ -11,7 +11,8 @@ import { prisma } from '../lib/prisma.js'
  * ΤΙ ΔΕΝ ΕΠΙΣΤΡΕΦΕΤΑΙ ΠΟΤΕ
  *   Το operator_name των καταφυγίων όταν ο δικαιούχος είναι φυσικό πρόσωπο.
  *   Είναι προσωπικό δεδομένο: έξι από τις 84 εγγραφές είναι ιδιώτες, και το
- *   όνομά τους δεν έχει λόγο να φύγει από τη βάση.
+ *   όνομά τους δεν έχει λόγο να φύγει από τη βάση. Για τους ίδιους δεν
+ *   επιστρέφονται ούτε διεύθυνση, τηλέφωνο και email.
  */
 export default async function registryRoutes(app: FastifyInstance) {
 
@@ -36,13 +37,14 @@ export default async function registryRoutes(app: FastifyInstance) {
         name: s.name,
         category: s.category,
         municipality: s.municipality,
-        // Το όνομα φυσικού προσώπου ΔΕΝ βγαίνει ποτέ.
+        // Το όνομα φυσικού προσώπου ΔΕΝ βγαίνει ποτέ — ούτε η διεύθυνση, το
+        // τηλέφωνο και το email του, που το ταυτοποιούν εξίσου.
         operator_name: s.operator_is_person ? null : s.operator_name,
-        address: s.address,
+        address: s.operator_is_person ? null : s.address,
         latitude: s.latitude,
         longitude: s.longitude,
-        phone: s.phone,
-        email: s.email,
+        phone: s.operator_is_person ? null : s.phone,
+        email: s.operator_is_person ? null : s.email,
         website: s.website,
         is_claimed: !!s.claimed_service_id,
         claimed_service_id: s.claimed_service_id,

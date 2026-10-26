@@ -1,8 +1,10 @@
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bell, CheckCheck, Trash2 } from 'lucide-react-native'
 import { api } from '@/lib/api'
+import { internalRoute } from '@/lib/notifications'
 import { useAuthStore } from '@/store/auth'
 import { Screen, EmptyState, Loading } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -13,10 +15,13 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * Το web τις δείχνει στο καμπανάκι της κεφαλίδας· το κινητό είχε μόνο τα
  * push, οπότε μια ειδοποίηση που χάθηκε από το σύστημα δεν βρισκόταν πουθενά.
  * Ίδιες ενέργειες με το web: ανάγνωση με πάτημα, όλες αναγνωσμένες, διαγραφή.
+ * Ε16: το πάτημα ανοίγει και το `link` όταν είναι εσωτερική διαδρομή (όπως το
+ * web NotificationsPanel)· ίδια αντιστοίχιση με το push (internalRoute).
  */
 export default function NotificationsScreen() {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const router = useRouter()
   const { isAuthenticated } = useAuthStore()
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -77,7 +82,11 @@ export default function NotificationsScreen() {
         ListEmptyComponent={<EmptyState icon={Bell} title={t('notifCenter.empty')} />}
         renderItem={({ item: n }) => (
           <TouchableOpacity activeOpacity={0.7} style={[s.row, !n.is_read && s.rowNew]}
-            onPress={() => { if (!n.is_read) markRead.mutate(n.id) }}>
+            onPress={() => {
+              if (!n.is_read) markRead.mutate(n.id)
+              const to = internalRoute(n.link, n.type)
+              if (to) { try { router.push(to as never) } catch { /* άγνωστη διαδρομή */ } }
+            }}>
             {!n.is_read ? <View style={s.dot} /> : <View style={s.dotSpace} />}
             <View style={{ flex: 1, minWidth: 0 }}>
               {!!n.title && <Text style={s.title}>{n.title}</Text>}

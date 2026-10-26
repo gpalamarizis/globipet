@@ -200,7 +200,15 @@ const routes: FastifyPluginAsync = async (app) => {
     const invitee = invitee_id
       ? await prisma.user.findUnique({ where: { id: String(invitee_id) } })
       : await prisma.user.findUnique({ where: { email: String(invitee_email).toLowerCase() } })
-    if (!invitee) return reply.code(404).send({ message: 'Χρήστης δεν βρέθηκε' })
+    // Με email: ΙΔΙΑ απάντηση είτε υπάρχει λογαριασμός είτε όχι — αλλιώς το
+    // endpoint έλεγε σε κάθε διοργανωτή ποια email είναι εγγεγραμμένα.
+    // Αν δεν υπάρχει, απλώς δεν δημιουργείται πρόσκληση.
+    // (Με invitee_id από τη λίστα «κοντά σου» δεν διαρρέει email, οπότε το 404 μένει.)
+    const byEmail = !invitee_id
+    if (!invitee) {
+      if (byEmail) return { ok: true }
+      return reply.code(404).send({ message: 'Χρήστης δεν βρέθηκε' })
+    }
 
     if (invitee.email === email) {
       return reply.code(400).send({ message: 'Δεν μπορείς να προσκαλέσεις τον εαυτό σου' })
@@ -220,6 +228,7 @@ const routes: FastifyPluginAsync = async (app) => {
       },
       update: { status: 'pending', message: message ? String(message).slice(0, 500) : null },
     })
+    if (byEmail) return { ok: true }
     // Πρόσκληση με invitee_id: η απάντηση δεν πρέπει να «μεταφράζει» το id
     // της λίστας «κοντά σου» σε email.
     return publicInvitation(inv, email)

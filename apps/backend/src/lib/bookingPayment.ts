@@ -1,5 +1,8 @@
 import prisma from './prisma.js'
-import { getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection } from './viva.js'
+import {
+  getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection, isRefundOutcomeUnknown,
+  isVivaNotFoundYet, vivaForeignTransaction,
+} from './viva.js'
 import { bookingStart } from './cancellation.js'
 import { auditSystem } from './audit.js'
 import { countRedemptions } from './campaignDiscount.js'
@@ -51,15 +54,24 @@ export function isBookingPayable(b: any, now = new Date()): boolean {
 
 const REFUND_ACTION = 'booking_duplicate_refund'
 
-async function alreadyRefunded(bookingId: string, transactionId: string): Promise<boolean> {
-  const row = await prisma.auditLog.findFirst({
+/**
+ * Προηγούμενη απόπειρα επιστροφής αυτής της συναλλαγής: 'success', 'unknown'
+ * (άγνωστη έκβαση — ίσως επιστράφηκε· ΚΑΜΙΑ νέα επιστροφή, τη λύνει ο
+ * διαχειριστής) ή null. Πριν μετρούσε μόνο η επιτυχία, οπότε μετά από
+ * timeout της Viva ένα νέο /verify του πελάτη έκανε δεύτερη πλήρη επιστροφή.
+ */
+async function priorRefund(bookingId: string, transactionId: string): Promise<'success' | 'unknown' | null> {
+  const rows = await prisma.auditLog.findMany({
     where: {
-      resource: 'booking', resource_id: bookingId, outcome: 'success', action: REFUND_ACTION,
+      resource: 'booking', resource_id: bookingId, action: REFUND_ACTION, outcome: { in: ['success', 'failure'] },
       metadata: { path: ['transaction_id'], equals: transactionId },
     },
-    select: { id: true },
+    select: { outcome: true, metadata: true },
+    take: 50,
   })
-  return !!row
+  if (rows.some(r => r.outcome === 'success')) return 'success'
+  if (rows.some(r => r.outcome === 'failure' && (r.metadata as any)?.unknown_outcome === true)) return 'unknown'
+  return null
 }
 
 /**
@@ -72,7 +84,7 @@ const refundsInFlight = new Set<string>()
 /** Πλήρης επιστροφή μιας συναλλαγής που δεν πληρώνει (πια) την κράτηση. */
 async function refundExtraPayment(
   bookingId: string, transactionId: string, why: string,
-): Promise<'refunded' | 'already' | 'failed'> {
+): Promise<'refunded' | 'already' | 'unknown' | 'failed'> {
   const key = `${bookingId}|${transactionId}`
   if (refundsInFlight.has(key)) return 'already'
   refundsInFlight.add(key)
@@ -93,9 +105,25 @@ async function refundExtraPayment(
 
 async function refundExtraPaymentLocked(
   bookingId: string, transactionId: string, why: string,
-): Promise<'refunded' | 'already' | 'failed'> {
+): Promise<'refunded' | 'already' | 'unknown' | 'failed'> {
   try {
-    if (await alreadyRefunded(bookingId, transactionId)) return 'already'
+    const prior = await priorRefund(bookingId, transactionId)
+    if (prior === 'success') return 'already'
+    if (prior === 'unknown') {
+      // Ποτέ ξανά στα τυφλά. Η Viva 'R' (ολόκληρη επιστραμμένη) επιβεβαιώνει
+      // ότι η επιστροφή έγινε → καταγραφή επιτυχίας, 'already'.
+      let viva: string | null = null
+      try { viva = String((await getVivaTransaction(transactionId))?.statusId ?? '') } catch { viva = null }
+      if (viva === 'R') {
+        await auditSystem({
+          action: REFUND_ACTION, resource: 'booking', resource_id: bookingId,
+          metadata: { transaction_id: transactionId, refund_tx: null, reason: why, source: 'viva_status_R' },
+        })
+        return 'already'
+      }
+      console.error(`[viva] booking ${bookingId}: earlier refund of ${transactionId} has unknown outcome — not refunded again (admin)`)
+      return 'unknown'
+    }
     const r = await refundVivaTransaction(transactionId)
     console.error(`[viva] booking ${bookingId}: transaction ${transactionId} refunded (${why})`)
     await auditSystem({
@@ -105,13 +133,16 @@ async function refundExtraPaymentLocked(
     return 'refunded'
   } catch (err: any) {
     // Καταγράφεται κι η αποτυχία: πρέπει να βρεθεί και να γίνει με το χέρι.
-    console.error(`[viva] booking ${bookingId}: REFUND FAILED for ${transactionId} (${why}):`, err?.message)
+    // Άγνωστη έκβαση (timeout/δίκτυο/5xx): `unknown_outcome` — καμία νέα
+    // επιστροφή αυτής της συναλλαγής μέχρι να τη λύσει ο διαχειριστής.
+    const unknown = isRefundOutcomeUnknown(err)
+    console.error(`[viva] booking ${bookingId}: REFUND ${unknown ? 'OUTCOME UNKNOWN' : 'FAILED'} for ${transactionId} (${why}):`, err?.message)
     await auditSystem({
       action: REFUND_ACTION, resource: 'booking', resource_id: bookingId,
       outcome: 'failure', error_message: String(err?.message ?? err).slice(0, 500),
-      metadata: { transaction_id: transactionId, reason: why },
+      metadata: { transaction_id: transactionId, reason: why, ...(unknown ? { unknown_outcome: true } : {}) },
     })
-    return 'failed'
+    return unknown ? 'unknown' : 'failed'
   }
 }
 
@@ -124,12 +155,20 @@ async function refundExtraPaymentLocked(
  *   'error'   — η επαλήθευση δεν ολοκληρώθηκε (Viva 5xx/429, timeout, δίκτυο,
  *               διαπιστευτήρια): άγνωστο ακόμη, πρέπει να ξαναγίνει. Πριν
  *               αντιμετωπιζόταν ως 'invalid' και το webhook απαντούσε 200,
- *               άρα η Viva δεν το ξανάστελνε και η πληρωμή χανόταν.
+ *               άρα η Viva δεν το ξανάστελνε και η πληρωμή χανόταν. Επίσης
+ *               Viva 404 για ΠΡΟΣΦΑΤΟ webhook (`retryNotFound`, lib/viva
+ *               isVivaNotFoundYet)· το verify του πελάτη δεν το δίνει.
  */
-async function verifyBookingTransaction(booking: { id: string; total_price: number }, transactionId: string): Promise<'ok' | 'invalid' | 'error'> {
+async function verifyBookingTransaction(booking: { id: string; total_price: number }, transactionId: string, retryNotFound = false): Promise<'ok' | 'invalid' | 'error'> {
   try {
     const tx = await getVivaTransaction(transactionId)
     if (!tx || tx.statusId !== 'F') return 'invalid'
+    // Κοινός λογαριασμός Viva: άλλη πηγή ή νόμισμα (όταν η Viva δίνει το πεδίο).
+    const foreign = vivaForeignTransaction(tx)
+    if (foreign) {
+      console.error(`[viva] transaction ${transactionId} is not ours (${foreign}) — booking ${booking.id} not confirmed`)
+      return 'invalid'
+    }
     const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
     if (trns !== booking.id) {
       console.error(`[viva] transaction ${transactionId} belongs to ${trns}, not booking ${booking.id}`)
@@ -143,6 +182,10 @@ async function verifyBookingTransaction(booking: { id: string; total_price: numb
     }
     return 'ok'
   } catch (err: any) {
+    if (isVivaNotFoundYet(err, retryNotFound)) {
+      console.error(`[viva] booking transaction ${transactionId} not found at Viva yet (recent webhook) — will retry`)
+      return 'error'
+    }
     if (isVivaDefinitiveRejection(err)) {
       console.error('[viva] booking transaction rejected by Viva:', err?.message)
       return 'invalid'
@@ -165,11 +208,11 @@ export type BookingPaymentResult =
  * Καταχωρεί την πληρωμή μιας κράτησης. Ιδεμποτική: η Viva στέλνει το ίδιο
  * webhook περισσότερες από μία φορές, και το verify μπορεί να τρέξει μαζί.
  */
-export async function confirmBookingPayment(bookingId: string, transactionId: string): Promise<BookingPaymentResult> {
+export async function confirmBookingPayment(bookingId: string, transactionId: string, retryNotFound = false): Promise<BookingPaymentResult> {
   const txn = String(transactionId)
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
   if (!booking) return 'not_found'
-  const verdict = await verifyBookingTransaction(booking, txn)
+  const verdict = await verifyBookingTransaction(booking, txn, retryNotFound)
   if (verdict !== 'ok') return verdict
 
   // Η ήδη καταχωρημένη συναλλαγή (επανάληψη webhook/verify).
@@ -201,7 +244,8 @@ export async function confirmBookingPayment(bookingId: string, transactionId: st
     ? 'duplicate payment of an already paid booking'
     : `booking is ${fresh.status}/${fresh.payment_status}`
   const r = await refundExtraPayment(bookingId, txn, why)
-  return r === 'failed' ? 'refund_failed' : 'refunded'
+  // Άγνωστη έκβαση: όχι «επιστράφηκε» — στον διαχειριστή (ίδια τιμή με την αποτυχία).
+  return r === 'failed' || r === 'unknown' ? 'refund_failed' : 'refunded'
 }
 
 /**
@@ -211,8 +255,8 @@ export async function confirmBookingPayment(bookingId: string, transactionId: st
  *                webhook απαντά μη-2xx ώστε η Viva να το ξαναστείλει
  *   'not_mine' — δεν είναι κράτηση (ή άκυρη συναλλαγή): επόμενος κλάδος
  */
-export async function handleBookingPaymentWebhook(ref: string, transactionId: string): Promise<'handled' | 'retry' | 'not_mine'> {
-  const r = await confirmBookingPayment(ref, transactionId)
+export async function handleBookingPaymentWebhook(ref: string, transactionId: string, retryNotFound = false): Promise<'handled' | 'retry' | 'not_mine'> {
+  const r = await confirmBookingPayment(ref, transactionId, retryNotFound)
   if (r === 'error') return 'retry'
   return r !== 'not_found' && r !== 'invalid' ? 'handled' : 'not_mine'
 }

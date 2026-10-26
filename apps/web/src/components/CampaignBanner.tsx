@@ -57,6 +57,17 @@ type Props = {
 /** /products/:id (παλιές προβολές) → /marketplace/:id (η πραγματική διαδρομή). */
 const siteLink = (link: string) => link.replace(/^\/products\//, '/marketplace/')
 
+/** Μόνο εσωτερική διαδρομή: «/…» αλλά όχι «//…» ή «/\…» (άλλο domain). Αλλιώς κανένας σύνδεσμος. */
+const internalLink = (link: string | null | undefined): string | null =>
+  typeof link === 'string' && /^\/(?![\/\\])/.test(link) ? siteLink(link) : null
+
+/** Players που επιτρέπεται να μπουν σε iframe — ακριβές hostname, όχι «περιέχει youtube». */
+const EMBED_HOSTS = new Set(['www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com', 'player.vimeo.com'])
+const isEmbed = (url: string): boolean => {
+  try { const u = new URL(url); return u.protocol === 'https:' && EMBED_HOSTS.has(u.hostname) }
+  catch { return false }
+}
+
 /** Ποιες προβολές έχουν ήδη μετρηθεί σε αυτή τη συνεδρία. */
 const counted = new Set<string>()
 
@@ -116,13 +127,16 @@ export default function CampaignBanner({ page, slot = 'banner', className }: Pro
 function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: any) {
   const { t } = useTranslation()
   const it: Placement = item
+  const link = internalLink(it.link_url)
 
   const inner = (
     <>
       {/* Μέσο */}
       {it.media_type === 'video' && it.media_url && (
-        it.media_url.includes('youtube') || it.media_url.includes('vimeo') ? (
+        isEmbed(it.media_url) ? (
           <iframe src={it.media_url}
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            referrerPolicy="strict-origin-when-cross-origin"
             className={cn('w-full', slot === 'sidebar' ? 'aspect-[9/16]' : 'aspect-video')}
             allow="accelerometer; encrypted-media; picture-in-picture"
             allowFullScreen title={it.headline || it.title} />
@@ -166,7 +180,7 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
               </p>
             )}
 
-            {it.cta_label && it.link_url && (
+            {it.cta_label && link && (
               <span className={cn(
                 'inline-flex items-center gap-1.5 mt-3 font-medium text-brand-900 dark:text-yellow-400',
                 slot === 'hero' ? 'text-base' : 'text-sm')}>
@@ -182,7 +196,7 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
   const shell = cn(
     'relative block rounded-2xl overflow-hidden border bg-white dark:bg-gray-900',
     'border-gray-200 dark:border-gray-800',
-    it.link_url && 'hover:border-brand-400 hover:shadow-md transition-all',
+    link && 'hover:border-brand-400 hover:shadow-md transition-all',
     slot === 'hero' && 'border-brand-200 dark:border-brand-900/50 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-gray-900',
   )
 
@@ -192,8 +206,8 @@ function CampaignCard({ item, slot, discount, daysLeft, onClick, onDismiss }: an
       transition={{ duration: 0.25 }}>
 
       <div className="relative">
-        {it.link_url ? (
-          <Link to={siteLink(it.link_url)} onClick={onClick} className={shell}>{inner}</Link>
+        {link ? (
+          <Link to={link} onClick={onClick} className={shell}>{inner}</Link>
         ) : (
           <div className={shell}>{inner}</div>
         )}

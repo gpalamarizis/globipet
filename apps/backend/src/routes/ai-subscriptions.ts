@@ -5,7 +5,7 @@ import { sendAiTrialStartedEmail } from '../lib/email.js'
 import { serverError } from '../lib/errors.js'
 import { getRequestLang, translateRecords, translateRecord } from '../lib/i18n.js'
 import { audit } from '../lib/audit.js'
-import { liveAiStripeSubscriptionIds, cancelStripeSubscription, openAiCheckoutSessionUrl } from '../lib/stripeSubscriptions.js'
+import { liveAiStripeSubscriptionIds, cancelStripeSubscription, openAiCheckoutSessionUrl, AI_CHECKOUT_BUSY } from '../lib/stripeSubscriptions.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const TRIAL_DAYS = 30
@@ -152,6 +152,11 @@ const aiSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     // (διπλό πάτημα, δεύτερη συσκευή): επιστρέφεται το ίδιο URL αντί για
     // δεύτερο session — δύο ολοκληρωμένα sessions θα έφτιαχναν δύο συνδρομές.
     const reuse = await openAiCheckoutSessionUrl(String(userId), plan.id, String(billing))
+    // Ανοιχτό checkout ΑΛΛΟΥ πλάνου που δεν έληξε (π.χ. πληρώνεται τώρα): όχι
+    // δεύτερο session και όχι το URL του άλλου πλάνου.
+    if (reuse === AI_CHECKOUT_BUSY) {
+      return reply.code(409).send({ message: 'Υπάρχει ήδη ανοιχτή πληρωμή για άλλο πλάνο AI. Ολοκλήρωσέ την ή δοκίμασε ξανά σε λίγα λεπτά.' })
+    }
     if (reuse) return reply.send({ data: { checkout_url: reuse } })
 
     try {

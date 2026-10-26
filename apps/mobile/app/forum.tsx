@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { MessagesSquare, Plus, Pin, CheckCircle2, X, Eye } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input, EmptyState, SkeletonRows } from '@/components/ui'
+import { ErrorState } from '@/components/ErrorState'
+import { LoadMore, useDebounced, nextPageOf, flattenPages } from '@/components/ListPaging'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -14,14 +16,23 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  *
  * Οι κατηγορίες κρατούνται ως ΚΛΕΙΔΙ: η τιμή που αποθηκεύεται στη βάση δεν
  * πρέπει να εξαρτάται από τη γλώσσα του χρήστη τη στιγμή που γράφει.
+ *
+ * Ίδιες τιμές με το web (Forum.tsx): το κινητό αποθήκευε «behaviour» ενώ το
+ * web «behavior», και έλειπαν training/adoption — το φίλτρο της μίας
+ * πλατφόρμας δεν έβρισκε τα θέματα της άλλης.
  */
 const CATEGORIES = [
   { value: '',          labelKey: 'common.all' },
   { value: 'health',    labelKey: 'forum.catHealth' },
   { value: 'nutrition', labelKey: 'forum.catNutrition' },
-  { value: 'behaviour', labelKey: 'forum.catBehaviour' },
+  { value: 'training',  labelKey: 'forum.catTraining' },
+  { value: 'behavior',  labelKey: 'forum.catBehaviour' },
+  { value: 'adoption',  labelKey: 'forum.catAdoption' },
   { value: 'general',   labelKey: 'forum.catGeneral' },
 ]
+// Παλιά θέματα από το κινητό έχουν «behaviour»: ίδια ετικέτα.
+const catLabelKey = (v: string) => v === 'behaviour' ? 'forum.catBehaviour' : CATEGORIES.find(c => c.value === v)?.labelKey
+const PAGE_SIZE = 20
 
 export default function ForumScreen() {
   const { t } = useTranslation()
@@ -31,15 +42,27 @@ export default function ForumScreen() {
 
   const [refreshing, setRefreshing] = useState(false)
   const [category, setCategory] = useState('')
+  const [search, setSearch] = useState('')
+  const q = useDebounced(search.trim())
   const [composing, setComposing] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [newCategory, setNewCategory] = useState('general')
 
-  const { data: topics = [], isLoading } = useQuery({
-    queryKey: ['forum'],
-    queryFn: () => api.get('/forum').then(r => r.data?.data ?? r.data ?? []),
+  // Αναζήτηση, κατηγορία και σελίδες στον server (GET /forum?q&category&page&limit),
+  // όπως στο web — πριν ερχόταν μόνο η πρώτη σελίδα (20) και η κατηγορία
+  // φιλτραριζόταν μόνο μέσα σε αυτήν.
+  const topicsQuery = useInfiniteQuery({
+    queryKey: ['forum', { q, category }],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.get('/forum', {
+      params: { q: q || undefined, category: category || undefined, page: pageParam, limit: PAGE_SIZE },
+    }).then(r => r.data),
+    getNextPageParam: nextPageOf,
+    placeholderData: keepPreviousData,
   })
+  const { isLoading, isError, refetch, isFetching } = topicsQuery
+  const topics = flattenPages(topicsQuery.data?.pages)
 
   const create = useMutation({
     mutationFn: () => api.post('/forum', {
@@ -58,16 +81,14 @@ export default function ForumScreen() {
     setRefreshing(true); await qc.invalidateQueries({ queryKey: ['forum'] }); setRefreshing(false)
   }, [qc])
 
-  const filtered = useMemo(
-    () => category ? topics.filter((x: any) => x.category === category) : topics,
-    [topics, category])
-
   return (
     <Screen title={t('forum.title')} back onRefresh={onRefresh} refreshing={refreshing}>
       {isAuthenticated && (
         <Button label={t('forum.newTopic')} icon={<Plus size={18} color={colors.textOnDark} />}
           onPress={() => setComposing(true)} full style={{ marginBottom: space.md }} />
       )}
+
+      <Input value={search} onChangeText={setSearch} placeholder={t('forum.searchPlaceholder')} />
 
       <View style={[s.chips, { flexWrap: 'wrap' }]}>
         {CATEGORIES.map(c => {
@@ -82,8 +103,11 @@ export default function ForumScreen() {
       </View>
 
       {isLoading ? <SkeletonRows count={4} /> :
-       filtered.length === 0 ? <EmptyState icon={MessagesSquare} title={t('forum.empty')} message={t('forum.emptyHint')} /> :
-       filtered.map((x: any) => (
+       isError && topics.length === 0 ? <ErrorState onRetry={() => refetch()} retrying={isFetching} /> :
+       topics.length === 0 ? (q || category
+         ? <EmptyState icon={MessagesSquare} title={t('common.no_results')} message={q ? t('common.try_another_search') : t('common.try_another_category')} />
+         : <EmptyState icon={MessagesSquare} title={t('forum.empty')} message={t('forum.emptyHint')} />) :
+       topics.map((x: any) => (
         <Card key={x.id} onPress={() => router.push(`/forum/${x.id}` as any)}>
           <View style={s.topRow}>
             {x.is_pinned && <Pin size={13} color={colors.brand} />}
@@ -94,7 +118,7 @@ export default function ForumScreen() {
             {x.author_name} · {t('forum.replies', { count: x.replies_count ?? 0 })}
           </Text>
           <View style={s.badges}>
-            {!!x.category && <Badge label={t(`forum.cat${x.category.charAt(0).toUpperCase()}${x.category.slice(1)}`, { defaultValue: x.category })} tone="neutral" />}
+            {!!x.category && <Badge label={catLabelKey(x.category) ? t(catLabelKey(x.category)!) : x.category} tone="neutral" />}
             {x.views_count > 0 && (
               <View style={s.views}>
                 <Eye size={12} color={colors.textLight} />
@@ -104,6 +128,11 @@ export default function ForumScreen() {
           </View>
         </Card>
       ))}
+
+      {topics.length > 0 && (
+        <LoadMore hasMore={!!topicsQuery.hasNextPage} loading={topicsQuery.isFetchingNextPage}
+          onPress={() => topicsQuery.fetchNextPage()} />
+      )}
 
       <Modal visible={composing} transparent animationType="slide" onRequestClose={() => setComposing(false)}>
         <View style={s.backdrop}>

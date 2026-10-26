@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 import i18n from 'i18next'
-import { api, setAuthToken, setTokenRotationHandler } from '../lib/api'
+import { api, setAuthToken, setTokenRotationHandler, setSessionHandlers, setLoggingOut } from '../lib/api'
 import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
@@ -46,6 +46,8 @@ interface User {
   preferred_language?: string | null
   /** Ε12: false = το email δεν έχει επιβεβαιωθεί ακόμα (μπάρα/οθόνη «Επιβεβαίωσε το email σου»). */
   email_verified?: boolean
+  /** Ε13/Ε16: true = λείπει η ημερομηνία γέννησης (πύλη auth/birth-date στο app/_layout.tsx). */
+  needs_birth_date?: boolean
 }
 
 /**
@@ -66,6 +68,12 @@ interface AuthState {
   loginWithFacebook: () => Promise<boolean>
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
+  /**
+   * Ε16: διαδρομή που θα ανοίξει το app/_layout.tsx μόλις υπάρχει navigator
+   * (π.χ. '/auth/login' μετά από λήξη συνεδρίας). Την καθαρίζει το ίδιο.
+   */
+  pendingRedirect: string | null
+  clearPendingRedirect: () => void
   loadToken: () => Promise<void>
   /** Συγχώνευση στοιχείων μετά από επεξεργασία προφίλ — και στη μνήμη και στο SecureStore, όπως το updateUser του web. */
   updateUser: (patch: Partial<User>) => Promise<void>
@@ -87,6 +95,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isAuthenticated: false,
   isLoading: false,
+  pendingRedirect: null,
+  clearPendingRedirect: () => set({ pendingRedirect: null }),
 
   /**
    * Καλείται μία φορά από το app/_layout.tsx, πριν εμφανιστεί οποιαδήποτε
@@ -250,24 +260,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    // ΠΡΩΤΑ η διαγραφή της συσκευής, όσο το τοκεν ισχύει ακόμα. Αντίστροφα,
-    // το αίτημα φεύγει χωρίς ταυτοποίηση και η συσκευή μένει εγγεγραμμένη:
-    // ο επόμενος που θα συνδεθεί εδώ θα έπαιρνε τις ειδοποιήσεις του
-    // προηγούμενου.
-    await unregisterPushToken()
-    await SecureStore.deleteItemAsync('token')
-    await SecureStore.deleteItemAsync('user')
-    setAuthToken(null)
-    // Τα δεδομένα του χρήστη φεύγουν μαζί του: αλλιώς ο επόμενος στην ίδια
-    // συσκευή τα βλέπει από την cache (βλ. lib/queryClient.ts).
-    queryClient.clear()
-    set({ user: null, token: null, isAuthenticated: false })
-    // Best-effort sign-out from Facebook so the next login prompts again
-    signOutFacebook().catch(() => {})
+    setLoggingOut(true)
+    try {
+      // ΠΡΩΤΑ η διαγραφή της συσκευής, όσο το τοκεν ισχύει ακόμα. Αντίστροφα,
+      // το αίτημα φεύγει χωρίς ταυτοποίηση και η συσκευή μένει εγγεγραμμένη:
+      // ο επόμενος που θα συνδεθεί εδώ θα έπαιρνε τις ειδοποιήσεις του
+      // προηγούμενου.
+      await unregisterPushToken()
+      await SecureStore.deleteItemAsync('token')
+      await SecureStore.deleteItemAsync('user')
+      setAuthToken(null)
+      // Τα δεδομένα του χρήστη φεύγουν μαζί του: αλλιώς ο επόμενος στην ίδια
+      // συσκευή τα βλέπει από την cache (βλ. lib/queryClient.ts).
+      queryClient.clear()
+      set({ user: null, token: null, isAuthenticated: false })
+      // Best-effort sign-out from Facebook so the next login prompts again
+      signOutFacebook().catch(() => {})
+    } finally {
+      setLoggingOut(false)
+    }
   },
 }))
 
 // Ε12: όταν ο server ανακυκλώνει το τοκεν (αλλαγή κωδικού), η συνεδρία το παίρνει αμέσως.
 setTokenRotationHandler((token) => {
   useAuthStore.setState({ token })
+})
+
+/**
+ * Ε16 — χειριστές του api.ts.
+ *
+ * Λήξη συνεδρίας (401): τοπική αποσύνδεση ΧΩΡΙΣ το DELETE της συσκευής push
+ * (με άκυρο τοκεν θα έπαιρνε κι αυτό 401) και οθόνη σύνδεσης. Το api.ts
+ * εξασφαλίζει ότι τρέχει μία φορά ανά συνεδρία.
+ *
+ * Λείπει η ημερομηνία γέννησης (403 birth_date_required): σημαδεύεται ο
+ * χρήστης και η ΜΟΝΑΔΙΚΗ πύλη του app/_layout.tsx ανοίγει την auth/birth-date
+ * — μία πλοήγηση, χωρίς κύκλο, όσα αιτήματα κι αν πάρουν 403.
+ */
+setSessionHandlers({
+  expired: () => {
+    void (async () => {
+      setLoggingOut(true)
+      try {
+        setAuthToken(null)
+        try { await SecureStore.deleteItemAsync('token') } catch {}
+        try { await SecureStore.deleteItemAsync('user') } catch {}
+        queryClient.clear()
+        useAuthStore.setState({ user: null, token: null, isAuthenticated: false, pendingRedirect: '/auth/login' })
+        signOutFacebook().catch(() => {})
+      } finally {
+        setLoggingOut(false)
+      }
+    })()
+  },
+  birthDateRequired: () => {
+    const st = useAuthStore.getState()
+    if (!st.isAuthenticated || st.user?.needs_birth_date === true) return
+    void st.updateUser({ needs_birth_date: true })
+  },
 })

@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import cookie from '@fastify/cookie'
 import { Prisma } from '@prisma/client'
+import { randomBytes } from 'crypto'
 import prisma from './lib/prisma.js'
 import { trustProxyHop } from './lib/trustProxy.js'
 import adminCatalogRoutes from './routes/admin-catalog.js'
@@ -13,7 +14,7 @@ import insuranceRoutes from './routes/insurance.js'
 
 // Routes
 import authRoutes from './routes/auth.js'
-import usersRoutes from './routes/users.js'
+import usersRoutes, { needsBirthDate, BIRTH_DATE_REQUIRED_MESSAGE } from './routes/users.js'
 import petsRoutes from './routes/pets.js'
 import productsRoutes from './routes/products.js'
 import servicesRoutes from './routes/services.js'
@@ -101,10 +102,52 @@ import governanceRoutes from './routes/governance.js'
  *   κώδικα — αν το Cloudflare προσθέσει δίκτυο, οι επισκέπτες από αυτό
  *   μετριούνται με την IP του edge (ασφαλές: όχι πλαστοπροσωπία, μόνο
  *   χονδρότερο rate limit) μέχρι να ενημερωθεί.
+ *
+ *   Ε16: το άλμα 1 (Cloudflare) ισχύει ΜΟΝΟ με TRUST_CLOUDFLARE_PROXY=1 — το
+ *   API καλείται σήμερα απευθείας στο *.up.railway.app, και ένα Cloudflare
+ *   Worker οποιουδήποτε θα «γινόταν» Cloudflare edge με πλαστό XFF.
+ *   Λεπτομέρειες στο lib/trustProxy.ts.
  */
+/**
+ * Ε16 — logs και χρονικά όρια.
+ *
+ *   logger: development → όπως πριν (true, όλα)· production → μόνο warn/error,
+ *   ΧΩΡΙΣ τις κεφαλίδες authorization/cookie (τοκεν συνεδρίας, cookie OAuth)·
+ *   αλλού (test κ.λπ.) → κλειστό, όπως πριν.
+ *
+ *   Χρονικά όρια (Node http):
+ *     requestTimeout 180″ — χρόνος για να ΛΗΦΘΕΙ ολόκληρο το αίτημα (κεφαλίδες +
+ *       σώμα). Όχι 60″: το κινητό ανεβάζει βίντεο έως 25MB με timeout 180″
+ *       (mobile/src/lib/uploadMedia.ts) — σε αργό δίκτυο 60″ θα το έκοβαν.
+ *     connectionTimeout 190″ — αδράνεια socket. Όχι 10″: η αδράνεια μετράει
+ *       ΚΑΙ όσο ο server επεξεργάζεται (καμία κίνηση στο socket), οπότε μια
+ *       κλήση AI με web_search (routes/ai.ts· το κινητό περιμένει έως 120″)
+ *       θα κοβόταν στα 10″. Το slowloris καλύπτεται από τα headersTimeout
+ *       (60″, προεπιλογή Node) και requestTimeout.
+ *     keepAliveTimeout 65″ — πάνω από το συνήθες 60″ των load balancers, ώστε
+ *       να μην κλείνουμε εμείς πρώτοι μια σύνδεση που ο proxy ξαναχρησιμοποιεί.
+ */
+const IS_PROD = process.env.NODE_ENV === 'production'
 const app = Fastify({
-  logger: process.env.NODE_ENV === 'development',
+  logger: process.env.NODE_ENV === 'development'
+    ? true
+    : IS_PROD
+      ? {
+          level: 'warn',
+          redact: {
+            paths: [
+              'req.headers.authorization', 'req.headers.cookie',
+              'headers.authorization', 'headers.cookie',
+              'res.headers["set-cookie"]',
+            ],
+            censor: '[redacted]',
+          },
+        }
+      : false,
   trustProxy: trustProxyHop,
+  requestTimeout: 180_000,
+  connectionTimeout: 190_000,
+  keepAliveTimeout: 65_000,
 })
 
 // ─── Έλεγχος μεταβλητών περιβάλλοντος (lib/envCheck.ts) ──
@@ -143,16 +186,20 @@ await app.register(helmet, {
 })
 
 // ─── CORS with strict origin whitelist ─────────────────
+// Ε16: τα localhost ΜΟΝΟ εκτός παραγωγής — αλλιώς οποιαδήποτε σελίδα σερβίρεται
+// τοπικά (π.χ. κακόβουλο εργαλείο στον υπολογιστή του χρήστη) έκανε αιτήματα
+// με credentials στο API παραγωγής.
 const ALLOWED_ORIGINS = [
   'https://globipet.com', 'https://www.globipet.com',
   'https://globipet.pages.dev',
-  'http://localhost:5173', 'http://localhost:3000',
+  ...(IS_PROD ? [] : ['http://localhost:5173', 'http://localhost:3000']),
 ]
 await app.register(cors, {
   origin: (origin, cb) => {
     // Allow same-origin (no origin header) and whitelisted origins
     if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
-    return cb(new Error('Not allowed by CORS'), false)
+    // 403 (όχι 500): ο χειριστής σφαλμάτων δεν καταγράφει stack για κάθε ξένο origin.
+    return cb(Object.assign(new Error('Not allowed by CORS'), { statusCode: 403 }), false)
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -190,16 +237,20 @@ await app.register(cookie, { secret: JWT_SECRET })
  *   Cache 30″ ανά χρήστη στη μνήμη: ένα ερώτημα ανά χρήστη ανά μισό λεπτό, όχι
  *   ανά αίτημα. Οι αλλαγές σε αυτή τη διεργασία καθαρίζουν αμέσως το cache
  *   (app.invalidateAuthCache)· σε άλλη διεργασία ισχύουν το πολύ σε 30″.
+ *
+ *   Ε16: στο ίδιο cache και το `needsBd` (λείπει η ημερομηνία γέννησης —
+ *   routes/users.ts needsBirthDate, η ΙΔΙΑ συνάρτηση με το πεδίο
+ *   needs_birth_date). Καθαρίζει στο PATCH /auth/me/birth-date.
  */
 const AUTH_CACHE_TTL_MS = 30_000
-const authCache = new Map<string, { at: number; state: { tv: number; role: string } | null }>()
+const authCache = new Map<string, { at: number; state: { tv: number; role: string; needsBd: boolean } | null }>()
 
 async function loadAuthState(userId: string) {
   const now = Date.now()
   const hit = authCache.get(userId)
   if (hit && now - hit.at < AUTH_CACHE_TTL_MS) return hit.state
-  const u = await prisma.user.findUnique({ where: { id: userId }, select: { token_version: true, role: true } })
-  const state = u ? { tv: u.token_version, role: u.role } : null
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, token_version: true, role: true, birth_date: true } })
+  const state = u ? { tv: u.token_version, role: u.role, needsBd: await needsBirthDate(u) } : null
   if (authCache.size > 20_000) {
     for (const [k, v] of authCache) if (now - v.at >= AUTH_CACHE_TTL_MS) authCache.delete(k)
   }
@@ -254,7 +305,7 @@ function userOrIpKey(req: any): string {
 // κάτω): επίθεση από πολλές IP σε έναν λογαριασμό μετράει κι αυτή.
 // register / contact / forgot-password: ΜΟΝΟ ανά IP (ένα όριο ανά email θα
 // επέτρεπε σε τρίτο να «κλειδώσει» την επαναφορά κωδικού κάποιου άλλου).
-type LimitRule = { max: number; window: string; key?: 'ip' | 'user' }
+type LimitRule = { max: number; window: string; key?: 'ip' | 'user'; methods?: string[] }
 const STRICT_LIMITS: Record<string, LimitRule> = {
   '/api/auth/login':           { max: 20, window: '15 minutes' },
   '/api/auth/register':        { max: 5,  window: '1 hour' },
@@ -285,6 +336,17 @@ const STRICT_LIMITS: Record<string, LimitRule> = {
   '/api/payments/return':      { max: 30, window: '1 minute' },
   // Δημόσιο webhook της Viva (POST ειδοποίηση + GET επαλήθευση κλειδιού).
   '/api/orders/viva/webhook':  { max: 120, window: '1 minute' },
+  // Ε16: ανέβασμα αρχείων (R2 — κόστος αποθήκευσης/εύρους): 30 / 10′ ανά χρήστη.
+  // Και οι δύο μορφές URL (το '/' με πρόθεμα καταχωρείται και με τελική κάθετο).
+  '/api/upload':               { max: 30, window: '10 minutes', key: 'user', methods: ['POST'] },
+  '/api/upload/':              { max: 30, window: '10 minutes', key: 'user', methods: ['POST'] },
+  // Ε16: νέα τηλεσυμβουλευτική → email στον πάροχο (εξερχόμενα): ανά χρήστη.
+  '/api/telehealth':           { max: 20, window: '1 hour', key: 'user', methods: ['POST'] },
+  '/api/telehealth/':          { max: 20, window: '1 hour', key: 'user', methods: ['POST'] },
+  // Ε16: OAuth — κάθε callback/exchange ρωτά Google/Facebook (εξερχόμενα).
+  '/api/auth/google/callback':   { max: 30, window: '1 minute' },
+  '/api/auth/facebook/callback': { max: 30, window: '1 minute' },
+  '/api/auth/exchange':          { max: 30, window: '1 minute' },
 }
 // Κάθε κλήση AI κοστίζει (Anthropic/OpenAI): 20/λεπτό ανά χρήστη, για όλα τα POST /api/ai/*.
 const AI_LIMIT: LimitRule = { max: 20, window: '1 minute', key: 'user' }
@@ -298,9 +360,18 @@ const strictError = (_req: any, ctx: any) => ({
 
 let loginEmailLimiter: ((req: any, opts?: { increment?: boolean }) => Promise<any>) | null = null
 
+/**
+ * Ε16: οι διαδρομές AI δέχονται εικόνα base64 έως ~7MB (routes/ai.ts
+ * AI_IMAGE_MAX_BASE64)· το γενικό όριο σώματος του Fastify (1MB) τις απέρριπτε
+ * πριν φτάσουν στον δικό τους έλεγχο. Μόνο για /api/ai/*.
+ */
+const AI_BODY_LIMIT = 8 * 1024 * 1024
+
 app.addHook('onRoute', (route) => {
   const methods = Array.isArray(route.method) ? route.method : [route.method]
-  const rule = STRICT_LIMITS[route.url]
+  if (route.url.startsWith('/api/ai/') && route.bodyLimit === undefined) route.bodyLimit = AI_BODY_LIMIT
+  const strict = STRICT_LIMITS[route.url]
+  const rule = (strict && (!strict.methods || methods.some(m => strict.methods!.includes(String(m).toUpperCase()))) ? strict : undefined)
     ?? (route.url.startsWith('/api/ai/') && methods.includes('POST') ? AI_LIMIT : undefined)
   if (!rule) return
   route.config = {
@@ -364,11 +435,59 @@ loginEmailLimiter = (app as any).createRateLimit({
 // αποτύγχανε χωρίς κατανοητό μήνυμα. Τα δύο όρια πρέπει να συμφωνούν:
 // το multipart είναι η εξωτερική πύλη, ο έλεγχος της διαδρομής κρίνει
 // εικόνα ή βίντεο και επιβάλλει το σωστό όριο για το καθένα.
-await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } })
+//
+// Ε16: και όρια πλήθους — το μόνο που διαβάζει multipart είναι το POST
+// /api/upload (routes/upload.ts: ένα req.file(), το `folder` έρχεται στο
+// query). Χωρίς αυτά, ένα αίτημα με χιλιάδες μέρη/πεδία κρατούσε τον parser.
+await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1, fields: 10, parts: 12 } })
+
+/**
+ * Ε16 — ΠΥΛΗ ΗΜΕΡΟΜΗΝΙΑΣ ΓΕΝΝΗΣΗΣ ΣΤΟΝ SERVER (απόφαση ιδιοκτήτη).
+ *
+ *   Πριν, το `needs_birth_date` ήταν μόνο σημαία για τον client: ένας
+ *   λογαριασμός Google/Facebook χωρίς ημερομηνία (άρα πιθανώς κάτω των 15)
+ *   χρησιμοποιούσε όλο το API κατευθείαν. Τώρα κάθε διαδρομή με `authenticate`
+ *   απαντά 403 `{ message, code: 'birth_date_required' }` όσο λείπει η
+ *   ημερομηνία — εκτός από όσα χρειάζονται για να τη δώσει, να διαβάσει τα
+ *   νομικά, να ασκήσει δικαιώματα GDPR και να αποσυνδεθεί:
+ *     /api/auth/*            (me, me/birth-date, refresh, logout-all,
+ *                             resend-verification· PATCH /auth/me μόνο για
+ *                             preferred_language — η αλλαγή γλώσσας)
+ *     /api/user-rights/*     (GDPR: εξαγωγή, διαγραφή, διόρθωση)
+ *     /api/user-consents/*   (συγκαταθέσεις — οθόνη consents / cookies)
+ *     DELETE /api/notifications/push/register (αποσύνδεση συσκευής)
+ *     POST /api/notifications/push/register (καταχώριση συσκευής — ο νέος
+ *                             χρήστης OAuth την κάνει πριν δώσει ημερομηνία,
+ *                             αλλιώς δεν θα λάμβανε ποτέ ειδοποιήσεις push)
+ *   Ποιος εξαιρείται: routes/users.ts needsBirthDate (admin· service_provider
+ *   μόνο αν τον ρόλο τον έδωσε διαχειριστής).
+ *   Δημόσιες διαδρομές (χωρίς authenticate) δεν επηρεάζονται.
+ */
+function birthDateGateAllows(req: any): boolean {
+  const url: string = req.routeOptions?.url ?? ''
+  const method = String(req.method || '').toUpperCase()
+  if (url.startsWith('/api/user-rights/') || url === '/api/user-consents' || url.startsWith('/api/user-consents/')) return true
+  if (url === '/api/notifications/push/register' && (method === 'DELETE' || method === 'POST')) return true
+  if (url.startsWith('/api/auth/')) {
+    if (url === '/api/auth/me' && method !== 'GET') {
+      const b = req.body
+      return !!b && typeof b === 'object' && !Array.isArray(b) &&
+        Object.keys(b).length > 0 && Object.keys(b).every(k => k === 'preferred_language')
+    }
+    return true
+  }
+  return false
+}
 
 // Auth decorator — ο έλεγχος έκδοσης/ρόλου γίνεται στο `trusted` του jwt (πιο πάνω).
 app.decorate('authenticate', async (req: any, reply: any) => {
   try { await req.jwtVerify() } catch { return reply.code(401).send({ message: 'Μη εξουσιοδοτημένη πρόσβαση' }) }
+  // Ε16: η κατάσταση είναι ήδη στο cache (μόλις τη διάβασε το `trusted`) — καμία νέα ερώτηση.
+  const id = (req.user as any)?.id
+  const state = typeof id === 'string' && id ? await loadAuthState(id) : null
+  if (state?.needsBd && !birthDateGateAllows(req)) {
+    return reply.code(403).send({ message: BIRTH_DATE_REQUIRED_MESSAGE, code: 'birth_date_required' })
+  }
 })
 
 // Register all routes
@@ -450,33 +569,53 @@ registerMessageTranslation(app)
  *   P2025 (η εγγραφή δεν βρέθηκε) → 404
  * με γενικό μεταφρασμένο μήνυμα (lib/apiMessages) — ποτέ το μήνυμα του Prisma,
  * που περιέχει ονόματα πινάκων/στηλών. Το πλήρες σφάλμα πάει στα logs.
- * ΟΛΑ τα υπόλοιπα (429 του rate limit, 400 του validation του Fastify, 401,
- * πραγματικά 500, P2002 κ.λπ.) περνούν αυτούσια στον προεπιλεγμένο χειριστή
- * του Fastify — η συμπεριφορά τους δεν αλλάζει.
+ *   Ε16: P2002 (μοναδικότητα) → 409 «υπάρχει ήδη» (πριν 500 με το μήνυμα του Prisma).
+ * Τα υπόλοιπα 4xx (429 του rate limit, 400 του validation του Fastify, 401…)
+ * περνούν αυτούσια στον προεπιλεγμένο χειριστή του Fastify.
+ *   Ε16: κάθε σφάλμα ≥ 500 (ή χωρίς κωδικό) → ΠΟΤΕ το εσωτερικό err.message
+ *   (διαδρομές αρχείων, SQL, απαντήσεις τρίτων) — γενικό μήνυμα + κωδικός
+ *   αναφοράς, όπως το lib/errors.ts serverError· το πλήρες σφάλμα στα logs
+ *   με τον ίδιο κωδικό. Στο development το μήνυμα μένει ορατό.
  * ΠΡΕΠΕΙ να μπει πριν τα routes (οι υπο-εφαρμογές κληρονομούν τον χειριστή
  * τη στιγμή της εγγραφής τους).
  */
+const SERVER_ERROR_MESSAGE = 'Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.'   // ίδιο με lib/errors.ts serverError
 app.setErrorHandler((err: any, req, reply) => {
   const prismaStatus =
     err instanceof Prisma.PrismaClientValidationError ? 400
       : err instanceof Prisma.PrismaClientKnownRequestError
-        ? (err.code === 'P2000' || err.code === 'P2003' ? 400 : err.code === 'P2025' ? 404 : 0)
+        ? (err.code === 'P2000' || err.code === 'P2003' ? 400 : err.code === 'P2025' ? 404 : err.code === 'P2002' ? 409 : 0)
         : 0
   if (!prismaStatus) {
-    // Αμετάβλητη συμπεριφορά: ο επόμενος (προεπιλεγμένος) χειριστής.
+    const raw = Number(err?.statusCode ?? err?.status)
+    const sc = raw >= 400 && raw < 600 ? raw : 500
+    if (sc >= 500) {
+      // Ε16: κανένα εσωτερικό μήνυμα προς τον client.
+      const ref = randomBytes(3).toString('hex')
+      const detail = err instanceof Error ? (err.stack || err.message) : (() => { try { return JSON.stringify(err) } catch { return String(err) } })()
+      console.error(`[unhandled ${sc}] ref=${ref} ${req.method} ${req.url}:`, detail)
+      if (process.env.NODE_ENV === 'development') {
+        reply.code(sc).send({ message: `${SERVER_ERROR_MESSAGE} [${ref}] ${String(err?.message ?? err)}`, ref })
+        return
+      }
+      reply.code(sc).send({ message: `${SERVER_ERROR_MESSAGE} (κωδικός ${ref})`, ref })
+      return
+    }
+    // 4xx: αμετάβλητη συμπεριφορά — ο επόμενος (προεπιλεγμένος) χειριστής.
     // ΠΡΟΣΟΧΗ: το reply.send() ενός ΜΗ-Error αντικειμένου (π.χ. τα 429 του
     // rate limit ή τα throw { statusCode, message }) στέλνεται ως κανονική
     // απάντηση με status 200 — κρατάμε ρητά τον κωδικό του.
     if (!(err instanceof Error)) {
-      const sc = Number(err?.statusCode ?? err?.status)
-      reply.code(sc >= 400 && sc < 600 ? sc : 500).send(err)
+      reply.code(sc).send(err)
       return
     }
     reply.send(err)
     return
   }
   console.error(`[prisma ${err?.code ?? 'validation'}] ${req.method} ${req.url}:`, String(err?.message ?? err).slice(-600))
-  reply.code(prismaStatus).send({ message: prismaStatus === 404 ? 'Δεν βρέθηκε' : 'Μη έγκυρα δεδομένα' })
+  reply.code(prismaStatus).send({
+    message: prismaStatus === 404 ? 'Δεν βρέθηκε' : prismaStatus === 409 ? 'Η εγγραφή υπάρχει ήδη' : 'Μη έγκυρα δεδομένα',
+  })
 })
 
 for (const { prefix, handler } of routes) {

@@ -35,6 +35,33 @@ export interface PushPayload {
   data?: Record<string, unknown>
 }
 
+/**
+ * Ε16 — μόνο γνωστές υπηρεσίες Web Push (blind SSRF).
+ *
+ *   Το endpoint της συνδρομής το στέλνει ο browser — δηλαδή, στην πράξη,
+ *   οποιοσδήποτε με λογαριασμό. Με οποιοδήποτε https URL, ο server μας έκανε
+ *   POST όπου του έλεγες (εσωτερικές υπηρεσίες της Railway, metadata, τρίτοι)
+ *   σε κάθε ειδοποίηση. Επιτρέπονται ΜΟΝΟ οι υπηρεσίες push των browsers:
+ *     fcm.googleapis.com              — Chrome, Edge (Chromium), Opera, Brave, Samsung
+ *     *.push.services.mozilla.com     — Firefox
+ *     *.notify.windows.com            — παλιός Edge / WNS
+ *     web.push.apple.com, *.push.apple.com — Safari (macOS/iOS)
+ *   https, χωρίς στοιχεία χρήστη και χωρίς άλλη θύρα. Έλεγχος στη δήλωση
+ *   (notifications.ts → 400) ΚΑΙ στην αποστολή (παλιές εγγραφές παραλείπονται).
+ */
+const WEB_PUSH_EXACT_HOSTS = ['fcm.googleapis.com', 'web.push.apple.com']
+const WEB_PUSH_HOST_SUFFIXES = ['.push.services.mozilla.com', '.notify.windows.com', '.push.apple.com']
+
+export function isAllowedWebPushEndpoint(endpoint: unknown): boolean {
+  if (typeof endpoint !== 'string' || endpoint.length > 2048) return false
+  let u: URL
+  try { u = new URL(endpoint) } catch { return false }
+  if (u.protocol !== 'https:' || u.username || u.password) return false
+  if (u.port && u.port !== '443') return false
+  const host = u.hostname.toLowerCase()
+  return WEB_PUSH_EXACT_HOSTS.includes(host) || WEB_PUSH_HOST_SUFFIXES.some(sfx => host.endsWith(sfx))
+}
+
 let vapidReady: boolean | null = null
 
 /**
@@ -121,6 +148,12 @@ async function sendWeb(
   payload: PushPayload,
 ): Promise<string[]> {
   const valid = rows.filter(r => r.endpoint && r.p256dh && r.auth)
+    .filter(r => {
+      if (isAllowedWebPushEndpoint(r.endpoint)) return true
+      // Ε16: παλιά εγγραφή σε μη επιτρεπόμενο host — καμία αποστολή εκεί.
+      console.warn('[push] παράλειψη συνδρομής web με μη επιτρεπόμενο endpoint', r.id)
+      return false
+    })
   if (valid.length === 0 || !ensureVapid()) return []
 
   const body = JSON.stringify({

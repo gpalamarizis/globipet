@@ -57,6 +57,20 @@ const TOKEN_ROTATING_ENDPOINTS = ['/users/me/password']
 let onTokenRotated: ((token: string) => void) | null = null
 export function setTokenRotationHandler(fn: (token: string) => void) { onTokenRotated = fn }
 
+/**
+ * Ε16 — η πύλη ημερομηνίας γέννησης επιβάλλεται πλέον ΚΑΙ από τον server:
+ * όσο λείπει η ημερομηνία, κάθε προστατευμένο endpoint (εκτός auth, GDPR,
+ * συγκαταθέσεων, αποσύνδεσης συσκευής) απαντά
+ *   403 { message, code: 'birth_date_required' }.
+ * Δεν είναι «σφάλμα» για τον χρήστη: ο χειριστής (BirthDateGate.tsx) ανοίγει
+ * την οθόνη ημερομηνίας, και το αίτημα ΔΕΝ επιστρέφει ποτέ — ώστε καμία σελίδα
+ * να μη δείξει toast σφάλματος πίσω από την πύλη (όπως η ανακατεύθυνση του 401).
+ * Χωρίς καταχωρημένο χειριστή → κανονική απόρριψη, όπως πριν.
+ */
+let onBirthDateRequired: (() => boolean) | null = null
+/** Ο χειριστής επιστρέφει true όταν άνοιξε την πύλη (τότε το αίτημα μένει σε αναμονή). */
+export function setBirthDateRequiredHandler(fn: (() => boolean) | null) { onBirthDateRequired = fn }
+
 // Response interceptor — handle errors
 api.interceptors.response.use(
   (response) => {
@@ -72,12 +86,21 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || i18n.t('apiMsg.generic')
     const url: string = error.config?.url || ''
 
+    if (status === 403 && error.response?.data?.code === 'birth_date_required' && onBirthDateRequired?.()) {
+      return new Promise(() => { /* η οθόνη της πύλης αντικαθιστά τη σελίδα — βλ. setBirthDateRequiredHandler */ })
+    }
+
     if (status === 401 && !AUTH_ENDPOINTS.some(p => url.includes(p))) {
       localStorage.removeItem('globipet-auth')
       // Only navigate if we are not already on the login page, so a failed
       // background request cannot trap the user in a redirect loop.
       if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login'
+        // Επιστροφή στη σελίδα όπου ήταν, μετά τη σύνδεση — μόνο εσωτερική
+        // διαδρομή (ίδιος κανόνας με το safeRedirect του Login.tsx): όχι
+        // «//…» / «/\…» και όχι /register ή /auth/… (βρόχος/ροή σύνδεσης).
+        const here = window.location.pathname + window.location.search + window.location.hash
+        const safe = /^\/(?![\/\\])/.test(here) && here !== '/' && !/^\/(login|register|auth)(?:[/?#]|$)/i.test(here)
+        window.location.href = safe ? `/login?redirect=${encodeURIComponent(here)}` : '/login'
       }
     } else if (status === 429 && !error.response?.data?.message) {
       // Γενικό μήνυμα ΜΟΝΟ όταν ο server δεν έστειλε δικό του: αλλιώς η

@@ -16,6 +16,7 @@ const governanceRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req: any, reply: any) => {
     try {
       await (app as any).authenticate(req, reply)
+      if (reply.sent) return reply
       if ((req.user as any)?.role !== 'admin') {
         return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })
       }

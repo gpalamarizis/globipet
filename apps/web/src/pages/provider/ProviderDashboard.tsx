@@ -571,7 +571,8 @@ function CalendarTab() {
             <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
               b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
               b.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600')}>
-              {b.status === 'confirmed' ? t('providerDash.confirmShort') : b.status === 'pending' ? t('providerDash.pending') : b.status}
+              {b.status === 'confirmed' ? t('providerDash.confirmShort') : b.status === 'pending' ? t('providerDash.pending')
+                : String(t(`bookingPolicy.st${String(b.status).charAt(0).toUpperCase()}${String(b.status).slice(1)}`, { defaultValue: b.status }))}
             </span>
           </div>
         ))}

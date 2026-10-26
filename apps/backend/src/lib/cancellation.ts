@@ -5,6 +5,7 @@ import { withRefundLock } from './refundLock.js'
 import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import { sendPushToUser } from './push.js'
 import { broadcastToUser } from '../routes/notifications.js'
+import { settleRefundTx } from './refundSettlement.js'
 
 /**
  * Πολιτική ακύρωσης κρατήσεων.
@@ -121,8 +122,9 @@ export async function notifyCancelRefundCompleted(kind: 'booking' | 'telehealth'
  * Επιτυχής επιστροφή του διαχειριστή (POST /admin/refund → audit 'refund')
  * αυτής της συναλλαγής. Αν η διεργασία έπεσε πριν γραφτεί η τελική
  * κατάσταση, η εγγραφή έμεινε `refunding`: η εργασία των κολλημένων την
- * ολοκληρώνει όπως το admin.ts (μόνο payment_status, με το ποσό/full που
- * καταγράφηκαν) — καμία νέα επιστροφή.
+ * ολοκληρώνει όπως το admin.ts (με το ποσό/full που καταγράφηκαν: κατάσταση
+ * πληρωμής, αναλογική μείωση αμοιβής/προμήθειας, ακύρωση σε πλήρη επιστροφή —
+ * completeAdminRefundTx) — καμία νέα επιστροφή.
  */
 async function adminRefundSuccess(resource: 'booking' | 'telehealth', id: string, txn: string) {
   const row = await prisma.auditLog.findFirst({
@@ -134,6 +136,23 @@ async function adminRefundSuccess(resource: 'booking' | 'telehealth', id: string
     select: { metadata: true },
   })
   return row ? ((row.metadata ?? {}) as any) : null
+}
+
+/**
+ * Ολοκλήρωση επιστροφής admin που έμεινε `refunding`: ίδια τελική εγγραφή με
+ * το admin.ts (lib/refundSettlement), σε μία συναλλαγή βάσης, μόνο από
+ * refunding (μία φορά). Ποσό: ό,τι καταγράφηκε· αν λείπει, σε πλήρη
+ * επιστροφή το σύνολο, σε μερική καμία μείωση αμοιβής (δεν ξέρουμε πόσο).
+ */
+async function completeAdminRefundTx(type: 'booking' | 'telehealth', id: string, txn: string, m: any, total: number) {
+  const status = adminRefundFinalStatus(m, total)
+  const a = Number(m?.amount)
+  const amount = status === 'refunded' ? total : Number.isFinite(a) ? a : 0
+  const st = await prisma.$transaction((tx) => settleRefundTx(tx, {
+    type, id, paymentRef: txn, fromStatus: 'refunding', toStatus: status,
+    remainingBefore: total, amount,
+  }))
+  return { status, st }
 }
 
 /** Τελική κατάσταση πληρωμής επιστροφής admin — ίδια λογική με το admin.ts. */
@@ -421,17 +440,14 @@ export async function resolveStuckBookingRefunds(): Promise<{ completed: number;
         }
 
         // Επιστροφή του διαχειριστή που έγινε (audit 'refund') αλλά δεν
-        // γράφτηκε η τελική κατάσταση: μόνο payment_status, όπως το admin.ts.
+        // γράφτηκε η τελική κατάσταση: όπως το admin.ts (completeAdminRefundTx).
         const adm = await adminRefundSuccess('booking', b.id, txn)
         if (adm) {
-          const status = adminRefundFinalStatus(adm, Number(b.total_price) || 0)
-          const r = await prisma.booking.updateMany({
-            where: { id: b.id, payment_status: 'refunding', payment_ref: txn }, data: { payment_status: status },
-          })
-          if (r.count === 0) return null
+          const { status, st } = await completeAdminRefundTx('booking', b.id, txn, adm, Number(b.total_price) || 0)
+          if (!st.applied) return null
           await auditSystem({
             action: 'admin_refund_completed', resource: 'booking', resource_id: b.id, subject_email: b.customer_email,
-            metadata: { transaction_id: txn, amount: adm.amount ?? null, new_status: status, resolved_by: 'stuck_refund_job' },
+            metadata: { transaction_id: txn, amount: adm.amount ?? null, new_status: status, resolved_by: 'stuck_refund_job', cancelled: st.cancelled },
           })
           return 'completed' as const
         }
@@ -753,17 +769,14 @@ export async function resolveStuckTelehealthRefunds(): Promise<{ completed: numb
         }
 
         // Επιστροφή του διαχειριστή που έγινε αλλά δεν γράφτηκε η τελική
-        // κατάσταση: μόνο payment_status, όπως το admin.ts.
+        // κατάσταση: όπως το admin.ts (completeAdminRefundTx).
         const adm = await adminRefundSuccess('telehealth', c.id, txn)
         if (adm) {
-          const status = adminRefundFinalStatus(adm, Number(c.price) || 0)
-          const r = await prisma.telehealthConsultation.updateMany({
-            where: { id: c.id, payment_status: 'refunding', payment_ref: txn }, data: { payment_status: status },
-          })
-          if (r.count === 0) return null
+          const { status, st } = await completeAdminRefundTx('telehealth', c.id, txn, adm, Number(c.price) || 0)
+          if (!st.applied) return null
           await auditSystem({
             action: 'admin_refund_completed', resource: 'telehealth', resource_id: c.id, subject_email: c.client_email,
-            metadata: { transaction_id: txn, amount: adm.amount ?? null, new_status: status, resolved_by: 'stuck_refund_job' },
+            metadata: { transaction_id: txn, amount: adm.amount ?? null, new_status: status, resolved_by: 'stuck_refund_job', cancelled: st.cancelled },
           })
           return 'completed' as const
         }

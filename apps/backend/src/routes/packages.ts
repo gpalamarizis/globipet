@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { coordsFromBody } from '../lib/geocode.js'
+import { BIRTH_DATE_REQUIRED_MESSAGE } from './users.js'
 
 /** Ανώτατη τιμή (€) υπηρεσίας/πακέτου. */
 const MAX_PRICE = 100_000
@@ -89,6 +90,13 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
       if (!requestingUser) {
         return reply.code(404).send({ message: 'Χρήστης δεν βρέθηκε' })
       }
+      // Ε16: ο απλός χρήστης γίνεται εδώ service_provider — και ο πάροχος που
+      // έγινε μόνος του ΔΕΝ εξαιρείται από την πύλη ημερομηνίας γέννησης
+      // (users.ts needsBirthDate). Χωρίς ημερομηνία → πρώτα η ημερομηνία
+      // (ίδια απάντηση με το authenticate του index.ts), πριν γραφτεί τίποτα.
+      if (requestingUser.role === 'user' && !requestingUser.birth_date) {
+        return reply.code(403).send({ message: BIRTH_DATE_REQUIRED_MESSAGE, code: 'birth_date_required' })
+      }
 
       // Look up the templates from DB
       let templatePackages: any[] = []
@@ -160,6 +168,8 @@ const packageRoutes: FastifyPluginAsync = async (app) => {
 
       if (requestingUser.role === 'user') {
         await prisma.user.update({ where: { email: userEmail }, data: { role: 'service_provider' } })
+        // Νέος ρόλος: το cache ελέγχου τοκεν (index.ts) καθαρίζει αμέσως.
+        ;(app as any).invalidateAuthCache?.(requestingUser.id)
       }
 
       return { service: result, packages_count: templatePackages.length }

@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, Modal, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PawPrint, ShieldCheck, MapPin, AlertTriangle, ChevronRight, Pencil, Trash2, X } from 'lucide-react-native'
+import { PawPrint, ShieldCheck, MapPin, AlertTriangle, ChevronRight, Pencil, Trash2, X, Navigation } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { PetFormFields, EMPTY_PET_FORM, petToForm, petPayload, petEmoji, type PetFormState } from '@/components/PetForm'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
+
+/** Χρονοσφραγίδα θέσης (ISO) στη γλώσσα του χρήστη, π.χ. «23 Οκτ, 14:05». */
+function fmtStamp(v: string | null | undefined, lang: string): string {
+  if (!v) return '—'
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return String(v)
+  const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }
+  try { return d.toLocaleString(lang, opts) } catch { return d.toLocaleString(undefined, opts) }
+}
 
 /**
  * Καρτέλα κατοικιδίου.
@@ -18,7 +27,7 @@ import { ErrorState, NotFoundState } from '@/components/ErrorState'
  * είναι η πιο επείγουσα ενέργεια ολόκληρης της εφαρμογής.
  */
 export default function PetDetailScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -34,6 +43,14 @@ export default function PetDetailScreen() {
     queryFn: () => api.get('/tracker/devices').then(r => r.data?.data ?? []),
   })
   const device = devices.find((d: any) => d.pet_id === id)
+
+  // Ιστορικό θέσεων του κατοικιδίου, νεότερη πρώτη — όπως η καρτέλα
+  // «Τοποθεσία» του web (GET /tracker?pet_id=…&limit=25).
+  const { data: locations = [] } = useQuery({
+    queryKey: ['pet-locations', id],
+    queryFn: () => api.get('/tracker', { params: { pet_id: id, limit: 25 } }).then(r => r.data?.data ?? []),
+    enabled: !!id,
+  })
 
   // Επεξεργασία: ίδια πεδία με την προσθήκη και με το web (AddPetModal,
   // που επιτρέπει και αλλαγή είδους για διόρθωση λάθους καταχώρισης).
@@ -158,6 +175,35 @@ export default function PetDetailScreen() {
           </Card>
         )}
 
+        <Card>
+          <Text style={s.sectionTitle}>{t('petDetail.locationHistory')}</Text>
+          {locations.length === 0
+            ? <Text style={s.meta}>{t('petDetail.noLocations')}</Text>
+            : locations.map((loc: any) => {
+                const lost = loc.status === 'lost'
+                return (
+                  <View key={loc.id} style={s.locRow}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.v} numberOfLines={1}>
+                        {Number(loc.latitude).toFixed(5)}, {Number(loc.longitude).toFixed(5)}
+                      </Text>
+                      <Text style={s.k}>{fmtStamp(loc.created_at, i18n.language)}</Text>
+                    </View>
+                    <Badge label={lost ? t('petDetail.statusLost') : t('petDetail.statusSafe')}
+                      tone={lost ? 'danger' : 'success'} />
+                  </View>
+                )
+              })}
+          {locations.length > 0 && (
+            <Button label={t('tracker.directions')} variant="secondary" size="sm" full
+              icon={<Navigation size={icon.sm} color={colors.text} />}
+              onPress={() => Linking.openURL(
+                `https://www.google.com/maps/dir/?api=1&destination=${locations[0].latitude},${locations[0].longitude}`
+              )}
+              style={{ marginTop: space.md }} />
+          )}
+        </Card>
+
         {/* Η δήλωση απώλειας είναι η πιο επείγουσα ενέργεια: μένει τελευταία
             και ευδιάκριτη, ώστε να βρίσκεται αμέσως σε στιγμή πανικού. */}
         <View style={s.actions}>
@@ -224,6 +270,10 @@ const s = StyleSheet.create({
   badges: { flexDirection: 'row', gap: space.xs, marginTop: space.xs, flexWrap: 'wrap' },
   sectionTitle: { ...type.emphasis, color: colors.text, marginBottom: space.sm },
   kv: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space.xs },
+  locRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
+  },
   k: { ...type.caption, color: colors.textMuted },
   v: { ...type.caption, color: colors.text, fontWeight: weight.semibold },
   link: {

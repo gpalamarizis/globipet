@@ -124,6 +124,14 @@ export default function TrackerScreen() {
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
 
+  // Νέο κλειδί: το παλιό παύει αμέσως (routes/tracker.ts) και η συσκευή δεν
+  // στέλνει θέση ώσπου να ρυθμιστεί ξανά — επιβεβαίωση πριν, όπως στο web.
+  const confirmRotate = (d: any) =>
+    Alert.alert(t('tracker.rotateTitle'), t('tracker.rotateQ'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('tracker.newToken'), style: 'destructive', onPress: () => rotateToken.mutate(d.id) },
+    ])
+
   const confirmRemove = (d: any) =>
     Alert.alert(t('tracker.removeTitle'), t('tracker.removeQ'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -194,7 +202,7 @@ export default function TrackerScreen() {
               <Text style={s.deviceTxt} numberOfLines={1}>
                 {d.name || d.device_id}
               </Text>
-              <TouchableOpacity onPress={() => rotateToken.mutate(d.id)} disabled={rotateToken.isPending} hitSlop={8}>
+              <TouchableOpacity onPress={() => confirmRotate(d)} disabled={rotateToken.isPending} hitSlop={8}>
                 <KeyRound size={16} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => confirmRemove(d)} hitSlop={8}>

@@ -26,10 +26,11 @@ const routes: FastifyPluginAsync = async (app) => {
     const pageNo = Math.max(1, Number(page) || 1)
     const skip = (pageNo - 1) * take
     const where: any = {}
-    if (category) where.category = category
+    // Ε16: παλιά θέματα από το κινητό αποθηκεύτηκαν ως «behaviour» — ίδια κατηγορία με «behavior».
+    if (category) where.category = category === 'behavior' ? { in: ['behavior', 'behaviour'] } : category
     if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { content: { contains: q, mode: 'insensitive' } }]
     const [data, total] = await Promise.all([
-      prisma.forumTopic.findMany({ where, skip, take, orderBy: [{ is_pinned: 'desc' }, { created_at: 'desc' }] }),
+      prisma.forumTopic.findMany({ where, skip, take, orderBy: [{ is_pinned: 'desc' }, { created_at: 'desc' }, { id: 'asc' }] }),
       prisma.forumTopic.count({ where })
     ])
     const viewer = await viewerEmail(req)

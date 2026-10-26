@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert, Share } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Alert, Share, Platform } from 'react-native'
+import { File, Directory, Paths } from 'expo-file-system'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,12 +38,34 @@ export default function PrivacyScreen() {
   const exportData = useMutation({
     mutationFn: () => api.get('/user-rights/export').then(r => r.data),
     onSuccess: async (data) => {
-      // Χωρίς σύστημα αρχείων: μοιραζόμαστε το JSON, ώστε ο χρήστης να το
-      // στείλει στον εαυτό του ή να το αποθηκεύσει όπου θέλει.
+      /**
+       * Ε16: ΟΛΟ το JSON σε αρχείο. Πριν μοιραζόταν ως κείμενο κομμένο στους
+       * 500.000 χαρακτήρες — η εξαγωγή του Άρθρου 20 έβγαινε ελλιπής και
+       * άκυρη (μισό JSON) για όποιον είχε πολλά δεδομένα.
+       *   iOS: αρχείο στην cache → φύλλο κοινοποίησης (Αποθήκευση στα Αρχεία, email…).
+       *   Android: το Share δεν στέλνει αρχεία (μόνο κείμενο) και δεν υπάρχει
+       *   expo-sharing· ο χρήστης διαλέγει φάκελο (SAF) και γράφεται εκεί.
+       */
+      const json = JSON.stringify(data, null, 2)
+      const d = new Date()
+      const p2 = (n: number) => String(n).padStart(2, '0')
+      const name = `globipet-data_${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}.json`
       try {
-        await Share.share({ message: JSON.stringify(data, null, 2).slice(0, 500000) })
+        if (Platform.OS === 'android') {
+          let dir: Awaited<ReturnType<typeof Directory.pickDirectoryAsync>>
+          try { dir = await Directory.pickDirectoryAsync() } catch { return /* ο χρήστης ακύρωσε */ }
+          const out = dir.createFile(name, 'application/json')
+          out.write(json)
+          Alert.alert(t('privacy.exportDone'), t('privacy.exportSaved', { name }))
+        } else {
+          const file = new File(Paths.cache, name)
+          if (file.exists) file.delete()
+          file.create()
+          file.write(json)
+          await Share.share({ url: file.uri, title: name })
+        }
       } catch {
-        Alert.alert(t('privacy.exportDone'), t('privacy.exportHint'))
+        Alert.alert(t('common.error'), t('privacy.exportFailed'))
       }
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),

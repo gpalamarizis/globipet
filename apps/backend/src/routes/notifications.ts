@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { audit } from '../lib/audit.js'
+import { isAllowedWebPushEndpoint } from '../lib/push.js'
 
 /**
  * Connected WebSocket clients, keyed by the authenticated user's EMAIL.
@@ -177,6 +178,11 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
       const auth = keys?.auth
       if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || !p256dh || !auth) {
         return reply.code(400).send({ message: 'Ελλιπή στοιχεία συνδρομής' })
+      }
+      // Ε16: μόνο υπηρεσίες push των browsers (lib/push.ts) — όχι οποιοδήποτε
+      // https URL, όπου ο server θα έκανε POST σε κάθε ειδοποίηση (blind SSRF).
+      if (!isAllowedWebPushEndpoint(endpoint)) {
+        return reply.code(400).send({ message: 'Μη αποδεκτή υπηρεσία ειδοποιήσεων' })
       }
       const row = await prisma.pushSubscription.upsert({
         where: { endpoint },

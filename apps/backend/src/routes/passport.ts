@@ -24,6 +24,49 @@ function accessNotExpired() {
   return { OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] }
 }
 
+/** Μήνυμα 403 όταν υπάρχει πρόσβαση κτηνιάτρου αλλά το email δεν έχει επιβεβαιωθεί. */
+export const VET_VERIFY_EMAIL_MSG = 'Επιβεβαίωσε πρώτα το email σου για να δεις τον ιατρικό φάκελο που σου κοινοποιήθηκε.'
+
+/** Κανονική μορφή του email παρόχου: χωρίς κενά, πεζά. */
+export function normProviderEmail(v: unknown): string {
+  return typeof v === 'string' ? v.trim().toLowerCase() : ''
+}
+
+/** Οι γραμμές πρόσβασης ταιριάζουν με το email χωρίς διάκριση πεζών/κεφαλαίων (παλιές γραμμές μπορεί να είναι μικτές). */
+export function providerEmailIs(email: string) {
+  return { equals: String(email ?? '').trim(), mode: 'insensitive' as const }
+}
+
+/** Το email του χρήστη έχει επιβεβαιωθεί; Διαβάζεται από τη βάση, όχι από το JWT. */
+export async function isEmailVerified(userId: string | undefined, email: string | undefined): Promise<boolean> {
+  const where = userId ? { id: String(userId) } : email ? { email: String(email) } : null
+  if (!where) return false
+  const u = await prisma.user.findUnique({ where: where as any, select: { email_verified_at: true } })
+  return !!u?.email_verified_at
+}
+
+/**
+ * Πρόσβαση κτηνιάτρου/παρόχου στον φάκελο ενός ζώου.
+ *
+ *   Η γραμμή πρόσβασης ταιριάζει με το email του token. Όμως το POST
+ *   /auth/register δίνει token ΠΡΙΝ την επιβεβαίωση του email, οπότε όποιος
+ *   έκανε εγγραφή με το email ενός κτηνιάτρου έπαιρνε τον ιατρικό φάκελο.
+ *   Τώρα χρειάζεται και επιβεβαιωμένο email (email_verified_at από τη βάση).
+ *
+ *   'ok' = εγκεκριμένη, μη ληγμένη πρόσβαση + επιβεβαιωμένο email
+ *   'unverified' = υπάρχει πρόσβαση αλλά το email δεν έχει επιβεβαιωθεί
+ *   null = καμία πρόσβαση
+ */
+export async function vetPassportAccess(petId: string, email: string | undefined, userId?: string): Promise<'ok' | 'unverified' | null> {
+  if (!email || !petId) return null
+  const row = await prisma.petPassportAccess.findFirst({
+    where: { pet_id: petId, provider_email: providerEmailIs(email), status: 'approved', ...accessNotExpired() },
+    select: { id: true },
+  })
+  if (!row) return null
+  return (await isEmailVerified(userId, email)) ? 'ok' : 'unverified'
+}
+
 const routes: FastifyPluginAsync = async (app) => {
 
   // ─── HELPERS ──────────────────────────────────────────────────────
@@ -107,9 +150,9 @@ const routes: FastifyPluginAsync = async (app) => {
     if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
 
     // Owner or approved vet can view
-    const hasAccess = pet.owner_email === email ||
-      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
-    if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const access = pet.owner_email === email ? 'ok' : await vetPassportAccess(petId, email, (req.user as any)?.id)
+    if (access === 'unverified') return reply.code(403).send({ message: VET_VERIFY_EMAIL_MSG })
+    if (access !== 'ok') return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const [vaccinations, healthRecords, pedigree, travelDocs,
            medications, labResults, imaging, surgeries, allergies,
@@ -183,9 +226,9 @@ const routes: FastifyPluginAsync = async (app) => {
     const { petId } = req.params as any
     const pet = await prisma.pet.findUnique({ where: { id: petId }, select: { owner_email: true } })
     if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    const hasAccess = pet.owner_email === email ||
-      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
-    if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const access = pet.owner_email === email ? 'ok' : await vetPassportAccess(petId, email, userId)
+    if (access === 'unverified') return reply.code(403).send({ message: VET_VERIFY_EMAIL_MSG })
+    if (access !== 'ok') return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const path = `/passport/${encodeURIComponent(petId)}/pdf?t=${signPdfToken(petId, String(userId))}`
     const base = process.env.PUBLIC_API_URL || 'https://globipetbackend-production.up.railway.app/api'
@@ -197,6 +240,7 @@ const routes: FastifyPluginAsync = async (app) => {
     const { petId } = req.params as any
     // Δύο τρόποι: υπογεγραμμένος σύνδεσμος (?t=) ή κανονική σύνδεση (Bearer).
     let email: string
+    let pdfUserId: string | undefined
     const t = (req.query as any)?.t
     if (t) {
       const userId = verifyPdfToken(String(t), petId)
@@ -206,17 +250,19 @@ const routes: FastifyPluginAsync = async (app) => {
       if (!owner) return reply.code(401).send({ message: 'Ο σύνδεσμος έληξε. Πάτησε ξανά «Εξαγωγή PDF».' })
       // Η πρόσβαση ξαναελέγχεται παρακάτω (μπορεί να ανακλήθηκε στο μεταξύ).
       email = owner.email
+      pdfUserId = userId!
     } else {
       await (app as any).authenticate(req, reply)
       if (reply.sent) return reply
       email = (req.user as any).email
+      pdfUserId = (req.user as any).id
     }
 
     const pet = await prisma.pet.findUnique({ where: { id: petId } })
     if (!pet) return reply.code(404).send({ message: 'Δεν βρέθηκε' })
-    const hasAccess = pet.owner_email === email ||
-      await prisma.petPassportAccess.findFirst({ where: { pet_id: petId, provider_email: email, status: 'approved', ...accessNotExpired() } })
-    if (!hasAccess) return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
+    const access = pet.owner_email === email ? 'ok' : await vetPassportAccess(petId, email, pdfUserId)
+    if (access === 'unverified') return reply.code(403).send({ message: VET_VERIFY_EMAIL_MSG })
+    if (access !== 'ok') return reply.code(403).send({ message: 'Δεν έχετε δικαίωμα' })
 
     const [vaccinations, healthRecords, medications, labResults, imaging, surgeries, allergies, chronicConditions, dentalRecords, weightRecords] = await Promise.all([
       prisma.vaccination.findMany({ where: { pet_id: petId }, orderBy: { date_administered: 'desc' } }),
@@ -636,17 +682,30 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
   app.post('/access/:petId', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email } = req.user as any
     await assertPetOwner(req.params.petId, email).catch(e => { throw { statusCode: e.statusCode, message: e.message } })
-    const { provider_email, provider_name, reason, expires_at } = req.body as any
+    const { provider_name, reason, expires_at } = req.body as any
+    // Πεζά/χωρίς κενά: η πρόσβαση ελέγχεται με το email του λογαριασμού, που
+    // αποθηκεύεται πεζό. «Vet@Clinic.gr» δεν θα ταίριαζε ποτέ.
+    const provider_email = normProviderEmail((req.body as any)?.provider_email)
     if (!provider_email) return reply.code(400).send({ message: 'Λείπει το email παρόχου' })
     // Μη έγκυρη ημερομηνία έδινε Invalid Date → 500 από το Prisma.
     if (expires_at && Number.isNaN(new Date(expires_at).getTime())) {
       return reply.code(400).send({ message: 'Μη έγκυρη ημερομηνία λήξης' })
     }
-    const access = await prisma.petPassportAccess.upsert({
-      where: { pet_id_provider_email: { pet_id: req.params.petId, provider_email } },
-      create: { pet_id: req.params.petId, owner_email: email, provider_email, provider_name: provider_name || provider_email, reason, status: 'approved', granted_at: new Date(), expires_at: expires_at ? new Date(expires_at) : null },
-      update: { status: 'approved', granted_at: new Date(), reason, expires_at: expires_at ? new Date(expires_at) : null },
+    const update = { status: 'approved', granted_at: new Date(), reason, expires_at: expires_at ? new Date(expires_at) : null }
+    // Παλιές γραμμές μπορεί να έχουν μικτά κεφαλαία: ανανεώνεται η υπάρχουσα
+    // (προτιμάται η ήδη πεζή) αντί να γράφεται δεύτερη για τον ίδιο πάροχο.
+    const existing = await prisma.petPassportAccess.findMany({
+      where: { pet_id: req.params.petId, provider_email: providerEmailIs(provider_email) },
+      select: { id: true, provider_email: true },
     })
+    const hit = existing.find(a => a.provider_email === provider_email) ?? existing[0]
+    const access = hit
+      ? await prisma.petPassportAccess.update({ where: { id: hit.id }, data: update })
+      : await prisma.petPassportAccess.upsert({
+          where: { pet_id_provider_email: { pet_id: req.params.petId, provider_email } },
+          create: { pet_id: req.params.petId, owner_email: email, provider_email, provider_name: provider_name || provider_email, ...update },
+          update,
+        })
     return reply.code(201).send(access)
   })
 
@@ -660,12 +719,13 @@ ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
 
   // Provider: see which pets I have approved access to
   app.get('/my-patients', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
-    const { email } = req.user as any
+    const { email, id } = req.user as any
     const accesses = await prisma.petPassportAccess.findMany({
-      where: { provider_email: email, status: 'approved', ...accessNotExpired() },
+      where: { provider_email: providerEmailIs(email), status: 'approved', ...accessNotExpired() },
       orderBy: { granted_at: 'desc' },
     })
     if (!accesses.length) return reply.send({ data: [] })
+    if (!(await isEmailVerified(id, email))) return reply.code(403).send({ message: VET_VERIFY_EMAIL_MSG })
     const petIds = accesses.map(a => a.pet_id)
     const pets = await prisma.pet.findMany({ where: { id: { in: petIds } } })
     return reply.send({ data: pets.map(p => ({ ...p, access: accesses.find(a => a.pet_id === p.id) })) })

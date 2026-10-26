@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { isAllowedImageUrl } from '../lib/storage.js'
 import { identityOf } from '../lib/userName.js'
 
 /**
@@ -95,6 +96,8 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const { content, image_url, tags, pet_name, pet_id } = req.body as any
     if (!content?.trim()) return reply.code(400).send({ message: 'Το περιεχόμενο είναι υποχρεωτικό' })
+    // Εικόνα μόνο από το δικό μας R2 (lib/storage.ts isAllowedImageUrl).
+    if (!isAllowedImageUrl(image_url)) return reply.code(400).send({ message: 'Μη έγκυρη διεύθυνση φωτογραφίας' })
 
     // A post may reference a pet, but only one the author actually owns —
     // otherwise anyone could attach their post to someone else's pet profile.
@@ -254,6 +257,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     const post = await assertCanModify(req, reply, req.params.id)
     if (!post) return
     const { content, image_url, tags } = req.body as any
+    if (image_url !== undefined && !isAllowedImageUrl(image_url)) return reply.code(400).send({ message: 'Μη έγκυρη διεύθυνση φωτογραφίας' })
     const data: any = {}
     if (content !== undefined) data.content = String(content).trim()
     if (image_url !== undefined) data.image_url = image_url || null

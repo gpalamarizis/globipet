@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { effectivePrice, isOnSale } from '@/lib/price'
+import { adminText } from '@/lib/homeContent'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -27,7 +28,14 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const c = content || {}
+  // Ε16: κείμενα του διαχειριστή — ίδιος κανόνας με το κινητό (lib/homeContent).
+  const heroTitle1 = adminText(content, 'hero_title_1')
+  const heroTitle2 = adminText(content, 'hero_title_2')
+  const heroSubtitle = adminText(content, 'hero_subtitle')
+  const heroCta = adminText(content, 'hero_cta')
+  const taglineText = adminText(content, 'tagline')
+  const servicesTitle = adminText(content, 'services_title')
+  const servicesSubtitle = adminText(content, 'services_subtitle')
 
   const { data: featuredProducts, isLoading: loadingProducts } = useQuery({
     queryKey: ['featured-products'],
@@ -117,19 +125,21 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
                 className="inline-flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/30 rounded-full px-4 py-2 mb-6">
                 <Zap size={14} className="text-yellow-400" />
-                <p className="text-xs font-bold text-yellow-400 tracking-widest uppercase">{t('pgHome.aiPlatform')}</p>
+                <p className="text-xs font-bold text-yellow-400 tracking-widest uppercase">{taglineText ?? t('pgHome.aiPlatform')}</p>
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-4xl lg:text-6xl font-display font-black text-white leading-tight max-w-3xl drop-shadow-2xl">
-                {t('home.hero.title1')}<br/>{t('home.hero.title2')} <span className="text-yellow-400">{t('home.hero.title3')}</span>
+                {heroTitle1 ?? t('home.hero.title1')}<br/>{heroTitle2
+                  ? <span className="text-yellow-400">{heroTitle2}</span>
+                  : <>{t('home.hero.title2')} <span className="text-yellow-400">{t('home.hero.title3')}</span></>}
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.8 }}
                 className="text-base lg:text-lg text-white/90 mt-6 max-w-2xl leading-relaxed drop-shadow-lg">
-                {t('home.hero.subtitle')}
+                {heroSubtitle ?? t('home.hero.subtitle')}
               </motion.p>
 
               <motion.div
@@ -157,7 +167,7 @@ export default function Home() {
                       με αποτυχημένη πληρωμή: «Επιλογή πλάνου» (όπως στο κινητό). */}
                   {isAuthenticated && heroAiStatus && !['none', 'trial', 'active'].includes(heroAiStatus)
                     ? t('aiGate.choosePlan')
-                    : t('home.hero.tryFree')}
+                    : (heroCta ?? t('home.hero.tryFree'))}
                 </Link>
                 <Link to="/services" className="bg-white/10 backdrop-blur-sm border border-white/30 text-white font-medium text-base px-8 py-4 rounded-xl hover:bg-white/20 transition-all">
                   {t('home.hero.learnMore')}
@@ -382,8 +392,8 @@ export default function Home() {
         <div className="page-container">
           <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="section-title">{t('home.categoriesSection.title')}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{t('home.categoriesSection.subtitle')}</p>
+              <h2 className="section-title">{servicesTitle ?? t('home.categoriesSection.title')}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{servicesSubtitle ?? t('home.categoriesSection.subtitle')}</p>
             </div>
             <Link to="/services" className="flex items-center gap-1 text-sm text-brand-900 dark:text-brand-400 font-medium hover:gap-2 transition-all">
               {t('home.categoriesSection.viewAll')} <ArrowRight size={14} />

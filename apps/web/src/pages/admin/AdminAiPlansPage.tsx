@@ -228,13 +228,13 @@ export default function AdminAiPlansPage() {
                   <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminAiPlans.form.nameEn')}</label>
                   <input className="input text-sm" value={editingPlan.name ?? ''}
                     onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                    placeholder="e.g. AI Health" />
+                    placeholder={t('adminAiPlans.form.nameEnPlaceholder')} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminAiPlans.form.nameEl')}</label>
                   <input className="input text-sm" value={editingPlan.name_el ?? ''}
                     onChange={e => setEditingPlan({ ...editingPlan, name_el: e.target.value })}
-                    placeholder="π.χ. AI Υγεία" />
+                    placeholder={t('adminAiPlans.form.nameElPlaceholder')} />
                 </div>
               </div>
 

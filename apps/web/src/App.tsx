@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -181,7 +181,11 @@ function OAuthHandler() {
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+  const location = useLocation()
+  // Ε16: μετά τη σύνδεση επιστροφή στη σελίδα που ζητήθηκε (π.χ. σύνδεσμος
+  // ειδοποίησης /communities/:id). Το Login δέχεται μόνο εσωτερική διαδρομή.
+  const back = location.pathname + location.search
+  return isAuthenticated ? <>{children}</> : <Navigate to={back && back !== '/' ? `/login?redirect=${encodeURIComponent(back)}` : '/login'} replace />
 }
 
 function ProviderRoute({ children }: { children: React.ReactNode }) {
@@ -255,6 +259,7 @@ export default function App() {
                 <Route path="/welfare-organisations" element={<WelfareOrgs />} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />
+                <Route path="/communities/:id" element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/telehealth"      element={<PrivateRoute><Telehealth /></PrivateRoute>} />
                 <Route path="/telehealth/:id/confirmation" element={<TelehealthConfirmation />} />
                 <Route path="/my-pets"         element={<PrivateRoute><MyPets /></PrivateRoute>} />

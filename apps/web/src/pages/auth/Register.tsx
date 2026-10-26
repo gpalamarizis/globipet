@@ -26,11 +26,19 @@ function maxBirthDate(): string {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * ?redirect= μόνο ως εσωτερική διαδρομή: «/…», όχι «//…» ή «/\…» (άλλο domain —
+ * open redirect) και όχι πάλι σε /login ή /register (βρόχος). Αλλιώς «/».
+ * Ίδιος κανόνας στο Login.tsx.
+ */
+const safeRedirect = (raw: string | null): string =>
+  raw && /^\/(?![\/\\])/.test(raw) && !/^\/(login|register)(?:[/?#]|$)/i.test(raw) ? raw : '/'
+
 export default function Register() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/'
+  const redirectTo = safeRedirect(searchParams.get('redirect'))
   const { register, isLoading } = useAuthStore()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -184,7 +192,7 @@ export default function Register() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          {t('authExtraLogin.hasAccount')} <Link to="/login" className="text-brand-900 font-medium hover:underline">{t('auth.login')}</Link>
+          {t('authExtraLogin.hasAccount')} <Link to={redirectTo !== '/' ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'} className="text-brand-900 font-medium hover:underline">{t('auth.login')}</Link>
         </p>
       </motion.div>
     </div>

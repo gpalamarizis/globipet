@@ -46,6 +46,53 @@ function readStoredToken(): Promise<string | null> {
 export function setAuthToken(token: string | null) {
   authToken = token
   tokenRead = Promise.resolve(token)
+  // Νέα συνεδρία (σύνδεση/ανακύκλωση): ένα επόμενο 401 ξαναχειρίζεται κανονικά.
+  if (token) sessionExpiring = false
+}
+
+/**
+ * Ε16 — ΛΗΞΗ ΣΥΝΕΔΡΙΑΣ (401) ΚΑΙ ΠΥΛΗ ΗΜΕΡΟΜΗΝΙΑΣ ΓΕΝΝΗΣΗΣ (403)
+ *
+ *   Πριν, ένα 401 (ληγμένο/ανακλημένο τοκεν, «αποσύνδεση από όλες τις
+ *   συσκευές») δεν άλλαζε τίποτα: η εφαρμογή έμενε «συνδεδεμένη» και κάθε
+ *   οθόνη έβγαζε σφάλμα. Τώρα, όπως στο web/src/lib/api.ts: αποσύνδεση και
+ *   οθόνη σύνδεσης — ΜΙΑ φορά, όσα αιτήματα κι αν αποτύχουν μαζί.
+ *
+ *   Οι χειριστές δηλώνονται από το store/auth.ts (χωρίς import του store
+ *   εδώ — κυκλική εξάρτηση).
+ */
+const PUBLIC_AUTH_ENDPOINTS = [
+  '/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password',
+  '/auth/verify-email', '/auth/google', '/auth/facebook',
+]
+let sessionExpiring = false
+/** Όσο τρέχει μια αποσύνδεση (π.χ. κλειστός λογαριασμός), τα 401 της είναι αναμενόμενα. */
+let loggingOut = false
+export function setLoggingOut(on: boolean) { loggingOut = on }
+
+let onSessionExpired: (() => void) | null = null
+let onBirthDateRequired: (() => void) | null = null
+export function setSessionHandlers(h: { expired: () => void; birthDateRequired: () => void }) {
+  onSessionExpired = h.expired
+  onBirthDateRequired = h.birthDateRequired
+}
+
+function handleAuthError(err: any) {
+  const status = err?.response?.status
+  if (status !== 401 && status !== 403) return
+  const url: string = err?.config?.url || ''
+  if (PUBLIC_AUTH_ENDPOINTS.some(p => url.includes(p))) return
+  const sent = String((err?.config?.headers as any)?.Authorization || '')
+  // Μόνο αιτήματα που έφυγαν με το ΤΡΕΧΟΝ τοκεν: ένα αργό αίτημα της
+  // προηγούμενης συνεδρίας δεν αποσυνδέει αυτή που μόλις ξεκίνησε.
+  if (!authToken || sent !== `Bearer ${authToken}`) return
+  if (status === 401) {
+    if (loggingOut || sessionExpiring) return
+    sessionExpiring = true
+    onSessionExpired?.()
+    return
+  }
+  if ((err?.response?.data as any)?.code === 'birth_date_required') onBirthDateRequired?.()
 }
 
 api.interceptors.request.use(async config => {
@@ -86,6 +133,7 @@ api.interceptors.response.use(
     // Μόνο στην ανάπτυξη: σε production τα σφάλματα δικτύου του χρήστη δεν
     // έχουν λόγο να γράφονται στα logs της συσκευής του.
     if (__DEV__) console.error('API Error:', err.response?.status, err.response?.data)
+    try { handleAuthError(err) } catch {}
     return Promise.reject(err)
   }
 )

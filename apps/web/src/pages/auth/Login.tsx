@@ -7,6 +7,14 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
+/**
+ * ?redirect= μόνο ως εσωτερική διαδρομή: «/…», όχι «//…» ή «/\…» (άλλο domain —
+ * open redirect) και όχι πάλι σε /login ή /register (βρόχος). Αλλιώς «/».
+ * Ίδιος κανόνας στο Register.tsx.
+ */
+const safeRedirect = (raw: string | null): string =>
+  raw && /^\/(?![\/\\])/.test(raw) && !/^\/(login|register)(?:[/?#]|$)/i.test(raw) ? raw : '/'
+
 export default function Login() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -15,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [params] = useSearchParams()
+  const redirectTo = safeRedirect(params.get('redirect'))
 
   // Επιστροφή από Google/Facebook με ?error=… (routes/auth.ts). Πριν δεν
   // εμφανιζόταν τίποτα· ο χρήστης έβλεπε απλώς ξανά τη φόρμα.
@@ -34,7 +43,7 @@ export default function Login() {
       // Ο καθαρός πάροχος δεν έχει λόγο να δει την καταναλωτική αρχική:
       // πάει κατευθείαν στον πίνακά του. Ο «both» βλέπει τα πάντα.
       const role = useAuthStore.getState().user?.role
-      navigate(role === 'service_provider' ? '/provider' : '/')
+      navigate(role === 'service_provider' ? '/provider' : redirectTo)
     }
     catch (err: any) { toast.error(err?.response?.data?.message || err.message || t('authExtraLogin.invalidCredentials')) }
   }
@@ -107,7 +116,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          {t('authExtraLogin.noAccount')} <Link to="/register" className="text-brand-900 font-medium hover:underline">{t('auth.register')}</Link>
+          {t('authExtraLogin.noAccount')} <Link to={redirectTo !== '/' ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'} className="text-brand-900 font-medium hover:underline">{t('auth.register')}</Link>
         </p>
       </motion.div>
     </div>

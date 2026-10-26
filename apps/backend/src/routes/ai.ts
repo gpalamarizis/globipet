@@ -24,6 +24,7 @@ const AI_DAILY_LIMIT: Record<string, number> = { trial: 15, active: 60 }
 const AI_CALL_ACTION = 'ai_call'
 const MSG_AI_DAILY_LIMIT = 'Έφτασες το ημερήσιο όριο χρήσης AI — δοκίμασε ξανά αύριο'
 const MSG_TEXT_TOO_LONG = 'Κάποιο κείμενο είναι πολύ μεγάλο'
+const MSG_AI_RECORD_FAILED = 'Η υπηρεσία AI δεν είναι διαθέσιμη αυτή τη στιγμή — δοκίμασε ξανά σε λίγο'
 const LONG_TEXT = 2000
 const SHORT_TEXT = 400
 
@@ -67,6 +68,8 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
    * τα μεσάνυχτα (ώρα Ελλάδας). Ο διαχειριστής χωρίς όριο. Η καταγραφή
    * γράφεται από τον handler (recordAiCall) ακριβώς πριν την κλήση στο
    * Anthropic — ένα αίτημα που απορρίπτεται στον έλεγχο (400) δεν μετρά.
+   * Αυτός ο έλεγχος είναι το γρήγορο «όχι»· το ακριβές όριο υπό ταυτόχρονα
+   * αιτήματα το κρατά η recordAiCall (κράτηση + θέση).
    */
   const endpointOf = (req: any) => String(req.routeOptions?.url ?? req.url ?? '').slice(0, 100)
 
@@ -96,9 +99,66 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     }
   }
 
-  /** Καταγραφή μιας κλήσης στο Anthropic (μετρά στο ημερήσιο όριο). */
-  const recordAiCall = (req: any) =>
-    audit(req, { action: AI_CALL_ACTION, resource: 'ai', metadata: { endpoint: endpointOf(req), limit: req.aiDailyLimit ?? null } })
+  /**
+   * Κράτηση μιας κλήσης στο Anthropic (μετρά στο ημερήσιο όριο) — ΠΡΙΝ την κλήση.
+   *
+   *   Ο έλεγχος του guard (count) και η καταγραφή γίνονταν χωριστά: Ν
+   *   ταυτόχρονα αιτήματα έβλεπαν όλα «14 από 15» και περνούσαν όλα. Τώρα:
+   *     1) γράφεται η γραμμή ai_call (απευθείας, ΟΧΙ με audit(), που καταπίνει
+   *        το σφάλμα — χωρίς καταγραφή το όριο δεν μετρά → 503, όχι κλήση)
+   *     2) μετράμε τη ΘΕΣΗ της: γραμμές της μέρας με (created_at, id) ≤ τη δική
+   *        μας. Θέση > όριο → η γραμμή σβήνεται και 429.
+   *   Η θέση είναι μοναδική ανά γραμμή, οπότε από Ν ταυτόχρονα αιτήματα
+   *   περνούν ακριβώς όσα χωρούν (όχι κανένα, όπως με απλό count μετά το insert).
+   *   Επιστρέφει true αν η κλήση μπορεί να γίνει· αλλιώς έχει ήδη απαντήσει.
+   */
+  async function recordAiCall(req: any, reply: any): Promise<boolean> {
+    const u = (req.user || {}) as any
+    const limit: number | null = req.aiDailyLimit ?? null
+    let row: { id: string; created_at: Date }
+    try {
+      row = await prisma.auditLog.create({
+        data: {
+          action: AI_CALL_ACTION, resource: 'ai', outcome: 'success',
+          actor_id: u.id ?? null, actor_email: u.email ?? null, actor_role: u.role ?? null,
+          metadata: { endpoint: endpointOf(req), limit },
+          ip: req.ip || null, user_agent: (req.headers?.['user-agent'] as string) ?? null,
+          method: req.method ?? null, path: req.url ? String(req.url).slice(0, 300) : null,
+        },
+        select: { id: true, created_at: true },
+      })
+    } catch (err: any) {
+      console.error('[ai] ai_call reservation failed:', err?.message ?? err)
+      reply.code(503).send({ message: MSG_AI_RECORD_FAILED })
+      return false
+    }
+    if (limit === null) return true
+    try {
+      const position = await prisma.auditLog.count({
+        where: {
+          actor_email: u.email, action: AI_CALL_ACTION, outcome: 'success',
+          created_at: { gte: athensDayStart() },
+          OR: [
+            { created_at: { lt: row.created_at } },
+            { created_at: row.created_at, id: { lte: row.id } },
+          ],
+        },
+      })
+      if (position <= limit) return true
+    } catch (err: any) {
+      console.error('[ai] ai_call count failed:', err?.message ?? err)
+      await prisma.auditLog.delete({ where: { id: row.id } }).catch(() => {})
+      reply.code(503).send({ message: MSG_AI_RECORD_FAILED })
+      return false
+    }
+    await prisma.auditLog.delete({ where: { id: row.id } }).catch(() => {})
+    await audit(req, {
+      action: AI_CALL_ACTION, resource: 'ai', outcome: 'blocked', status_code: 429,
+      metadata: { endpoint: endpointOf(req), limit, race: true },
+    })
+    reply.code(429).send({ message: MSG_AI_DAILY_LIMIT, code: 'ai_daily_limit', limit })
+    return false
+  }
 
   async function requireAiAccess(req: any, reply: any) {
     const u = req.user as any
@@ -225,7 +285,7 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 {"severity":"low"|"medium"|"high","findings":["..."],"conditions":["..."],"comparison_sources":["σύντομη αναφορά πηγής 1","σύντομη αναφορά πηγής 2"],"recommendation":"","urgency":"","disclaimer":"Αυτή η ανάλυση είναι ενδεικτική και δεν υποκαθιστά την επίσκεψη σε κτηνίατρο."}`
 
     try {
-      await recordAiCall(req)
+      if (!(await recordAiCall(req, reply))) return reply
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
@@ -289,7 +349,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
     try {
       const imageContent = img.block
 
-      await recordAiCall(req)
+      if (!(await recordAiCall(req, reply))) return reply
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 1536,
@@ -346,7 +406,7 @@ ${context ? `Πλαίσιο: ${context}` : ''}
 }`
 
     try {
-      await recordAiCall(req)
+      if (!(await recordAiCall(req, reply))) return reply
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
@@ -443,7 +503,7 @@ ${contextParts}
 }`
 
     try {
-      await recordAiCall(req)
+      if (!(await recordAiCall(req, reply))) return reply
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,
@@ -541,7 +601,7 @@ ${contextParts}
     const userPrompt = `${context ? `Πλαίσιο: ${context}\n` : ''}Ερώτηση: ${question}`
 
     try {
-      await recordAiCall(req)
+      if (!(await recordAiCall(req, reply))) return reply
       const response = await client.messages.create({
         model: 'claude-opus-4-5',
         max_tokens: 2048,

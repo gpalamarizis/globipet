@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Stack, useSegments, useRouter } from 'expo-router'
+import { Stack, useSegments, useRouter, useRootNavigationState } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -37,7 +37,8 @@ const CARD_ROUTES = [
   'checkout',
   'communities',
   'inbox',
-  'insurance',
+  // Ε16: χωρίς 'insurance' — η οθόνη είναι η app/(tabs)/insurance.tsx (κρυφό tab,
+  // εκεί οδηγούν Αρχική/Ανακάλυψη)· η διπλή app/insurance.tsx αφαιρέθηκε.
   'language',
   'notifications',
   'orders',
@@ -142,9 +143,17 @@ export default function RootLayout() {
     })
   }, [])
 
+  /**
+   * Ε16: ο navigator υπάρχει μόνο αφού αποδοθεί το Stack (ίδια συνθήκη με το
+   * `return null` πιο κάτω) ΚΑΙ η ρίζα της πλοήγησης έχει κατάσταση. Πριν από
+   * αυτό κάθε router.push/replace χάνεται ή πετάει σφάλμα.
+   */
+  const rootNavKey = useRootNavigationState()?.key
+  const navReady = fontsReady && authReady && i18nReady && !!rootNavKey
+
   // Στέλνει τον χρήστη στη σωστή οθόνη όταν πατήσει ειδοποίηση — και όταν η
-  // εφαρμογή ήταν κλειστή και όταν ήταν ήδη ανοιχτή.
-  usePushRouting()
+  // εφαρμογή ήταν κλειστή και όταν ήταν ήδη ανοιχτή. Περιμένει τον navigator.
+  usePushRouting(navReady)
 
   useEffect(() => {
     // Το splash κρύβεται όταν είναι έτοιμες ΚΑΙ οι γραμματοσειρές ΚΑΙ η
@@ -162,7 +171,9 @@ export default function RootLayout() {
    */
   const role = useAuthStore(st => st.user?.role)
   const isAuthenticated = useAuthStore(st => st.isAuthenticated)
-  const needsBirthDate = useAuthStore(st => (st.user as any)?.needs_birth_date === true)
+  const needsBirthDate = useAuthStore(st => st.user?.needs_birth_date === true)
+  // Ε16: π.χ. '/auth/login' μετά από λήξη συνεδρίας (401) — βλ. store/auth.ts.
+  const pendingRedirect = useAuthStore(st => st.pendingRedirect)
   const segments = useSegments()
   const router = useRouter()
   // Ε13: ένα push της auth/birth-date τη φορά — μέχρι να φανεί στα segments.
@@ -171,7 +182,18 @@ export default function RootLayout() {
     // Πριν αποδοθεί το Stack (γραμματοσειρές + μεταφράσεις + σύνδεση, ίδια
     // συνθήκη με το `return null` πιο κάτω) δεν υπάρχει navigator: ένα push
     // τότε χάνεται ή πετάει σφάλμα και η πύλη ημερομηνίας δεν ανοίγει.
-    if (!fontsReady || !authReady || !i18nReady) return
+    if (!navReady) return
+    // Ε16: λήξη συνεδρίας → οθόνη σύνδεσης, μία φορά (καθαρίζεται πριν την πλοήγηση).
+    if (pendingRedirect) {
+      useAuthStore.getState().clearPendingRedirect()
+      if (!(segments[0] === 'auth' && (segments as string[])[1] === 'login')) {
+        // Πρώτα η αρχική στη βάση της στοίβας, μετά η σύνδεση από πάνω: το
+        // «πίσω» από τη σύνδεση πηγαίνει στην αρχική αντί να κλείνει η εφαρμογή.
+        router.replace('/(tabs)' as any)
+        router.push(pendingRedirect as any)
+      }
+      return
+    }
     // Ως string επίτηδες: οι παραγόμενοι τύποι διαδρομών του expo-router
     // ανανεώνονται μόνο στο επόμενο «expo start», οπότε μια νέα ομάδα
     // οθονών θα έσπαγε τη μεταγλώττιση μέχρι τότε.
@@ -203,7 +225,7 @@ export default function RootLayout() {
     if ((!isAuthenticated || role !== 'service_provider') && inProvider && role !== 'both') {
       router.replace('/(tabs)' as any)
     }
-  }, [fontsReady, authReady, i18nReady, isAuthenticated, needsBirthDate, role, segments, router])
+  }, [navReady, pendingRedirect, isAuthenticated, needsBirthDate, role, segments, router])
 
   // Το return έρχεται ΜΕΤΑ από όλα τα hooks.
   if (!fontsReady || !authReady || !i18nReady) return null

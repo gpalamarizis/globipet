@@ -899,7 +899,9 @@
     "newToken": "New key",
     "tokenHint": "Set the new key on the device so it keeps sending its location.",
     "tokenOnce": "Device key — copy it now, it will not be shown again",
-    "ingestUrl": "Location upload URL"
+    "ingestUrl": "Location upload URL",
+    "rotateTitle": "New device key",
+    "rotateQ": "The current key stops working immediately and the device will not send its location until it is set up with the new one. Continue?"
   },
   "ver": {
     "about": "About",
@@ -1239,7 +1241,8 @@
     "szXLarge": "Extra large",
     "title": "Service packages",
     "update": "Update",
-    "yourPrice": "Your price:"
+    "yourPrice": "Your price:",
+    "addon": "Add-on"
   },
   "providerStaffNew": {
     "title": "New staff member",
@@ -1481,7 +1484,11 @@
     "reviews": "Reviews"
   },
   "petDetail": {
-    "lostNotice": "This pet is reported lost"
+    "lostNotice": "This pet is reported lost",
+    "locationHistory": "Location history",
+    "noLocations": "No recorded locations",
+    "statusLost": "Lost",
+    "statusSafe": "Safe"
   },
   "pricing": {
     "title": "AI subscriptions",
@@ -1573,7 +1580,10 @@
     "acceptedAnswer": "Accepted answer",
     "markAnswer": "Mark as answer",
     "confirmDelete": "Delete this reply?",
-    "confirmDeleteTopic": "Delete this topic along with all its replies?"
+    "confirmDeleteTopic": "Delete this topic along with all its replies?",
+    "searchPlaceholder": "Search topics...",
+    "catTraining": "Training",
+    "catAdoption": "Adoption"
   },
   "events": {
     "title": "Events",
@@ -1621,7 +1631,18 @@
     "mineEmpty": "You haven’t created any events",
     "refundsPending_one": "{{count}} refund pending",
     "refundsPending": "{{count}} refunds pending",
-    "completeRefundsQuestion": "Complete the refunds?"
+    "completeRefundsQuestion": "Complete the refunds?",
+    "searchPlaceholder": "Search events...",
+    "upcomingOnly": "Upcoming only",
+    "allDates": "All dates",
+    "types": {
+      "meetup": "Meetup",
+      "show": "Show",
+      "adoption": "Adoption",
+      "training": "Training",
+      "charity": "Charity",
+      "competition": "Competition"
+    }
   },
   "breeds": {
     "title": "Breeds",
@@ -1750,7 +1771,9 @@
     "cancelDelete": "Cancel the request",
     "cancelled": "Cancelled",
     "cancelledHint": "Your account stays active.",
-    "legalNote": "Rights under Articles 17 and 20 of the General Data Protection Regulation."
+    "legalNote": "Rights under Articles 17 and 20 of the General Data Protection Regulation.",
+    "exportSaved": "The file {{name}} was saved to the folder you chose.",
+    "exportFailed": "The file could not be saved. Please try again."
   },
   "reviews": {
     "write": "Write a review",
@@ -2455,5 +2478,8 @@
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "changeDate": "Change date"
+  },
+  "paging": {
+    "loadMore": "Load more"
   }
 }

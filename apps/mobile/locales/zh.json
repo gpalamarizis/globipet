@@ -899,7 +899,9 @@
     "newToken": "新密钥",
     "tokenHint": "请在设备上设置新密钥以继续上报位置。",
     "tokenOnce": "设备密钥 — 请立即复制，之后不会再显示",
-    "ingestUrl": "位置上报 URL"
+    "ingestUrl": "位置上报 URL",
+    "rotateTitle": "新设备密钥",
+    "rotateQ": "当前密钥将立即失效，在使用新密钥完成设置之前，设备将不会发送位置。是否继续？"
   },
   "ver": {
     "about": "简介",
@@ -1239,7 +1241,8 @@
     "szXLarge": "超大型",
     "title": "服务套餐",
     "update": "更新",
-    "yourPrice": "您的价格："
+    "yourPrice": "您的价格：",
+    "addon": "附加项"
   },
   "providerStaffNew": {
     "title": "新增员工",
@@ -1481,7 +1484,11 @@
     "reviews": "评价"
   },
   "petDetail": {
-    "lostNotice": "该宠物已被标记为走失"
+    "lostNotice": "该宠物已被标记为走失",
+    "locationHistory": "位置记录",
+    "noLocations": "暂无位置记录",
+    "statusLost": "走失",
+    "statusSafe": "安全"
   },
   "pricing": {
     "title": "AI 订阅",
@@ -1573,7 +1580,10 @@
     "acceptedAnswer": "已采纳的答案",
     "markAnswer": "标记为答案",
     "confirmDelete": "确定删除此回复？",
-    "confirmDeleteTopic": "要删除此主题及其所有回复吗？"
+    "confirmDeleteTopic": "要删除此主题及其所有回复吗？",
+    "searchPlaceholder": "搜索主题...",
+    "catTraining": "训练",
+    "catAdoption": "领养"
   },
   "events": {
     "title": "活动",
@@ -1621,7 +1631,18 @@
     "mineEmpty": "您还没有创建任何活动",
     "refundsPending_one": "{{count}} 笔退款待完成",
     "refundsPending": "{{count}} 笔退款待完成",
-    "completeRefundsQuestion": "确定完成退款吗？"
+    "completeRefundsQuestion": "确定完成退款吗？",
+    "searchPlaceholder": "搜索活动...",
+    "upcomingOnly": "仅显示即将举行",
+    "allDates": "全部日期",
+    "types": {
+      "meetup": "聚会",
+      "show": "展览",
+      "adoption": "领养",
+      "training": "训练",
+      "charity": "慈善",
+      "competition": "比赛"
+    }
   },
   "breeds": {
     "title": "品种",
@@ -1750,7 +1771,9 @@
     "cancelDelete": "取消请求",
     "cancelled": "已取消",
     "cancelledHint": "您的账号仍然有效。",
-    "legalNote": "依据《通用数据保护条例》第 17 条和第 20 条的权利。"
+    "legalNote": "依据《通用数据保护条例》第 17 条和第 20 条的权利。",
+    "exportSaved": "文件 {{name}} 已保存到您选择的文件夹。",
+    "exportFailed": "无法保存文件，请重试。"
   },
   "reviews": {
     "write": "写评价",
@@ -2455,5 +2478,8 @@
     "terms": "使用条款",
     "privacy": "隐私政策",
     "changeDate": "修改日期"
+  },
+  "paging": {
+    "loadMore": "加载更多"
   }
 }

@@ -88,6 +88,28 @@ function tint(key: string) {
   return (colors.category as any)[key] ?? colors.category.default
 }
 
+/**
+ * Κείμενα της αρχικής που αλλάζει ο διαχειριστής (GET /settings/content/home,
+ * σελίδα «Περιεχόμενο» του admin στο web).
+ *
+ * Ο server συγχωνεύει πάντα τα αποθηκευμένα με τις δικές του ελληνικές
+ * προεπιλογές (DEFAULT_CONTENT στο backend/src/routes/settings.ts), άρα η
+ * απάντηση δεν είναι ποτέ άδεια. Μια τιμή ίση με την προεπιλογή σημαίνει
+ * «δεν την άλλαξε κανείς» και τότε μένει το μεταφρασμένο κείμενο της
+ * εφαρμογής — αλλιώς ο αγγλόφωνος χρήστης θα έβλεπε ελληνικά.
+ */
+const SERVER_HOME_DEFAULTS: Record<string, string> = {
+  hero_cta: 'Ξεκινήστε Τώρα',
+  services_title: 'Υπηρεσίες',
+  services_subtitle: 'Βρες τον καλύτερο πάροχο κοντά σου',
+}
+function adminText(content: any, key: string): string | null {
+  const v = content?.[key]
+  if (typeof v !== 'string') return null
+  const x = v.trim()
+  return x && x !== SERVER_HOME_DEFAULTS[key] ? x : null
+}
+
 export default function HomeScreen() {
   const tabSpace = useTabSpace()
   const { t, i18n } = useTranslation()
@@ -99,6 +121,17 @@ export default function HomeScreen() {
   // Το loadToken() έφυγε από εδώ. Τρέχει πλέον στο app/_layout.tsx, πριν
   // εμφανιστεί οποιαδήποτε οθόνη — αλλιώς κάθε άνοιγμα που δεν περνούσε
   // από την Αρχική έβγαζε 401 και το React Query το κρατούσε στην cache.
+
+  // Ίδιο κλειδί και ίδιο endpoint με το web (Home.tsx).
+  const { data: content } = useQuery({
+    queryKey: ['content-home'],
+    queryFn: () => api.get('/settings/content/home').then(r => r.data?.data ?? {}),
+    staleTime: 5 * 60 * 1000,
+  })
+  const taglineText = adminText(content, 'tagline') ?? t('home.everything_pet_needs')
+  const servicesTitle = adminText(content, 'services_title') ?? t('services.title')
+  const servicesSubtitle = adminText(content, 'services_subtitle')
+  const startTitle = adminText(content, 'hero_cta') ?? t('home.start_today')
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
@@ -181,6 +214,7 @@ export default function HomeScreen() {
       queryClient.invalidateQueries({ queryKey: ['featured-products'] }),
       queryClient.invalidateQueries({ queryKey: ['ai-subscription-status'] }),
       queryClient.invalidateQueries({ queryKey: ['my-next-booking'] }),
+      queryClient.invalidateQueries({ queryKey: ['content-home'] }),
     ])
     setRefreshing(false)
   }, [queryClient])
@@ -205,7 +239,7 @@ export default function HomeScreen() {
             <Text style={s.greeting} numberOfLines={1}>
               {isAuthenticated ? t('home.greeting_name', { name: firstName }) : t('home.welcome')}
             </Text>
-            <Text style={s.tagline}>{t('home.everything_pet_needs')}</Text>
+            <Text style={s.tagline}>{taglineText}</Text>
           </View>
           {isAuthenticated && user?.profile_photo
             ? <Image source={{ uri: user.profile_photo }} style={s.avatar} />
@@ -338,7 +372,8 @@ export default function HomeScreen() {
           Τρεις στήλες. Χωράνε ολόκληρες οι λέξεις στα 12px, και το
           πλακίδιο μεγαλώνει αρκετά ώστε να είναι εύκολος στόχος. */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>{t('services.title')}</Text>
+        <Text style={[s.sectionTitle, !!servicesSubtitle && { marginBottom: space.xs }]}>{servicesTitle}</Text>
+        {!!servicesSubtitle && <Text style={s.sectionSub}>{servicesSubtitle}</Text>}
         <View style={s.serviceGrid}>
           {SERVICES.map(a => {
             const c = tint(a.key)
@@ -449,7 +484,7 @@ export default function HomeScreen() {
       {/* ── Εγγραφή ──────────────────────────────────────────────── */}
       {!isAuthenticated && (
         <View style={s.authBanner}>
-          <Text style={s.authTitle}>{t('home.start_today')}</Text>
+          <Text style={s.authTitle}>{startTitle}</Text>
           <Text style={s.authSub}>{t('home.free_signup')}</Text>
           <View style={s.authBtns}>
             <TouchableOpacity style={s.authPrimary} activeOpacity={0.85}
@@ -518,6 +553,7 @@ const s = StyleSheet.create({
   trialValue: { ...type.body, color: colors.text, fontWeight: weight.bold },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginBottom: space.md },
+  sectionSub: { ...type.caption, color: colors.textMuted, marginBottom: space.md },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: space.md },
   seeAll: { ...type.body, color: colors.brand, fontWeight: weight.semibold },
 

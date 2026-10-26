@@ -158,7 +158,7 @@ function sessionClaims(user: SessionUser) {
  * επαλήθευσης, token_version. (Πριν έφευγαν τα hash του reset_token σε κάθε
  * login.) Προστίθεται `email_verified` για τη μπάρα «Επιβεβαίωσε το email σου».
  */
-function toSafeUser(user: any) {
+async function toSafeUser(user: any) {
   const {
     password_hash: _p, reset_token: _r, reset_token_expires: _re,
     email_verify_token: _v, email_verify_expires: _ve, token_version: _tv,
@@ -169,7 +169,10 @@ function toSafeUser(user: any) {
   // Ε13: λογαριασμός χωρίς ημερομηνία γέννησης (Google/Facebook, παλιοί
   // λογαριασμοί) → ο client ζητά την ημερομηνία πριν από οτιδήποτε άλλο
   // (PATCH /auth/me/birth-date). Προσθετικό πεδίο.
-  safe.needs_birth_date = needsBirthDate(user)
+  // Ε16: ίδια συνάρτηση με την επιβολή του index.ts (authenticate → 403
+  // birth_date_required): service_provider εξαιρείται ΜΟΝΟ αν τον ρόλο τον
+  // έδωσε διαχειριστής.
+  safe.needs_birth_date = await needsBirthDate(user)
   return safe
 }
 
@@ -455,7 +458,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'register', resource: 'user', resource_id: user.id })
-    return { user: toSafeUser(user), token }
+    return { user: await toSafeUser(user), token }
   })
 
   // Login
@@ -484,7 +487,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     await autoLinkProviderStaff(user, req)
     const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'login', resource: 'user', resource_id: user.id })
-    return { user: toSafeUser(user), token }
+    return { user: await toSafeUser(user), token }
   })
 
   // Me
@@ -492,7 +495,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { email } = (req.user as any)
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return null
-    return toSafeUser(user)
+    return await toSafeUser(user)
   })
 
   // Update me (PATCH /auth/me or PATCH /users/me - whichever your frontend uses)
@@ -516,7 +519,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     if ('phone'   in updateData) updateData.phone   = encryptField(updateData.phone)
     if ('address' in updateData) updateData.address = encryptField(updateData.address)
     const user = await prisma.user.update({ where: { id }, data: updateData })
-    return toSafeUser(user)
+    return await toSafeUser(user)
   })
 
   /**
@@ -592,9 +595,13 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     const done = await prisma.user.updateMany({ where: { id, birth_date: null }, data: { birth_date: dob } })
     if (done.count === 0) return reply.code(409).send({ message: 'Η ημερομηνία γέννησης έχει ήδη οριστεί' })
+    // Ε16: η πύλη του authenticate (index.ts) κρατά στο cache ότι λείπει η
+    // ημερομηνία — καθαρίζει ΑΜΕΣΩΣ, αλλιώς τα επόμενα αιτήματα θα έπαιρναν
+    // 403 birth_date_required για έως 30″.
+    ;(app as any).invalidateAuthCache?.(id)
     await audit(req, { action: 'birth_date_set', resource: 'user', resource_id: id })
     const user = await prisma.user.findUnique({ where: { id } })
-    return toSafeUser(user)
+    return await toSafeUser(user)
   })
 
   // Refresh — ξαναδιαβάζει τον χρήστη: διαγραμμένος ή ανακλημένος → 401
@@ -618,6 +625,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.user as any
     await prisma.user.update({ where: { id }, data: { token_version: { increment: 1 } } })
     ;(app as any).invalidateAuthCache?.(id)
+    // Οι συσκευές push του χρήστη σβήνονται (best-effort): μια συσκευή που
+    // αποσυνδέθηκε δεν πρέπει να λαμβάνει πια ειδοποιήσεις. Το κινητό
+    // ξαναδηλώνεται μόνο του στην επόμενη σύνδεση/εκκίνηση.
+    await prisma.pushSubscription.deleteMany({ where: { user_id: id } })
+      .catch((e: any) => console.error('[logout-all] push cleanup failed:', e?.message))
     await audit(req, { action: 'logout_all', resource: 'user', resource_id: id })
     return { message: 'Αποσυνδέθηκες από όλες τις συσκευές' }
   })
@@ -739,7 +751,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       })
       if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
       const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
-      return { user: toSafeUser(user), token }
+      return { user: await toSafeUser(user), token }
     } catch (err: any) {
       console.error('Google mobile OAuth error:', err)
       return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
@@ -820,7 +832,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       })
       if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
       const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
-      return { user: toSafeUser(user), token }
+      return { user: await toSafeUser(user), token }
     } catch (err: any) {
       console.error('Facebook mobile OAuth error:', err)
       return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
@@ -980,7 +992,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
 
     const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
     await audit(req, { action: 'oauth_exchange', resource: 'user', resource_id: user.id })
-    return { user: toSafeUser(user), token }
+    return { user: await toSafeUser(user), token }
   })
 
   // Forgot password
@@ -1109,6 +1121,11 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       }
     })
     ;(app as any).invalidateAuthCache?.(user.id)
+    // Οι συσκευές push του χρήστη σβήνονται (best-effort): μια συσκευή που
+    // αποσυνδέθηκε δεν πρέπει να λαμβάνει πια ειδοποιήσεις. Το κινητό
+    // ξαναδηλώνεται μόνο του στην επόμενη σύνδεση/εκκίνηση.
+    await prisma.pushSubscription.deleteMany({ where: { user_id: user.id } })
+      .catch((e: any) => console.error('[reset-password] push cleanup failed:', e?.message))
     if (newlyVerified) {
       await grantTrialOnVerification(user.id)
       await autoLinkProviderStaff({ ...user, email_verified_at: new Date() }, req)

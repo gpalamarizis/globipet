@@ -2,7 +2,10 @@ import type { FastifyPluginAsync } from 'fastify'
 import { randomBytes } from 'node:crypto'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
-import { createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection, isRefundOutcomeUnknown } from '../lib/viva.js'
+import {
+  createVivaPaymentOrder, getVivaTransaction, refundVivaTransaction, isVivaDefinitiveRejection, isRefundOutcomeUnknown,
+  isVivaNotFoundYet, vivaForeignTransaction,
+} from '../lib/viva.js'
 import { bookingStart, REFUND_IN_PROGRESS_MESSAGE } from '../lib/cancellation.js'
 import { audit, auditSystem } from '../lib/audit.js'
 import { serverError } from '../lib/errors.js'
@@ -104,6 +107,26 @@ export async function alreadyRefunded(registrationId: string, transactionId: str
 }
 
 /**
+ * Υπάρχει επιστροφή αυτής της συναλλαγής με ΑΓΝΩΣΤΗ έκβαση (audit failure με
+ * unknown_outcome — αυτόματη ή αυτο-ακύρωση); Τότε η επιστροφή ίσως έγινε και
+ * καμία αυτόματη ροή δεν την ξανακάνει (refundOrphanPayment).
+ */
+async function unknownRefundOutcome(registrationId: string, transactionId: string): Promise<boolean> {
+  const row = await prisma.auditLog.findFirst({
+    where: {
+      resource: 'event_registration', resource_id: registrationId, outcome: 'failure',
+      action: { in: REFUND_ACTIONS },
+      AND: [
+        { metadata: { path: ['transaction_id'], equals: transactionId } },
+        { metadata: { path: ['unknown_outcome'], equals: true } },
+      ],
+    },
+    select: { id: true },
+  })
+  return !!row
+}
+
+/**
  * Λόγος επιστροφής μιας εγγραφής, από το audit log:
  *   'full'      — η εκδήλωση γέμισε όσο πλήρωνε
  *   'cancelled' — ακύρωσε ο ίδιος
@@ -188,6 +211,14 @@ export const eventRefundLockKey = (registrationId: string, transactionId: string
  *
  *   'refunded' — έγινε τώρα
  *   'already'  — είχε ήδη γίνει (audit) ή γίνεται αυτή τη στιγμή· καμία κλήση
+ *                (ο καλών ξεχωρίζει με alreadyRefunded)
+ *   'unknown'  — ΑΓΝΩΣΤΗ έκβαση (timeout/δίκτυο/5xx), τώρα ή σε προηγούμενη
+ *                απόπειρα της ίδιας συναλλαγής (audit unknown_outcome): η
+ *                επιστροφή ΙΣΩΣ έγινε. Καμία νέα κλήση στη Viva — εκτός αν η
+ *                Viva λέει ήδη 'R' (επιστραμμένη: καταγράφεται επιτυχία →
+ *                'already'). Ο καλών δεν γράφει refund_failed (θα επέτρεπε
+ *                νέα απόπειρα)· η εγγραφή μένει `refunding` για την εργασία
+ *                των κολλημένων (Viva 'R') / τον διαχειριστή.
  *   'failed'   — η Viva αρνήθηκε ή ο έλεγχος δεν ολοκληρώθηκε· χρειάζεται χειρισμό
  *
  * Ο έλεγχος audit → επιστροφή → audit γίνεται υπό διεκδίκηση στη βάση
@@ -198,7 +229,7 @@ export const eventRefundLockKey = (registrationId: string, transactionId: string
  */
 async function refundOrphanPayment(
   registrationId: string, transactionId: string, why: string,
-): Promise<'refunded' | 'already' | 'failed'> {
+): Promise<'refunded' | 'already' | 'unknown' | 'failed'> {
   const key = `${registrationId}|${transactionId}`
   if (refundsInFlight.has(key)) return 'already'
   refundsInFlight.add(key)
@@ -213,11 +244,26 @@ async function refundOrphanPayment(
 
 async function refundOrphanPaymentLocked(
   registrationId: string, transactionId: string, why: string,
-): Promise<'refunded' | 'already' | 'failed'> {
+): Promise<'refunded' | 'already' | 'unknown' | 'failed'> {
   try {
     if (await alreadyRefunded(registrationId, transactionId)) {
       console.error(`[viva] event registration ${registrationId}: transaction ${transactionId} already refunded — skipped (${why})`)
       return 'already'
+    }
+    if (await unknownRefundOutcome(registrationId, transactionId)) {
+      // Προηγούμενη επιστροφή με άγνωστη έκβαση: ποτέ ξανά στα τυφλά.
+      // Η Viva 'R' (ολόκληρη επιστραμμένη) την επιβεβαιώνει.
+      let viva: string | null = null
+      try { viva = String((await getVivaTransaction(transactionId))?.statusId ?? '') } catch { viva = null }
+      if (viva === 'R') {
+        await auditSystem({
+          action: 'event_registration_auto_refund', resource: 'event_registration', resource_id: registrationId,
+          metadata: { transaction_id: transactionId, refund_tx: null, reason: why, source: 'viva_status_R' },
+        })
+        return 'already'
+      }
+      console.error(`[viva] event registration ${registrationId}: earlier refund of ${transactionId} has unknown outcome — not refunded again (${why})`)
+      return 'unknown'
     }
     const r = await refundVivaTransaction(transactionId)
     console.error(`[viva] event registration ${registrationId}: transaction ${transactionId} refunded (${why})`)
@@ -228,13 +274,14 @@ async function refundOrphanPaymentLocked(
     return 'refunded'
   } catch (err: any) {
     // Καταγράφεται κι η αποτυχία: πρέπει να βρεθεί και να γίνει με το χέρι.
-    console.error(`[viva] event registration ${registrationId}: REFUND FAILED for ${transactionId} (${why}):`, err?.message)
+    const unknown = isRefundOutcomeUnknown(err)
+    console.error(`[viva] event registration ${registrationId}: REFUND ${unknown ? 'OUTCOME UNKNOWN' : 'FAILED'} for ${transactionId} (${why}):`, err?.message)
     await auditSystem({
       action: 'event_registration_auto_refund', resource: 'event_registration', resource_id: registrationId,
       outcome: 'failure', error_message: String(err?.message ?? err).slice(0, 500),
-      metadata: { transaction_id: transactionId, reason: why },
+      metadata: { transaction_id: transactionId, reason: why, ...(unknown ? { unknown_outcome: true } : {}) },
     })
-    return 'failed'
+    return unknown ? 'unknown' : 'failed'
   }
 }
 
@@ -253,7 +300,7 @@ async function refundOrphanPaymentLocked(
  * βάση) — όχι «άκυρη»· το webhook απαντά μη-2xx και το verify 503, ώστε να
  * ξαναγίνει. Πριν επέστρεφε null και η πληρωμή έμενε χωρίς θέση.
  */
-async function verifyEventPayment(registrationId: string, transactionId: string): Promise<{ orderCode: string } | null | 'error'> {
+async function verifyEventPayment(registrationId: string, transactionId: string, retryNotFound = false): Promise<{ orderCode: string } | null | 'error'> {
   const txn = String(transactionId)
   try {
     const reg = await prisma.eventRegistration.findUnique({ where: { id: registrationId } })
@@ -261,6 +308,12 @@ async function verifyEventPayment(registrationId: string, transactionId: string)
 
     const tx = await getVivaTransaction(txn)
     if (!tx || tx.statusId !== 'F') return null
+    // Κοινός λογαριασμός Viva: άλλη πηγή ή νόμισμα (όταν η Viva δίνει το πεδίο).
+    const foreign = vivaForeignTransaction(tx)
+    if (foreign) {
+      console.error(`[viva] transaction ${txn} is not ours (${foreign}) — event registration ${registrationId} not confirmed`)
+      return null
+    }
 
     const trns = String(tx.merchantTrns ?? tx.MerchantTrns ?? '')
     if (!trns.startsWith(`ev:${registrationId}:`) && trns !== registrationId) {
@@ -298,6 +351,11 @@ async function verifyEventPayment(registrationId: string, transactionId: string)
     }
     return { orderCode: txOrder }
   } catch (err: any) {
+    // Πρόσφατο webhook, συναλλαγή που η Viva δεν δείχνει ακόμη (404): ξανά.
+    if (isVivaNotFoundYet(err, retryNotFound)) {
+      console.error(`[viva] event registration transaction ${txn} not found at Viva yet (recent webhook) — will retry`)
+      return 'error'
+    }
     if (isVivaDefinitiveRejection(err)) {
       console.error('[viva] event registration transaction rejected by Viva:', err?.message)
       return null
@@ -316,7 +374,7 @@ export async function vivaPaidEventRegistration(registrationId: string, transact
   return !!r && r !== 'error'
 }
 
-type MarkResult = 'registered' | 'refunded' | 'refund_failed' | 'ignored'
+type MarkResult = 'registered' | 'refunded' | 'refund_failed' | 'refunding' | 'ignored'
 
 const stateOf = (status: string): MarkResult =>
   status === 'registered' ? 'registered'
@@ -336,6 +394,8 @@ const stateOf = (status: string): MarkResult =>
  *   registered      → η θέση επιβεβαιώθηκε (ή ήταν ήδη)
  *   refunded        → γέμισε στο μεταξύ, τα χρήματα επιστράφηκαν
  *   refund_failed   → γέμισε, αλλά η Viva αρνήθηκε την επιστροφή (χρειάζεται χειρισμό)
+ *   refunding       → γέμισε, η επιστροφή έχει ΑΓΝΩΣΤΗ έκβαση ή τρέχει αλλού:
+ *                     μένει `refunding` (εργασία κολλημένων → Viva 'R' / διαχειριστής)
  *   ignored         → η εγγραφή δεν περίμενε αυτή την πληρωμή· η συναλλαγή
  *                     επιστρέφεται αν δεν είναι η ήδη καταχωρημένη
  */
@@ -408,7 +468,14 @@ export async function markEventRegistrationPaid(
 
   // Γέμισε (ή ακυρώθηκε) όσο ο χρήστης πλήρωνε: πλήρης επιστροφή.
   const res = await refundOrphanPayment(reg.id, txn, outcome === 'cancelled' ? EVENT_CANCELLED_REASON : 'event became full')
-  const final = res === 'failed' ? 'refund_failed' : 'refunded'
+  // «Επιστράφηκε» ΜΟΝΟ με καταγραφή επιτυχίας ('already' σημαίνει και «τρέχει
+  // αλλού»). Οριστική άρνηση → refund_failed. Άγνωστη έκβαση ή επιστροφή που
+  // τρέχει αλλού → ΜΕΝΕΙ `refunding` (κανόνας του έργου): ένα refund_failed θα
+  // άνοιγε νέα απόπειρα για χρήματα που ίσως επιστράφηκαν ήδη· το κλείνει η
+  // εργασία των κολλημένων (audit / Viva 'R') ή ο διαχειριστής.
+  const ok = res === 'refunded' || (res === 'already' && await alreadyRefunded(reg.id, txn))
+  if (!ok && res !== 'failed') return 'refunding'
+  const final = ok ? 'refunded' : 'refund_failed'
   await prisma.eventRegistration.updateMany({
     where: { id: reg.id, status: 'refunding', viva_transaction_id: txn },
     data: { status: final },
@@ -420,8 +487,8 @@ export async function markEventRegistrationPaid(
  * Επαλήθευση + καταχώριση (verify της σελίδας επιβεβαίωσης και webhook).
  * null = άκυρη/δεν αφορά εγγραφή· 'error' = η επαλήθευση δεν ολοκληρώθηκε.
  */
-export async function confirmEventRegistrationPayment(registrationId: string, transactionId: string): Promise<MarkResult | null | 'error'> {
-  const ok = await verifyEventPayment(registrationId, transactionId)
+export async function confirmEventRegistrationPayment(registrationId: string, transactionId: string, retryNotFound = false): Promise<MarkResult | null | 'error'> {
+  const ok = await verifyEventPayment(registrationId, transactionId, retryNotFound)
   if (ok === 'error') return 'error'
   if (!ok) return null
   return markEventRegistrationPaid(registrationId, String(transactionId), ok.orderCode)
@@ -435,7 +502,7 @@ export async function confirmEventRegistrationPayment(registrationId: string, tr
  * 'retry': η επαλήθευση στη Viva δεν ολοκληρώθηκε — το webhook απαντά μη-2xx
  * ώστε η Viva να το ξαναστείλει.
  */
-export async function handleEventPaymentWebhook(merchantTrns: string, transactionId: string): Promise<'ok' | 'retry'> {
+export async function handleEventPaymentWebhook(merchantTrns: string, transactionId: string, retryNotFound = false): Promise<'ok' | 'retry'> {
   const regId = eventRegistrationIdFromTrns(merchantTrns)
   const txn = String(transactionId)
   if (!regId) {
@@ -447,18 +514,18 @@ export async function handleEventPaymentWebhook(merchantTrns: string, transactio
     try {
       const tx = await getVivaTransaction(txn)
       const trns = String(tx?.merchantTrns ?? tx?.MerchantTrns ?? '')
-      if (tx?.statusId === 'F' && trns === merchantTrns) {
+      if (tx?.statusId === 'F' && trns === merchantTrns && !vivaForeignTransaction(tx)) {
         await refundOrphanPayment(regId, txn, 'registration no longer exists')
       } else {
         console.error(`[viva] webhook for missing event registration ${regId} could not be verified — ignored`)
       }
     } catch (err: any) {
       console.error(`[viva] webhook for missing event registration ${regId}: verification error`, err?.message)
-      if (!isVivaDefinitiveRejection(err)) return 'retry'
+      if (isVivaNotFoundYet(err, retryNotFound) || !isVivaDefinitiveRejection(err)) return 'retry'
     }
     return 'ok'
   }
-  const r = await confirmEventRegistrationPayment(regId, txn)
+  const r = await confirmEventRegistrationPayment(regId, txn, retryNotFound)
   if (r === 'error') return 'retry'
   if (!r) console.error(`[viva] webhook for event registration ${regId} could not be verified — ignored`)
   return 'ok'
@@ -713,9 +780,13 @@ export type EventCancelReport = {
 async function refundForCancelledEvent(
   reg: { id: string; event_id: string; guests: number | null; viva_transaction_id: string | null },
   seatCounted: boolean,
-): Promise<boolean> {
+): Promise<boolean | 'unknown'> {
   const txn = String(reg.viva_transaction_id)
   const res = await refundOrphanPayment(reg.id, txn, EVENT_CANCELLED_REASON)
+  // Άγνωστη έκβαση: η εγγραφή ΜΕΝΕΙ `refunding` (όχι refund_failed, που θα
+  // ξαναδοκιμαζόταν)· στην αναφορά ως «σε εξέλιξη». Την κλείνει η εργασία των
+  // κολλημένων (Viva 'R') ή ο διαχειριστής.
+  if (res === 'unknown') return 'unknown'
   // 'already': είτε επιστράφηκε ήδη (audit) είτε τρέχει ταυτόχρονα — μόνο
   // το πρώτο μετρά ως επιτυχία.
   const ok = res === 'refunded' || (res === 'already' && await alreadyRefunded(reg.id, txn))
@@ -835,7 +906,11 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
           data: { status: 'refunding' },
         })
         if (claimed.count === 0) { report.in_progress.push(problem(reg, 'changed')); continue }
-        if (await refundForCancelledEvent(reg, true)) {
+        const refunded = await refundForCancelledEvent(reg, true)
+        if (refunded === 'unknown') {
+          report.in_progress.push(problem(reg, 'refunding'))
+          await notifyEventCancelled(reg.user_email, event, 'delayed', reg.amount_paid)
+        } else if (refunded) {
           report.refunded++
           report.refunded_amount = round2(report.refunded_amount + (reg.amount_paid ?? 0))
           await notifyEventCancelled(reg.user_email, event, 'refunded', reg.amount_paid)
@@ -962,7 +1037,10 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
         }
         // Η θέση δεν μετριέται σε refund_failed (ούτε στο «γέμισε» ούτε μετά
         // από αποτυχημένη απόπειρα ακύρωσης, που την αφαίρεσε ήδη).
-        if (await refundForCancelledEvent(reg, false)) {
+        const refunded = await refundForCancelledEvent(reg, false)
+        if (refunded === 'unknown') {
+          report.in_progress.push(problem(reg, 'refunding'))
+        } else if (refunded) {
           report.refunded++
           report.refunded_amount = round2(report.refunded_amount + (reg.amount_paid ?? 0))
           await notifyEventCancelled(reg.user_email, event, 'refunded', reg.amount_paid)
@@ -1132,7 +1210,7 @@ const EVENT_PAYMENT_DESCRIPTION = 'GlobiPet εκδήλωση:'
 
 export async function refundLegacyOrphanEventPayment(
   ref: string, transactionId: string,
-): Promise<'refunded' | 'already' | 'failed' | 'skip' | 'retry'> {
+): Promise<'refunded' | 'already' | 'unknown' | 'failed' | 'skip' | 'retry'> {
   if (!UUID_RE.test(ref)) return 'skip'
   const txn = String(transactionId)
   try {
@@ -1158,6 +1236,8 @@ export async function refundLegacyOrphanEventPayment(
   const trns = String(tx?.merchantTrns ?? tx?.MerchantTrns ?? '')
   const desc = String(tx?.customerTrns ?? tx?.CustomerTrns ?? '')
   if (tx?.statusId !== 'F' || trns !== ref || !desc.startsWith(EVENT_PAYMENT_DESCRIPTION)) return 'skip'
+  // Κοινός λογαριασμός Viva: πληρωμή άλλης πηγής/νομίσματος δεν επιστρέφεται από εδώ.
+  if (vivaForeignTransaction(tx)) return 'skip'
   return refundOrphanPayment(ref, txn, 'registration no longer exists (legacy reference)')
 }
 
@@ -1264,7 +1344,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     const take = Math.min(Math.max(Number(limit) || 20, 1), 100)
     const skip = (Math.max(Number(page) || 1, 1) - 1) * take
     const [data, total] = await Promise.all([
-      prisma.event.findMany({ where, skip, take, orderBy: { date: 'asc' } }),
+      prisma.event.findMany({ where, skip, take, orderBy: [{ date: 'asc' }, { id: 'asc' }] }),
       prisma.event.count({ where })
     ])
     const translated = await translateRecords('event', data, lang)

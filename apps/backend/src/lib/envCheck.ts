@@ -47,6 +47,11 @@ const CRITICAL: Array<{ keys: string[]; effect: string }> = [
   { keys: ['VIVA_CLIENT_ID', 'VIVA_CLIENT_SECRET', 'VIVA_SOURCE_CODE'], effect: 'οι πληρωμές Viva αποτυγχάνουν' },
   // lib/viva.ts (επιστροφές), routes/orders.ts GET /viva/webhook
   { keys: ['VIVA_MERCHANT_ID', 'VIVA_API_KEY'], effect: 'οι επιστροφές χρημάτων Viva και η επαλήθευση webhook της Viva αποτυγχάνουν' },
+  // Ε16 — ασφάλεια δεδομένων (όχι χρήματα), ίδιο επίπεδο: ΔΥΝΑΤΟ log, ο server συνεχίζει.
+  // routes/admin.ts queryClient(): χωρίς αυτό το εργαλείο SQL τρέχει με την ΚΥΡΙΑ σύνδεση.
+  { keys: ['DATABASE_URL_READONLY'], effect: 'το εργαλείο SQL της διαχείρισης (POST /admin/query) τρέχει με την κύρια σύνδεση της βάσης αντί για τον ρόλο μόνο ανάγνωσης' },
+  // lib/storage.ts: χωρίς αυτό τα ιατρικά αρχεία / εικόνες AI πάνε στο ΔΗΜΟΣΙΟ bucket.
+  { keys: ['CF_R2_PRIVATE_BUCKET_NAME'], effect: 'τα ιατρικά αρχεία και οι εικόνες AI αποθηκεύονται στο ΔΗΜΟΣΙΟ bucket του R2' },
 ]
 
 /** Προαιρετικές — λείπουν → προειδοποίηση με τη συνέπεια. */

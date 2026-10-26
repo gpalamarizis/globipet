@@ -60,9 +60,18 @@ function isAllowedMedia(url: string | null | undefined): boolean {
   let host: string
   try { host = new URL(u).hostname.replace(/^www\./, '') }
   catch { return false }                        // ό,τι δεν είναι έγκυρο URL
-  // Δικά μας αρχεία από R2 ή Cloudflare
-  if (host.endsWith('.r2.cloudflarestorage.com') || host.endsWith('globipet.com')) return true
-  if (host.endsWith('.r2.dev') || host.endsWith('.pages.dev')) return true
+  // Δικά μας αρχεία. Ε16: ΟΧΙ πια γενικά *.r2.dev / *.pages.dev /
+  // *.r2.cloudflarestorage.com — σε αυτά ο καθένας στήνει δικό του χώρο.
+  // Επιτρέπονται μόνο: globipet.com (+ υποτομείς, όχι «evilglobipet.com»),
+  // ο δημόσιος host του R2 (CF_R2_PUBLIC_URL) και ο endpoint του ΔΙΚΟΥ μας
+  // λογαριασμού R2 — εκεί γράφει το lib/storage.ts όταν λείπει το CF_R2_PUBLIC_URL.
+  if (host === 'globipet.com' || host.endsWith('.globipet.com')) return true
+  const pub = process.env.CF_R2_PUBLIC_URL
+  if (pub) {
+    try { if (new URL(pub).hostname.toLowerCase().replace(/^www\./, '') === host) return true } catch { /* κακή τιμή env */ }
+  }
+  const acct = process.env.CF_R2_ACCOUNT_ID?.trim().toLowerCase()
+  if (acct && host === `${acct}.r2.cloudflarestorage.com`) return true
   return MEDIA_HOSTS.some(h => host === h || host.endsWith('.' + h))
 }
 
@@ -515,7 +524,8 @@ const campaignRoutes: FastifyPluginAsync = async (app) => {
           })
         }
         // Ο σύνδεσμος προορισμού πρέπει να είναι εσωτερική διαδρομή.
-        if (p.link_url && !String(p.link_url).startsWith('/')) {
+        // «//host» και «/\host» ο browser τα ανοίγει ως ΑΛΛΟ domain.
+        if (p.link_url && !/^\/(?![\/\\])/.test(String(p.link_url))) {
           return reply.code(400).send({ message: 'Ο σύνδεσμος πρέπει να είναι εσωτερική διαδρομή' })
         }
       }

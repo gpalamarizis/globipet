@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
-import { r2, putObject, toDisplayUrl, parsePrivateRef, ownerHashes, PRIVATE_URL_TTL } from '../lib/storage.js'
+import { r2, putObject, toDisplayUrl, parsePrivateRef, ownerHashes, isPrivateFolder, PRIVATE_URL_TTL, PRIVATE_STORAGE_UNAVAILABLE_MSG } from '../lib/storage.js'
+import { vetPassportAccess, VET_VERIFY_EMAIL_MSG } from './passport.js'
 
 /**
  * Allowed MIME types and their expected magic bytes (file signatures).
@@ -103,6 +104,11 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
 
       // 4) Sanitize folder (prevent path traversal)
       const folder = sanitizeFolder((req.query as any).folder)
+      // Ιατρικά / AI υγείας / κόπρανα-ούρα: ΠΟΤΕ στο δημόσιο bucket. Χωρίς
+      // CF_R2_PRIVATE_BUCKET_NAME πήγαιναν εκεί σιωπηλά, με δημόσιο URL.
+      if (isPrivateFolder(folder) && !c.privateBucket) {
+        return reply.code(503).send({ message: PRIVATE_STORAGE_UNAVAILABLE_MSG })
+      }
 
       // 5) Ασφαλές όνομα: επέκταση από τη λίστα, ΟΧΙ από το όνομα του πελάτη.
       //    Το κλειδί περιέχει το hash του ιδιοκτήτη (lib/storage.ts), ώστε η
@@ -166,15 +172,11 @@ const uploadRoutes: FastifyPluginAsync = async (app) => {
     if (!allowed && email && typeof pet_id === 'string' && pet_id.length <= 64) {
       const pet = await prisma.pet.findUnique({ where: { id: pet_id }, select: { owner_email: true } })
       if (pet && ownerHashes(pet.owner_email).includes(p.owner)) {
-        const now = new Date()
-        const access = await prisma.petPassportAccess.findFirst({
-          where: {
-            pet_id, provider_email: email, status: 'approved',
-            OR: [{ expires_at: null }, { expires_at: { gt: now } }],
-          },
-          select: { id: true },
-        })
-        if (access) {
+        // Ίδιος έλεγχος με το διαβατήριο: εγκεκριμένη, μη ληγμένη πρόσβαση
+        // ΚΑΙ επιβεβαιωμένο email (αλλιώς αρκούσε εγγραφή με το email του κτηνιάτρου).
+        const access = await vetPassportAccess(pet_id, email, id)
+        if (access === 'unverified') return reply.code(403).send({ message: VET_VERIFY_EMAIL_MSG })
+        if (access === 'ok') {
           const where = { pet_id, file_urls: { has: ref as string } }
           const sel = { select: { id: true } }
           const hits = await Promise.all([

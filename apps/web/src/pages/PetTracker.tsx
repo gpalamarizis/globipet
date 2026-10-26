@@ -499,7 +499,10 @@ function DeviceManager({
                     </p>
                   </div>
                   <button
-                    onClick={() => regenerate.mutate(d.id)}
+                    // Το παλιό κλειδί παύει αμέσως (routes/tracker.ts) — επιβεβαίωση
+                    // πριν, όπως στο κινητό (app/tracker.tsx).
+                    onClick={() => { if (confirm(t('tracker.rotateConfirm'))) regenerate.mutate(d.id) }}
+                    disabled={regenerate.isPending}
                     title={t('tracker.newToken')}
                     className="text-gray-400 hover:text-brand-900 p-1 shrink-0">
                     <RefreshCw size={14} />

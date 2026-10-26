@@ -44,6 +44,7 @@ const insightsRoutes: FastifyPluginAsync = async (app) => {
   const requireShopAccess = async (req: any, reply: any) => {
     try { await (app as any).authenticate(req, reply) }
     catch { return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' }) }
+    if (reply.sent) return reply
     const role = (req.user as any)?.role
     if (!['admin', 'service_provider', 'both'].includes(role)) {
       return reply.code(403).send({ message: 'Δεν έχεις πρόσβαση στα στατιστικά καταστήματος' })

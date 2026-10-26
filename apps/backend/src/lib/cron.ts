@@ -145,11 +145,12 @@ const DELETE_BY_ID: string[] = ['productSubscription', 'userInsuranceSubscriptio
  * υπόκεινται σε φορολογική υποχρέωση διατήρησης. Το άρθρο 17 παρ. 3 στοιχ. β΄
  * επιτρέπει τη διατήρηση όταν υπάρχει νομική υποχρέωση.
  */
-const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string; set?: Record<string, any> }[] = [
+const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string; set?: Record<string, any>; ci?: true }[] = [
   // Λογιστική / συμβατική αξία — διατηρούνται ανωνυμοποιημένα (τα ποσά μένουν).
   // Η διεύθυνση αποστολής της παραγγελίας καθαρίζεται πριν (eraseUserAccount).
-  { accessor: 'order',                  field: 'user_email', nameField: 'user_name' },
-  { accessor: 'booking',                field: 'customer_email', nameField: 'customer_name' },
+  // Οι σημειώσεις (notes) είναι ελεύθερο κείμενο του πελάτη — φεύγουν.
+  { accessor: 'order',                  field: 'user_email', nameField: 'user_name', set: { notes: null } },
+  { accessor: 'booking',                field: 'customer_email', nameField: 'customer_name', set: { notes: null } },
   { accessor: 'review',                 field: 'customer_email', nameField: 'customer_name' },
   // Οι σημειώσεις της συνεδρίας είναι ελεύθερο κείμενο για το ζώο/τον άνθρωπο.
   { accessor: 'telehealthConsultation', field: 'client_email', nameField: 'client_name', set: { notes: null } },
@@ -159,14 +160,16 @@ const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string; set?
   { accessor: 'booking',                field: 'provider_email', nameField: 'provider_name' },
   { accessor: 'telehealthConsultation', field: 'provider_email', nameField: 'provider_name' },
   { accessor: 'review',                 field: 'provider_email' },
-  // Πρόσβαση στο διαβατήριο ζώων τρίτων: ανακαλείται.
-  { accessor: 'petPassportAccess',      field: 'provider_email', nameField: 'provider_name', set: { status: 'revoked' } },
+  // Πρόσβαση στο διαβατήριο ζώων τρίτων: ανακαλείται. Ε16: ci — το email του
+  // κτηνιάτρου το πληκτρολογεί ο ιδιοκτήτης (πεζά/κεφαλαία όπως τα έγραψε).
+  { accessor: 'petPassportAccess',      field: 'provider_email', nameField: 'provider_name', set: { status: 'revoked' }, ci: true },
   // Περιεχόμενο που ΑΝΗΚΕΙ σε άλλους χρήστες — δεν διαγράφεται.
   // Μια κοινότητα με μέλη, μια εκδήλωση με συμμετέχοντες, ή προϊόν που
   // κάποιος αγόρασε δεν μπορούν να εξαφανιστούν επειδή έφυγε ο δημιουργός.
-  { accessor: 'community',              field: 'creator_email' },
+  // Το όνομα του δημιουργού εμφανίζεται δημόσια στην κοινότητα/βόλτα.
+  { accessor: 'community',              field: 'creator_email', nameField: 'creator_name' },
   { accessor: 'event',                  field: 'organizer_email' },
-  { accessor: 'playdateEvent',          field: 'creator_email' },
+  { accessor: 'playdateEvent',          field: 'creator_email', nameField: 'creator_name', set: { creator_photo: null } },
   { accessor: 'product',                field: 'provider_email' },
   // Η υπηρεσία μένει για το ιστορικό κρατήσεων, αλλά χωρίς στοιχεία
   // επικοινωνίας και εκτός καταλόγου (κανείς δεν θα την εξυπηρετήσει).
@@ -175,7 +178,7 @@ const ANONYMIZE_MAP: { accessor: string; field: string; nameField?: string; set?
   // ── Προστέθηκαν μετά τον αρχικό χάρτη ──────────────────────────────
   // Συμμετοχή σε εκδήλωση: ο διοργανωτής πρέπει να κρατά τον αριθμό
   // συμμετεχόντων και το ιστορικό, όχι το όνομα.
-  { accessor: 'eventRegistration',      field: 'user_email', nameField: 'user_name' },
+  { accessor: 'eventRegistration',      field: 'user_email', nameField: 'user_name', set: { notes: null } },
   // Καμπάνιες παρόχου: ανήκουν στη δραστηριότητά του, όπως οι υπηρεσίες.
   { accessor: 'campaigns',              field: 'owner_email' },
   // Μηνύματα παρόχου↔πελάτη: το νήμα ανήκει και στους δύο, οπότε
@@ -249,6 +252,18 @@ export async function eraseUserAccount(userId: string, email: string): Promise<R
     if (a.nameField) data[a.nameField] = 'Διαγραμμένος χρήστης'
     const r = await model.updateMany({ where: { [a.field]: email }, data })
     if (r.count) counts['anon:' + a.accessor + '.' + a.field] = r.count
+    if (a.ci) {
+      // Ε16: όσες έμειναν διαφέρουν μόνο σε πεζά/κεφαλαία. Ανά γραμμή, με
+      // μοναδικό ψευδώνυμο: δύο τέτοιες για το ίδιο ζώο θα παραβίαζαν το
+      // @@unique([pet_id, provider_email]) με το κοινό ANON_EMAIL.
+      const rest: { id: string }[] = await model.findMany({
+        where: { [a.field]: { equals: email, mode: 'insensitive' } }, select: { id: true },
+      })
+      for (const row of rest) {
+        await model.update({ where: { id: row.id }, data: { ...data, [a.field]: `deleted-${userId}-${row.id}@anonymized.invalid` } })
+      }
+      if (rest.length) counts['anon:' + a.accessor + '.' + a.field + ':ci'] = rest.length
+    }
   }
 
   // 2) Διαγραφή προσωπικών δεδομένων
@@ -295,6 +310,19 @@ export async function eraseUserAccount(userId: string, email: string): Promise<R
 
   // 5) Συναινέσεις
   await prisma.userConsent.deleteMany({ where: { user_id: userId } })
+
+  // 5α) Αρχεία ελέγχου (audit_logs): ΔΕΝ σβήνονται — κάποια είναι οικονομική
+  //     κατάσταση (AUDIT_STATE_ACTIONS), που διαβάζεται με action/resource/
+  //     resource_id, ποτέ με email. Το email γίνεται emailHash (όπως οι εγγραφές
+  //     της ίδιας της διαγραφής), και IP / user agent φεύγουν. Χωρίς διάκριση
+  //     πεζών/κεφαλαίων: παλιές εγγραφές (π.χ. αποτυχημένη σύνδεση) κρατούν το
+  //     email όπως πληκτρολογήθηκε.
+  const eh = emailHash(email)
+  const byEmail = { equals: email, mode: 'insensitive' as const }
+  const auA = await prisma.auditLog.updateMany({ where: { actor_email: byEmail }, data: { actor_email: eh, ip: null, user_agent: null } })
+  if (auA.count) counts['anon:auditLog.actor_email'] = auA.count
+  const auS = await prisma.auditLog.updateMany({ where: { subject_email: byEmail }, data: { subject_email: eh, ip: null, user_agent: null } })
+  if (auS.count) counts['anon:auditLog.subject_email'] = auS.count
 
   // 6) Ο ίδιος ο χρήστης — τελευταίος στη βάση. Το αίτημα διαγραφής φεύγει
   //    μαζί του (onDelete: Cascade).
@@ -451,6 +479,7 @@ export const AUDIT_STATE_ACTIONS: readonly string[] = [
   'event_cancel',                             // routes/events.ts legacyCancelledAt
   'subscription_paid_while_paused',           // routes/admin-refunds.ts FAILURE_ACTIONS
   'external_refund',                          // lib/externalRefund.ts (ήδη εφαρμοσμένη, σύνολο επιστροφών), admin.ts έσοδα
+  'admin_user_create', 'admin_user_update',   // routes/users.ts roleAssignedByAdmin (ρόλος από διαχειριστή → χωρίς ημερομηνία γέννησης)
 ]
 
 const sqlList = (xs: readonly string[]) => xs.map(x => `'${x.replace(/'/g, "''")}'`).join(',')

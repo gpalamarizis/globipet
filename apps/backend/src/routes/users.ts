@@ -22,21 +22,40 @@ import { parseBody, text, httpUrl, phone, language } from '../lib/validate.js'
  * PATCH /user-rights/rectify (εκεί σε λειτουργία strip, για συμβατότητα). Πριν,
  * αυτά τα τρία έγραφαν ό,τι ερχόταν — η «πόρτα» του javascript: έμενε ανοιχτή.
  *
- * profile_photo: μόνο https από το R2 (CF_R2_PUBLIC_URL ή *.r2.cloudflarestorage.com
- * / *.r2.dev) — εκεί ανεβάζει το /api/upload. Κενό = αφαίρεση. Μια οποιαδήποτε
- * εξωτερική διεύθυνση θα γινόταν pixel παρακολούθησης για όποιον βλέπει το προφίλ.
+ * profile_photo: μόνο https από το ΔΙΚΟ ΜΑΣ R2 — εκεί ανεβάζει το /api/upload
+ * (lib/storage.ts uploadToR2). Κενό = αφαίρεση. Μια οποιαδήποτε εξωτερική
+ * διεύθυνση θα γινόταν pixel παρακολούθησης για όποιον βλέπει το προφίλ.
+ *
+ * Ε16: πριν γινόταν δεκτό ΚΑΘΕ `*.r2.dev` / `*.r2.cloudflarestorage.com` —
+ * δηλαδή το bucket οποιουδήποτε λογαριασμού Cloudflare (ένας επιτιθέμενος
+ * ανεβάζει ό,τι θέλει στο δικό του pub-xxx.r2.dev). Τώρα ακριβώς οι δύο μορφές
+ * URL που παράγει το lib/storage.ts:
+ *   · `${CF_R2_PUBLIC_URL}/<key>` (ίδιος host και, αν έχει, ίδιο πρόθεμα path)
+ *   · `https://${CF_R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${CF_R2_BUCKET_NAME}/<key>`
+ *     (όταν δεν έχει οριστεί δημόσιο URL)
+ * Εξάγεται για επαναχρήση (posts / communities κ.λπ.).
  */
-function isAllowedPhotoUrl(v: string): boolean {
+export function isAllowedPhotoUrl(v: string): boolean {
   if (v === '') return true
   let u: URL
   try { u = new URL(v) } catch { return false }
   if (u.protocol !== 'https:') return false
+  if (u.username || u.password) return false
   const host = u.hostname.toLowerCase()
-  const pub = process.env.CF_R2_PUBLIC_URL
+  const pub = process.env.CF_R2_PUBLIC_URL?.trim()
   if (pub) {
-    try { if (new URL(pub).hostname.toLowerCase() === host) return true } catch { /* κακή τιμή env */ }
+    try {
+      const p = new URL(pub)
+      const prefix = p.pathname.replace(/\/+$/, '')
+      if (p.protocol === 'https:' && p.hostname.toLowerCase() === host &&
+          (prefix === '' || u.pathname.startsWith(prefix + '/'))) return true
+    } catch { /* κακή τιμή env */ }
   }
-  return host.endsWith('.r2.cloudflarestorage.com') || host.endsWith('.r2.dev')
+  const account = process.env.CF_R2_ACCOUNT_ID?.trim().toLowerCase()
+  const bucket = process.env.CF_R2_BUCKET_NAME?.trim()
+  if (account && bucket && host === `${account}.r2.cloudflarestorage.com` &&
+      u.pathname.startsWith(`/${bucket}/`)) return true
+  return false
 }
 
 export const profileSchema = z.object({
@@ -53,21 +72,82 @@ export const profileSchema = z.object({
 }).strict()
 
 /**
- * Ε13: οι επαγγελματικοί λογαριασμοί (admin, service_provider) δεν περνούν
- * από την πύλη ημερομηνίας γέννησης. Ο ρόλος `both` είναι και ιδιώτης
- * χρήστης → ζητείται κανονικά. Κοινό με το auth.ts (toSafeUser).
+ * Ε16: απάντηση 403 όταν λείπει η ημερομηνία γέννησης (index.ts authenticate,
+ * packages.ts /setup): `{ message, code: 'birth_date_required' }`. Ο client
+ * ανοίγει την οθόνη ημερομηνίας γέννησης αντί για μήνυμα σφάλματος.
  */
-export const BIRTH_DATE_EXEMPT_ROLES = ['admin', 'service_provider']
-export function needsBirthDate(user: { birth_date?: unknown; role?: unknown }): boolean {
+export const BIRTH_DATE_REQUIRED_MESSAGE = 'Συμπλήρωσε πρώτα την ημερομηνία γέννησής σου για να συνεχίσεις.'
+
+/**
+ * Ε13/Ε16 — ποιος χρειάζεται ημερομηνία γέννησης (ΜΙΑ συνάρτηση για όλους:
+ * το πεδίο `needs_birth_date` του auth.ts/users.ts ΚΑΙ η επιβολή στο
+ * `authenticate` του index.ts — ώστε σημαία και 403 να συμφωνούν πάντα).
+ *
+ *   · Έχει ημερομηνία → όχι.
+ *   · admin → όχι (εξαίρεση ιδιοκτήτη).
+ *   · service_provider → όχι ΜΟΝΟ αν τον ρόλο τον έδωσε διαχειριστής
+ *     (roleAssignedByAdmin). Πάροχος που έγινε μόνος του (εγγραφή — εκεί η
+ *     ημερομηνία είναι ήδη υποχρεωτική —, ή παλιό POST /packages/setup)
+ *     → ναι.
+ *   · user / both → ναι.
+ */
+export async function needsBirthDate(user: { id?: string | null; birth_date?: unknown; role?: unknown }): Promise<boolean> {
   if (user.birth_date) return false
-  return !BIRTH_DATE_EXEMPT_ROLES.includes(String(user.role ?? ''))
+  const role = String(user.role ?? '')
+  if (role === 'admin') return false
+  if (role === 'service_provider' && user.id) return !(await roleAssignedByAdmin(user.id))
+  return true
+}
+
+/**
+ * Ο ρόλος service_provider δόθηκε από διαχειριστή;
+ *
+ *   Δεν υπάρχει στήλη γι' αυτό (καμία αλλαγή στο schema). Το πιο αξιόπιστο
+ *   υπάρχον σήμα είναι το audit των δύο διαδρομών της διαχείρισης (admin.ts):
+ *     · POST  /admin/users     → action 'admin_user_create', metadata.role
+ *     · PATCH /admin/users/:id → action 'admin_user_update', metadata.fields ∋ 'role'
+ *       και (από Ε16) metadata.role = η νέα τιμή
+ *   Μετράει η ΠΙΟ ΠΡΟΣΦΑΤΗ τέτοια εγγραφή: αν έχει metadata.role, πρέπει να
+ *   είναι 'service_provider'· παλιές εγγραφές update χωρίς metadata.role
+ *   (πριν το Ε16) → αρκεί ότι ο ρόλος άλλαξε από διαχειριστή και ο τρέχων
+ *   είναι service_provider.
+ *   και μόνο με actor_role = 'admin' (ο ρόλος του actor έρχεται από τη βάση,
+ *   index.ts `trusted`). Ερώτημα ΜΟΝΟ για πάροχο χωρίς ημερομηνία· το
+ *   αποτέλεσμα κρατιέται στο cache ελέγχου τοκεν (index.ts, 30″).
+ *
+ *   Τα 'admin_user_create' / 'admin_user_update' είναι στο AUDIT_STATE_ACTIONS
+ *   (lib/cron), ώστε το RETENTION των audit_logs να μην τα σβήνει.
+ */
+export async function roleAssignedByAdmin(userId: string): Promise<boolean> {
+  try {
+    const row = await prisma.auditLog.findFirst({
+      where: {
+        resource: 'user', resource_id: userId, actor_role: 'admin', outcome: 'success',
+        OR: [
+          { action: 'admin_user_create' },
+          { action: 'admin_user_update', metadata: { path: ['fields'], array_contains: ['role'] } },
+        ],
+      },
+      orderBy: { created_at: 'desc' },
+      select: { action: true, metadata: true },
+    })
+    if (!row) return false
+    const role = (row.metadata as any)?.role
+    if (typeof role === 'string') return role === 'service_provider'
+    // Παλιά εγγραφή update (χωρίς metadata.role): ο ρόλος άλλαξε από διαχειριστή.
+    return row.action === 'admin_user_update'
+  } catch (err) {
+    // Αποτυχία ανάγνωσης → ΔΕΝ εξαιρείται (ασφαλής πλευρά: ζητείται ημερομηνία).
+    console.error('[birth-date] roleAssignedByAdmin', userId, (err as any)?.message ?? err)
+    return false
+  }
 }
 
 /**
  * Ε12: ο χρήστης προς τον client ΧΩΡΙΣ μυστικά (κωδικός, hash reset/επαλήθευσης,
  * token_version) και με `email_verified` — όπως το toSafeUser του auth.ts.
  */
-function safeUser(user: any) {
+async function safeUser(user: any) {
   const {
     password_hash: _p, reset_token: _r, reset_token_expires: _re,
     email_verify_token: _v, email_verify_expires: _ve, token_version: _tv,
@@ -76,10 +156,22 @@ function safeUser(user: any) {
   decryptUserFields(safe)
   safe.email_verified = !!user.email_verified_at
   // Ε13: όπως το toSafeUser — λείπει η ημερομηνία γέννησης (PATCH /auth/me/birth-date)·
-  // όχι για επαγγελματικούς λογαριασμούς (admin, service_provider).
-  safe.needs_birth_date = needsBirthDate(user)
+  // Ε16: όχι για admin ή service_provider που τον όρισε διαχειριστής (needsBirthDate).
+  safe.needs_birth_date = await needsBirthDate(user)
   return safe
 }
+
+const passwordChangeSchema = z.object({
+  current_password: z.string({
+    required_error: 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί',
+    invalid_type_error: 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί',
+  }).min(1, 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί').max(1000),
+  new_password: z.string({
+    required_error: 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί',
+    invalid_type_error: 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί',
+  }).min(8, 'Ο νέος κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες')
+    .max(200, 'Ο κωδικός είναι υπερβολικά μεγάλος'),
+})
 
 const usersRoutes: FastifyPluginAsync = async (app) => {
 
@@ -88,7 +180,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const { email } = req.user as any
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return null
-    return safeUser(user)
+    return await safeUser(user)
   })
 
   // PUT /users/me — legacy full-update endpoint
@@ -110,7 +202,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         phone: encryptField(phone) as any,
       },
     })
-    const safe = safeUser(user)
+    const safe = await safeUser(user)
     await audit(req, {
       action: 'profile_update',
       resource: 'user',
@@ -141,7 +233,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     if ('address' in updateData) updateData.address = encryptField(updateData.address)
 
     const user = await prisma.user.update({ where: { email }, data: updateData })
-    const safe = safeUser(user)
+    const safe = await safeUser(user)
     await audit(req, {
       action: 'profile_update',
       resource: 'user',
@@ -153,16 +245,13 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // POST /users/me/password — user changes their own password
+  // Ε16: zod — μόνο κείμενα (αριθμός/αντικείμενο/πίνακας δεν φτάνει ποτέ στο
+  // bcrypt), νέος κωδικός 8–200 όπως στην εγγραφή/επαναφορά (auth.ts).
   app.post('/me/password', { preHandler: [(app as any).authenticate] }, async (req, reply) => {
     const { email, id } = req.user as any
-    const { current_password, new_password } = req.body as any
-
-    if (!current_password || !new_password) {
-      return reply.code(400).send({ message: 'Τρέχων και νέος κωδικός είναι υποχρεωτικοί' })
-    }
-    if (new_password.length < 8) {
-      return reply.code(400).send({ message: 'Ο νέος κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες' })
-    }
+    const parsed = parseBody(passwordChangeSchema, req.body, reply)
+    if (!parsed) return
+    const { current_password, new_password } = parsed
 
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || !user.password_hash) {
@@ -191,6 +280,12 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true, email: true, role: true, token_version: true },
     })
     ;(app as any).invalidateAuthCache?.(updated.id)
+    // Οι συσκευές push σβήνονται (best-effort): οι ΑΛΛΕΣ συνεδρίες μόλις
+    // τελείωσαν και δεν πρέπει να λαμβάνουν ειδοποιήσεις. Το κινητό
+    // ξαναδηλώνεται μόνο του στην επόμενη εκκίνηση· στο web ο χρήστης
+    // ξαναενεργοποιεί τις ειδοποιήσεις από τις ρυθμίσεις.
+    await prisma.pushSubscription.deleteMany({ where: { user_id: updated.id } })
+      .catch((e: any) => console.error('[me/password] push cleanup failed:', e?.message))
     const token = app.jwt.sign(
       { id: updated.id, email: updated.email, role: updated.role, tv: updated.token_version },
       { expiresIn: '7d' },

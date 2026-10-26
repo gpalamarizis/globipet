@@ -3,6 +3,7 @@ import { getVivaTransaction, isVivaDefinitiveRejection, VivaHttpError } from './
 import { withRefundLock } from './refundLock.js'
 import { bookingCancelLockKey, telehealthCancelLockKey, notifyCancelRefundCompleted } from './cancellation.js'
 import { eventRefundLockKey, notifyRegistrationRefunded } from '../routes/events.js'
+import { settleRefundTx } from './refundSettlement.js'
 
 /**
  * Viva webhook EventTypeId 1797 «Transaction Reversal Created».
@@ -104,12 +105,6 @@ type Rec = {
   eventId: string | null
 }
 
-/** Ίδιο με routes/orders.ts ORDER_STOCK_RESERVED_ACTION (χωρίς κυκλική εισαγωγή). */
-const ORDER_STOCK_RESERVED = 'order_stock_reserved'
-/** Πλήρης επιστροφή ακυρώνει μόνο ό,τι δεν έχει ολοκληρωθεί. */
-const ORDER_CANCELLABLE = ['pending', 'confirmed', 'processing']
-const SESSION_FINAL = ['completed', 'no_show', 'cancelled']
-
 async function findByParent(parent: string): Promise<Rec | null> {
   const [o, b, c, r] = await Promise.all([
     prisma.order.findFirst({ where: { payment_ref: parent } }),
@@ -125,7 +120,8 @@ async function findByParent(parent: string): Promise<Rec | null> {
 }
 
 /**
- * Viva 404 για τη συναλλαγή ΕΠΙΣΤΡΟΦΗΣ: αμέσως μετά τη δημιουργία της, η
+ * Viva 404 για τη συναλλαγή ΕΠΙΣΤΡΟΦΗΣ (ή, στο orders.ts, ΠΛΗΡΩΜΗΣ — EventTypeId
+ * 1796, μέσω lib/viva isVivaNotFoundYet): αμέσως μετά τη δημιουργία της, η
  * επιστροφή μπορεί να μη φαίνεται ακόμη στο API συναλλαγών (καθυστέρηση
  * ευρετηρίου της Viva). Τότε 'retry' (503 — η Viva ξαναστέλνει) ΑΝΤΙ για
  * οριστική απόρριψη, αλλά ΜΟΝΟ όσο το webhook είναι πρόσφατο (< 1 ώρα), ώστε
@@ -136,7 +132,7 @@ async function findByParent(parent: string): Promise<Rec | null> {
  */
 const REVERSAL_404_RETRY_WINDOW_MS = 3600_000
 const ISO_WITH_TZ_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i
-function isRecentWebhook(eventData: any, webhookCreated?: unknown): boolean {
+export function isRecentWebhook(eventData: any, webhookCreated?: unknown): boolean {
   for (const v of [webhookCreated, eventData?.InsDate]) {
     if (typeof v !== 'string' || !ISO_WITH_TZ_RE.test(v.trim())) continue
     const t = new Date(v.trim()).getTime()
@@ -271,13 +267,9 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
     const canApply = why === null
 
     const newStatus = !canApply ? null : isEvent ? 'refunded' : full ? 'refunded' : 'partially_refunded'
+    // Ό,τι έμενε πληρωμένο πριν από αυτή την επιστροφή (για την αναλογική
+    // μείωση αμοιβής/προμήθειας — lib/refundSettlement).
     const before = Math.max(0, rec.paid - prev)
-    const after = Math.max(0, before - (amount ?? 0))
-    const ratio = before > 0.005 ? Math.min(1, after / before) : 0
-    // Πλήρης επιστροφή: ακύρωση ό,τι δεν έχει ολοκληρωθεί (βλ. σχόλιο αρχής).
-    const cancelLife = canApply && full && !isEvent && (rec.type === 'order'
-      ? ORDER_CANCELLABLE.includes(rec.status)
-      : !SESSION_FINAL.includes(rec.status))
 
     const auditRow = (applied: boolean, extra: Record<string, unknown> = {}) => ({
       action: EXTERNAL_REFUND_ACTION, resource: rec.type, resource_id: rec.id,
@@ -327,45 +319,18 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
           return
         }
 
-        const data: any = { payment_status: newStatus }
-        if (rec.payout != null) data.provider_payout_amount = round2(Number(rec.payout) * ratio)
-        if (rec.fee != null) data.platform_fee_amount = round2(Number(rec.fee) * ratio)
-        const where = { id: rec.id, payment_status: rec.state, payment_ref: parent }
-        const r = rec.type === 'order' ? await tx.order.updateMany({ where, data })
-          : rec.type === 'booking' ? await tx.booking.updateMany({ where, data })
-          : await tx.telehealthConsultation.updateMany({ where, data })
-        if (r.count !== 1) throw new ChangedError()
-
-        // Πλήρης επιστροφή: ακύρωση ό,τι δεν έχει ολοκληρωθεί — υπό συνθήκη
-        // (ίδια κατάσταση ζωής), ώστε μια ταυτόχρονη αλλαγή (π.χ. «Ολοκληρώθηκε»)
-        // να μην αντικατασταθεί.
-        let cancelled = false
-        let stockRestored = false
-        if (cancelLife) {
-          const lw = { id: rec.id, status: rec.status, payment_ref: parent }
-          const c = rec.type === 'order' ? await tx.order.updateMany({ where: lw, data: { status: 'cancelled' } })
-            : rec.type === 'booking' ? await tx.booking.updateMany({ where: lw, data: { status: 'cancelled' } })
-            : await tx.telehealthConsultation.updateMany({ where: lw, data: { status: 'cancelled' } })
-          cancelled = c.count === 1
-          // Παραγγελία: επαναφορά του αποθέματος που δεσμεύτηκε για ΑΥΤΗ την
-          // πληρωμή — μία φορά (η μετάβαση σε cancelled περνά μόνο μία φορά).
-          if (cancelled && rec.type === 'order') {
-            const reservedRow = await tx.auditLog.findFirst({
-              where: {
-                action: ORDER_STOCK_RESERVED, resource: 'order', resource_id: rec.id,
-                metadata: { path: ['transaction_id'], equals: parent },
-              },
-              select: { metadata: true },
-            })
-            const items = ((reservedRow?.metadata ?? {}) as any).items ?? {}
-            for (const [pid, q] of Object.entries(items)) {
-              const qty = Math.floor(Number(q))
-              if (!pid || !Number.isFinite(qty) || qty <= 0) continue
-              await tx.product.updateMany({ where: { id: pid }, data: { stock: { increment: qty } } })
-              stockRestored = true
-            }
-          }
-        }
+        // Μετάβαση υπό συνθήκη (ίδια κατάσταση, ίδια πληρωμή), αναλογική
+        // μείωση αμοιβής/προμήθειας, και — σε ΠΛΗΡΗ επιστροφή — ακύρωση ό,τι
+        // δεν έχει ολοκληρωθεί με επαναφορά του δεσμευμένου αποθέματος: κοινή
+        // λογική με το /admin/refund (lib/refundSettlement), μία φορά.
+        const st = await settleRefundTx(tx, {
+          type: rec.type as 'order' | 'booking' | 'telehealth', id: rec.id, paymentRef: parent, fromStatus: rec.state,
+          toStatus: newStatus as 'refunded' | 'partially_refunded',
+          remainingBefore: before, amount: amount ?? 0,
+        })
+        if (!st.applied) throw new ChangedError()
+        const cancelled = st.cancelled
+        const stockRestored = st.stockRestored
         await tx.auditLog.create({
           data: auditRow(true, {
             previous_life_status: rec.status, cancelled, stock_restored: stockRestored,

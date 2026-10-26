@@ -8,7 +8,7 @@ import { refundVivaTransaction, isRefundOutcomeUnknown } from '../lib/viva.js'
 import { withRefundLock } from '../lib/refundLock.js'
 import { REFUND_IN_PROGRESS_MESSAGE, TELEHEALTH_REFUND_CLAIM_ACTION } from '../lib/cancellation.js'
 import { ADMIN_REFUND_CLAIM_ACTION, adminRefundLockKey, adminRefundDone } from './admin-refunds.js'
-import { ORDER_STOCK_RESERVED_ACTION } from './orders.js'
+import { settleRefundTx, type SettleResult } from '../lib/refundSettlement.js'
 import { encryptField, decryptField } from '../lib/crypto.js'
 import { sendPushToUser } from '../lib/push.js'
 import { eraseUserAccount, emailHash } from '../lib/cron.js'
@@ -26,17 +26,24 @@ const round2 = (n: number) => Math.round(n * 100) / 100
  *   στήλες) τα ερωτήματα τρέχουν με αυτόν τον ρόλο: η ίδια η Postgres
  *   αρνείται κάθε εγγραφή και κάθε προστατευμένη στήλη, όποιο κόλπο κι αν
  *   περάσει τους ελέγχους κειμένου. Χωρίς τη μεταβλητή → η κύρια σύνδεση,
- *   όπως πριν (οι έλεγχοι κειμένου + READ ONLY συναλλαγή).
+ *   όπως πριν (οι έλεγχοι κειμένου + READ ONLY συναλλαγή) — ΜΟΝΟ εκτός
+ *   παραγωγής: με NODE_ENV=production χωρίς τη μεταβλητή το /admin/query
+ *   απαντά 503 (readonlyQueryUnavailable).
  *   Ένα instance, δημιουργείται στην πρώτη χρήση (lazy).
  */
 let readonlyClient: PrismaClient | null = null
 function queryClient(): PrismaClient {
-  const url = process.env.DATABASE_URL_READONLY
+  const url = process.env.DATABASE_URL_READONLY?.trim()
   if (!url) return prisma
   if (!readonlyClient) {
     readonlyClient = new PrismaClient({ datasources: { db: { url } }, log: ['error'] })
   }
   return readonlyClient
+}
+
+/** Παραγωγή χωρίς σύνδεση μόνο ανάγνωσης → το εργαλείο SQL δεν τρέχει με την κύρια σύνδεση. */
+function readonlyQueryUnavailable(): boolean {
+  return process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL_READONLY?.trim()
 }
 
 /** Διαφυγή HTML για κείμενο του διαχειριστή μέσα σε email. */
@@ -85,6 +92,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req, reply) => {
     try {
       await (app as any).authenticate(req, reply)
+      if (reply.sent) return reply
       if ((req.user as any)?.role !== 'admin') {
         return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })
       }
@@ -426,6 +434,9 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
         password_hash,
         role: role || 'user',
         phone: encryptField(phone) as any,
+        // Ο λογαριασμός τον δημιουργεί ο διαχειριστής: θεωρείται επιβεβαιωμένος
+        // (αλλιώς η σύνδεση/πληρωμές ζητούσαν επιβεβαίωση email που δεν στάλθηκε).
+        email_verified_at: new Date(),
       },
       select: {
         id: true, full_name: true, email: true, role: true, created_at: true
@@ -476,7 +487,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     })
     // Νέος ρόλος/κωδικός: το cache ελέγχου τοκεν (index.ts) καθαρίζει αμέσως.
     if (data.token_version !== undefined) (app as any).invalidateAuthCache?.(user.id)
-    await audit(req, { action: 'admin_user_update', resource: 'user', resource_id: user.id, metadata: { fields: Object.keys(data), password_changed: !!password } })
+    await audit(req, { action: 'admin_user_update', resource: 'user', resource_id: user.id, metadata: { fields: Object.keys(data), password_changed: !!password, ...(data.role !== undefined ? { role: data.role } : {}) } })
     return user
   })
 
@@ -539,7 +550,7 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
    *     · υποχρεωτικό όριο γραμμών
    *     · κάθε ερώτημα καταγράφεται στο ημερολόγιο ελέγχου
    */
-  const FORBIDDEN_COLUMNS = /\b(password_hash|reset_token|reset_token_expires|expo_token|endpoint|p256dh|auth|two_factor|api_key|secret)\b/i
+  const FORBIDDEN_COLUMNS = /\b(password_hash|reset_token|reset_token_expires|expo_token|access_token|refresh_token|device_token|email_verify_token|email_verify_expires|endpoint|p256dh|auth|two_factor|api_key|secret)\b/i
   const MAX_ROWS = 500
   // Συναρτήσεις με παρενέργειες ή πρόσβαση εκτός βάσης, που ένα READ ONLY
   // transaction ΔΕΝ μπλοκάρει (τερματισμός συνδέσεων, αρχεία, ρυθμίσεις).
@@ -574,8 +585,12 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
    * με bcrypt hash ή με JSON που περιέχει τέτοιο κλειδί κρύβεται, και τα
    * BigInt (count(*)) γίνονται αριθμοί — αλλιώς η σειριοποίηση JSON σκάει.
    */
-  const SENSITIVE_KEY = /^(password_hash|password|google_id|facebook_id|apple_id|p256dh|auth|endpoint|tax_number)$|^two_factor|_secret$|_token$|_token_expires$/i
-  const SENSITIVE_IN_TEXT = /"(password_hash|google_id|facebook_id|p256dh|auth|endpoint|two_factor\w*|\w*_secret|\w*_token)"\s*:/i
+  // Κάθε κλειδί που περιέχει token/secret (access_token, refresh_token,
+  // device_token, email_verify_token, client_secret, …) και τα *_expires των
+  // τοκεν. Η προέλευση μιας τιμής από στήλη δεν φαίνεται μετά από alias, οπότε
+  // πιάνουμε όσο πιο πλατιά γίνεται τα ονόματα.
+  const SENSITIVE_KEY = /^(password_hash|password|google_id|facebook_id|apple_id|p256dh|auth|endpoint|tax_number|api_key|email_verify_expires|reset_token_expires)$|^two_factor|token|secret/i
+  const SENSITIVE_IN_TEXT = /"(password_hash|google_id|facebook_id|p256dh|auth|endpoint|api_key|two_factor\w*|\w*secret\w*|\w*token\w*)"\s*:/i
   const BCRYPT = /\$2[aby]?\$\d{2}\$[./A-Za-z0-9]{20,}/
   const REDACTED = '[redacted]'
   function scrub(v: any, depth = 0): any {
@@ -763,53 +778,49 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     const doneAmount = done && done.amount != null && Number.isFinite(Number(done.amount)) ? Number(done.amount) : null
     const finalAmount = doneAmount ?? amountOut
     const finalFull = done ? (typeof done.full === 'boolean' ? done.full : finalAmount >= paid - 0.005) : full
-    // Υπό συνθήκη: μόνο από refunding και για την ίδια συναλλαγή.
-    // Αμοιβή παρόχου και προμήθεια μειώνονται αναλογικά με ό,τι κρατήθηκε —
-    // ίδιος κανόνας με την ακύρωση (lib/cancellation cancelBooking). Πριν, μετά
-    // από μερική επιστροφή ο πάροχος έμενε να εισπράξει ολόκληρη την αμοιβή.
-    // Μία φορά: η εγγραφή περνά από refunding μόνο εδώ, οπότε δεν μειώνεται διπλά.
-    const keep = finalFull ? 0 : Math.min(1, Math.max(0, (paid - finalAmount) / paid))
-    const finalData: any = { payment_status: finalFull ? 'refunded' : 'partially_refunded' }
-    if (record.provider_payout_amount != null) finalData.provider_payout_amount = round2(Number(record.provider_payout_amount) * keep)
-    if (record.platform_fee_amount != null) finalData.platform_fee_amount = round2(Number(record.platform_fee_amount) * keep)
-    // Παραγγελία, ΠΛΗΡΗΣ επιστροφή: επαναφορά του αποθέματος που δεσμεύτηκε
-    // στην πληρωμή (orders.ts claimOrderPayment → καταγραφή
-    // ORDER_STOCK_RESERVED_ACTION για ΑΥΤΗ τη συναλλαγή). Μία φορά: στην ίδια
-    // συναλλαγή βάσης με τη μετάβαση refunding → refunded, που περνά μόνο μία
-    // φορά (count 1). Μερική επιστροφή: τίποτα (δεν ξέρουμε ποια είδη
-    // επιστράφηκαν). Παραγγελία ακυρωμένη λόγω έλλειψης αποθέματος δεν φτάνει
-    // ποτέ εδώ (δεν έγινε paid, ούτε δεσμεύτηκε απόθεμα)· παραγγελία που
-    // πληρώθηκε πριν τη δέσμευση αποθέματος δεν έχει καταγραφή → τίποτα.
-    let stockRestored = false
+    // Τελική εγγραφή σε ΜΙΑ συναλλαγή βάσης (lib/refundSettlement — κοινή με
+    // τη «Σήμανση ως λυμένο», την εργασία των κολλημένων και την εξωτερική
+    // επιστροφή), υπό συνθήκη: μόνο από refunding και για την ίδια συναλλαγή.
+    //   · Αμοιβή παρόχου και προμήθεια μειώνονται αναλογικά με ό,τι κρατήθηκε
+    //     — ίδιος κανόνας με την ακύρωση (lib/cancellation cancelBooking).
+    //   · ΠΛΗΡΗΣ επιστροφή ακυρώνει ό,τι δεν έχει ολοκληρωθεί: κράτηση/συνεδρία
+    //     όχι completed/no_show/cancelled → cancelled· παραγγελία
+    //     pending/confirmed/processing → cancelled, με επαναφορά του
+    //     αποθέματος που δεσμεύτηκε στην πληρωμή (orders.ts claimOrderPayment →
+    //     καταγραφή ORDER_STOCK_RESERVED_ACTION για ΑΥΤΗ τη συναλλαγή). Πριν
+    //     η κράτηση έμενε «επιβεβαιωμένη» (και η κλήση της τηλεϊατρικής
+    //     ανοιχτή) με τα χρήματα επιστραμμένα. Απεσταλμένη/παραδομένη
+    //     παραγγελία μένει ως έχει — και το απόθεμα (το εμπόρευμα έφυγε).
+    //   · Μία φορά: όλα εξαρτώνται από τη μετάβαση refunding → refunded /
+    //     partially_refunded, που περνά μόνο μία φορά (count 1).
+    // Μερική επιστροφή: καμία ακύρωση, καμία επαναφορά αποθέματος.
+    let settled: SettleResult | null = null
     await prisma.$transaction(async (tx) => {
-      const fin = await (tx as any)[type === 'telehealth' ? 'telehealthConsultation' : type].updateMany({
-        where: { id, payment_status: 'refunding', payment_ref: record.payment_ref },
-        data: finalData,
+      settled = await settleRefundTx(tx, {
+        type, id, paymentRef: txn, fromStatus: 'refunding',
+        toStatus: finalFull ? 'refunded' : 'partially_refunded',
+        remainingBefore: paid, amount: finalFull ? paid : finalAmount,
       })
-      if (fin.count !== 1 || type !== 'order' || !finalFull) return
-      const reservedRow = await tx.auditLog.findFirst({
-        where: {
-          action: ORDER_STOCK_RESERVED_ACTION, resource: 'order', resource_id: id,
-          metadata: { path: ['transaction_id'], equals: txn },
-        },
-        select: { metadata: true },
-      })
-      const items = ((reservedRow?.metadata ?? {}) as any).items ?? {}
-      for (const [pid, q] of Object.entries(items)) {
-        const qty = Math.floor(Number(q))
-        if (!pid || !Number.isFinite(qty) || qty <= 0) continue
-        await tx.product.updateMany({ where: { id: pid }, data: { stock: { increment: qty } } })
-        stockRestored = true
-      }
     })
-    if (stockRestored) {
+    const st = settled as SettleResult | null
+    if (st?.stockRestored) {
       await audit(req, { action: 'order_stock_restored', resource: 'order', resource_id: id, metadata: { transaction_id: txn, admin } })
     }
+    if (st?.cancelled) {
+      await audit(req, {
+        action: 'refund_lifecycle_cancelled', resource: type, resource_id: id,
+        metadata: { transaction_id: txn, previous_status: st.previousLifeStatus, admin },
+      })
+    }
 
-    return { success: true, amount: finalAmount, full: finalFull, refund_transaction: refundTx ?? null }
+    // `cancelled` προσθετικό: η πλήρης επιστροφή ακύρωσε και την κράτηση/συνεδρία/παραγγελία.
+    return { success: true, amount: finalAmount, full: finalFull, refund_transaction: refundTx ?? null, cancelled: !!st?.cancelled }
   })
 
   app.post('/query', async (req: any, reply) => {
+    if (readonlyQueryUnavailable()) {
+      return reply.code(503).send({ message: 'Το εργαλείο SQL δεν είναι διαθέσιμο: δεν έχει οριστεί σύνδεση μόνο ανάγνωσης στη βάση.' })
+    }
     const { sql } = req.body as any
     if (!sql || typeof sql !== 'string') {
       return reply.code(400).send({ message: 'Δεν δόθηκε SQL query' })

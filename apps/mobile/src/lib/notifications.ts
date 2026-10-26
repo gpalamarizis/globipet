@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'expo-router'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
@@ -150,13 +150,24 @@ export function routeFromNotification(
   const data = response?.notification?.request?.content?.data as
     | Record<string, unknown>
     | undefined
-  const target = data?.url ?? data?.route
+  return internalRoute(data?.url ?? data?.route, data?.type)
+}
+
+/**
+ * Ε16: ο ίδιος κανόνας για το push και για το κέντρο ειδοποιήσεων
+ * (app/notifications.tsx, `link` + `type` της ειδοποίησης). Μόνο εσωτερική
+ * διαδρομή — όπως το web NotificationsPanel (/^\/(?![\/\\])/) και αυστηρότερα.
+ */
+export function internalRoute(target: unknown, type?: unknown): string | null {
   if (typeof target !== 'string') return null
-  if (!target.startsWith('/') || target.startsWith('//')) return null
+  if (!/^\/(?![\/\\])/.test(target)) return null
+  // Ε16: ούτε «/\host» (κάποιοι parsers το διαβάζουν ως «//host»), ούτε
+  // κενά/χαρακτήρες ελέγχου, ούτε υπερβολικό μήκος.
+  if (target.length > 512 || /[\\\s\u0000-\u001f]/.test(target)) return null
   // Αποτυχία χρέωσης συνδρομής: ο server στέλνει link '/profile' (σελίδα του
   // web). Στο κινητό οι συνδρομές έχουν δική τους οθόνη. Αναγνωρίζεται μόνο
   // από ρητό τύπο στα δεδομένα — το κείμενο είναι μεταφρασμένο, δεν ελέγχεται.
-  if (data?.type === 'subscription_payment_failed') return '/subscriptions'
+  if (type === 'subscription_payment_failed') return '/subscriptions'
   // Οι σύνδεσμοι παρόχου του backend είναι του web (/provider, /provider/telehealth/:id).
   // Στο κινητό ο χώρος παρόχου είναι η ομάδα (provider): εκεί η Επισκόπηση
   // δείχνει τις σημερινές τηλεσυνεδρίες με κουμπί εισόδου στην κλήση.
@@ -176,27 +187,44 @@ export function routeFromNotification(
  * Χωρίς το πρώτο, κάθε ειδοποίηση που ανοίγει την εφαρμογή από το μηδέν
  * καταλήγει στην Αρχική αντί για την κράτηση ή το μήνυμα που αφορούσε.
  */
-export function usePushRouting(): void {
+export function usePushRouting(ready: boolean): void {
   const router = useRouter()
+  /**
+   * Ε16: ΠΡΩΤΑ ΑΠΟΘΗΚΕΥΣΗ, ΜΕΤΑ ΠΛΟΗΓΗΣΗ
+   *   Στο κρύο άνοιγμα από ειδοποίηση το getLastNotificationResponseAsync
+   *   απαντούσε πριν αποδοθεί ο navigator (το _layout επιστρέφει null μέχρι
+   *   γραμματοσειρές/σύνδεση/γλώσσα), και το router.push πετούσε σφάλμα.
+   *   Τώρα η διαδρομή κρατιέται και ανοίγει μόνο όταν `ready` (navigator
+   *   έτοιμος) — το ίδιο και για τον listener.
+   */
+  const [pending, setPending] = useState<string | null>(null)
+  // Η ίδια ειδοποίηση μπορεί να έρθει και από τις δύο πηγές: μία πλοήγηση.
+  const handled = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let alive = true
-
-    Notifications.getLastNotificationResponseAsync()
-      .then(response => {
-        if (!alive) return
-        const path = routeFromNotification(response)
-        if (path) router.push(path as never)
-      })
-      .catch(() => {})
-
-    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+    const take = (response: Notifications.NotificationResponse | null) => {
+      if (!alive || !response) return
+      const id = response.notification?.request?.identifier
+      if (id) {
+        if (handled.current.has(id)) return
+        handled.current.add(id)
+      }
       const path = routeFromNotification(response)
-      if (path) router.push(path as never)
-    })
+      if (path) setPending(path)
+    }
+
+    Notifications.getLastNotificationResponseAsync().then(take).catch(() => {})
+    const sub = Notifications.addNotificationResponseReceivedListener(take)
 
     return () => { alive = false; sub.remove() }
-  }, [router])
+  }, [])
+
+  useEffect(() => {
+    if (!ready || !pending) return
+    setPending(null)
+    try { router.push(pending as never) } catch { /* άγνωστη διαδρομή: μένει εκεί που είναι */ }
+  }, [ready, pending, router])
 }
 
 // ═══════════════════════════════════════════════════════════════════════

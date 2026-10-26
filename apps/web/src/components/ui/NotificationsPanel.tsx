@@ -4,10 +4,16 @@ import { api } from '@/lib/api'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+
+// Μόνο εσωτερικές διαδρομές της εφαρμογής ("/…" αλλά όχι "//…" ή "/\…",
+// που ο browser τα ερμηνεύει ως άλλο domain).
+const isInternalPath = (l: unknown): l is string => typeof l === 'string' && /^\/(?![\/\\])/.test(l)
 
 export default function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   // Δικό του κλειδί: το ['notifications'] το χρησιμοποιεί ήδη η κεφαλίδα
   // (MainLayout) για ΜΟΝΟ τις αδιάβαστες — με κοινό κλειδί η μία λίστα
   // έγραφε πάνω στην άλλη στην cache.
@@ -56,7 +62,10 @@ export default function NotificationsPanel({ open, onClose }: { open: boolean; o
               {notifications.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-400">{t('cmpNotifPanel.empty')}</div>
               ) : notifications.map((n: any) => (
-                <div key={n.id} onClick={() => { if (!n.is_read) markRead.mutate(n.id) }}
+                <div key={n.id} onClick={() => {
+                  if (!n.is_read) markRead.mutate(n.id)
+                  if (isInternalPath(n.link)) { onClose(); navigate(n.link) }
+                }}
                   className={cn('px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-start gap-2 cursor-pointer', !n.is_read && 'bg-brand-50/50 dark:bg-brand-900/10')}>
                   <div className="flex-1 min-w-0">
                     {n.title && <p className="text-sm font-semibold text-gray-900 dark:text-white">{n.title}</p>}

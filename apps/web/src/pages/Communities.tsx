@@ -7,13 +7,19 @@ import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
+import { useParams, useNavigate } from 'react-router-dom'
 
 export default function Communities() {
   const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const qc = useQueryClient()
-  const [view, setView] = useState<'list' | 'chat'>('list')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  // Η ανοιχτή κοινότητα ζει στο URL (/communities/:id), όπως στο κινητό
+  // (app/communities/[id].tsx): οι ειδοποιήσεις «νέα κοινότητα» στέλνουν
+  // ακριβώς αυτόν τον σύνδεσμο, και το «πίσω» του browser επιστρέφει στη λίστα.
+  const { id: routeId } = useParams<{ id?: string }>()
+  const selectedId = routeId ?? null
+  const view: 'list' | 'chat' = selectedId ? 'chat' : 'list'
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
@@ -46,7 +52,7 @@ export default function Communities() {
     enabled: !!user,
   })
 
-  const { data: communityData, refetch: refetchMessages } = useQuery({
+  const { data: communityData, refetch: refetchMessages, isLoading: communityLoading } = useQuery({
     queryKey: ['community', selectedId],
     queryFn: () => api.get(`/communities/${selectedId}`).then(r => r.data),
     enabled: !!selectedId,
@@ -125,7 +131,7 @@ export default function Communities() {
     } catch { toast.error(t('pgCommunities.geocodingError')) }
   }
 
-  const openChat = (id: string) => { setSelectedId(id); setView('chat') }
+  const openChat = (id: string) => navigate(`/communities/${encodeURIComponent(id)}`)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
@@ -226,11 +232,24 @@ export default function Communities() {
           </>
         )}
 
+        {/* Σύνδεσμος σε κοινότητα που φορτώνει ή δεν υπάρχει πια (404). */}
+        {view === 'chat' && !community && (
+          communityLoading ? (
+            <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>
+          ) : (
+            <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl shadow-sm">
+              <p className="text-4xl mb-3">🏘️</p>
+              <p className="font-semibold text-gray-900 dark:text-white mb-4">{t('pgCommunities.notFound')}</p>
+              <button onClick={() => navigate('/communities')} className="px-6 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-medium">{t('pgCommunities.backToList')}</button>
+            </div>
+          )
+        )}
+
         {view === 'chat' && community && (
           <div className="flex flex-col h-[calc(100vh-8rem)]">
             {/* Chat header */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm mb-3 flex items-center gap-3">
-              <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
+              <button onClick={() => navigate('/communities')} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
                 <ChevronLeft size={18} className="text-gray-500" />
               </button>
               <div className="flex-1">

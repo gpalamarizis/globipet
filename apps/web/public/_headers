@@ -76,8 +76,78 @@
   Accept-Ranges: bytes
   Content-Type: video/mp4
 
+# Το assetlinks.json (App Links του Android) πρέπει να σερβίρεται ως JSON·
+# χωρίς επέκταση στο URL το Pages δεν βάζει πάντα σωστό Content-Type και η
+# επαλήθευση του Google αποτυγχάνει.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+
 # Security headers for everything else
+#
+# Ε16 — ΠΡΟΣΘΗΚΕΣ
+#   Strict-Transport-Security: μόνο HTTPS για έναν χρόνο — ΧΩΡΙΣ includeSubDomains
+#     (υποτομείς που ίσως δεν έχουν ακόμη HTTPS δεν πρέπει να «κλειδώσουν»).
+#     ΧΩΡΙΣ preload: η λίστα preload δεν αναιρείται εύκολα.
+#   Permissions-Policy: κάμερα/μικρόφωνο/κοινή χρήση οθόνης μόνο για εμάς και
+#     για τα iframe της τηλεϊατρικής (8x8.vc = JaaS, meet.jit.si = εφεδρικό,
+#     βλ. backend routes/telehealth.ts). Τοποθεσία μόνο για εμάς (κοινότητες,
+#     GPS). Πληρωμές (Payment Request API) και USB: κανείς — η Viva ανοίγει
+#     με ανακατεύθυνση, όχι μέσα στη σελίδα.
+#   Cross-Origin-Opener-Policy: same-origin-allow-popups — απομονώνει το
+#     παράθυρο αλλά αφήνει τα popups (π.χ. «Άνοιγμα σε νέα καρτέλα»).
+#   Content-Security-Policy-Report-Only: ΔΕΝ μπλοκάρει τίποτα ακόμη· ο browser
+#     γράφει μόνο στην κονσόλα ό,τι θα είχε μπλοκαριστεί. Όταν η κονσόλα
+#     μείνει καθαρή για λίγες μέρες, αλλάζει το όνομα σε
+#     Content-Security-Policy. Πηγές ανά οδηγία (από grep στον κώδικα web/src):
+#
+#   default-src 'self'
+#   script-src
+#     'self'                              τα bundles του Vite (/assets/*.js), sw.js — κανένα inline script στο index.html
+#     https://api.mapbox.com              mapbox-gl.js (lib/loadMapbox.ts)
+#     https://8x8.vc                      external_api.js του JaaS (JitsiCall.tsx)
+#     https://meet.jit.si                 external_api.js όταν δεν έχει ρυθμιστεί JaaS
+#     https://static.cloudflareinsights.com  beacon του Cloudflare Web Analytics, αν είναι ενεργό στο Pages
+#   style-src
+#     'self'                              CSS του build
+#     'unsafe-inline'                     <style> των γραμματοσειρών στο index.html και react-hot-toast (εισάγει <style>)
+#     https://api.mapbox.com              mapbox-gl.css
+#   img-src
+#     'self' data: blob:                  λογότυπα, εικόνες base64 (upload χωρίς R2), προεπισκοπήσεις αρχείων (createObjectURL)
+#     https:                              ΣΚΟΠΙΜΑ ανοιχτό: εικόνες προϊόντων από μαζική εισαγωγή (bulk-import, οποιοδήποτε URL),
+#                                         Unsplash (Home/About), avatar Google (*.googleusercontent.com) και
+#                                         Facebook (*.fbcdn.net, *.fbsbx.com), R2 δημόσιο και προσωρινοί σύνδεσμοι
+#                                         *.r2.cloudflarestorage.com. Το img δεν εκτελεί κώδικα.
+#   font-src 'self' data:                 γραμματοσειρές από /fonts (καμία Google Fonts)
+#   connect-src
+#     'self'                              /cdn-cgi/trace (lib/geoLocale.ts)
+#     https://globipetbackend-production.up.railway.app   το API (VITE_API_URL) — αν αλλάξει το VITE_API_URL, αλλάζει κι εδώ
+#     https://api.mapbox.com              στυλ, tiles, sprites, glyphs του χάρτη
+#     https://events.mapbox.com           τηλεμετρία του mapbox-gl (αλλιώς σφάλματα στην κονσόλα)
+#     https://*.tiles.mapbox.com          raster tiles
+#     https://cloudflareinsights.com      αποστολή μετρήσεων Web Analytics, αν είναι ενεργό
+#   media-src
+#     'self' blob:                        /videos/* (Home) και προεπισκόπηση βίντεο πριν το upload
+#     https://globipet.com https://*.globipet.com   βίντεο καμπανιών σε δικό μας domain
+#     https://*.r2.dev https://*.r2.cloudflarestorage.com   βίντεο καμπανιών στο R2 — ΣΤΕΝΕΥΕΙ στον ακριβή host του
+#                                         CF_R2_PUBLIC_URL (και <account>.r2.cloudflarestorage.com) πριν την επιβολή
+#   frame-src
+#     https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com
+#                                         βίντεο καμπανιών (CampaignBanner.tsx — ίδια λίστα)
+#     https://8x8.vc https://meet.jit.si  βιντεοκλήση τηλεϊατρικής
+#   worker-src 'self' blob:               sw.js (ειδοποιήσεις) και οι workers του mapbox-gl (blob:)
+#   child-src 'self' blob:                το ίδιο για παλαιότερο Safari που διαβάζει child-src για workers
+#   manifest-src 'self'                   /manifest.webmanifest
+#   object-src 'none'                     κανένα plugin/embed
+#   base-uri 'self'                       κανένα ξένο <base>
+#   form-action 'self'                    οι φόρμες στέλνονται με JS· Google/Facebook/Viva είναι ανακατευθύνσεις
+#   frame-ancestors 'none'                ίδιο με το X-Frame-Options: DENY
+#
+#   Δεν υπάρχει report-uri: δεν υπάρχει endpoint αναφορών στο backend.
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Permissions-Policy: camera=(self "https://8x8.vc" "https://meet.jit.si"), microphone=(self "https://8x8.vc" "https://meet.jit.si"), display-capture=(self "https://8x8.vc" "https://meet.jit.si"), geolocation=(self), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://api.mapbox.com https://8x8.vc https://meet.jit.si https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://globipetbackend-production.up.railway.app https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://cloudflareinsights.com; media-src 'self' blob: https://globipet.com https://*.globipet.com https://*.r2.dev https://*.r2.cloudflarestorage.com; frame-src https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://8x8.vc https://meet.jit.si; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

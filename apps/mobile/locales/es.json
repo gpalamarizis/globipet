@@ -899,7 +899,9 @@
     "newToken": "Nueva clave",
     "tokenHint": "Configura la nueva clave en el dispositivo para que siga enviando ubicación.",
     "tokenOnce": "Clave del dispositivo — cópiala ahora, no se volverá a mostrar",
-    "ingestUrl": "URL de envío de ubicación"
+    "ingestUrl": "URL de envío de ubicación",
+    "rotateTitle": "Nueva clave del dispositivo",
+    "rotateQ": "La clave actual deja de funcionar de inmediato y el dispositivo no enviará su ubicación hasta que se configure con la nueva. ¿Continuar?"
   },
   "ver": {
     "about": "Sobre ti",
@@ -1239,7 +1241,8 @@
     "szXLarge": "Muy grande",
     "title": "Paquetes de servicios",
     "update": "Actualizar",
-    "yourPrice": "Tu precio:"
+    "yourPrice": "Tu precio:",
+    "addon": "Extra"
   },
   "providerStaffNew": {
     "title": "Nuevo miembro del personal",
@@ -1481,7 +1484,11 @@
     "reviews": "Reseñas"
   },
   "petDetail": {
-    "lostNotice": "Esta mascota está declarada perdida"
+    "lostNotice": "Esta mascota está declarada perdida",
+    "locationHistory": "Historial de ubicaciones",
+    "noLocations": "No hay ubicaciones registradas",
+    "statusLost": "Perdida",
+    "statusSafe": "Segura"
   },
   "pricing": {
     "title": "Suscripciones de IA",
@@ -1573,7 +1580,10 @@
     "acceptedAnswer": "Respuesta aceptada",
     "markAnswer": "Marcar como respuesta",
     "confirmDelete": "¿Eliminar esta respuesta?",
-    "confirmDeleteTopic": "¿Eliminar este tema junto con todas sus respuestas?"
+    "confirmDeleteTopic": "¿Eliminar este tema junto con todas sus respuestas?",
+    "searchPlaceholder": "Buscar temas...",
+    "catTraining": "Adiestramiento",
+    "catAdoption": "Adopción"
   },
   "events": {
     "title": "Eventos",
@@ -1621,7 +1631,18 @@
     "mineEmpty": "No has creado ningún evento",
     "refundsPending_one": "{{count}} reembolso pendiente",
     "refundsPending": "{{count}} reembolsos pendientes",
-    "completeRefundsQuestion": "¿Completar los reembolsos?"
+    "completeRefundsQuestion": "¿Completar los reembolsos?",
+    "searchPlaceholder": "Buscar eventos...",
+    "upcomingOnly": "Solo próximos",
+    "allDates": "Todas las fechas",
+    "types": {
+      "meetup": "Quedada",
+      "show": "Exposición",
+      "adoption": "Adopción",
+      "training": "Adiestramiento",
+      "charity": "Benéfico",
+      "competition": "Competición"
+    }
   },
   "breeds": {
     "title": "Razas",
@@ -1750,7 +1771,9 @@
     "cancelDelete": "Cancelar solicitud",
     "cancelled": "Cancelada",
     "cancelledHint": "Tu cuenta sigue activa.",
-    "legalNote": "Derechos conforme a los artículos 17 y 20 del RGPD."
+    "legalNote": "Derechos conforme a los artículos 17 y 20 del RGPD.",
+    "exportSaved": "El archivo {{name}} se guardó en la carpeta que elegiste.",
+    "exportFailed": "No se pudo guardar el archivo. Inténtalo de nuevo."
   },
   "reviews": {
     "write": "Escribir reseña",
@@ -2455,5 +2478,8 @@
     "terms": "Términos de uso",
     "privacy": "Política de privacidad",
     "changeDate": "Cambiar fecha"
+  },
+  "paging": {
+    "loadMore": "Cargar más"
   }
 }

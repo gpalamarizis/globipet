@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, ScrollView, RefreshControl, Platform, StatusBar } from 'react-native'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, ScrollView, RefreshControl, Platform, StatusBar, ActivityIndicator } from 'react-native'
+import { useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Search, X, Star, MapPin, CheckCircle } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
 import { ErrorState } from '@/components/ErrorState'
+import { useDebounced, nextPageOf, flattenPages } from '@/components/ListPaging'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -54,6 +55,8 @@ const HOSTING_SUB = [
   { id: 'boarding',    labelKey: 'services.types.boarding',    emoji: '🏨' },
 ]
 
+const PAGE_SIZE = 30
+
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
 export default function ServicesScreen() {
@@ -79,20 +82,33 @@ export default function ServicesScreen() {
   const [onlyEmergency, setOnlyEmergency] = useState(false)
   const [minRating, setMinRating] = useState(0)
 
-  const { data: services = [], isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['services', serviceType, search, city, onlyVerified, onlyEmergency, minRating],
-    queryFn: () => api.get('/services', {
+  // Κείμενα με καθυστέρηση: όχι ένα αίτημα ανά πλήκτρο.
+  const q = useDebounced(search.trim())
+  const cityQ = useDebounced(city.trim())
+
+  // Σελιδοποίηση (GET /services?page&limit → { data, page, totalPages }):
+  // πριν ερχόταν μόνο η πρώτη σελίδα των 30 και οι υπόλοιποι πάροχοι δεν
+  // εμφανίζονταν ποτέ στο κινητό. Νέα σελίδα στο τέλος της κύλισης.
+  const servicesQuery = useInfiniteQuery({
+    queryKey: ['services', serviceType, q, cityQ, onlyVerified, onlyEmergency, minRating],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.get('/services', {
       params: {
         ...(serviceType !== 'all' ? { service_type: serviceType } : {}),
-        ...(search ? { q: search } : {}),
-        ...(city.trim() ? { city: city.trim() } : {}),
+        ...(q ? { q } : {}),
+        ...(cityQ ? { city: cityQ } : {}),
         ...(onlyVerified ? { verified: true } : {}),
         ...(onlyEmergency ? { emergency: true } : {}),
         ...(minRating > 0 ? { min_rating: minRating } : {}),
-        limit: 30,
+        page: pageParam,
+        limit: PAGE_SIZE,
       },
-    }).then(r => r.data?.data ?? []),
+    }).then(r => r.data),
+    getNextPageParam: nextPageOf,
+    placeholderData: keepPreviousData,
   })
+  const { isLoading, isError, refetch, isFetching } = servicesQuery
+  const services = flattenPages(servicesQuery.data?.pages)
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -205,6 +221,13 @@ export default function ServicesScreen() {
         data={services}
         ListHeaderComponent={<CampaignBanner page="services" slot="banner" />}
         keyExtractor={i => i.id}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (servicesQuery.hasNextPage && !servicesQuery.isFetchingNextPage) servicesQuery.fetchNextPage()
+        }}
+        ListFooterComponent={servicesQuery.isFetchingNextPage
+          ? <ActivityIndicator color={colors.brand} style={{ marginVertical: space.md }} />
+          : null}
         contentContainerStyle={{ padding: space.lg, paddingBottom: tabSpace.paddingBottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={

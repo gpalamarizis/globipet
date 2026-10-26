@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { CalendarHeart, ShieldAlert } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, setBirthDateRequiredHandler } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 
 /**
@@ -50,6 +51,21 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
   const [confirmUnder, setConfirmUnder] = useState(false)
   const [saving, setSaving] = useState(false)
   const [closedMsg, setClosedMsg] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  /**
+   * Τα αιτήματα που πήραν 403 birth_date_required μένουν σε αναμονή για
+   * πάντα (lib/api.ts). Μόλις η ημερομηνία οριστεί (ή ο server πει ότι δεν
+   * χρειάζεται), τα queries ακυρώνονται και ξαναφορτώνονται — αλλιώς όσα δεν
+   * είχαν δεδομένα έμεναν «φορτώνει…» για πάντα.
+   */
+  const releaseHeld = useCallback(() => {
+    void queryClient.cancelQueries().then(() => queryClient.resetQueries()).catch(() => {})
+  }, [queryClient])
+  // Όριο για τον κλάδο «το /auth/me λέει false ενώ ο server απάντησε 403»:
+  // το πολύ μία ανανέωση ανά 10'', ώστε μια ασυμφωνία του server να μη δώσει
+  // βρόχο 403 → reset → 403 (και τρεμόπαιγμα της πύλης).
+  const lastAutoRelease = useRef(0)
 
   const flag = (user as any)?.needs_birth_date as boolean | undefined
   // Χρήστης αποθηκευμένος από προηγούμενη έκδοση (χωρίς το πεδίο): μία
@@ -57,6 +73,38 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (isAuthenticated && flag === undefined) void refreshUser()
   }, [isAuthenticated, flag, refreshUser])
+
+  // Ε16: ο server απάντησε 403 birth_date_required (lib/api.ts) — π.χ. ο
+  // αποθηκευμένος χρήστης έλεγε needs_birth_date false, ή πάροχος που έγινε
+  // μόνος του. Η πύλη ανοίγει αμέσως· το /auth/me επιβεβαιώνει την τιμή.
+  useEffect(() => {
+    let refreshing = false
+    setBirthDateRequiredHandler(() => {
+      const st = useAuthStore.getState()
+      if (!st.isAuthenticated || !st.user) return false
+      if ((st.user as any).needs_birth_date !== true) st.updateUser({ needs_birth_date: true } as any)
+      if (!refreshing) {
+        refreshing = true
+        void st.refreshUser().finally(() => {
+          refreshing = false
+          const now = useAuthStore.getState()
+          if (!now.isAuthenticated || !now.user) return
+          // Αποτυχία του /auth/me → ο χρήστης μένει όπως ήταν (σημαία true, πύλη).
+          if ((now.user as any).needs_birth_date !== true) {
+            // Ο server (/auth/me) λέει ότι δεν χρειάζεται: η σημαία του
+            // interceptor έχει ήδη καθαρίσει (refreshUser) — τα κρατημένα
+            // αιτήματα ξαναστέλνονται, μία φορά ανά 10''.
+            if (Date.now() - lastAutoRelease.current > 10_000) {
+              lastAutoRelease.current = Date.now()
+              releaseHeld()
+            }
+          }
+        })
+      }
+      return true
+    })
+    return () => setBirthDateRequiredHandler(null)
+  }, [releaseHeld])
 
   if (closedMsg) {
     return (
@@ -83,6 +131,7 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
     try {
       const { data } = await api.patch('/auth/me/birth-date', { birth_date: birthDate })
       if (data && typeof data === 'object') updateUser(data)
+      releaseHeld()
     } catch (err: any) {
       const status = err?.statusCode ?? err?.response?.status
       const body = err?.response?.data
@@ -93,6 +142,7 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
         setClosedMsg(body?.message || t('birthGate.closedLogin'))
       } else if (status === 409) {
         await refreshUser() // είχε ήδη οριστεί (π.χ. από άλλη καρτέλα)
+        releaseHeld()
       } else {
         toast.error(err?.message || t('common.error'))
       }

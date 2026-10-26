@@ -213,8 +213,15 @@ export async function refundVivaTransaction(
     // Σε λεπτά, στρογγυλοποιημένα — το Viva δεν δέχεται δεκαδικά.
     params.set('amount', String(Math.round(amountEuros * 100)))
   }
+  // Κοινός λογαριασμός Viva με το Thesis: χωρίς source code η επιστροφή
+  // γίνεται χωρίς τον διαχωρισμό της πηγής — όπως και στη δημιουργία
+  // πληρωμής, αποτυγχάνει ρητά (οριστικό σφάλμα, ΚΑΜΙΑ κλήση στη Viva) αντί
+  // να παραλείπεται σιωπηλά.
   const sourceCode = process.env.VIVA_SOURCE_CODE
-  if (sourceCode) params.set('sourceCode', sourceCode)
+  if (!sourceCode) {
+    throw new Error('Λείπει το VIVA_SOURCE_CODE για επιστροφή χρημάτων')
+  }
+  params.set('sourceCode', sourceCode)
 
   const qs = params.toString()
   const url = `${legacy}/api/transactions/${encodeURIComponent(transactionId)}${qs ? '?' + qs : ''}`
@@ -287,6 +294,41 @@ export class VivaHttpError extends Error {
  */
 export function isVivaDefinitiveRejection(err: unknown): boolean {
   return err instanceof VivaHttpError && (err.status === 400 || err.status === 404)
+}
+
+/**
+ * Η συναλλαγή ΔΕΝ είναι πληρωμή αυτής της εφαρμογής, κατά τα πεδία που δίνει
+ * η ίδια η Viva (λογαριασμός κοινός με το Thesis). Ελέγχεται ΜΟΝΟ ό,τι
+ * υπάρχει στην απάντηση — αν η Viva δεν δίνει το πεδίο, καμία απόρριψη (ώστε
+ * να μη σπάσουν οι πληρωμές):
+ *   · sourceCode / SourceCode ≠ VIVA_SOURCE_CODE (μόνο αν ορίστηκε)
+ *   · currencyCode / CurrencyCode ≠ EUR (ISO 4217: 978 ή «EUR»)
+ * Επιστρέφει την αιτία (για log) ή null.
+ */
+export function vivaForeignTransaction(tx: any): string | null {
+  const present = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== ''
+  const expected = process.env.VIVA_SOURCE_CODE
+  const source = tx?.sourceCode ?? tx?.SourceCode
+  if (expected && present(source) && String(source).trim() !== String(expected).trim()) {
+    return `source code ${String(source)} is not ${expected}`
+  }
+  const currency = tx?.currencyCode ?? tx?.CurrencyCode
+  if (present(currency) && !['978', 'EUR'].includes(String(currency).trim().toUpperCase())) {
+    return `currency ${String(currency)} is not EUR`
+  }
+  return null
+}
+
+/**
+ * Η Viva απάντησε 404 για συναλλαγή ΠΛΗΡΩΜΗΣ που ανέφερε πρόσφατο webhook:
+ * αμέσως μετά τη δημιουργία της η συναλλαγή μπορεί να μη φαίνεται ακόμη στο
+ * API συναλλαγών. Τότε η επαλήθευση ξαναγίνεται (το webhook απαντά 503 και η
+ * Viva ξαναστέλνει) αντί για οριστική απόρριψη — που άφηνε πληρωμένα χρήματα
+ * χωρίς καταχώριση. `retryNotFound` = το webhook είναι πρόσφατο
+ * (lib/externalRefund isRecentWebhook)· στο verify του πελάτη πάντα false.
+ */
+export function isVivaNotFoundYet(err: unknown, retryNotFound: boolean | undefined): boolean {
+  return !!retryNotFound && err instanceof VivaHttpError && err.status === 404
 }
 
 /**

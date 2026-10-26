@@ -1010,16 +1010,19 @@ export default function AdminDashboard() {
 
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Ε16: τα ποσοστά τάσης (+12%, −3% …) ήταν σταθερά στον κώδικα, όχι
+              μετρήσεις. Το /admin/stats δεν δίνει σύγκριση με προηγούμενη
+              περίοδο, οπότε δεν εμφανίζεται τάση (change={null}). */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Users}       label={t('adminDash.st_users')}     value={stats?.users ?? '—'}    change={12}  color="bg-blue-500" onClick={() => setActiveTab('users' as Tab)} />
-            <StatCard icon={PawPrint}    label={t('adminDash.st_pets')}  value={stats?.pets ?? '—'}     change={8}   color="bg-orange-500" onClick={() => setActiveTab('pets' as Tab)} />
-            <StatCard icon={ShoppingBag} label={t('adminDash.st_orders')} value={stats?.orders ?? '—'}   change={-3}  color="bg-green-500" onClick={() => setActiveTab('orders' as Tab)} />
-            <StatCard icon={TrendingUp}  label={t('adminDash.st_revenue')}       value={`€${stats?.revenue ?? '0'}`} change={15} color="bg-purple-500" onClick={() => setActiveTab('revenue' as Tab)} />
+            <StatCard icon={Users}       label={t('adminDash.st_users')}     value={stats?.users ?? '—'}    change={null} color="bg-blue-500" onClick={() => setActiveTab('users' as Tab)} />
+            <StatCard icon={PawPrint}    label={t('adminDash.st_pets')}  value={stats?.pets ?? '—'}     change={null} color="bg-orange-500" onClick={() => setActiveTab('pets' as Tab)} />
+            <StatCard icon={ShoppingBag} label={t('adminDash.st_orders')} value={stats?.orders ?? '—'}   change={null} color="bg-green-500" onClick={() => setActiveTab('orders' as Tab)} />
+            <StatCard icon={TrendingUp}  label={t('adminDash.st_revenue')}       value={`€${stats?.revenue ?? '0'}`} change={null} color="bg-purple-500" onClick={() => setActiveTab('revenue' as Tab)} />
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Shield}      label={t('adminDash.st_providers')}     value={stats?.providers ?? '—'} change={5}  color="bg-teal-500" onClick={() => setActiveTab('providers' as Tab)} />
-            <StatCard icon={Package}     label={t('adminDash.st_products')}    value={stats?.products ?? '—'}  change={2}  color="bg-pink-500" onClick={() => setActiveTab('products' as Tab)} />
-            <StatCard icon={ClipboardList} label={t('adminDash.st_bookings')} value={stats?.bookings ?? '—'}  change={18} color="bg-yellow-500" onClick={() => setActiveTab('bookings' as Tab)} />
+            <StatCard icon={Shield}      label={t('adminDash.st_providers')}     value={stats?.providers ?? '—'} change={null} color="bg-teal-500" onClick={() => setActiveTab('providers' as Tab)} />
+            <StatCard icon={Package}     label={t('adminDash.st_products')}    value={stats?.products ?? '—'}  change={null} color="bg-pink-500" onClick={() => setActiveTab('products' as Tab)} />
+            <StatCard icon={ClipboardList} label={t('adminDash.st_bookings')} value={stats?.bookings ?? '—'}  change={null} color="bg-yellow-500" onClick={() => setActiveTab('bookings' as Tab)} />
             <StatCard icon={Database}    label={t('adminDash.st_records')} value={stats?.total_records ?? '—'} change={null} color="bg-gray-500" onClick={() => setActiveTab('database' as Tab)} />
           </div>
           <div className="card p-5">
@@ -1113,6 +1116,7 @@ function AdminBookingsTab() {
   const STATUS_LABEL: Record<string, string> = {
     pending: t('adminDash.bs_pending'), confirmed: t('adminDash.bs_confirmed'),
     completed: t('adminDash.bs_completed'), cancelled: t('adminDash.bs_cancelled'),
+    no_show: t('bookingPolicy.stNo_show', { defaultValue: t('bookings.status.no_show', { defaultValue: 'no_show' }) }),
   }
 
   return (

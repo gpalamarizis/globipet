@@ -15,7 +15,7 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
     const pageNo = Math.max(1, Number(page) || 1)
     const skip = (pageNo - 1) * take
     const [data, total] = await Promise.all([
-      prisma.breed.findMany({ where, skip, take, orderBy: { popularity: 'desc' } }),
+      prisma.breed.findMany({ where, skip, take, orderBy: [{ popularity: 'desc' }, { id: 'asc' }] }),
       prisma.breed.count({ where })
     ])
     const translated = await translateRecords('breed', data, lang)

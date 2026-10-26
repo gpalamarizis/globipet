@@ -169,7 +169,7 @@ export default function MyBookings() {
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusColors[booking.status] || 'bg-gray-100 text-gray-600')}>
-                    {t(`bookings.status.${booking.status}`) || booking.status}
+                    {t(`bookings.status.${booking.status}`, { defaultValue: booking.status })}
                   </span>
                   {/* Απλήρωτη και πληρώσιμη — το κρίνει ο server (`payable`). */}
                   {booking.payable === true && (

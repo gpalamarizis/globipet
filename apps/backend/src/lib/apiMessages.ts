@@ -28,6 +28,13 @@ const LANGS: Lang[] = ['el', 'en', 'es', 'fr', 'zh']
 
 /** Ελληνικό πρωτότυπο -> [en, es, fr, zh] */
 const MESSAGES: Record<string, [string, string, string, string]> = {
+  'Συμπλήρωσε πρώτα την ημερομηνία γέννησής σου για να συνεχίσεις.': ['Please enter your date of birth first to continue.', 'Introduce primero tu fecha de nacimiento para continuar.', 'Indique d\'abord votre date de naissance pour continuer.', '请先填写您的出生日期以继续。'],
+  'Η εγγραφή υπάρχει ήδη': ['This record already exists', 'Este registro ya existe', 'Cet enregistrement existe déjà', '该记录已存在'],
+  'Μη αποδεκτή υπηρεσία ειδοποιήσεων': ['Unsupported notification service', 'Servicio de notificaciones no admitido', 'Service de notifications non pris en charge', '不支持的通知服务'],
+  'Το αίτημα διαγραφής λόγω ηλικίας ακυρώνεται μόνο από την υποστήριξη.': ['An age-related deletion request can only be cancelled by support.', 'Una solicitud de eliminación por motivos de edad solo puede cancelarla el equipo de soporte.', 'Une demande de suppression liée à l\'âge ne peut être annulée que par le support.', '因年龄原因提交的删除请求只能由客服取消。'],
+  'Επιβεβαίωσε πρώτα το email σου για να δεις τον ιατρικό φάκελο που σου κοινοποιήθηκε.': ['Please confirm your email first to view the medical record shared with you.', 'Confirma primero tu email para ver el historial médico que se ha compartido contigo.', 'Confirmez d\'abord votre e-mail pour consulter le dossier médical partagé avec vous.', '请先验证您的邮箱，才能查看与您共享的医疗档案。'],
+  'Το εργαλείο SQL δεν είναι διαθέσιμο: δεν έχει οριστεί σύνδεση μόνο ανάγνωσης στη βάση.': ['The SQL tool is not available: no read-only database connection has been configured.', 'La herramienta SQL no está disponible: no se ha configurado una conexión de solo lectura a la base de datos.', 'L\'outil SQL n\'est pas disponible : aucune connexion en lecture seule à la base de données n\'a été configurée.', 'SQL 工具不可用：尚未配置只读数据库连接。'],
+  'Η υπηρεσία AI δεν είναι διαθέσιμη αυτή τη στιγμή — δοκίμασε ξανά σε λίγο': ['The AI service is not available right now — please try again shortly', 'El servicio de IA no está disponible en este momento — inténtalo de nuevo en un momento', 'Le service d\'IA n\'est pas disponible pour le moment — réessayez dans un instant', 'AI 服务暂时不可用，请稍后重试'],
   'Δεν έχετε δικαίωμα': ['You do not have permission', 'No tienes permiso', 'Vous n\'avez pas l\'autorisation', '您没有权限'],
   'Δεν βρέθηκε': ['Not found', 'No encontrado', 'Introuvable', '未找到'],
   'Μη εξουσιοδοτημένος': ['Unauthorised', 'No autorizado', 'Non autorisé', '未授权'],
@@ -413,6 +420,8 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   'Η πρόσκληση καταχωρήθηκε. Αν υπάρχει λογαριασμός με αυτό το email, ο χρήστης θα τη δει στο προφίλ του και θα πρέπει να την αποδεχθεί.': ['The invitation has been saved. If an account exists with this email, the user will see it in their profile and must accept it.', 'Se ha guardado la invitación. Si existe una cuenta con este email, el usuario la verá en su perfil y deberá aceptarla.', 'L’invitation a été enregistrée. Si un compte existe avec cet e-mail, l’utilisateur la verra dans son profil et devra l’accepter.', '邀请已保存。如果存在使用该邮箱的账户，该用户将在个人资料中看到邀请，并需接受后才会关联。'],
   'Πρέπει να είσαι τουλάχιστον 15 ετών για να χρησιμοποιήσεις το GlobiPet. Ο λογαριασμός σου κλείνει και θα διαγραφεί.': ['You must be at least 15 to use GlobiPet. Your account is being closed and will be deleted.', 'Debes tener al menos 15 años para usar GlobiPet. Tu cuenta se cierra y se eliminará.', 'Vous devez avoir au moins 15 ans pour utiliser GlobiPet. Votre compte est fermé et sera supprimé.', '使用 GlobiPet 需年满 15 岁。您的账号将被关闭并删除。'],
   'Η ημερομηνία γέννησης έχει ήδη οριστεί': ['Your date of birth has already been set', 'La fecha de nacimiento ya se ha indicado', 'La date de naissance a déjà été indiquée', '出生日期已设置'],
+  // Ε16 (διορθώσεις ελέγχου)
+  'Υπάρχει ήδη ανοιχτή πληρωμή για άλλο πλάνο AI. Ολοκλήρωσέ την ή δοκίμασε ξανά σε λίγα λεπτά.': ['There is already an open payment for another AI plan. Complete it or try again in a few minutes.', 'Ya hay un pago abierto para otro plan de IA. Complétalo o inténtalo de nuevo en unos minutos.', 'Un paiement est déjà en cours pour une autre formule IA. Finalisez-le ou réessayez dans quelques minutes.', '另一个 AI 套餐已有未完成的付款。请完成该付款，或几分钟后重试。'],
 }
 
 const IDX: Record<Exclude<Lang, 'el'>, number> = { en: 0, es: 1, fr: 2, zh: 3 }

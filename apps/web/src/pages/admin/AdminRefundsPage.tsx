@@ -42,6 +42,14 @@ type Item = {
 const KNOWN_REASONS = ['full', 'cancelled', 'event_cancelled', 'booking_cancel', 'telehealth_cancel', 'admin_refund', 'external_refund']
 const KNOWN_VIVA = ['F', 'R', 'E', 'A', 'X', 'error', 'unknown']
 const KNOWN_RESOURCES = ['event_registration', 'booking', 'telehealth', 'order', 'product_subscription']
+/**
+ * Ε16: ενέργειες audit με δική τους ετικέτα (προτιμάται από το metadata.reason,
+ * που για τις διπλές συνδρομές Stripe είναι αγγλικό κείμενο του server).
+ * routes/webhooks.ts FOOD_DUP_REFUND_ACTION / AI_DUP_REFUND_ACTION,
+ * routes/admin-refunds.ts + admin.ts 'refund_lifecycle_cancelled'.
+ */
+const KNOWN_ACTIONS = ['food_subscription_duplicate_refund', 'ai_subscription_duplicate_refund', 'refund_lifecycle_cancelled',
+  'subscription_delivery_out_of_stock', 'subscription_invoice_amount_mismatch', 'food_subscription_duplicate_cancel_failed']
 const KNOWN_STATUSES = ['refund_failed', 'refunding']
 
 const VIVA_CLS: Record<string, string> = {
@@ -73,9 +81,12 @@ export default function AdminRefundsPage() {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
   const kindLabel = (r: Item) => r.kind === 'audit' || r.kind === 'order' || r.kind === 'external_refund'
-    ? (KNOWN_RESOURCES.includes(r.resource) ? t(`adminRefunds.res_${r.resource}`) : r.resource)
+    // Διπλή συνδρομή AI: resource 'user' (webhooks.ts) — ετικέτα της συνδρομής, όχι «user».
+    ? (r.action === 'ai_subscription_duplicate_refund' ? t('adminRefunds.res_ai_subscription')
+      : KNOWN_RESOURCES.includes(r.resource) ? t(`adminRefunds.res_${r.resource}`) : r.resource)
     : t(`adminRefunds.kind_${r.kind}`)
-  const reasonLabel = (r: Item) => !r.reason ? '—'
+  const reasonLabel = (r: Item) => r.action && KNOWN_ACTIONS.includes(r.action) ? t(`adminRefunds.action_${r.action}`)
+    : !r.reason ? '—'
     : KNOWN_REASONS.includes(r.reason) ? t(`adminRefunds.reason_${r.reason}`) : r.reason
   // Επιστροφή admin ή ακύρωση (κράτηση/τηλεϊατρική) που έμεινε σε εξέλιξη:
   // προεπιλογή το ποσό που ζητήθηκε τότε (requested_amount του server).

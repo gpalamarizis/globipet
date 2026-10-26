@@ -3,6 +3,7 @@ import Stripe from 'stripe'
 import prisma from '../lib/prisma.js'
 import { serverError } from '../lib/errors.js'
 import { effectivePrice } from '../lib/price.js'
+import { openFoodCheckoutSessionUrl } from '../lib/stripeSubscriptions.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
 const SETTING_KEY = 'food_subscription_discount_percent'
@@ -39,6 +40,14 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(409).send({ message: 'Έχεις ήδη ενεργή συνδρομή για αυτό το προϊόν' })
     }
 
+    // Ανοιχτό checkout του ίδιου χρήστη για το ίδιο προϊόν (διπλό πάτημα,
+    // δεύτερη συσκευή/καρτέλα): το ίδιο URL αντί για δεύτερο session — δύο
+    // ολοκληρωμένα sessions έφτιαχναν δύο συνδρομές με διπλή μηνιαία χρέωση
+    // (ο έλεγχος παραπάνω βλέπει μόνο συνδρομές που ήδη ολοκληρώθηκαν). Ό,τι
+    // ξεφύγει, το ακυρώνει και το επιστρέφει το webhook (ensureProductSubscription).
+    const reuse = await openFoodCheckoutSessionUrl(String(user.id), product.id)
+    if (reuse) return reply.send({ data: { checkout_url: reuse } })
+
     const setting = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY } })
     const discountPercent = setting ? parseFloat(setting.value) : 0
     // Βάση = τιμή έκπτωσης αν ισχύει (lib/price.ts), μείον την έκπτωση
@@ -50,6 +59,8 @@ const subscriptionsRoutes: FastifyPluginAsync = async (app) => {
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer_email: user.email,
+        // Στο ίδιο το session (όχι μόνο στη συνδρομή), για τον έλεγχο ανοιχτού checkout.
+        metadata: { user_id: String(user.id), product_id: product.id },
         line_items: [{
           price_data: {
             currency: 'eur',

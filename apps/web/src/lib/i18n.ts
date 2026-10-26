@@ -974,6 +974,8 @@ const el = {
     gpsFound: 'GPS εντοπίστηκε!',
     creating: 'Δημιουργία...',
     createCommunity: 'Δημιουργία Κοινότητας',
+    notFound: 'Η κοινότητα δεν βρέθηκε',
+    backToList: 'Πίσω στις κοινότητες',
   },
   pgEvents: {
     resultsCount_one: '{{count}} εκδήλωση',
@@ -2283,6 +2285,13 @@ const el = {
     reason_external_refund: 'Επιστροφή από τον πίνακα της Viva',
     refundTxn: 'Συναλλαγή επιστροφής',
     externalResolveHint: 'Η επιστροφή έγινε εκτός εφαρμογής, από τον πίνακα της Viva, και ΔΕΝ εφαρμόστηκε αυτόματα (π.χ. μερική επιστροφή εγγραφής εκδήλωσης ή ασαφές ιστορικό επιστροφών) — η εγγραφή δεν άλλαξε. Έλεγξε τι χρειάζεται και γράψε σημείωση — καμία κλήση στη Viva.',
+    res_ai_subscription: 'Συνδρομή AI (Stripe)',
+    action_food_subscription_duplicate_refund: 'Επιστροφή διπλής συνδρομής προϊόντος',
+    action_ai_subscription_duplicate_refund: 'Επιστροφή διπλής συνδρομής AI',
+    action_refund_lifecycle_cancelled: 'Ακύρωση μετά από επιστροφή',
+    action_subscription_delivery_out_of_stock: 'Παράδοση συνδρομής χωρίς απόθεμα',
+    action_subscription_invoice_amount_mismatch: 'Ποσό τιμολογίου συνδρομής διαφορετικό από την τιμή',
+    action_food_subscription_duplicate_cancel_failed: 'Διπλή συνδρομή προϊόντος που δεν ακυρώθηκε στο Stripe',
   },
   emailVerify: {
     pageTitle: 'Επιβεβαίωση email',
@@ -3009,6 +3018,8 @@ const el = {
       includes: 'Περιλαμβάνει', includesHelp: '1 feature = Individual, 2+ features = Bundle',
       telehealthSessions: 'Συνεδρίες τηλεϊατρικής/μήνα',
       active: 'Ενεργό', featured: 'Προτεινόμενο', displayOrder: 'Σειρά εμφάνισης',
+      nameEnPlaceholder: 'π.χ. AI Health',
+      nameElPlaceholder: 'π.χ. AI Υγεία',
     },
   },
   marketplace: {
@@ -3067,7 +3078,7 @@ const el = {
     noBookingsDesc: 'Κάνε την πρώτη σου κράτηση στις Υπηρεσίες',
     cancel: 'Ακύρωση', cancelled: 'Η κράτηση ακυρώθηκε',
     rate: 'Αξιολόγηση', submitReview: 'Υποβολή', reviewSubmitted: 'Η κριτική υποβλήθηκε!',
-    status: { pending: 'Εκκρεμεί', confirmed: 'Επιβεβαιώθηκε', completed: 'Ολοκληρώθηκε', cancelled: 'Ακυρώθηκε' },
+    status: { pending: 'Εκκρεμεί', confirmed: 'Επιβεβαιώθηκε', completed: 'Ολοκληρώθηκε', cancelled: 'Ακυρώθηκε', no_show: 'Δεν προσήλθε', },
     minutes: 'λεπτά',
     payNow: 'Πληρωμή — €{{amount}}',
     paymentPending: 'Εκκρεμεί πληρωμή',
@@ -3174,6 +3185,7 @@ const el = {
     deviceName: 'Όνομα (προαιρετικό)',
     register: 'Καταχώρηση',
     mapUnavailable: 'Ο χάρτης δεν είναι διαθέσιμος αυτή τη στιγμή. Δες τα κατοικίδιά σου στη λίστα.',
+    rotateConfirm: 'Να δημιουργηθεί νέο token; Το τρέχον σταματά να λειτουργεί αμέσως και η συσκευή δεν θα στέλνει θέση μέχρι να ρυθμιστεί με το νέο.',
   },
   petsExtra: {
     lostBadge: 'ΧΑΜΕΝΟ', deleted: 'Το κατοικίδιο διαγράφηκε',
@@ -3833,6 +3845,7 @@ const el = {
     tabProducts: 'Προϊόντα',
     tabServices: 'Υπηρεσίες',
     title: 'Μεταφράσεις',
+    englishPlaceholder: 'Μετάφραση στα αγγλικά…',
   },
 }
 
@@ -4808,6 +4821,8 @@ const en: typeof el = {
     gpsFound: 'GPS location found!',
     creating: 'Creating...',
     createCommunity: 'Create community',
+    notFound: 'Community not found',
+    backToList: 'Back to communities',
   },
   pgEvents: {
     resultsCount_one: '{{count}} event',
@@ -6117,6 +6132,13 @@ const en: typeof el = {
     reason_external_refund: 'Refund made in the Viva dashboard',
     refundTxn: 'Refund transaction',
     externalResolveHint: 'This refund was made outside the app, in the Viva dashboard, and was NOT applied automatically (e.g. a partial refund of an event registration or an unclear refund history), so the record was not changed. Check what is needed and write a note — Viva is not contacted.',
+    res_ai_subscription: 'AI subscription (Stripe)',
+    action_food_subscription_duplicate_refund: 'Refund of duplicate product subscription',
+    action_ai_subscription_duplicate_refund: 'Refund of duplicate AI subscription',
+    action_refund_lifecycle_cancelled: 'Cancelled after refund',
+    action_subscription_delivery_out_of_stock: 'Subscription delivery without stock',
+    action_subscription_invoice_amount_mismatch: 'Subscription invoice amount differs from the price',
+    action_food_subscription_duplicate_cancel_failed: 'Duplicate product subscription not cancelled in Stripe',
   },
   emailVerify: {
     pageTitle: 'Email confirmation',
@@ -6820,6 +6842,8 @@ const en: typeof el = {
       includes: 'Includes', includesHelp: '1 feature = Individual, 2+ features = Bundle',
       telehealthSessions: 'Telehealth sessions/month',
       active: 'Active', featured: 'Featured', displayOrder: 'Display order',
+      nameEnPlaceholder: 'e.g. AI Health',
+      nameElPlaceholder: 'e.g. AI Υγεία',
     },
   },
   marketplace: {
@@ -6861,7 +6885,7 @@ const en: typeof el = {
     noBookings: 'No bookings yet', noBookingsDesc: 'Make your first booking in Services',
     cancel: 'Cancel', cancelled: 'Booking cancelled',
     rate: 'Rate', submitReview: 'Submit', reviewSubmitted: 'Review submitted!',
-    status: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled' },
+    status: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show', },
     minutes: 'minutes',
     payNow: 'Pay — €{{amount}}',
     paymentPending: 'Payment pending',
@@ -6960,6 +6984,7 @@ const en: typeof el = {
     deviceName: 'Name (optional)',
     register: 'Register',
     mapUnavailable: 'The map is not available right now. See your pets in the list.',
+    rotateConfirm: 'Generate a new token? The current one stops working immediately and the device will not send its location until it is set up with the new one.',
   },
   petsExtra: {
     lostBadge: 'LOST', deleted: 'Pet deleted',
@@ -7619,6 +7644,7 @@ const en: typeof el = {
     tabProducts: 'Products',
     tabServices: 'Services',
     title: 'Translations',
+    englishPlaceholder: 'English translation…',
   },
 }
 
@@ -8594,6 +8620,8 @@ const es: typeof el = {
     gpsFound: '¡Ubicación GPS encontrada!',
     creating: 'Creando...',
     createCommunity: 'Crear comunidad',
+    notFound: 'No se encontró la comunidad',
+    backToList: 'Volver a las comunidades',
   },
   pgEvents: {
     resultsCount_one: '{{count}} evento',
@@ -9903,6 +9931,13 @@ const es: typeof el = {
     reason_external_refund: 'Reembolso hecho desde el panel de Viva',
     refundTxn: 'Transacción de reembolso',
     externalResolveHint: 'Este reembolso se hizo fuera de la aplicación, desde el panel de Viva, y NO se aplicó automáticamente (p. ej., reembolso parcial de una inscripción a un evento o historial de reembolsos poco claro), así que el registro no cambió. Revisa lo necesario y escribe una nota; no se contacta con Viva.',
+    res_ai_subscription: 'Suscripción de IA (Stripe)',
+    action_food_subscription_duplicate_refund: 'Reembolso de suscripción de producto duplicada',
+    action_ai_subscription_duplicate_refund: 'Reembolso de suscripción de IA duplicada',
+    action_refund_lifecycle_cancelled: 'Cancelado tras el reembolso',
+    action_subscription_delivery_out_of_stock: 'Entrega de suscripción sin stock',
+    action_subscription_invoice_amount_mismatch: 'El importe de la factura de la suscripción no coincide con el precio',
+    action_food_subscription_duplicate_cancel_failed: 'Suscripción de producto duplicada no cancelada en Stripe',
   },
   emailVerify: {
     pageTitle: 'Confirmación de email',
@@ -10606,6 +10641,8 @@ const es: typeof el = {
       includes: 'Incluye', includesHelp: '1 feature = Individual, 2+ features = Bundle',
       telehealthSessions: 'Sesiones de telesalud/mes',
       active: 'Activo', featured: 'Destacado', displayOrder: 'Orden de visualización',
+      nameEnPlaceholder: 'p. ej. AI Health',
+      nameElPlaceholder: 'p. ej. AI Υγεία',
     },
   },
   marketplace: {
@@ -10647,7 +10684,7 @@ const es: typeof el = {
     noBookings: 'Sin reservas', noBookingsDesc: 'Haz tu primera reserva en Servicios',
     cancel: 'Cancelar', cancelled: 'Reserva cancelada',
     rate: 'Valorar', submitReview: 'Enviar', reviewSubmitted: '¡Reseña enviada!',
-    status: { pending: 'Pendiente', confirmed: 'Confirmado', completed: 'Completado', cancelled: 'Cancelado' },
+    status: { pending: 'Pendiente', confirmed: 'Confirmado', completed: 'Completado', cancelled: 'Cancelado', no_show: 'No se presentó', },
     minutes: 'minutos',
     payNow: 'Pagar — €{{amount}}',
     paymentPending: 'Pago pendiente',
@@ -10746,6 +10783,7 @@ const es: typeof el = {
     deviceName: 'Nombre (opcional)',
     register: 'Registrar',
     mapUnavailable: 'El mapa no está disponible en este momento. Consulta tus mascotas en la lista.',
+    rotateConfirm: '¿Generar un nuevo token? El actual deja de funcionar de inmediato y el dispositivo no enviará su ubicación hasta que se configure con el nuevo.',
   },
   petsExtra: {
     lostBadge: 'PERDIDA', deleted: 'Mascota eliminada',
@@ -11405,6 +11443,7 @@ const es: typeof el = {
     tabProducts: 'Productos',
     tabServices: 'Servicios',
     title: 'Traducciones',
+    englishPlaceholder: 'Traducción al inglés…',
   },
 }
 
@@ -12380,6 +12419,8 @@ const fr: typeof el = {
     gpsFound: 'Position GPS trouvée !',
     creating: 'Création...',
     createCommunity: 'Créer la communauté',
+    notFound: 'Communauté introuvable',
+    backToList: 'Retour aux communautés',
   },
   pgEvents: {
     resultsCount_one: '{{count}} événement',
@@ -13689,6 +13730,13 @@ const fr: typeof el = {
     reason_external_refund: 'Remboursement effectué depuis le tableau de bord Viva',
     refundTxn: 'Transaction de remboursement',
     externalResolveHint: 'Ce remboursement a été effectué hors de l’application, depuis le tableau de bord Viva, et n’a PAS été appliqué automatiquement (p. ex. remboursement partiel d’une inscription à un événement ou historique de remboursements ambigu) : l’enregistrement n’a pas été modifié. Vérifiez ce qui est nécessaire et rédigez une note — Viva n’est pas contacté.',
+    res_ai_subscription: 'Abonnement IA (Stripe)',
+    action_food_subscription_duplicate_refund: 'Remboursement d\'un abonnement produit en double',
+    action_ai_subscription_duplicate_refund: 'Remboursement d\'un abonnement IA en double',
+    action_refund_lifecycle_cancelled: 'Annulé après remboursement',
+    action_subscription_delivery_out_of_stock: 'Livraison d\'abonnement sans stock',
+    action_subscription_invoice_amount_mismatch: 'Montant de la facture d\'abonnement différent du prix',
+    action_food_subscription_duplicate_cancel_failed: 'Abonnement produit en double non annulé dans Stripe',
   },
   emailVerify: {
     pageTitle: 'Confirmation de l\'e-mail',
@@ -14392,6 +14440,8 @@ const fr: typeof el = {
       includes: 'Inclut', includesHelp: '1 feature = Individuel, 2+ features = Pack',
       telehealthSessions: 'Séances de télésanté/mois',
       active: 'Actif', featured: 'Recommandé', displayOrder: "Ordre d'affichage",
+      nameEnPlaceholder: 'ex. AI Health',
+      nameElPlaceholder: 'ex. AI Υγεία',
     },
   },
   marketplace: {
@@ -14433,7 +14483,7 @@ const fr: typeof el = {
     noBookings: 'Pas de réservations', noBookingsDesc: 'Faites votre première réservation',
     cancel: 'Annuler', cancelled: 'Réservation annulée',
     rate: 'Évaluer', submitReview: 'Soumettre', reviewSubmitted: 'Avis soumis!',
-    status: { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé' },
+    status: { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent', },
     minutes: 'minutes',
     payNow: 'Payer — {{amount}} €',
     paymentPending: 'Paiement en attente',
@@ -14532,6 +14582,7 @@ const fr: typeof el = {
     deviceName: 'Nom (facultatif)',
     register: 'Enregistrer',
     mapUnavailable: 'La carte n’est pas disponible pour le moment. Consultez vos animaux dans la liste.',
+    rotateConfirm: 'Générer un nouveau jeton ? L\'actuel cesse de fonctionner immédiatement et l\'appareil n\'enverra plus sa position tant qu\'il n\'est pas configuré avec le nouveau.',
   },
   petsExtra: {
     lostBadge: 'PERDU', deleted: 'Animal supprimé',
@@ -15191,6 +15242,7 @@ const fr: typeof el = {
     tabProducts: 'Produits',
     tabServices: 'Services',
     title: 'Traductions',
+    englishPlaceholder: 'Traduction en anglais…',
   },
 }
 
@@ -16166,6 +16218,8 @@ const zh: typeof el = {
     gpsFound: '已获取 GPS 位置！',
     creating: '创建中...',
     createCommunity: '创建社区',
+    notFound: '未找到该社区',
+    backToList: '返回社区列表',
   },
   pgEvents: {
     resultsCount_one: '{{count}} 个活动',
@@ -17475,6 +17529,13 @@ const zh: typeof el = {
     reason_external_refund: '在 Viva 后台发起的退款',
     refundTxn: '退款交易',
     externalResolveHint: '此退款是在应用之外通过 Viva 后台发起的，且未自动应用（例如活动报名的部分退款，或退款记录不明确），因此记录未作更改。请核查所需处理并填写备注——不会联系 Viva。',
+    res_ai_subscription: 'AI 订阅（Stripe）',
+    action_food_subscription_duplicate_refund: '重复产品订阅的退款',
+    action_ai_subscription_duplicate_refund: '重复 AI 订阅的退款',
+    action_refund_lifecycle_cancelled: '退款后已取消',
+    action_subscription_delivery_out_of_stock: '订阅配送时无库存',
+    action_subscription_invoice_amount_mismatch: '订阅发票金额与价格不符',
+    action_food_subscription_duplicate_cancel_failed: '未能在 Stripe 中取消的重复产品订阅',
   },
   emailVerify: {
     pageTitle: '邮箱确认',
@@ -18178,6 +18239,8 @@ const zh: typeof el = {
       includes: '包含', includesHelp: '1 项功能 = 单项，2+ 项 = 套餐',
       telehealthSessions: '远程医疗次数/月',
       active: '激活', featured: '推荐', displayOrder: '显示顺序',
+      nameEnPlaceholder: '例如 AI Health',
+      nameElPlaceholder: '例如 AI Υγεία',
     },
   },
   marketplace: {
@@ -18219,7 +18282,7 @@ const zh: typeof el = {
     noBookings: '暂无预约', noBookingsDesc: '在服务页面进行第一次预约',
     cancel: '取消', cancelled: '预约已取消',
     rate: '评价', submitReview: '提交', reviewSubmitted: '评价已提交!',
-    status: { pending: '待处理', confirmed: '已确认', completed: '已完成', cancelled: '已取消' },
+    status: { pending: '待处理', confirmed: '已确认', completed: '已完成', cancelled: '已取消', no_show: '未到场', },
     minutes: '分钟',
     payNow: '支付 — €{{amount}}',
     paymentPending: '待付款',
@@ -18318,6 +18381,7 @@ const zh: typeof el = {
     deviceName: '名称（可选）',
     register: '登记',
     mapUnavailable: '地图暂时无法使用，请在列表中查看您的宠物。',
+    rotateConfirm: '生成新令牌？当前令牌将立即失效，在使用新令牌完成设置之前，设备将不会发送位置。',
   },
   petsExtra: {
     lostBadge: '走失', deleted: '宠物已删除',
@@ -18977,6 +19041,7 @@ const zh: typeof el = {
     tabProducts: '产品',
     tabServices: '服务',
     title: '翻译',
+    englishPlaceholder: '英文翻译…',
   },
 }
 

@@ -9,6 +9,7 @@ import {
   EVENT_REFUND_CLAIM_ACTION, EVENT_CANCELLED_REASON, notifyRegistrationRefunded,
 } from './events.js'
 import { EXTERNAL_REFUND_ACTION } from '../lib/externalRefund.js'
+import { settleRefundTx, type SettleResult } from '../lib/refundSettlement.js'
 
 /**
  * Αποτυχημένες / κολλημένες επιστροφές χρημάτων — χειρισμός από τον admin.
@@ -171,11 +172,36 @@ async function resolveAdminRefund(
   const target = amount <= 0 ? 'paid' : amount >= paid - 0.005 ? 'refunded' : 'partially_refunded'
 
   const work = async (): Promise<boolean> => {
-    const r = await ADMIN_REFUND_MODELS[type].updateMany({
-      where: { id: rec.id, payment_status: 'refunding', payment_ref: rec.payment_ref },
-      data: { payment_status: target },
-    })
-    if (r.count === 0) return false
+    let st: SettleResult | null = null
+    if (target === 'paid') {
+      // Η επιστροφή ΔΕΝ έγινε: πίσω σε paid, αμοιβή/προμήθεια όπως ήταν.
+      const r = await ADMIN_REFUND_MODELS[type].updateMany({
+        where: { id: rec.id, payment_status: 'refunding', payment_ref: rec.payment_ref },
+        data: { payment_status: target },
+      })
+      if (r.count === 0) return false
+    } else {
+      // Ίδια τελική εγγραφή με το POST /admin/refund (lib/refundSettlement):
+      // αναλογική μείωση αμοιβής παρόχου/προμήθειας και, σε ΠΛΗΡΗ επιστροφή,
+      // ακύρωση ό,τι δεν έχει ολοκληρωθεί με επαναφορά του δεσμευμένου
+      // αποθέματος — σε μία συναλλαγή βάσης, μόνο στη μετάβαση από refunding
+      // (μία φορά). Πριν γραφόταν μόνο το payment_status: ο πάροχος έμενε να
+      // εισπράξει ολόκληρη την αμοιβή μιας επιστραμμένης πληρωμής.
+      st = await prisma.$transaction((tx) => settleRefundTx(tx, {
+        type, id: rec.id, paymentRef: txn, fromStatus: 'refunding',
+        toStatus: target, remainingBefore: paid, amount,
+      }))
+      if (!st.applied) return false
+    }
+    if (st?.stockRestored) {
+      await audit(req, { action: 'order_stock_restored', resource: 'order', resource_id: rec.id, metadata: { transaction_id: txn, admin: by, manual: true } })
+    }
+    if (st?.cancelled) {
+      await audit(req, {
+        action: 'refund_lifecycle_cancelled', resource: type, resource_id: rec.id,
+        metadata: { transaction_id: txn, previous_status: st.previousLifeStatus, admin: by, manual: true },
+      })
+    }
     if (target !== 'paid') {
       // Καταγραφή ΕΠΙΤΥΧΙΑΣ: καμία μεταγενέστερη επιστροφή του admin δεν
       // ξαναεπιστρέφει αυτή τη συναλλαγή (adminRefundDone).
@@ -209,6 +235,11 @@ const FAILURE_ACTIONS = [
   'event_registration_auto_refund', 'event_registration_refund',
   'booking_duplicate_refund', 'order_duplicate_refund', 'telehealth_duplicate_refund',
   'booking_cancel_refund', 'refund', 'subscription_paid_while_paused',
+  // Παράδοση συνδρομής τροφής (webhooks.ts invoice.payment_succeeded): χωρίς
+  // απόθεμα / ποσό τιμολογίου ≠ τιμή — αναπλήρωση ή επιστροφή στο Stripe.
+  'subscription_delivery_out_of_stock', 'subscription_invoice_amount_mismatch',
+  // Διπλή συνδρομή τροφής που το Stripe αρνήθηκε μόνιμα να ακυρώσει (webhooks.ts).
+  'food_subscription_duplicate_cancel_failed',
 ]
 /**
  * Σημάδια «κολλημένης» κατάστασης: η εγγραφή/κράτηση/συνεδρία εμφανίζεται ήδη
@@ -328,6 +359,7 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', async (req, reply) => {
     try {
       await (app as any).authenticate(req, reply)
+      if (reply.sent) return reply
       if ((req.user as any)?.role !== 'admin') {
         return reply.code(403).send({ message: 'Απαγορευμένη πρόσβαση' })
       }
@@ -537,7 +569,12 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
 
     // Προαιρετικά: κατάσταση της συναλλαγής στη Viva (όχι για Stripe).
     if (String(req.query?.check ?? '') === '1') {
-      const checkable = items.filter(i => i.transaction_id && i.action !== 'subscription_paid_while_paused').slice(0, 60)
+      // Συνδρομές Stripe (τιμολόγια, όχι συναλλαγές Viva): καμία ερώτηση στη Viva.
+      const stripeRow = (a: string | null) => a === 'subscription_paid_while_paused'
+        || a === 'subscription_delivery_out_of_stock' || a === 'subscription_invoice_amount_mismatch'
+        || a === 'food_subscription_duplicate_cancel_failed'
+        || a === 'food_subscription_duplicate_refund' || a === 'ai_subscription_duplicate_refund'
+      const checkable = items.filter(i => i.transaction_id && !stripeRow(i.action)).slice(0, 60)
       for (let i = 0; i < checkable.length; i += 5) {
         await Promise.all(checkable.slice(i, i + 5).map(async it => {
           try {

@@ -32,7 +32,22 @@ export function isCloudflareIp(address: string): boolean {
   return false
 }
 
-/** trustProxy: το άλμα της Railway (0) και, μόνο αμέσως μετά, ένα άλμα Cloudflare (1). */
+/**
+ * Ε16: το άλμα Cloudflare εμπιστεύεται ΜΟΝΟ με TRUST_CLOUDFLARE_PROXY=1.
+ *
+ *   Το API καλείται απευθείας στο *.up.railway.app (όχι μέσω Cloudflare). Αν
+ *   εμπιστευόμασταν πάντα ένα άλμα Cloudflare, οποιοσδήποτε θα έστελνε το
+ *   αίτημα από ένα δικό του Cloudflare Worker (η IP εξόδου του είναι του
+ *   Cloudflare) με πλαστό X-Forwarded-For: το req.ip θα ήταν όποια IP ήθελε
+ *   → παράκαμψη κάθε ορίου ανά IP (login, register, forgot-password…).
+ *
+ *   Προεπιλογή: μόνο το άλμα 0 (ο proxy της Railway) — req.ip = η διεύθυνση
+ *   που είδε η Railway. Το 1 ορίζεται ΜΟΝΟ όταν το API μπει πίσω από το
+ *   Cloudflare (proxied DNS) ΚΑΙ η απευθείας πρόσβαση στο railway.app κλείσει.
+ */
+const TRUST_CLOUDFLARE = process.env.TRUST_CLOUDFLARE_PROXY === '1'
+
+/** trustProxy: το άλμα της Railway (0) και, μόνο με TRUST_CLOUDFLARE_PROXY=1, ένα άλμα Cloudflare (1). */
 export function trustProxyHop(address: string, hop: number): boolean {
-  return hop === 0 || (hop === 1 && isCloudflareIp(address))
+  return hop === 0 || (TRUST_CLOUDFLARE && hop === 1 && isCloudflareIp(address))
 }

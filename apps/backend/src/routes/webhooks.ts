@@ -8,9 +8,75 @@ import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscri
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { auditSystem } from '../lib/audit.js'
-import { AI_SUB_ACTIVATED_ACTION, currentAiStripeSubscriptionId, otherLiveAiSubscriptions, cancelStripeSubscription } from '../lib/stripeSubscriptions.js'
+import {
+  AI_SUB_ACTIVATED_ACTION, currentAiStripeSubscriptionId, otherLiveAiSubscriptions, cancelStripeSubscription,
+  refundLatestPaidInvoice, refundStripeInvoice, type StripeErrorOut,
+} from '../lib/stripeSubscriptions.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' })
+
+/**
+ * ΔΙΠΛΗ ΣΥΝΔΡΟΜΗ ΤΡΟΦΗΣ (ίδιος χρήστης, ίδιο προϊόν)
+ *
+ * Το checkout ελέγχει μόνο συνδρομές που ήδη ολοκληρώθηκαν· δύο ανοιχτά
+ * checkout (διπλό πάτημα, δύο συσκευές) ολοκληρώνονταν και τα δύο → δύο
+ * συνδρομές στο Stripe, διπλή μηνιαία χρέωση και δύο παραδόσεις. Εδώ, υπό
+ * κλείδωμα βάσης ανά χρήστη+προϊόν: αν υπάρχει ήδη ζωντανή γραμμή (όχι
+ * cancelled/completed) για άλλη συνδρομή του Stripe, η ΝΕΑ γράφεται
+ * `cancelled` μαζί με σημάδι (audit FOOD_DUP_ACTION) στην ΙΔΙΑ συναλλαγή,
+ * ακυρώνεται αμέσως στο Stripe και το τελευταίο πληρωμένο τιμολόγιό της
+ * επιστρέφεται ολόκληρο (lib/stripeSubscriptions — ιδεμποτικό: audit,
+ * έλεγχος της χρέωσης στο Stripe, idempotency key). Η επανάληψη οποιουδήποτε
+ * γεγονότος της βρίσκει το σημάδι και ξανατρέχει μόνο ό,τι δεν ολοκληρώθηκε.
+ * Αν η ακύρωση/επιστροφή αποτύχει → σφάλμα → 500, το Stripe ξαναστέλνει.
+ */
+const FOOD_DUP_ACTION = 'food_subscription_duplicate_cancelled'
+const FOOD_DUP_REFUND_ACTION = 'food_subscription_duplicate_refund'
+const FOOD_SUB_LOCK_SPACE = 'globipet:food-subscription'
+
+/** Σημάδι «διπλή συνδρομή τροφής» για αυτή τη συνδρομή του Stripe (ή null). */
+async function foodDuplicateMarker(subscriptionId: string): Promise<{ email: string | null } | null> {
+  const row = await prisma.auditLog.findFirst({
+    where: { action: FOOD_DUP_ACTION, resource: 'product_subscription', metadata: { path: ['stripe_subscription_id'], equals: subscriptionId } },
+    select: { subject_email: true },
+  })
+  return row ? { email: row.subject_email } : null
+}
+
+/**
+ * Ακύρωση στο Stripe + επιστροφή (του τιμολογίου `invoiceId`, αλλιώς του
+ * τελευταίου πληρωμένου). Πετά (→ 500, το Stripe ξαναστέλνει) ΜΟΝΟ σε
+ * προσωρινό σφάλμα (δίκτυο / Stripe / όριο αιτημάτων / βάση). Μόνιμο σφάλμα
+ * του Stripe (invalid_request, card, permission…) δεν διορθώνεται με
+ * επανάληψη: καταγραφή αποτυχίας για τον διαχειριστή («Αποτυχημένες
+ * επιστροφές») και συνέχεια (200) — αλλιώς το Stripe ξανάστελνε για μέρες.
+ */
+const FOOD_DUP_CANCEL_FAILED_ACTION = 'food_subscription_duplicate_cancel_failed'
+async function settleDuplicateFoodSubscription(subscriptionId: string, rowId: string, email: string | null, invoiceId?: string) {
+  const cancelErr: StripeErrorOut = {}
+  if (!(await cancelStripeSubscription(subscriptionId, cancelErr))) {
+    if (cancelErr.transient !== false) {
+      throw new Error(`duplicate food subscription ${subscriptionId} could not be cancelled in Stripe`)
+    }
+    await auditSystem({
+      action: FOOD_DUP_CANCEL_FAILED_ACTION, resource: 'product_subscription', resource_id: rowId, subject_email: email,
+      outcome: 'failure', error_message: cancelErr.message ?? 'Stripe cancel failed',
+      metadata: { transaction_id: invoiceId ?? null, invoice_id: invoiceId ?? null, stripe_subscription_id: subscriptionId, reason: 'duplicate food subscription' },
+    })
+    console.error(`[stripe] duplicate food subscription ${subscriptionId}: permanent cancel error — left for the admin`)
+    return
+  }
+  const ctx = { action: FOOD_DUP_REFUND_ACTION, resource: 'product_subscription', resourceId: rowId, email, reason: 'duplicate food subscription' }
+  const refundErr: StripeErrorOut = {}
+  const r = invoiceId
+    ? await refundStripeInvoice(invoiceId, { ...ctx, subscriptionId }, refundErr)
+    : await refundLatestPaidInvoice(subscriptionId, ctx, undefined, refundErr)
+  // Η αποτυχία έχει ήδη καταγραφεί (audit failure) από το refundStripeInvoice.
+  if (r === 'failed' && refundErr.transient !== false) {
+    throw new Error(`duplicate food subscription ${subscriptionId}: refund failed (will retry)`)
+  }
+  if (r === 'failed') console.error(`[stripe] duplicate food subscription ${subscriptionId}: permanent refund error — left for the admin`)
+}
 
 /**
  * Γραμμή product_subscriptions για μια συνδρομή του Stripe, από τα metadata
@@ -24,7 +90,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '20
  *
  * Το Stripe ΔΕΝ εγγυάται σειρά γεγονότων: το invoice.payment_succeeded της
  * 1ης πληρωμής μπορεί να φτάσει πριν το checkout.session.completed. Γι' αυτό
- * το καλούν και τα δύο.
+ * το καλούν και τα δύο. Διπλή συνδρομή: βλ. FOOD_DUP_ACTION.
  */
 async function ensureProductSubscription(
   subscription: Stripe.Subscription, customerId: string | null,
@@ -35,30 +101,65 @@ async function ensureProductSubscription(
     where: { stripe_subscription_id: subscription.id },
     select: { id: true },
   })
-  if (existing) return { created: false }
+  if (existing) {
+    // Διπλή που ήδη καταγράφηκε: ολοκλήρωση ακύρωσης/επιστροφής (ιδεμποτικά).
+    const dup = await foodDuplicateMarker(subscription.id)
+    if (dup) await settleDuplicateFoodSubscription(subscription.id, existing.id, dup.email)
+    return { created: false }
+  }
   const product = await prisma.product.findUnique({ where: { id: meta.product_id } })
   const { rate } = await calculateCommission(parseFloat(meta.monthly_price || '0'), product?.category || 'food')
   let created
+  let duplicateOf: string | null = null
   try {
-    created = await prisma.productSubscription.create({
-      data: {
-        user_id: meta.user_id,
-        product_id: meta.product_id,
-        discount_percent: parseFloat(meta.discount_percent || '0'),
-        monthly_price: parseFloat(meta.monthly_price || '0'),
-        commission_rate: rate,
-        // Το Stripe δεν εγγυάται σειρά: αν η συνδρομή έχει ήδη ακυρωθεί εκεί
-        // (customer.subscription.deleted ήρθε πρώτο και δεν βρήκε γραμμή),
-        // δεν γράφεται «active» — αλλιώς θα έβγαζε παραδόσεις.
-        status: subscription.status === 'canceled' ? 'cancelled' : 'active',
-        ...(subscription.status === 'canceled' ? { end_date: new Date() } : {}),
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscription.id,
-        next_delivery_date: new Date(),
-        deliveries_completed: 0,
-      },
-      include: { user: true, product: true },
+    const res = await prisma.$transaction(async (tx) => {
+      // Ένας έλεγχος «ήδη ζωντανή;» + δημιουργία τη φορά ανά χρήστη+προϊόν.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${FOOD_SUB_LOCK_SPACE}), hashtext(${`${meta.user_id}|${meta.product_id}`}))::text AS ok`
+      const live = subscription.status === 'canceled' ? null : await tx.productSubscription.findFirst({
+        where: {
+          user_id: meta.user_id, product_id: meta.product_id,
+          status: { notIn: ['cancelled', 'completed'] },
+          OR: [{ stripe_subscription_id: null }, { stripe_subscription_id: { not: subscription.id } }],
+        },
+        select: { id: true, stripe_subscription_id: true },
+      })
+      // Το Stripe δεν εγγυάται σειρά: αν η συνδρομή έχει ήδη ακυρωθεί εκεί
+      // (customer.subscription.deleted ήρθε πρώτο και δεν βρήκε γραμμή),
+      // δεν γράφεται «active» — αλλιώς θα έβγαζε παραδόσεις. Ούτε η διπλή.
+      const inactive = subscription.status === 'canceled' || !!live
+      const row = await tx.productSubscription.create({
+        data: {
+          user_id: meta.user_id,
+          product_id: meta.product_id,
+          discount_percent: parseFloat(meta.discount_percent || '0'),
+          monthly_price: parseFloat(meta.monthly_price || '0'),
+          commission_rate: rate,
+          status: inactive ? 'cancelled' : 'active',
+          ...(inactive ? { end_date: new Date() } : {}),
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          next_delivery_date: new Date(),
+          deliveries_completed: 0,
+        },
+        include: { user: true, product: true },
+      })
+      if (live) {
+        await tx.auditLog.create({
+          data: {
+            action: FOOD_DUP_ACTION, resource: 'product_subscription', resource_id: row.id,
+            actor_id: null, actor_email: 'system@globipet', actor_role: 'system',
+            subject_email: row.user.email, outcome: 'success',
+            metadata: {
+              stripe_subscription_id: subscription.id, kept_subscription_row: live.id,
+              kept_stripe_subscription_id: live.stripe_subscription_id, product_id: meta.product_id,
+            } as any,
+          },
+        })
+      }
+      return { row, duplicateOf: live?.id ?? null }
     })
+    created = res.row
+    duplicateOf = res.duplicateOf
   } catch (err: any) {
     if (err?.code === 'P2002') return { created: false }
     // Ο χρήστης ή το προϊόν δεν υπάρχει πια: μόνιμο σφάλμα — καταγραφή και
@@ -68,6 +169,11 @@ async function ensureProductSubscription(
       return null
     }
     throw err
+  }
+  if (duplicateOf) {
+    console.error(`[stripe] food subscription ${subscription.id} duplicates live row ${duplicateOf} — cancelling and refunding`)
+    await settleDuplicateFoodSubscription(subscription.id, created.id, created.user.email)
+    return { created: true }
   }
   if (created.status === 'active') {
     sendSubscriptionStartedEmail(created.user.email, {
@@ -140,11 +246,16 @@ async function activateAiSubscription(subscription: Stripe.Subscription): Promis
     const newer = others.filter(o => o.created > subscription.created && ['active', 'trialing', 'past_due'].includes(o.status))
     if (newer.length) {
       const ok = await cancelStripeSubscription(subscription.id)
+      const kept = newer.sort((x, y) => y.created - x.created)[0]
       await auditSystem({
-        action: 'ai_subscription_duplicate_cancelled', resource: 'user', resource_id: userId, subject_email: user.email,
+        action: AI_DUP_CANCELLED_ACTION, resource: 'user', resource_id: userId, subject_email: user.email,
         outcome: ok ? 'success' : 'error',
-        metadata: { kept: newer.sort((x, y) => y.created - x.created)[0].id, cancelled: ok ? [subscription.id] : [], failed: ok ? [] : [subscription.id] },
+        metadata: { kept: kept.id, cancelled: ok ? [subscription.id] : [], failed: ok ? [] : [subscription.id] },
       })
+      // Η διπλή που ακυρώθηκε είχε ήδη χρεωθεί: επιστροφή του τελευταίου
+      // πληρωμένου τιμολογίου της (ιδεμποτικά· αποτυχία → «Αποτυχημένες επιστροφές»)
+      // — μόνο αν εκδόθηκε γύρω/μετά τη δημιουργία της συνδρομής που κρατήθηκε.
+      if (ok) await refundAiDuplicate(subscription.id, userId, user.email, { keptCreated: kept.created })
       return
     }
     older = others.map(o => o.id)
@@ -176,11 +287,50 @@ async function activateAiSubscription(subscription: Stripe.Subscription): Promis
     const cancelled: string[] = [], failed: string[] = []
     for (const id of older) ((await cancelStripeSubscription(id)) ? cancelled : failed).push(id)
     await auditSystem({
-      action: 'ai_subscription_duplicate_cancelled', resource: 'user', resource_id: userId, subject_email: user.email,
+      action: AI_DUP_CANCELLED_ACTION, resource: 'user', resource_id: userId, subject_email: user.email,
       outcome: failed.length ? 'error' : 'success',
       metadata: { kept: subscription.id, cancelled, failed },
     })
+    // Κάθε διπλή που ακυρώθηκε: επιστροφή του τελευταίου πληρωμένου τιμολογίου της.
+    for (const id of cancelled) await refundAiDuplicate(id, userId, user.email, { keptCreated: subscription.created })
   }
+}
+
+/**
+ * Διπλή συνδρομή AI που ακυρώθηκε (μία συνδρομή AI ανά χρήστη· το checkout
+ * δεν επιτρέπει νέα όταν υπάρχει ενεργή, άρα κάθε άλλη ζωντανή είναι
+ * διπλή χρέωση από παράλληλα checkout). Πριν ακυρωνόταν ΧΩΡΙΣ επιστροφή και
+ * ο πελάτης έχανε την πρώτη χρέωσή της. Ιδεμποτικό (lib/stripeSubscriptions
+ * refundStripeInvoice)· ποτέ δεν πετάει.
+ */
+const AI_DUP_CANCELLED_ACTION = 'ai_subscription_duplicate_cancelled'
+const AI_DUP_REFUND_ACTION = 'ai_subscription_duplicate_refund'
+/**
+ * `keptCreated`: created (unix) της συνδρομής που ΚΡΑΤΗΘΗΚΕ. Επιστρέφεται
+ * μόνο τιμολόγιο της διπλής που εκδόθηκε από (keptCreated − 1 ώρα) και μετά:
+ * μια παλιά συνδρομή που πληρωνόταν και χρησιμοποιούνταν μήνες πριν από τη
+ * νέα ακυρώνεται χωρίς επιστροφή (καταγραφή «_skipped» με τον λόγο).
+ */
+async function refundAiDuplicate(
+  subscriptionId: string, userId: string, email: string | null,
+  /** keptCreated: όριο για το τελευταίο πληρωμένο· invoiceId: τιμολόγιο πληρωμένο ΜΕΤΑ την ακύρωση ως διπλής (επιστρέφεται πάντα). */
+  by: { keptCreated: number } | { invoiceId: string },
+) {
+  const ctx = { action: AI_DUP_REFUND_ACTION, resource: 'user', resourceId: userId, email, reason: 'duplicate AI subscription' }
+  const r = 'invoiceId' in by
+    ? await refundStripeInvoice(by.invoiceId, { ...ctx, subscriptionId })
+    : await refundLatestPaidInvoice(subscriptionId, ctx, by.keptCreated - 3600)
+  if (r === 'refunded') console.warn(`[stripe] duplicate AI subscription ${subscriptionId} of ${userId}: invoice refunded`)
+  if (r === 'skipped') console.warn(`[stripe] duplicate AI subscription ${subscriptionId} of ${userId}: cancelled without refund (invoice older than the kept subscription)`)
+}
+
+/** Η συνδρομή AI ακυρώθηκε από εμάς ως διπλή (audit AI_DUP_CANCELLED_ACTION); */
+async function aiDuplicateCancelled(subscriptionId: string, userId: string): Promise<boolean> {
+  const row = await prisma.auditLog.findFirst({
+    where: { action: AI_DUP_CANCELLED_ACTION, resource: 'user', resource_id: userId, metadata: { path: ['cancelled'], array_contains: [subscriptionId] } },
+    select: { id: true },
+  })
+  return !!row
 }
 
 /**
@@ -282,6 +432,13 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               // Συνδρομή AI: ενεργοποίηση/ανανέωση (και επαναφορά μετά από
               // αποτυχημένη πληρωμή) — καμία παραγγελία παράδοσης.
               if (isAiSubscription(subscription)) {
+                // Τιμολόγιο που πληρώθηκε ΜΕΤΑ την ακύρωση της συνδρομής ως
+                // διπλής: επιστρέφεται (καμία ενεργοποίηση — είναι canceled).
+                if (subscription.status === 'canceled'
+                  && await aiDuplicateCancelled(subscription.id, String(subscription.metadata.user_id))) {
+                  const u = await prisma.user.findUnique({ where: { id: String(subscription.metadata.user_id) }, select: { email: true } })
+                  await refundAiDuplicate(subscription.id, String(subscription.metadata.user_id), u?.email ?? null, { invoiceId: invoice.id })
+                }
                 await activateAiSubscription(subscription)
                 break
               }
@@ -341,8 +498,24 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               const providerPayout = Math.round((productSub.monthly_price - platformFee) * 100) / 100
               const providerEmail = (productSub.product as any).provider_email || null
 
+              // Απόθεμα: μία μονάδα ανά παράδοση, ατομικά και υπό συνθήκη στην
+              // ΙΔΙΑ συναλλαγή (όπως η πληρωμή παραγγελίας, orders.ts). Πριν
+              // καμία παράδοση συνδρομής δεν μείωνε το απόθεμα, οπότε το
+              // κατάστημα πουλούσε τις ίδιες μονάδες δεύτερη φορά. Χωρίς
+              // απόθεμα η παραγγελία ΓΡΑΦΕΤΑΙ κανονικά (ο πελάτης πλήρωσε — δεν
+              // χάνεται η παράδοση ούτε γίνεται αυτόματη επιστροφή), με
+              // καταγραφή για τον διαχειριστή (αναπλήρωση ή επιστροφή).
+              const stocked = await tx.product.updateMany({
+                where: { id: productSub.product_id, stock: { gte: 1 } },
+                data: { stock: { decrement: 1 } },
+              })
+              // Ποσό που πλήρωσε το Stripe ≠ τιμή της συνδρομής (ποσό κλειδωμένο
+              // στο checkout): καταγραφή για έλεγχο· η παράδοση γράφεται κανονικά.
+              const paidNow = Math.round(Number(invoice.amount_paid ?? 0)) / 100
+              const amountMismatch = Math.abs(paidNow - productSub.monthly_price) > 0.005
+
               // Create the monthly delivery order
-              await tx.order.create({
+              const deliveryOrder = await tx.order.create({
                 data: {
                   user_email: productSub.user.email,
                   user_name: productSub.user.full_name,
@@ -364,6 +537,37 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                   notes: `Αυτόματη μηνιαία παράδοση συνδρομής (παράδοση #${deliveryNumber}/12)`,
                 },
               })
+              const sysAudit = (action: string, error_message: string, metadata: Record<string, unknown>) => tx.auditLog.create({
+                data: {
+                  action, resource: 'order', resource_id: deliveryOrder.id,
+                  actor_id: null, actor_email: 'system@globipet', actor_role: 'system',
+                  subject_email: productSub.user.email, outcome: 'failure', error_message,
+                  metadata: { stripe_subscription_id: subId, invoice_id: invoice.id, product_subscription_id: productSub.id, delivery: deliveryNumber, ...metadata } as any,
+                },
+              })
+              if (stocked.count === 1) {
+                // Τι δεσμεύτηκε, στην ΙΔΙΑ συναλλαγή — ίδια μορφή με το
+                // claimOrderPayment (orders.ts), ώστε μια πλήρης επιστροφή που
+                // ακυρώνει την παραγγελία (lib/refundSettlement, paymentRef =
+                // id τιμολογίου) να επαναφέρει τη μονάδα.
+                await tx.auditLog.create({
+                  data: {
+                    action: 'order_stock_reserved', resource: 'order', resource_id: deliveryOrder.id,
+                    actor_id: null, actor_email: 'system@globipet', actor_role: 'system',
+                    metadata: { transaction_id: invoice.id, items: { [productSub.product_id]: 1 } } as any, outcome: 'success',
+                  },
+                })
+              }
+              if (stocked.count === 0) {
+                await sysAudit('subscription_delivery_out_of_stock',
+                  'Subscription delivery order created without stock — restock or refund in Stripe',
+                  { product_id: productSub.product_id })
+              }
+              if (amountMismatch) {
+                await sysAudit('subscription_invoice_amount_mismatch',
+                  `Invoice paid ${paidNow.toFixed(2)} but the subscription price is ${productSub.monthly_price.toFixed(2)} — check`,
+                  { amount_paid: paidNow, expected: productSub.monthly_price })
+              }
               return { kind: 'delivered' as const, productSub, deliveryNumber, isFinalDelivery, providerEmail, providerPayout }
             })
 
@@ -379,6 +583,11 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               // στείλει το Stripe. Πληρωμή σε παύση (τιμολόγιο που είχε ήδη
               // εκδοθεί πριν την παύση) καταγράφεται για τον διαχειριστή.
               console.warn(`[stripe] invoice.payment_succeeded for ${productSub.status} product subscription ${productSub.id} (${subId}) — skipped`)
+              // Διπλή συνδρομή τροφής (FOOD_DUP_ACTION): το τιμολόγιο αυτό
+              // επιστρέφεται (ιδεμποτικά· αποτυχία → 500, το Stripe ξαναστέλνει).
+              if (productSub.status === 'cancelled' && await foodDuplicateMarker(subId)) {
+                await settleDuplicateFoodSubscription(subId, productSub.id, productSub.user.email, invoice.id)
+              }
               if (productSub.status === 'paused') {
                 await auditSystem({
                   action: 'subscription_paid_while_paused', resource: 'product_subscription', resource_id: productSub.id,

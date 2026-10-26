@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, AppState } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -40,18 +40,36 @@ export default function OrderConfirmationScreen() {
   const [result, setResult] = useState<string | null>(null)
   // 'out_of_stock': το απόθεμα εξαντλήθηκε τη στιγμή της πληρωμής (orders.ts).
   const [reason, setReason] = useState<string | null>(null)
-  // Όπως στο web: αν ήρθαμε από την πληρωμή, ξαναρωτάμε κάθε 3″ για έως ένα
-  // λεπτό, γιατί το webhook του Viva μπορεί να επιβεβαιώσει μετά την επιστροφή.
-  const [pollUntil] = useState(() => transactionId ? Date.now() + 60_000 : 0)
+  /**
+   * Ε16: παρακολούθηση ΚΑΙ χωρίς transactionId. Η πληρωμή γίνεται στον
+   * browser· όταν ο χρήστης γυρίζει στην εφαρμογή (όχι μέσω του deep link)
+   * η οθόνη δεν έχει transactionId και πριν έμενε για πάντα «σε εκκρεμότητα».
+   * Τώρα, όπως στο booking-confirmation: όσο είναι απλήρωτη, νέα ανάγνωση
+   * κάθε 4″ για έως 2′, και νέα ανάγνωση + νέος κύκλος στην επιστροφή στο
+   * προσκήνιο. Το webhook του Viva είναι αυτό που την επιβεβαιώνει.
+   */
+  const [pollUntil, setPollUntil] = useState(() => Date.now() + 120_000)
 
-  const { data: order, isLoading, dataUpdatedAt } = useQuery({
+  const { data: order, isLoading, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/orders/${id}`).then(r => r.data?.data ?? r.data),
     enabled: !!id,
-    // Σταματά και όταν η πληρωμή απέτυχε: τελική κατάσταση, δεν θα αλλάξει.
+    // Μόνο όσο είναι απλήρωτη: πληρωμένη, αποτυχημένη, επιστραμμένη ή ακυρωμένη = τελική κατάσταση.
     refetchInterval: (q: any) =>
-      q.state.data?.payment_status !== 'paid' && !paymentFailed(q.state.data) && Date.now() < pollUntil ? 3000 : false,
+      q.state.data?.payment_status === 'unpaid' && !paymentFailed(q.state.data)
+        && q.state.data.status !== 'cancelled' && Date.now() < pollUntil ? 4000 : false,
   })
+
+  // Επιστροφή στο προσκήνιο (π.χ. από τη Viva στον browser): νέα ανάγνωση
+  // αμέσως και νέο παράθυρο παρακολούθησης 2′.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', st => {
+      if (st !== 'active' || !id) return
+      setPollUntil(Date.now() + 120_000)
+      void refetch()
+    })
+    return () => sub.remove()
+  }, [id, refetch])
 
   const verify = useMutation({
     mutationFn: () => {
