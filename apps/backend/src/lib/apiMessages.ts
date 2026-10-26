@@ -445,6 +445,10 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   "Ο σύνδεσμος έληξε. Άνοιξε ξανά το αποδεικτικό.": ["The link has expired. Open the receipt again.","El enlace ha caducado. Vuelve a abrir el justificante.","Le lien a expiré. Ouvrez à nouveau le justificatif.","链接已过期，请重新打开付款凭证。"],
   "Μη έγκυρη πληρωμή": ["Invalid payment","Pago no válido","Paiement non valide","付款无效"],
   "Το GlobiPet Plus διαχειρίζεται από τη σελίδα GlobiPet Plus": ["GlobiPet Plus is managed from the GlobiPet Plus page","GlobiPet Plus se gestiona desde la página de GlobiPet Plus","GlobiPet Plus se gère depuis la page GlobiPet Plus","GlobiPet Plus 需在 GlobiPet Plus 页面中管理"],
+  // Ε19 — ενεργοποίηση συνδρομής από τον admin
+  "Συμπλήρωσε email και πλάνο": ["Enter an email and a plan","Indica un correo electrónico y un plan","Indiquez un e-mail et une formule","请填写邮箱和方案"],
+  "Δεν βρέθηκε λογαριασμός με αυτό το email": ["No account found with this email","No se encontró ninguna cuenta con este correo electrónico","Aucun compte trouvé avec cet e-mail","未找到使用该邮箱的账户"],
+  "Ο λογαριασμός έχει ήδη ενεργή συνδρομή — άλλαξέ την από τη λίστα": ["This account already has an active subscription — change it from the list","Esta cuenta ya tiene una suscripción activa: cámbiala desde la lista","Ce compte a déjà un abonnement actif — modifiez-le depuis la liste","该账户已有有效订阅——请在列表中修改"],
 }
 
 const IDX: Record<Exclude<Lang, 'el'>, number> = { en: 0, es: 1, fr: 2, zh: 3 }

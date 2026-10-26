@@ -60,6 +60,46 @@ const adminSubscriptionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ data: enriched })
   })
 
+  /**
+   * Ε19 — POST /admin/subscriptions/ai/grant  { email, plan_id }
+   * Ενεργοποίηση συνδρομής AI (ή GlobiPet Plus) σε ΟΠΟΙΟΝΔΗΠΟΤΕ λογαριασμό με
+   * το email του — και σε όσους δεν φαίνονται στη λίστα (κατάσταση 'none').
+   * Χωρίς Stripe: καμία χρέωση, καμία λήξη (η αυτόματη λήξη αφορά μόνο το
+   * 'trial'), κανένας πόντος. Για επιδείξεις/ομάδα. Λογαριασμός με ΠΛΗΡΩΜΕΝΗ
+   * συνδρομή (active/payment_failed) δεν αλλάζει από εδώ — η χρέωσή του στο
+   * Stripe θα συνέχιζε· αλλάζει από τη λίστα (Επεξεργασία).
+   */
+  app.post('/ai/grant', async (req: any, reply) => {
+    const b = req.body ?? {}
+    const email = typeof b.email === 'string' ? b.email.trim() : ''
+    const planId = typeof b.plan_id === 'string' ? b.plan_id.trim() : ''
+    if (!email || !planId) return reply.code(400).send({ message: 'Συμπλήρωσε email και πλάνο' })
+    const plan = await prisma.aiSubscriptionPlan.findUnique({ where: { id: planId }, select: { id: true } })
+    if (!plan) return reply.code(404).send({ message: 'Το πλάνο δεν είναι διαθέσιμο' })
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true, email: true, ai_subscription_status: true, ai_subscription_plan_id: true },
+    })
+    if (!user) return reply.code(404).send({ message: 'Δεν βρέθηκε λογαριασμός με αυτό το email' })
+    if (user.ai_subscription_status === 'active' || user.ai_subscription_status === 'payment_failed') {
+      // Ήδη ενεργή με το ίδιο πλάνο → τίποτα να γίνει (ιδεμποτικό).
+      if (user.ai_subscription_status === 'active' && user.ai_subscription_plan_id === plan.id) {
+        return reply.send({ data: { id: user.id, ai_subscription_status: 'active', ai_subscription_plan_id: plan.id } })
+      }
+      return reply.code(409).send({ message: 'Ο λογαριασμός έχει ήδη ενεργή συνδρομή — άλλαξέ την από τη λίστα' })
+    }
+    const res = await prisma.user.updateMany({
+      where: { id: user.id, ai_subscription_status: { notIn: ['active', 'payment_failed'] } },
+      data: { ai_subscription_status: 'active', ai_subscription_plan_id: plan.id },
+    })
+    if (res.count !== 1) return reply.code(409).send({ message: 'Ο λογαριασμός έχει ήδη ενεργή συνδρομή — άλλαξέ την από τη λίστα' })
+    await audit(req, {
+      action: 'ai_subscription_granted', resource: 'user', resource_id: user.id, subject_email: user.email,
+      metadata: { plan_id: plan.id, previous_status: user.ai_subscription_status, complimentary: true },
+    })
+    return reply.send({ data: { id: user.id, ai_subscription_status: 'active', ai_subscription_plan_id: plan.id } })
+  })
+
   // PATCH /admin/subscriptions/ai/:user_id — admin changes user's AI subscription status/plan
   app.patch('/ai/:user_id', async (req: any, reply) => {
     const b = req.body ?? {}

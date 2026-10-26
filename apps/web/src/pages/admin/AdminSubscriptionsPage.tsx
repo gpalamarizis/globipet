@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation, Trans } from 'react-i18next'
-import { Layers, Brain, Package, Shield, Settings2, Check, X, Edit2 } from 'lucide-react'
+import { Layers, Brain, Package, Shield, Settings2, Check, X, Edit2, UserPlus } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { localName } from '@/lib/localName'
@@ -31,6 +31,8 @@ export default function AdminSubscriptionsPage() {
   const queryClient = useQueryClient()
   const [discountInput, setDiscountInput] = useState<string>('')
   const [editingAiUser, setEditingAiUser] = useState<any>(null)
+  // Ε19 — ενεργοποίηση συνδρομής σε οποιονδήποτε λογαριασμό (email + πλάνο).
+  const [grant, setGrant] = useState<{ email: string; plan_id: string } | null>(null)
 
   const { data: discountSetting } = useQuery({
     queryKey: ['food-subscription-discount'],
@@ -74,8 +76,20 @@ export default function AdminSubscriptionsPage() {
   const { data: aiPlans = [] } = useQuery({
     queryKey: ['admin-ai-plans-list'],
     queryFn: () => api.get('/admin/ai-plans').then(r => r.data?.data ?? []),
-    enabled: !!editingAiUser,
+    enabled: !!editingAiUser || !!grant,
   })
+
+  const grantAi = useMutation({
+    mutationFn: (body: { email: string; plan_id: string }) => api.post('/admin/subscriptions/ai/grant', body).then(r => r.data),
+    onSuccess: () => {
+      toast.success(t('adminSubs.grantDone'))
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-ai'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-overview'] })
+      setGrant(null)
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('adminSubs.updateError')),
+  })
+  const grantOk = !!grant && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(grant.email.trim()) && !!grant.plan_id
 
   const updateFoodStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/admin/subscriptions/food/${id}`, { status }),
@@ -200,6 +214,16 @@ export default function AdminSubscriptionsPage() {
             </table>
           </div>
         )
+      )}
+
+      {activeTab === 'ai' && (
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <p className="text-sm text-gray-500">{t('adminSubs.grantHint')}</p>
+          <button onClick={() => setGrant({ email: '', plan_id: '' })}
+            className="btn-primary text-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+            <UserPlus size={14} /> {t('adminSubs.grantBtn')}
+          </button>
+        </div>
       )}
 
       {/* AI tab — enhanced with plan info + actions */}
@@ -391,6 +415,46 @@ export default function AdminSubscriptionsPage() {
                 disabled={updateAiUser.isPending}
                 className="btn-primary flex-1">
                 {updateAiUser.isPending ? '...' : t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Ε19 — Ενεργοποίηση συνδρομής σε λογαριασμό */}
+      {grant && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => !grantAi.isPending && setGrant(null)}>
+          <div className="w-full max-w-md card p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('adminSubs.grantTitle')}</h2>
+              <button onClick={() => setGrant(null)} disabled={grantAi.isPending} className="btn-ghost p-2"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">{t('adminSubs.grantDesc')}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminSubs.grantEmail')}</label>
+                <input type="email" className="input text-sm" value={grant.email} autoFocus
+                  placeholder="name@example.com"
+                  onChange={e => setGrant({ ...grant, email: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">{t('adminSubs.plan')}</label>
+                <select className="input text-sm" value={grant.plan_id}
+                  onChange={e => setGrant({ ...grant, plan_id: e.target.value })}>
+                  <option value="">{t('adminSubs.grantPickPlan')}</option>
+                  {aiPlans.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {t('adminSubs.planOption', { name: localName(p, i18n.language), price: p.price_monthly })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setGrant(null)} disabled={grantAi.isPending} className="btn-secondary flex-1">{t('common.cancel')}</button>
+              <button onClick={() => grantAi.mutate({ email: grant.email.trim(), plan_id: grant.plan_id })}
+                disabled={!grantOk || grantAi.isPending} className="btn-primary flex-1">
+                {grantAi.isPending ? '...' : t('adminSubs.grantAction')}
               </button>
             </div>
           </div>
