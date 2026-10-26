@@ -5,13 +5,15 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone, MessageSquareText, Settings, Star, Trophy } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone, MessageSquareText, Settings, Star, Trophy, Crown, Receipt, TriangleAlert } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { fmtDateShort } from '@/lib/dates'
+import { fmtEur } from '@/lib/money'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 import NotificationBell from '@/components/NotificationBell'
+import { useMembership } from '../membership'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -32,8 +34,11 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   Μηνύματα & ειδοποιήσεις · Λογαριασμός & ασφάλεια · Απόρρητο & δεδομένα ·
  *   Βοήθεια & όροι, και στο τέλος η αποσύνδεση. Οι συντομεύσεις λειτουργιών
  *   (ιατρικός φάκελος, GPS, τηλεϊατρική) έφυγαν — ζουν στις καρτέλες
- *   «Κατοικίδια» και «Εξερεύνησε». Συνδρομή «μέλους GlobiPet» δεν υπάρχει·
- *   δείχνουμε μόνο ό,τι υπάρχει: συνδρομή AI και συνδρομές τροφής.
+ *   «Κατοικίδια» και «Εξερεύνησε».
+ *
+ * Ε18 — Κάρτα μέλους GlobiPet Plus ΣΤΗΝ ΚΟΡΥΦΗ (μόνο απλοί χρήστες· όχι
+ *   πάροχοι/admin) → /membership, και «Πληρωμές και αποδεικτικά» → /payments
+ *   στην ενότητα «Συνδρομές». Ίδια με το web (Profile).
  *
  * ΤΙ ΑΛΛΑΞΕ
  *   Το μενού έδειχνε σε τρεις διαδρομές που δεν υπάρχουν ως οθόνες στο
@@ -144,6 +149,25 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   })
   const foodLive = (foodSubs as any[]).filter(x => FOOD_SUB_LIVE.includes(x?.status)).length
+
+  // Ε18 — GlobiPet Plus: κάρτα για ιδιοκτήτες κατοικιδίων — και για τον «both»,
+  // που είναι και ιδιοκτήτης (ίδιος κανόνας με το web Profile)· όχι καθαροί πάροχοι/admin.
+  const isPlainUser = !!user && !['admin', 'service_provider'].includes(user.role)
+  const { data: membership } = useMembership(isAuthenticated && isPlainUser)
+  const mPlan = membership?.plan ?? null
+  const mName = mPlan?.name || t('membership.title')
+  const mSt = membership?.me?.status ?? 'none'
+  const mIsMember = mSt === 'member' || mSt === 'payment_failed'
+  // Κανονική μηνιαία τιμή (χωρίς την έκπτωση επιπέδου, που ισχύει μόνο την 1η περίοδο) — όπως το web.
+  const mMonthly = Number(mPlan?.price_monthly)
+  const mPrice = mPlan && Number.isFinite(mMonthly) && mMonthly > 0 ? fmtEur(mMonthly, i18n.language) : ''
+  const mRenews = mSt === 'member' && membership?.me?.current_period_end
+    ? fmtDateShort(membership.me.current_period_end, i18n.language) : ''
+  const showMemberCard = isPlainUser && !!membership && (mIsMember || (membership.available && !!mPlan))
+  const mLabel = mSt === 'member'
+    ? (mRenews ? t('membership.cardMember', { name: mName, date: mRenews }) : t('membership.cardMemberActive', { name: mName }))
+    : mSt === 'payment_failed' ? mName
+    : t('membership.cardJoin', { name: mName })
 
   // Επεξεργασία προφίλ
   const [editing, setEditing] = useState(false)
@@ -370,6 +394,29 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Ε18 — GlobiPet Plus στην κορυφή: μέλος → ανανέωση· όχι → «Γίνε μέλος» με τιμή. */}
+      {showMemberCard && (
+        <TouchableOpacity activeOpacity={0.7}
+          style={[s.row, s.memberCard, mSt === 'payment_failed' && s.memberCardDanger]}
+          onPress={() => router.push('/membership' as any)}>
+          {/* Ίδια με το web: προειδοποίηση + κόκκινο μήνυμα στην αποτυχημένη πληρωμή, δεξιά μόνο το βέλος. */}
+          <View style={[s.rowIcon, { backgroundColor: mSt === 'payment_failed' ? colors.dangerBg : colors.brandTint }]}>
+            {mSt === 'payment_failed'
+              ? <TriangleAlert size={icon.md} color={colors.danger} />
+              : <Crown size={icon.md} color={colors.brand} />}
+          </View>
+          <View style={s.rowBody}>
+            <Text style={[s.rowLabel, s.memberLabel]} numberOfLines={2}>{mLabel}</Text>
+            {mSt === 'payment_failed' ? (
+              <Text style={[s.rowSub, { color: colors.danger }]} numberOfLines={2}>{t('membership.cardPaymentFailed')}</Text>
+            ) : !mIsMember && !!mPrice && (
+              <Text style={s.rowSub} numberOfLines={1}>{t('membership.cardPrice', { price: mPrice })}</Text>
+            )}
+          </View>
+          <ChevronRight size={icon.md} color={colors.textLight} />
+        </TouchableOpacity>
+      )}
+
       {/* Στοιχεία προφίλ — όπως στο web. */}
       {(profile.bio || profile.city || profile.phone || profile.website) ? (
         <View style={s.info}>
@@ -435,7 +482,7 @@ export default function ProfileScreen() {
             <Text style={s.rowAction} numberOfLines={1}>{t('accountHub.plans')}</Text>
             <ChevronRight size={icon.md} color={colors.textLight} />
           </TouchableOpacity>
-          <TouchableOpacity style={[s.row, s.rowLast]} activeOpacity={0.7}
+          <TouchableOpacity style={s.row} activeOpacity={0.7}
             onPress={() => router.push('/subscriptions' as any)}>
             <View style={s.rowIcon}><RotateCcw size={icon.md} color={colors.brand} /></View>
             <View style={s.rowBody}>
@@ -446,6 +493,8 @@ export default function ProfileScreen() {
             </View>
             <ChevronRight size={icon.md} color={colors.textLight} />
           </TouchableOpacity>
+          {/* Ε18 — ιστορικό πληρωμών, αποδεικτικά και κάρτα (Stripe). */}
+          {renderRow({ key: 'payments', Icon: Receipt, labelKey: 'payments.title', sub: t('payments.rowSub'), route: '/payments' }, true)}
         </View>
       </View>
 
@@ -654,6 +703,14 @@ const s = StyleSheet.create({
   rowBody: { flex: 1, minWidth: 0 },
   rowSub: { ...type.caption, color: colors.textMuted, marginTop: 1 },
   rowAction: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, maxWidth: 110 },
+  // Ε18 — κάρτα μέλους: ίδια γραμμή με το μενού, ως αυτόνομη κάρτα στην κορυφή.
+  memberCard: {
+    borderWidth: 1.5, borderColor: colors.brand, borderBottomWidth: 1.5, borderBottomColor: colors.brand,
+    borderRadius: radius.lg, backgroundColor: colors.surface,
+    marginTop: space.lg, marginHorizontal: space.lg, paddingVertical: space.sm,
+  },
+  memberCardDanger: { borderColor: colors.danger, borderBottomColor: colors.danger },
+  memberLabel: { fontWeight: weight.semibold },
   rowProvider: {
     borderWidth: 1.5, borderColor: colors.brand, borderBottomWidth: 1.5, borderBottomColor: colors.brand,
     borderRadius: radius.lg, backgroundColor: colors.surface,

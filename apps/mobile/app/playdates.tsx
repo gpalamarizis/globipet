@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, StyleSheet, Image, Alert, Modal, TouchableOpacity, ScrollView, Linking } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PawPrint, MapPin, Calendar, Clock, Users, Plus, Trash2, Check, X, UserPlus, Navigation, Info } from 'lucide-react-native'
+import { PawPrint, MapPin, Calendar, Clock, Users, Plus, Trash2, Check, X, UserPlus, Navigation, Info, LocateFixed } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader, Input } from '@/components/ui'
@@ -69,6 +69,10 @@ const directionsUrl = (ev: any) => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
 }
 const isPosInt = (v: string) => /^\d+$/.test(v.trim()) && parseInt(v, 10) > 0
+// Ίδια στρογγυλοποίηση με την εύρεση από διεύθυνση (ServiceLocationField).
+const round6 = (n: number) => Math.round(n * 1e6) / 1e6
+/** Ε18 — όριο αναμονής για τη θέση GPS. */
+const GPS_TIMEOUT_MS = 15_000
 
 export default function PlaydatesScreen() {
   const { t, i18n } = useTranslation()
@@ -124,14 +128,99 @@ export default function PlaydatesScreen() {
 
   const resetCreate = () => {
     setPTitle(''); setPType('meetup'); setPDesc(''); setPDuration('60'); setPPets([])
-    setPAddress(''); setPDetails(''); setPLat(null); setPLng(null); setPAutoCity('')
+    setPAddress(''); setPDetails(''); setPLat(null); setPLng(null); setPAutoCity(''); setLocFilled(false)
     setPMax(''); setPCity(user?.city ?? ''); setPTried(false)
   }
   const closeCreate = () => { setCreating(false); setPTried(false) }
 
+  /**
+   * Ε18 — «Χρήση της τοποθεσίας μου»: GPS → GET /geocode/reverse → σημείο
+   * συνάντησης, πόλη, συντεταγμένες, με τον ίδιο τρόπο που τα γεμίζει η
+   * «Εύρεση από διεύθυνση» (setPLat/setPLng με round6, αυτόματη πόλη).
+   *
+   * Το expo-location φορτώνεται ΤΕΜΠΕΛΙΚΑ εδώ (require σε try/catch): μια
+   * εγκατεστημένη έκδοση χωρίς το native module δεν σκάει στο άνοιγμα — απλώς
+   * ζητά ενημέρωση της εφαρμογής όταν πατηθεί το κουμπί.
+   */
+  const [locating, setLocating] = useState(false)
+  // Νέο key στο ServiceLocationField ώστε να μη μείνει παλιό «βρέθηκε: …».
+  const [locKey, setLocKey] = useState(0)
+  // Σύντομη επιβεβαίωση κάτω από το κουμπί (όπως το toast του web) — μέχρι να αλλάξει η διεύθυνση.
+  const [locFilled, setLocFilled] = useState(false)
+  const fillFromMyLocation = async () => {
+    if (locating) return
+    let Location: typeof import('expo-location')
+    try {
+      Location = require('expo-location')
+    } catch {
+      Alert.alert(t('common.error'), t('playLocate.needsUpdate'))
+      return
+    }
+    setLocating(true)
+    setLocFilled(false)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      let granted = false
+      try {
+        granted = (await Location.requestForegroundPermissionsAsync()).status === 'granted'
+      } catch {
+        Alert.alert(t('common.error'), t('playLocate.needsUpdate'))
+        return
+      }
+      if (!granted) {
+        Alert.alert(t('playLocate.deniedTitle'), t('playLocate.denied'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('account.openSettings'), onPress: () => { Linking.openSettings().catch(() => {}) } },
+        ])
+        return
+      }
+      if (!(await Location.hasServicesEnabledAsync().catch(() => true))) {
+        Alert.alert(t('common.error'), t('playLocate.servicesOff'))
+        return
+      }
+      let pos: { coords: { latitude: number; longitude: number } }
+      try {
+        pos = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), GPS_TIMEOUT_MS) }),
+        ])
+      } catch {
+        Alert.alert(t('common.error'), t('playLocate.timeout'))
+        return
+      }
+      try {
+        const r = await api.get('/geocode/reverse', {
+          params: { lat: round6(pos.coords.latitude), lon: round6(pos.coords.longitude) },
+        })
+        const d = r.data?.data ?? r.data ?? {}
+        if (!String(d.display_name || '').trim()) {
+          Alert.alert(t('common.error'), t('playLocate.notFound'))
+          return
+        }
+        const lat = Number(d.lat ?? pos.coords.latitude), lon = Number(d.lon ?? pos.coords.longitude)
+        // Πρώτα η διεύθυνση (όχι onAddressChange: θα έσβηνε τις νέες συντεταγμένες).
+        setPAddress(String(d.display_name || ''))
+        setPLat(round6(lat)); setPLng(round6(lon))
+        setPAutoCity(String(d.city || '').trim())
+        setLocKey(k => k + 1)
+        setLocFilled(true)
+      } catch (e: any) {
+        const st = e?.response?.status
+        Alert.alert(t('common.error'),
+          st === 404 ? t('playLocate.notFound')
+          : st === 503 ? t('playLocate.busy')
+          : t('playLocate.error'))
+      }
+    } finally {
+      if (timer) clearTimeout(timer)
+      setLocating(false)
+    }
+  }
+
   // Νέα διεύθυνση μετά από εύρεση: οι παλιές συντεταγμένες/πόλη δεν ισχύουν πια.
   const onAddressChange = (v: string) => {
     setPAddress(v)
+    setLocFilled(false)
     if (pLat != null || pAutoCity) { setPLat(null); setPLng(null); setPAutoCity('') }
   }
 
@@ -479,7 +568,14 @@ export default function PlaydatesScreen() {
 
               <Input label={req(t('play.location'))} value={pAddress} onChangeText={onAddressChange}
                 placeholder={t('play.f.addressPh')} error={errOf('address')} />
+              <Button full size="sm" variant="secondary"
+                label={locating ? t('playLocate.locating') : t('playLocate.useMyLocation')}
+                icon={<LocateFixed size={icon.sm} color={colors.text} />}
+                loading={locating} disabled={locating}
+                onPress={fillFromMyLocation} style={locFilled ? { ...s.locateBtn, marginBottom: space.xs } : s.locateBtn} />
+              {locFilled && <Text style={s.locFilled}>{t('playLocate.filled')}</Text>}
               <ServiceLocationField
+                key={locKey}
                 address={pAddress}
                 // Χωρίς αυτόματη πόλη: η πόλη που έγραψε ο χρήστης βοηθά την εύρεση.
                 city={pAutoCity ? undefined : pCity}
@@ -599,6 +695,10 @@ const s = StyleSheet.create({
   chipTextOn: { color: colors.textOnDark },
   errSummary: { ...type.caption, color: colors.danger },
   autoCity: { ...type.caption, color: colors.textMuted, marginBottom: space.lg },
+  // Κάτω από το πεδίο διεύθυνσης (Input: marginBottom lg) — πιο κοντά σε αυτό, lg πριν από τον χάρτη.
+  locateBtn: { marginTop: -space.sm, marginBottom: space.lg },
+  // Επιβεβαίωση κάτω από το κουμπί: xs από αυτό, lg πριν από τον χάρτη (ίδιο κενό με χωρίς αυτήν).
+  locFilled: { ...type.caption, color: '#047857', marginBottom: space.lg },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.surface, padding: space.lg, gap: space.sm, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '88%' },
   sheetTitle: { ...type.section, color: colors.text },

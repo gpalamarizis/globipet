@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List, Navigation, Info } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List, Navigation, Info, LocateFixed } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
@@ -54,6 +54,10 @@ const todayYmd = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+/** Ίδια στρογγυλοποίηση με το ServiceLocationPicker (6 δεκαδικά). */
+const round6 = (n: number) => Math.round(n * 1e6) / 1e6
+/** Ε18 — «Χρήση της τοποθεσίας μου»: μόνο όπου ο browser δίνει γεωεντοπισμό. */
+const canGeolocate = typeof navigator !== 'undefined' && !!navigator.geolocation
 const isPosInt = (v: string) => /^\d+$/.test(v.trim()) && parseInt(v, 10) > 0
 
 /** Σημείο συνάντησης + λεπτομέρειες + «Οδηγίες» — ίδιο σε όλες τις κάρτες. */
@@ -158,6 +162,59 @@ export default function Playdates() {
   // Νέα διεύθυνση μετά από εύρεση: οι παλιές συντεταγμένες/πόλη δεν ισχύουν πια.
   const onAddressChange = (v: string) => setForm(f => ({ ...f, address: v,
     ...(f.latitude != null || f.autoCity ? { latitude: null, longitude: null, autoCity: '' } : {}) }))
+
+  /**
+   * Ε18 — «Χρήση της τοποθεσίας μου»: GPS → GET /geocode/reverse → σημείο
+   * συνάντησης (display_name), πόλη και συντεταγμένες. Τα πεδία γεμίζουν όπως
+   * στην «Εύρεση στον χάρτη» (onChange + onFound του ServiceLocationPicker):
+   * latitude/longitude στρογγυλεμένα, autoCity από το αποτέλεσμα — ο χάρτης
+   * του picker μετακινείται μόνος του στις νέες συντεταγμένες.
+   */
+  const [locating, setLocating] = useState(false)
+  // Νέο κλειδί στο picker μετά το GPS: αλλιώς θα έμενε το κείμενο μιας
+  // παλιότερης «Εύρεσης» (εσωτερική κατάσταση του picker) δίπλα στις νέες συντεταγμένες.
+  const [pickerSeq, setPickerSeq] = useState(0)
+  const fillMyLocation = () => {
+    if (!canGeolocate || locating) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { data } = await api.get('/geocode/reverse', {
+            params: { lat: round6(pos.coords.latitude), lon: round6(pos.coords.longitude) },
+          })
+          const name = String(data?.display_name || '').trim()
+          // Χωρίς διεύθυνση: τίποτα δεν γράφεται (όπως το κινητό).
+          if (!name) { toast.error(t('playdatesGeo.notFound')); return }
+          const lat = round6(Number(data?.lat ?? pos.coords.latitude))
+          const lon = round6(Number(data?.lon ?? pos.coords.longitude))
+          setForm(f => ({
+            ...f,
+            address: name,
+            latitude: lat,
+            longitude: lon,
+            autoCity: String(data?.city || '').trim(),
+          }))
+          setPickerSeq(n => n + 1)
+          toast.success(t('playdatesGeo.filled'))
+        } catch (e: any) {
+          const st = e?.response?.status
+          toast.error(st === 404 ? t('playdatesGeo.notFound')
+            : st === 503 ? t('playdatesGeo.busy')
+            : t('playdatesGeo.error'))
+        } finally {
+          setLocating(false)
+        }
+      },
+      (err) => {
+        setLocating(false)
+        toast.error(err.code === err.PERMISSION_DENIED ? t('playdatesGeo.denied')
+          : err.code === err.TIMEOUT ? t('playdatesGeo.timeout')
+          : t('playdatesGeo.unavailable'))
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
+    )
+  }
 
   const sendInvite = useMutation({
     // invitee_id covers the nearby-owner cards, which no longer receive an
@@ -445,8 +502,17 @@ export default function Playdates() {
                   <div><label className={labelCls}>{t('pgPlaydates.form.date')}</label><input type="date" min={todayYmd()} className={inputCls + errCls('date')} value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} /><FieldError k="date" /></div>
                   <div><label className={labelCls}>{t('pgPlaydates.form.time')}</label><input type="time" className={inputCls + errCls('time')} value={form.time} onChange={e => setForm(f => ({...f, time: e.target.value}))} /><FieldError k="time" /></div>
                 </div>
-                <div><label className={labelCls}>{t('pgPlaydates.form.meetingPoint')}</label><input className={inputCls + errCls('address')} value={form.address} onChange={e => onAddressChange(e.target.value)} placeholder={t('pgPlaydates.form.locationPlaceholder')} /><FieldError k="address" /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.meetingPoint')}</label><input className={inputCls + errCls('address')} value={form.address} onChange={e => onAddressChange(e.target.value)} placeholder={t('pgPlaydates.form.locationPlaceholder')} /><FieldError k="address" />
+                  {canGeolocate && (
+                    <button type="button" onClick={fillMyLocation} disabled={locating}
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-500 hover:underline disabled:opacity-60 disabled:no-underline">
+                      <LocateFixed size={14} className={locating ? 'animate-pulse' : undefined} aria-hidden="true" />
+                      {locating ? t('playdatesGeo.locating') : t('playdatesGeo.useMyLocation')}
+                    </button>
+                  )}
+                </div>
                 <ServiceLocationPicker
+                  key={`loc-${pickerSeq}`}
                   address={form.address}
                   // Χωρίς αυτόματη πόλη: η πόλη που έγραψε ο χρήστης βοηθά την εύρεση.
                   city={form.autoCity ? undefined : form.city}

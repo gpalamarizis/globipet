@@ -57,6 +57,21 @@ function throttled<T>(fn: () => Promise<T>): Promise<T> {
   return run
 }
 
+/** Πόλη → κωμόπολη → χωριό· αλλιώς ο δήμος χωρίς «Δήμος »/«Δήμου » (βλ. city πιο πάνω). */
+function cityOf(address: any): string {
+  const ad = address ?? {}
+  const settlement = String(ad.city || ad.town || ad.village || '').trim()
+  return settlement || String(ad.municipality || '').trim().replace(/^Δήμο[ςυ]\s+/u, '').trim()
+}
+
+/** Αποθήκευση στο κοινό cache (null → μόνο NULL_TTL_MS). */
+function remember(key: string, value: GeocodeResult | null) {
+  // Τα null (δεν βρέθηκε ή σφάλμα δικτύου — δεν ξεχωρίζουν εδώ) κρατιούνται
+  // μόνο 5 λεπτά, ώστε ένα προσωρινό σφάλμα να μη «κολλάει» για μια μέρα.
+  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string)
+  cache.set(key, { until: Date.now() + (value ? CACHE_TTL_MS : NULL_TTL_MS), value })
+}
+
 /**
  * @param address ελεύθερο κείμενο (κόβεται στους 200 χαρακτήρες)
  * @param country προαιρετικός κωδικός χώρας ISO 3166-1 alpha-2 (π.χ. 'gr')
@@ -90,17 +105,59 @@ export async function geocodeAddress(
       const lat = parseFloat(data[0].lat)
       const lon = parseFloat(data[0].lon)
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-      const ad = data[0].address ?? {}
-      const settlement = String(ad.city || ad.town || ad.village || '').trim()
-      const city = settlement || String(ad.municipality || '').trim().replace(/^Δήμο[ςυ]\s+/u, '').trim()
+      const city = cityOf(data[0].address)
       return { lat, lon, display_name: String(data[0].display_name ?? ''), ...(city ? { city } : {}) }
     } catch { return null }
   })
 
-  // Τα null (δεν βρέθηκε ή σφάλμα δικτύου — δεν ξεχωρίζουν εδώ) κρατιούνται
-  // μόνο 5 λεπτά, ώστε ένα προσωρινό σφάλμα να μη «κολλάει» για μια μέρα.
-  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string)
-  cache.set(key, { until: Date.now() + (value ? CACHE_TTL_MS : NULL_TTL_MS), value })
+  remember(key, value)
+  return value
+}
+
+/**
+ * Ε18 — Αντίστροφη γεωκωδικοποίηση (συντεταγμένες → διεύθυνση), για τη
+ * «Χρήση της τοποθεσίας μου» στη φόρμα βόλτας. ΙΔΙΑ ουρά (throttled: ≤ 1
+ * αίτημα/δευτ. για όλη την εφαρμογή μαζί με το geocodeAddress), ίδιο cache,
+ * ίδιο MAX_QUEUE / GeocodeBusyError, ίδια εξαγωγή πόλης.
+ *
+ * Nominatim /reverse (format=jsonv2, addressdetails=1, accept-language=el,
+ * zoom=18 — επίπεδο κτιρίου). Οι συντεταγμένες στρογγυλεύονται σε 4 δεκαδικά
+ * (~11 μ.) — αυτές ζητούνται, αυτές είναι το κλειδί του cache και αυτές
+ * επιστρέφονται ως lat/lon (το σημείο του χρήστη, όχι το κέντρο του κτιρίου
+ * που βρήκε το Nominatim).
+ * Ο καλών έχει ήδη ελέγξει ότι είναι πεπερασμένοι αριθμοί εντός ορίων.
+ */
+export async function reverseGeocode(
+  lat: number, lon: number, opts?: { throwIfBusy?: boolean },
+): Promise<GeocodeResult | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null
+  const la = Number(lat.toFixed(4))
+  const lo = Number(lon.toFixed(4))
+  const key = `rev|${la.toFixed(4)}|${lo.toFixed(4)}`
+
+  const hit = cache.get(key)
+  if (hit && Date.now() < hit.until) return hit.value
+
+  if (pending >= MAX_QUEUE) {
+    if (opts?.throwIfBusy) throw new GeocodeBusyError()
+    return null
+  }
+
+  const value = await throttled(async (): Promise<GeocodeResult | null> => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${la.toFixed(4)}&lon=${lo.toFixed(4)}`
+        + '&format=jsonv2&addressdetails=1&accept-language=el&zoom=18'
+      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(8000) })
+      if (!res.ok) return null
+      const data = await res.json() as any
+      // Χωρίς αποτέλεσμα το Nominatim απαντά 200 με { error: 'Unable to geocode' }.
+      if (!data || typeof data !== 'object' || data.error || !data.display_name) return null
+      const city = cityOf(data.address)
+      return { lat: la, lon: lo, display_name: String(data.display_name), ...(city ? { city } : {}) }
+    } catch { return null }
+  })
+
+  remember(key, value)
   return value
 }
 

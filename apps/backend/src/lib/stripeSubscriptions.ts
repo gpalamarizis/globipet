@@ -44,7 +44,12 @@ export async function liveAiStripeSubscriptionIds(userId: string): Promise<{ ids
   let searched = false
   if (/^[A-Za-z0-9_-]+$/.test(userId)) {
     try {
-      const found = await stripe.subscriptions.search({ query: `metadata['user_id']:'${userId}'`, limit: 100 })
+      // Σύντομο όριο, καμία επανάληψη (όπως stripePeriodEnd / routes/payments):
+      // καλείται και από αιτήματα χρήστη (ακύρωση συνδρομής).
+      const found = await stripe.subscriptions.search(
+        { query: `metadata['user_id']:'${userId}'`, limit: 100 },
+        { timeout: 5000, maxNetworkRetries: 0 },
+      )
       for (const s of found.data) {
         if (!s.metadata?.ai_plan_id) continue
         if (s.status === 'canceled' || s.status === 'incomplete_expired') continue
@@ -174,13 +179,19 @@ export async function cancelAllStripeSubscriptionsOfUser(userId: string): Promis
  *   · αν η λήξη ΑΠΟΤΥΧΕΙ (π.χ. ο χρήστης πληρώνει εκείνη τη στιγμή) →
  *     AI_CHECKOUT_BUSY (το route απαντά 409)· ΔΕΝ επιστρέφεται το URL του
  *     άλλου πλάνου, γιατί ο χρήστης θα πλήρωνε πλάνο/χρέωση που δεν διάλεξε.
+ *   · ίδιο πλάνο/χρέωση αλλά ΑΛΛΟ ποσό (ο admin άλλαξε την τιμή στο μεταξύ)
+ *     → όπως «άλλο πλάνο»: λήξη και νέο session με την τρέχουσα τιμή — ποτέ
+ *     το παλιό URL με την παλιά τιμή. Ποσό του session: metadata.unit_amount
+ *     (σε λεπτά — το γράφουν τα sessions από το Ε18 και μετά)· παλαιότερα
+ *     χωρίς αυτό → amount_subtotal (ποσό πριν από εκπτώσεις, ποσότητα 1).
+ *     Χωρίς `unitAmount` (καλών που δεν το δίνει) → δεν ελέγχεται ποσό.
  * Ό,τι ξεφύγει (π.χ. session παλαιότερο του παραθύρου) το πιάνει το webhook:
  * η διπλή συνδρομή ακυρώνεται και το τιμολόγιό της επιστρέφεται
  * (refundLatestPaidInvoice).
  */
 export const AI_CHECKOUT_BUSY = 'busy' as const
 export async function openAiCheckoutSessionUrl(
-  userId: string, planId: string, billing: string, minutes = 30,
+  userId: string, planId: string, billing: string, minutes = 30, unitAmount?: number,
 ): Promise<string | typeof AI_CHECKOUT_BUSY | null> {
   let open: Stripe.Checkout.Session[]
   try {
@@ -193,8 +204,15 @@ export async function openAiCheckoutSessionUrl(
     console.error('Stripe checkout session list error:', err?.message)
     return null
   }
-  const same = open.find(s => s.metadata?.ai_plan_id === planId && s.metadata?.billing === billing)
+  const samePrice = (s: Stripe.Checkout.Session): boolean => {
+    if (unitAmount === undefined) return true
+    const md = s.metadata?.unit_amount
+    if (md !== undefined && md !== null && md !== '') return Number(md) === unitAmount
+    return s.amount_subtotal === unitAmount
+  }
+  const same = open.find(s => s.metadata?.ai_plan_id === planId && s.metadata?.billing === billing && samePrice(s))
   if (same) return same.url ?? null
+  // Ό,τι έμεινε (άλλο πλάνο/χρέωση ή ίδιο με παλιά τιμή) λήγει.
   for (const other of open) {
     try {
       await stripe.checkout.sessions.expire(other.id)
@@ -204,6 +222,142 @@ export async function openAiCheckoutSessionUrl(
     }
   }
   return null
+}
+
+/**
+ * Ε18 — Checkout Session συνδρομής AI στο Stripe: ΚΟΙΝΟ για το
+ * POST /ai-subscriptions/create-checkout και το POST /membership/checkout
+ * (GlobiPet Plus = πλάνο AI με tier 'membership'). Ό,τι έκανε μέχρι τώρα το
+ * create-checkout, αυτούσιο:
+ *   · ανοιχτό checkout ίδιου πλάνου/χρέωσης → ίδιο URL· άλλου πλάνου που δεν
+ *     λήγει → `{ busy: true }` (το route απαντά 409) — openAiCheckoutSessionUrl·
+ *   · έκπτωση επιπέδου επιβράβευσης (aiTierCheckoutDiscount — δεν πετάει)·
+ *   · ανοιχτό checkout ίδιου πλάνου/χρέωσης με ΑΛΛΗ τιμή → λήγει, νέο session·
+ *   · metadata { user_id, ai_plan_id, billing } στο session ΚΑΙ στη συνδρομή —
+ *     από αυτά ενεργοποιεί το webhook (routes/webhooks activateAiSubscription).
+ * Οι έλεγχοι κατάστασης του χρήστη (ενεργή/εκκρεμής συνδρομή) μένουν στο
+ * route, με τα δικά του μηνύματα. Σφάλμα του Stripe στη δημιουργία → throw
+ * (το route απαντά serverError, όπως πριν).
+ */
+export async function createAiCheckoutSession(p: {
+  userId: string
+  userEmail: string
+  plan: { id: string; price_monthly: number; price_annual: number | null }
+  /** 'annual' → ετήσια· οτιδήποτε άλλο → μηνιαία (όπως το create-checkout). */
+  billing: any
+  productName: string
+  successUrl: string
+  cancelUrl: string
+}): Promise<{ busy: true } | { busy: false; checkout_url: string | null }> {
+  const { userId, userEmail, plan, billing } = p
+  const isAnnual = billing === 'annual'
+  const unitAmount = isAnnual
+    ? Math.round((plan.price_annual ?? plan.price_monthly * 12) * 100)
+    : Math.round(plan.price_monthly * 100)
+  const interval: 'month' | 'year' = isAnnual ? 'year' : 'month'
+
+  // Ανοιχτό checkout του ίδιου χρήστη για το ίδιο πλάνο τα τελευταία 30'
+  // (διπλό πάτημα, δεύτερη συσκευή): επιστρέφεται το ίδιο URL αντί για
+  // δεύτερο session — δύο ολοκληρωμένα sessions θα έφτιαχναν δύο συνδρομές.
+  // Με το τρέχον ποσό: ανοιχτό session με άλλη τιμή (αλλαγή από τον admin) λήγει.
+  const reuse = await openAiCheckoutSessionUrl(String(userId), plan.id, String(billing), 30, unitAmount)
+  // Ανοιχτό checkout ΑΛΛΟΥ πλάνου που δεν έληξε (π.χ. πληρώνεται τώρα): όχι
+  // δεύτερο session και όχι το URL του άλλου πλάνου.
+  if (reuse === AI_CHECKOUT_BUSY) return { busy: true }
+  if (reuse) return { busy: false, checkout_url: reuse }
+
+  // Έκπτωση επιπέδου επιβράβευσης (σε αποτυχία καμία έκπτωση).
+  // Κουπόνι μίας περιόδου χρέωσης: 12 μήνες για ετήσια, 1 για μηνιαία.
+  const tierDiscount = await aiTierCheckoutDiscount(String(userEmail), interval)
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer_email: userEmail,
+    // Στο ίδιο το session (όχι μόνο στη συνδρομή), για τον έλεγχο ανοιχτού checkout.
+    // unit_amount (λεπτά): για τον έλεγχο «ίδια τιμή» του openAiCheckoutSessionUrl.
+    metadata: { user_id: String(userId), ai_plan_id: plan.id, billing: String(billing), unit_amount: String(unitAmount) },
+    line_items: [{
+      price_data: {
+        currency: 'eur',
+        unit_amount: unitAmount,
+        recurring: { interval },
+        product_data: { name: p.productName },
+      },
+      quantity: 1,
+    }],
+    subscription_data: {
+      metadata: {
+        user_id: userId,
+        ai_plan_id: plan.id,
+        billing,
+      },
+    },
+    ...(tierDiscount.discounts ? { discounts: tierDiscount.discounts } : {}),
+    success_url: p.successUrl,
+    cancel_url: p.cancelUrl,
+  })
+  return { busy: false, checkout_url: session.url }
+}
+
+/**
+ * Ε17 — Ημερομηνία ανανέωσης (τέλος τρέχουσας περιόδου) της ενεργής συνδρομής AI.
+ * (Ε18: μεταφέρθηκε εδώ από το routes/ai-subscriptions — κοινή με το
+ * GET /membership.) Πρώτα η καταγραφή ενεργοποίησης (routes/webhooks —
+ * metadata.current_period_end): αν είναι ακόμη στο μέλλον, είναι η τρέχουσα
+ * περίοδος. Αλλιώς (έχει γίνει ανανέωση) μία ανάγνωση της συνδρομής από το
+ * Stripe, με όριο χρόνου και cache στη μνήμη της διεργασίας (stripePeriodEnd).
+ * Το webhook invoice.payment_succeeded ανανεώνει το current_period_end της
+ * καταγραφής, οπότε η ανάγνωση από το Stripe είναι σπάνια. Ποτέ δεν πετάει:
+ * σε σφάλμα/έλλειψη επιστρέφει null. Συνδρομή που έχει οριστεί να λήξει στο
+ * τέλος της περιόδου δεν «ανανεώνεται» → null.
+ */
+const PERIOD_HIT_MAX_MS = 6 * 60 * 60 * 1000
+const PERIOD_MISS_TTL_MS = 10 * 60 * 1000
+const PERIOD_CACHE_MAX = 1000
+const periodEndCache = new Map<string, { until: number; value: string | null }>()
+
+/**
+ * current_period_end μιας συνδρομής από το Stripe, με cache ανά id συνδρομής:
+ * τιμή → έως το τέλος της περιόδου (το πολύ 6 ώρες, ώστε ακύρωση/αλλαγή να
+ * φαίνεται)· null/σφάλμα → 10 λεπτά (όχι κλήση στο Stripe σε κάθε άνοιγμα).
+ */
+async function stripePeriodEnd(subId: string): Promise<string | null> {
+  const hit = periodEndCache.get(subId)
+  if (hit && hit.until > Date.now()) return hit.value
+  let value: string | null = null
+  try {
+    const sub = await stripe.subscriptions.retrieve(subId, {}, { timeout: 4000, maxNetworkRetries: 0 })
+    if (!sub.cancel_at_period_end && sub.status !== 'canceled' && sub.current_period_end) {
+      value = new Date(sub.current_period_end * 1000).toISOString()
+    }
+  } catch (err: any) {
+    console.error('[ai-subscriptions] renewal date (Stripe) error:', err?.message ?? err)
+    value = null
+  }
+  const ttl = value
+    ? Math.max(0, Math.min(new Date(value).getTime() - Date.now(), PERIOD_HIT_MAX_MS))
+    : PERIOD_MISS_TTL_MS
+  if (periodEndCache.size >= PERIOD_CACHE_MAX) periodEndCache.delete(periodEndCache.keys().next().value as string)
+  periodEndCache.set(subId, { until: Date.now() + ttl, value })
+  return value
+}
+
+export async function aiRenewalDate(userId: string): Promise<string | null> {
+  try {
+    const row = await prisma.auditLog.findFirst({
+      where: { action: AI_SUB_ACTIVATED_ACTION, resource: 'user', resource_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: { metadata: true },
+    })
+    const meta = (row?.metadata ?? {}) as any
+    const stored = typeof meta.current_period_end === 'string' ? new Date(meta.current_period_end) : null
+    if (stored && !isNaN(stored.getTime()) && stored.getTime() > Date.now()) return stored.toISOString()
+    const subId = typeof meta.stripe_subscription_id === 'string' ? meta.stripe_subscription_id : null
+    if (!subId || !process.env.STRIPE_SECRET_KEY) return null
+    return await stripePeriodEnd(subId)
+  } catch (err: any) {
+    console.error('[ai-subscriptions] renewal date error:', err?.message ?? err)
+    return null
+  }
 }
 
 /**

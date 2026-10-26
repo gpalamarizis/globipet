@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import prisma from './prisma.js'
+import { pointsMultiplierFor } from './membership.js'
 
 /**
  * Πρόγραμμα επιβράβευσης (Ε17) — πόντοι ανάλογα με τα ευρώ που ΠΛΗΡΩΘΗΚΑΝ.
@@ -262,13 +263,23 @@ export interface AwardInput {
  * Απόδοση πόντων για μια πληρωμή — ΜΙΑ φορά ανά (source, ref). Επιστρέφει
  * τους πόντους που δόθηκαν τώρα (0 αν ήδη δόθηκαν / μηδενικό ποσό / σφάλμα).
  * Ποτέ δεν πετάει.
+ *
+ * Ε18 — GlobiPet Plus: ενεργό μέλος ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΑΠΟΔΟΣΗΣ → πόντοι ×
+ * points_multiplier (lib/membership). Ο πολλαπλασιαστής και οι βασικοί πόντοι
+ * γράφονται στο metadata του σημαδιού απόδοσης· το `points` είναι οι πόντοι
+ * που ΔΟΘΗΚΑΝ (με τον πολλαπλασιαστή). Η αφαίρεση σε επιστροφή
+ * (revokeCoreTx) διαβάζει ΑΥΤΟ το `points` — αφαιρεί αναλογικά ό,τι δόθηκε,
+ * ποτέ περισσότερο, και οι παλιές εγγραφές (χωρίς πολλαπλασιαστή) μένουν ως έχουν.
  */
 export async function awardForPayment(input: AwardInput): Promise<number> {
   try {
     const email = String(input.email ?? '').trim()
     if (!email || !input.ref) return 0
     const cfg = await getLoyaltyConfig()
-    const points = pointsForAmount(Number(input.amount), cfg)
+    const basePoints = pointsForAmount(Number(input.amount), cfg)
+    if (basePoints <= 0) return 0
+    const multiplier = await pointsMultiplierFor(email) // 1 αν δεν είναι μέλος / σε σφάλμα
+    const points = Math.max(0, Math.floor(basePoints * multiplier))
     if (points <= 0) return 0
     const key = awardKey(input.source, input.ref)
     return await prisma.$transaction(async (tx) => {
@@ -292,6 +303,7 @@ export async function awardForPayment(input: AwardInput): Promise<number> {
           metadata: {
             source: input.source, ref: input.ref, amount: Math.round(Number(input.amount) * 100) / 100,
             points, points_per_euro: cfg.points_per_euro,
+            base_points: basePoints, points_multiplier: multiplier,
           } as any,
         },
       })
@@ -368,7 +380,9 @@ export interface RevokeInput {
  * Αφαίρεση μέσα σε συναλλαγή: πόντοι = απονεμημένοι × ποσό / πληρωμένο
  * (πλήρης → ό,τι έμεινε), ποτέ πάνω από ό,τι έμεινε από ΑΥΤΗ την πληρωμή,
  * ποτέ κάτω από 0 στο σύνολο. Πληρωμή χωρίς σημάδι απόδοσης (π.χ. πριν το
- * πρόγραμμα) → τίποτα.
+ * πρόγραμμα) → τίποτα. «Απονεμημένοι» = metadata.points του σημαδιού, δηλαδή
+ * οι πόντοι που ΔΟΘΗΚΑΝ, ήδη με τον πολλαπλασιαστή του GlobiPet Plus (Ε18)·
+ * η ιδιότητα μέλους τη στιγμή της επιστροφής δεν παίζει ρόλο.
  */
 async function revokeCoreTx(tx: Tx, input: RevokeInput): Promise<number> {
   const key = awardKey(input.source, input.ref)

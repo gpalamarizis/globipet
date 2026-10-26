@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } 
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Check, Star, Award } from 'lucide-react-native'
+import { Sparkles, Check, Star, Award, Crown } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { useMembership } from './membership'
 
 /**
  * Πλάνα συνδρομής AI και δωρεάν δοκιμή.
@@ -147,6 +148,12 @@ export default function PricingScreen() {
   const monthlyDiscounted = (p: any) =>
     annual && p.price_annual ? discounted(p.price_annual) / 12 : discounted(p.price_monthly)
 
+  // Ε18 — μικρό banner GlobiPet Plus (μόνο αν είναι διαθέσιμο), όπως στο web.
+  const { data: membership } = useMembership()
+  const plusOn = !!membership?.available && !!membership?.plan
+  // Πολλαπλασιαστής 1 = κανένα όφελος πόντων → παραλλαγή χωρίς «×1» (όπως το web NoMult).
+  const plusMult = Number(membership?.benefits?.points_multiplier)
+
   // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
   const canTrial = isAuthenticated && status?.ai_subscription_status === 'none'
 
@@ -154,6 +161,23 @@ export default function PricingScreen() {
     <Screen title={t('pricing.title')} back scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.intro}>{t('pricing.subtitle')}</Text>
+
+        {plusOn && (
+          <Card onPress={() => router.push('/membership' as any)} style={s.plus}>
+            <View style={s.tierRow}>
+              <Crown size={icon.md} color={colors.brand} />
+              <Text style={s.tierTxt}>
+                {Number.isFinite(plusMult) && plusMult > 1
+                  ? t('membership.banner', {
+                      name: membership!.plan!.name || t('membership.title'),
+                      multiplier: plusMult.toLocaleString(i18n.language),
+                    })
+                  : t('membership.bannerNoMult', { name: membership!.plan!.name || t('membership.title') })}
+              </Text>
+            </View>
+            <Text style={s.tierMore}>{t('membership.bannerMore')}</Text>
+          </Card>
+        )}
 
         {/* Έκπτωση του επιπέδου μου (όπως στο web). */}
         {tierPct > 0 && (
@@ -285,6 +309,7 @@ const s = StyleSheet.create({
   wasRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
   was: { ...type.body, color: colors.textLight, textDecorationLine: 'line-through' },
   tierRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  plus: { borderColor: colors.brand, borderWidth: 1.5, backgroundColor: colors.brandLight },
   tierTxt: { ...type.body, color: colors.text, flex: 1 },
   tierMore: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, marginTop: space.xs, marginLeft: icon.md + space.sm },
   features: { gap: space.xs, marginTop: space.md },

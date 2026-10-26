@@ -56,6 +56,7 @@ import packagesRoutes from './routes/packages.js'
 import catalogRoutes from './routes/catalog.js'
 import registryRoutes from './routes/registry.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
+import membershipRoutes from './routes/membership.js'
 import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron, startStuckRefundsCron } from './lib/cron.js'
 import { registerMessageTranslation } from './lib/apiMessages.js'
 import { assertProductionEnv } from './lib/envCheck.js'
@@ -539,6 +540,7 @@ const routes = [
   { prefix: '/api/registry', handler: registryRoutes },
   { prefix: '/api/admin/catalog', handler: adminCatalogRoutes },
   { prefix: '/api/ai-subscriptions', handler: aiSubscriptionsRoutes },
+  { prefix: '/api/membership', handler: membershipRoutes },   // Ε18 — GlobiPet Plus
   { prefix: '/api/settings', handler: settingsRoutes },
   { prefix: '/api/subscriptions', handler: subscriptionsRoutes },
   { prefix: '/api/webhooks', handler: webhooksRoutes },

@@ -4,7 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Image,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { SocialTermsNotice } from '@/components/LegalLinks'
@@ -23,6 +23,13 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
 export default function LoginScreen() {
   const { t } = useTranslation()
   const router = useRouter()
+  // Ε18: προαιρετική επιστροφή μετά τη σύνδεση (π.χ. /membership) — μόνο
+  // εσωτερική διαδρομή της εφαρμογής, ποτέ εξωτερικός σύνδεσμος.
+  const { redirect } = useLocalSearchParams<{ redirect?: string | string[] }>()
+  const safeRedirect = typeof redirect === 'string' && redirect.startsWith('/')
+    && !redirect.startsWith('//') && !redirect.includes('://') && !redirect.includes('\\')
+    ? redirect : null
+  const goAfterLogin = () => router.replace((safeRedirect ?? '/(tabs)') as any)
   const { login, loginWithGoogle, loginWithFacebook, isLoading } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,7 +46,7 @@ export default function LoginScreen() {
     }
     try {
       await login(email.trim(), password)
-      router.replace('/(tabs)')
+      goAfterLogin()
     } catch (err: any) {
       Alert.alert(t('auth.login_error'), msg(err, t('auth.wrong_credentials')))
     }
@@ -49,7 +56,7 @@ export default function LoginScreen() {
     setGoogleLoading(true)
     try {
       const signedIn = await loginWithGoogle()
-      if (signedIn) router.replace('/(tabs)')
+      if (signedIn) goAfterLogin()
     } catch (err: any) {
       Alert.alert(t('auth.err_google'), msg(err, t('common.something_wrong')))
     } finally { setGoogleLoading(false) }
@@ -59,7 +66,7 @@ export default function LoginScreen() {
     setFacebookLoading(true)
     try {
       const signedIn = await loginWithFacebook()
-      if (signedIn) router.replace('/(tabs)')
+      if (signedIn) goAfterLogin()
     } catch (err: any) {
       Alert.alert(t('auth.err_facebook'), msg(err, t('common.something_wrong')))
     } finally { setFacebookLoading(false) }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localName } from '@/lib/localName'
-import { Brain, Plus, Edit2, Trash2, X, Check, Package, Users, Sparkles, Video, Activity, Heart } from 'lucide-react'
+import { Brain, Plus, Edit2, Trash2, X, Check, Package, Users, Sparkles, Video, Activity, Heart, Crown } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -45,6 +46,14 @@ const FEATURE_META = [
   { key: 'includes_wellness_tracker', icon: Activity, labelKey: 'adminAiPlans.features.wellness',   color: 'text-green-500' },
   { key: 'includes_telehealth',       icon: Video,    labelKey: 'adminAiPlans.features.telehealth', color: 'text-blue-500' },
 ] as const
+
+/**
+ * Ε18 — το GlobiPet Plus είναι γραμμή αυτού του πίνακα με tier 'membership'.
+ * Διαχειρίζεται ΜΟΝΟ από τη σελίδα του (/admin/membership): εδώ καμία
+ * επεξεργασία/διαγραφή, αλλιώς η φόρμα θα του άλλαζε tier (δεν έχει
+ * 'membership') ή θα το έσβηνε μαζί με τα μέλη του.
+ */
+const MEMBERSHIP_TIER = 'membership'
 
 export default function AdminAiPlansPage() {
   const { t, i18n } = useTranslation()
@@ -126,6 +135,7 @@ export default function AdminAiPlansPage() {
           {plans.map(plan => {
             const includedCount = countIncluded(plan)
             const isBundle = includedCount > 1
+            const isMembership = plan.tier === MEMBERSHIP_TIER
             return (
               <div key={plan.id} className={cn('card p-5 relative', !plan.is_active && 'opacity-60')}>
                 {plan.is_featured && (
@@ -139,12 +149,18 @@ export default function AdminAiPlansPage() {
                     <h3 className="font-bold text-gray-900 dark:text-white">{localName(plan, i18n.language)}</h3>
                     <span className="text-xs text-gray-400 uppercase tracking-wider">{plan.tier}</span>
                   </div>
+                  {isMembership ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 shrink-0">
+                      <Crown size={10} aria-hidden="true" /> {t('adminMembership.plusBadge')}
+                    </span>
+                  ) : (
                   <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full',
                     isBundle ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700')}>
                     {isBundle
                       ? `${t('adminAiPlans.bundle')} (${includedCount})`
                       : t('adminAiPlans.individual')}
                   </span>
+                  )}
                 </div>
 
                 {plan.description && (
@@ -178,6 +194,11 @@ export default function AdminAiPlansPage() {
                   <span className="flex items-center gap-1">
                     <Users size={11} /> {plan.active_subscribers ?? 0} {t('adminAiPlans.subscribers')}
                   </span>
+                  {isMembership ? (
+                    <Link to="/admin/membership" className="text-[11px] font-medium text-brand-900 dark:text-brand-400 hover:underline py-1.5">
+                      {t('adminMembership.manageInPlus')}
+                    </Link>
+                  ) : (
                   <div className="flex gap-1">
                     <button onClick={() => openEdit(plan)}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title={t('adminAiPlans.edit')}>
@@ -192,6 +213,7 @@ export default function AdminAiPlansPage() {
                       <Trash2 size={13} className="text-red-500" />
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {!plan.is_active && (

@@ -3,11 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useLocation, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut, ChevronRight, Sparkles, RotateCcw, Heart, PawPrint, Inbox, Languages, Cookie, ShieldCheck, HelpCircle, MessageSquare, Mail, FileText } from 'lucide-react'
+import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut, ChevronRight, Sparkles, RotateCcw, Heart, PawPrint, Inbox, Languages, Cookie, ShieldCheck, HelpCircle, MessageSquare, Mail, FileText, Crown, Receipt, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api, uploadFile } from '@/lib/api'
 import { cn, getInitials, speciesEmoji } from '@/lib/utils'
-import { fmtDateShort } from '@/lib/dates'
+import { fmtDateShort, dateLocale } from '@/lib/dates'
 import { localName } from '@/lib/localName'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 import toast from 'react-hot-toast'
@@ -97,6 +97,8 @@ export default function Profile() {
   const hasGoogleAuth = !!(user as any)?.google_id || !!(user as any)?.facebook_id
   // Καθαρός πάροχος: χωρίς τις ενότητες πελάτη (βλ. παρακάτω) — ούτε τα αντίστοιχα αιτήματα.
   const providerOnly = user?.role === 'service_provider'
+  // Ε18 — κάρτα GlobiPet Plus μόνο για πελάτες: όχι πάροχοι, όχι διαχειριστές.
+  const showMembership = !!user && user.role !== 'service_provider' && user.role !== 'admin'
 
   // Σύνδεσμοι από το μενού λογαριασμού του παρόχου (/profile#password κ.λπ.):
   // ο router δεν κυλά μόνος του στο #, οπότε το κάνουμε εδώ.
@@ -159,6 +161,26 @@ export default function Profile() {
     enabled: !!user,
   })
   const inboxUnread = inbox?.unread ?? 0
+  // Ε18 — GlobiPet Plus (ίδιο query και κλειδί με τη σελίδα /membership).
+  const { data: membership } = useQuery<any>({
+    queryKey: ['membership', user?.id ?? 'anon'],
+    queryFn: () => api.get('/membership').then(r => r.data?.data),
+    enabled: showMembership,
+  })
+  const mbStatus: string = membership?.me?.status ?? 'none'
+  const mbName: string = membership?.plan?.name || t('membership.defaultName')
+  const mbRenews = mbStatus === 'member' && membership?.me?.current_period_end
+    ? fmtDateShort(String(membership.me.current_period_end), i18n.language) : ''
+  // Κανονική μηνιαία τιμή (η έκπτωση επιπέδου ισχύει μόνο την 1η περίοδο) — ίδια με το κινητό.
+  const mbPrice = (() => {
+    const v = Number(membership?.plan?.price_monthly)
+    if (!Number.isFinite(v) || v <= 0) return ''
+    try { return new Intl.NumberFormat(dateLocale(i18n.language), { style: 'currency', currency: 'EUR' }).format(v) } catch { return `€${v.toFixed(2)}` }
+  })()
+  // Μέλος / αποτυχημένη πληρωμή: πάντα (και αν ο admin απενεργοποίησε το πλάνο)·
+  // αλλιώς μόνο όταν το Plus διατίθεται.
+  const showMbCard = showMembership && !!membership
+    && (mbStatus === 'member' || mbStatus === 'payment_failed' || (membership.available && !!membership.plan))
 
   const aiSt: string = aiStatus?.ai_subscription_status ?? (user as any)?.ai_subscription_status ?? 'none'
   const aiPlanName = aiStatus?.plan ? localName(aiStatus.plan, i18n.language) : ''
@@ -242,6 +264,38 @@ export default function Profile() {
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-6">{t('profile.title')}</h1>
+
+      {/* Ε18 — GlobiPet Plus: κάρτα μέλους στην κορυφή (μόνο πελάτες). */}
+      {showMbCard && (
+        <Link to="/membership"
+          className={cn('card p-4 mb-6 flex items-center gap-3 hover:shadow-md transition-shadow',
+            mbStatus === 'payment_failed' ? 'border-red-200 dark:border-red-900/40' : 'border-amber-200 dark:border-amber-900/40')}>
+          <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+            mbStatus === 'payment_failed' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20')}>
+            {mbStatus === 'payment_failed'
+              ? <AlertTriangle size={18} className="text-red-600" aria-hidden="true" />
+              : <Crown size={18} className="text-amber-600" aria-hidden="true" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            {mbStatus === 'member' ? (
+              <p className="font-semibold text-sm text-gray-900 dark:text-white break-words">
+                {mbRenews ? t('membership.cardMemberRenews', { name: mbName, date: mbRenews }) : t('membership.cardMemberActive', { name: mbName })}
+              </p>
+            ) : mbStatus === 'payment_failed' ? (
+              <>
+                <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{mbName}</p>
+                <p className="text-xs text-red-600 mt-0.5">{t('membership.cardPaymentFailed')}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{t('membership.cardJoin', { name: mbName })}</p>
+                {!!mbPrice && <p className="text-xs text-gray-500 mt-0.5">{t('membership.cardFrom', { price: mbPrice })}</p>}
+              </>
+            )}
+          </div>
+          <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+        </Link>
+      )}
 
       {/* Profile card */}
       <div className="card p-6 mb-6">
@@ -386,6 +440,10 @@ export default function Profile() {
             <Row to="/marketplace" icon={RotateCcw} label={t('accountHub.foodSubs')} hint={t('accountHub.foodSubsEmpty')} />
           </RowCard>
         )}
+        {/* Ε18 — ιστορικό πληρωμών, αποδεικτικά, κάρτα συνδρομών. */}
+        <RowCard className="mt-3">
+          <Row to="/account/payments" icon={Receipt} label={t('payments.rowLabel')} hint={t('payments.rowHint')} />
+        </RowCard>
       </Section>
 
       {/* ── Η δραστηριότητά μου ──────────────────────────────── */}

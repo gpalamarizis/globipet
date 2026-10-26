@@ -1,5 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { MEMBERSHIP_TIER } from '../lib/membership.js'
+
+// Ε18: το GlobiPet Plus (tier 'membership') αλλάζει ΜΟΝΟ από το PUT /membership/admin
+// (έλεγχοι τιμής/ονόματος, ρυθμίσεις, audit). Εδώ: ούτε αλλαγή/διαγραφή του,
+// ούτε δημιουργία/μετατροπή άλλου πλάνου σε 'membership' (ίδιο με routes/ai-subscriptions).
+const PLUS_ADMIN_ONLY = 'Το GlobiPet Plus διαχειρίζεται από τη σελίδα GlobiPet Plus'
+async function isPlusPlan(id: unknown): Promise<boolean> {
+  if (typeof id !== 'string' || !id) return false
+  const p = await prisma.aiSubscriptionPlan.findUnique({ where: { id }, select: { tier: true } })
+  return p?.tier === MEMBERSHIP_TIER
+}
 
 /**
  * Admin CRUD για AI Subscription Plans.
@@ -50,6 +61,7 @@ const adminAiPlansRoutes: FastifyPluginAsync = async (app) => {
   // POST /admin/ai-plans — create new plan
   app.post('/', async (req: any, reply) => {
     const b = req.body ?? {}
+    if (b.tier === MEMBERSHIP_TIER) return reply.code(400).send({ message: PLUS_ADMIN_ONLY })
     if (!b.name || typeof b.price_monthly !== 'number') {
       return reply.code(400).send({ message: 'name και price_monthly είναι υποχρεωτικά' })
     }
@@ -86,6 +98,9 @@ const adminAiPlansRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /admin/ai-plans/:id — update plan
   app.patch('/:id', async (req: any, reply) => {
     const b = req.body ?? {}
+    if (b.tier === MEMBERSHIP_TIER || await isPlusPlan(req.params.id)) {
+      return reply.code(400).send({ message: PLUS_ADMIN_ONLY })
+    }
     // Whitelist updatable fields
     const data: any = {}
     const fields = ['name','name_el','description','tier','price_monthly','price_annual','currency',
@@ -103,6 +118,7 @@ const adminAiPlansRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /admin/ai-plans/:id — soft delete (is_active=false) or hard delete if unused
   app.delete('/:id', async (req: any, reply) => {
     const planId = req.params.id
+    if (await isPlusPlan(planId)) return reply.code(400).send({ message: PLUS_ADMIN_ONLY })
     const subscriberCount = await prisma.user.count({
       where: { ai_subscription_plan_id: planId },
     })

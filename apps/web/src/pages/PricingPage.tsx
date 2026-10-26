@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Heart, Sparkles, Activity, Check, Zap, X, AlertTriangle, Award } from 'lucide-react'
+import { Heart, Sparkles, Activity, Check, Zap, X, AlertTriangle, Award, Crown, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api'
 import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
@@ -113,7 +113,7 @@ export function AiSubscriptionManage({ dark = false }: { dark?: boolean }) {
 export default function PricingPage() {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null)
 
@@ -139,6 +139,13 @@ export default function PricingPage() {
     queryFn: () => api.get('/loyalty').then(r => r.data?.data),
     enabled: isAuthenticated,
   })
+  // Ε18 — GlobiPet Plus (ίδιο query και κλειδί με τη σελίδα /membership).
+  const { data: membership } = useQuery<any>({
+    queryKey: ['membership', user?.id ?? 'anon'],
+    queryFn: () => api.get('/membership').then(r => r.data?.data),
+  })
+  const plusMult = Number(membership?.benefits?.points_multiplier)
+
   const tierPct: number = isAuthenticated ? Math.max(0, Math.min(50, Number(loyalty?.ai_discount_percent) || 0)) : 0
   /** Τιμή μετά την έκπτωση, στρογγυλεμένη στο λεπτό (όπως το Stripe). */
   const discounted = (v: number) => Math.round(v * (100 - tierPct)) / 100
@@ -201,6 +208,27 @@ export default function PricingPage() {
           </button>
         </div>
       </section>
+
+      {/* Ε18 — GlobiPet Plus: μόνο όταν είναι διαθέσιμο. */}
+      {membership?.available && membership?.plan && (
+        <section className="max-w-xl mx-auto px-4 pb-6">
+          <Link to="/membership"
+            className="card p-4 flex items-center gap-3 hover:shadow-md transition-shadow border-amber-200 dark:border-amber-900/40">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
+              <Crown size={18} className="text-amber-600" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                {Number.isFinite(plusMult) && plusMult > 1
+                  ? t('membership.pricingBanner', { name: membership.plan.name, mult: plusMult.toLocaleString(i18n.language) })
+                  : t('membership.pricingBannerNoMult', { name: membership.plan.name })}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{t('membership.pricingBannerSub')}</p>
+            </div>
+            <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+          </Link>
+        </section>
+      )}
 
       {/* Έκπτωση του επιπέδου μου */}
       {tierPct > 0 && (

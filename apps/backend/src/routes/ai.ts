@@ -6,6 +6,7 @@ import { normLang } from '../lib/i18n.js'
 import { audit } from '../lib/audit.js'
 import { bookingStart } from '../lib/cancellation.js'
 import { resolveForAi } from '../lib/storage.js'
+import { getMembershipConfig, isMembershipPlanId } from '../lib/membership.js'
 
 const TRIAL_DAYS = 30
 
@@ -76,13 +77,20 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   async function enforceAiDailyLimit(req: any, reply: any, status: string | null) {
     const u = req.user as any
     if (u?.role === 'admin') { req.aiDailyLimit = null; return }
-    const kind = status === 'active' ? 'active' : 'trial'
-    // Ρυθμίσιμο χωρίς νέα έκδοση: app_settings `ai_daily_limit_trial` /
-    // `ai_daily_limit_active` (ακέραιος ≥ 0). Χωρίς ρύθμιση → 15 / 60.
-    let limit = AI_DAILY_LIMIT[kind]
-    const setting = await prisma.appSetting.findUnique({ where: { key: `ai_daily_limit_${kind}` } }).catch(() => null)
-    const override = setting ? Number(setting.value) : NaN
-    if (Number.isInteger(override) && override >= 0) limit = override
+    let limit: number
+    if (status === 'membership') {
+      // Ε18: μέλος GlobiPet Plus → όριο από τις ρυθμίσεις του Plus
+      // (app_settings `membership_config`, προεπιλογή 120).
+      limit = (await getMembershipConfig()).ai_daily_limit
+    } else {
+      const kind = status === 'active' ? 'active' : 'trial'
+      // Ρυθμίσιμο χωρίς νέα έκδοση: app_settings `ai_daily_limit_trial` /
+      // `ai_daily_limit_active` (ακέραιος ≥ 0). Χωρίς ρύθμιση → 15 / 60.
+      limit = AI_DAILY_LIMIT[kind]
+      const setting = await prisma.appSetting.findUnique({ where: { key: `ai_daily_limit_${kind}` } }).catch(() => null)
+      const override = setting ? Number(setting.value) : NaN
+      if (Number.isInteger(override) && override >= 0) limit = override
+    }
     req.aiDailyLimit = limit
     const used = await prisma.auditLog.count({
       where: {
@@ -166,11 +174,14 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await prisma.user.findUnique({
       where: { id: u.id },
-      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true },
+      select: { id: true, ai_subscription_status: true, ai_trial_started_at: true, ai_subscription_plan_id: true },
     })
     if (!user) return reply.code(401).send({ message: 'Μη εξουσιοδοτημένος' })
 
-    if (user.ai_subscription_status === 'active') return enforceAiDailyLimit(req, reply, 'active')
+    // Ε18: ενεργή συνδρομή στο GlobiPet Plus (πλάνο tier 'membership') → όριο μέλους.
+    if (user.ai_subscription_status === 'active') {
+      return enforceAiDailyLimit(req, reply, (await isMembershipPlanId(user.ai_subscription_plan_id)) ? 'membership' : 'active')
+    }
 
     if (user.ai_subscription_status === 'trial' && user.ai_trial_started_at) {
       const elapsedDays = (Date.now() - new Date(user.ai_trial_started_at).getTime()) / 86_400_000
