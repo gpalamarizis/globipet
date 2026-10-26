@@ -9,6 +9,7 @@ import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/compone
 import { PetFormFields, EMPTY_PET_FORM, petToForm, petPayload, petEmoji, type PetFormState } from '@/components/PetForm'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
+import { dateLocale } from '@/lib/dates'
 
 /** Χρονοσφραγίδα θέσης (ISO) στη γλώσσα του χρήστη, π.χ. «23 Οκτ, 14:05». */
 function fmtStamp(v: string | null | undefined, lang: string): string {
@@ -16,7 +17,7 @@ function fmtStamp(v: string | null | undefined, lang: string): string {
   const d = new Date(v)
   if (isNaN(d.getTime())) return String(v)
   const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }
-  try { return d.toLocaleString(lang, opts) } catch { return d.toLocaleString(undefined, opts) }
+  try { return d.toLocaleString(dateLocale(lang), opts) } catch { return d.toLocaleString(undefined, opts) }
 }
 
 /**

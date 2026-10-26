@@ -324,8 +324,8 @@ const el = {
     dateAdministeredReq: 'Ημ. Χορήγησης *',
     nextDose: 'Επόμενη Δόση',
     vacType: {
-      core: 'Core',
-      nonCore: 'Non-Core',
+      core: 'Βασικό (υποχρεωτικό)',
+      nonCore: 'Προαιρετικό',
       rabies: 'Λύσσα',
     },
     newExam: 'Νέα Εξέταση',
@@ -744,7 +744,7 @@ const el = {
     liveAutoStopped: 'Η ζωντανή ανάλυση σταμάτησε αυτόματα',
     errAnalysis: 'Σφάλμα ανάλυσης',
     errVideo: 'Σφάλμα ανάλυσης βίντεο',
-    title: 'AI Emotional Intelligence',
+    title: 'AI Συναισθήματα',
     subtitle: 'Ανάλυση συναισθημάτων κατοικίδιου μέσω κάμερας ή βίντεο',
     betaBadge: '🧪 Emerging Technology — Beta',
     speciesLabel: 'Είδος κατοικίδιου',
@@ -868,9 +868,9 @@ const el = {
     inviteSent: 'Πρόσκληση στάλθηκε!',
     inviteFailed: 'Η πρόσκληση δεν στάλθηκε',
     responseSaved: 'Απάντηση καταχωρήθηκε!',
-    title: 'Pet Playdates',
+    title: 'Βόλτες κατοικιδίων',
     subtitle: 'Βρες παρέα για το κατοικίδιό σου',
-    newEvent: 'Νέο Event',
+    newEvent: 'Νέα βόλτα',
     cityFilter: '🏙️ Πόλη...',
     eventsNearYou: '📅 Events κοντά σου',
     invite: 'Πρόσκληση',
@@ -890,20 +890,33 @@ const el = {
     decline: 'Απόρριψη',
     youAccepted: '✅ Αποδέχθηκες',
     youDeclined: '❌ Απέρριψες',
-    modalTitle: 'Νέο Playdate Event',
+    modalTitle: 'Νέα βόλτα',
     form: {
       title: 'Τίτλος *',
-      titlePlaceholder: 'π.χ. Βόλτα στο Πεδίον Άρεως',
+      titlePlaceholder: 'π.χ. Βόλτα στο Πεδίον του Άρεως',
       type: 'Τύπος',
       description: 'Περιγραφή',
       date: 'Ημερομηνία *',
       time: 'Ώρα *',
       location: 'Τοποθεσία *',
-      locationPlaceholder: 'π.χ. Πεδίον Άρεως, Αθήνα',
+      locationPlaceholder: 'π.χ. Πεδίον του Άρεως, Αθήνα',
       city: 'Πόλη *',
       duration: 'Διάρκεια (λεπτά)',
       maxParticipants: 'Μέγιστοι συμμετέχοντες',
       petTypes: 'Είδη κατοικίδιων',
+      requiredNote: 'Τα πεδία με * είναι υποχρεωτικά.',
+      meetingPoint: 'Σημείο συνάντησης *',
+      mapTitle: 'Σημείο στον χάρτη',
+      mapHint: 'Βρες το σημείο για να συμπληρωθεί αυτόματα η πόλη και να έχουν οι συμμετέχοντες οδηγίες.',
+      mapNotSet: 'Δεν έχει βρεθεί στον χάρτη — οι συμμετέχοντες θα δουν μόνο τη διεύθυνση.',
+      cityAuto: 'Πόλη: {{city}} (από τη διεύθυνση)',
+      cityOptional: 'Πόλη',
+      cityHint: 'Δεν βρέθηκε αυτόματα από τη διεύθυνση. Χρησιμοποιείται για τη λίστα «κοντά σου».',
+      details: 'Λεπτομέρειες σημείου',
+      detailsPlaceholder: 'π.χ. στο συντριβάνι, βόρεια είσοδος',
+      descriptionPlaceholder: 'π.χ. Χαλαρή βόλτα μίας ώρας — φέρτε νερό για τα σκυλιά.',
+      maxPlaceholder: 'π.χ. 10 (κενό = 10)',
+      petTypesHint: 'Άφησέ το κενό αν η βόλτα είναι για όλα.',
     },
     creating: 'Δημιουργία...',
     createEvent: 'Δημιουργία Event',
@@ -923,6 +936,16 @@ const el = {
     deleteQ: 'Να διαγραφεί το event «{{title}}»;',
     deleteFailed: 'Η διαγραφή απέτυχε',
     responseFailed: 'Η απάντηση δεν καταχωρήθηκε',
+    directions: 'Οδηγίες',
+    err: {
+      title: 'Γράψε τίτλο (τουλάχιστον 2 χαρακτήρες).',
+      date: 'Διάλεξε ημερομηνία.',
+      time: 'Διάλεξε ώρα.',
+      address: 'Γράψε το σημείο συνάντησης.',
+      city: 'Γράψε την πόλη.',
+      number: 'Γράψε έναν θετικό ακέραιο αριθμό.',
+      summary: 'Συμπλήρωσε τα πεδία που επισημαίνονται με κόκκινο.',
+    },
   },
   pgCommunities: {
     locationFound: 'Τοποθεσία εντοπίστηκε!',
@@ -1140,8 +1163,8 @@ const el = {
       reviewerDesc: 'Γράψατε 5 κριτικές',
       regularTitle: 'Τακτικός',
       regularDesc: '10 κρατήσεις υπηρεσιών',
-      goldTitle: 'Loyalty Gold',
-      goldDesc: 'Φτάσατε Gold επίπεδο',
+      goldTitle: 'Χρυσό επίπεδο',
+      goldDesc: 'Φτάσατε στο Χρυσό επίπεδο',
       petLoverTitle: 'Pet Lover',
       petLoverDesc: 'Προσθέσατε 3 κατοικίδια',
     },
@@ -2543,6 +2566,430 @@ const el = {
     alsoUserRequestHint: 'Ο χρήστης είχε ζητήσει και ο ίδιος διαγραφή — δεν ακυρώνεται από εδώ.',
     status_executing: 'Η διαγραφή εκτελείται ή διακόπηκε',
   },
+  navGroups: {
+    health: 'Υγεία',
+    tools: 'Εργαλεία',
+    info: 'Πληροφορίες',
+    infoSupport: 'Πληροφορίες & υποστήριξη',
+    pets: 'Κατοικίδια',
+    explore: 'Εξερεύνησε',
+    popularProducts: 'Δημοφιλή προϊόντα',
+  },
+  accountHub: {
+    subscriptions: 'Συνδρομές',
+    activity: 'Η δραστηριότητά μου',
+    myReviews: 'Οι κριτικές μου',
+    myPets: 'Τα κατοικίδιά μου',
+    rewards: 'Επιβραβεύσεις',
+    howTiersWork: 'Πώς λειτουργούν τα επίπεδα',
+    messages: 'Μηνύματα & ειδοποιήσεις',
+    security: 'Λογαριασμός & ασφάλεια',
+    privacy: 'Απόρρητο & δεδομένα',
+    help: 'Βοήθεια & όροι',
+    editProfile: 'Επεξεργασία προφίλ',
+    language: 'Γλώσσα',
+    consents: 'Συγκαταθέσεις (cookies)',
+    privacyPolicy: 'Πολιτική απορρήτου',
+    aiNone: 'Δεν έχεις συνδρομή AI',
+    aiTrial: 'Δωρεάν δοκιμή σε εξέλιξη',
+    aiTrialEnds: 'Η δοκιμή λήγει στις {{date}}',
+    aiExpired: 'Η δωρεάν δοκιμή έληξε',
+    aiManage: 'Διαχείριση',
+    foodSubs: 'Συνδρομές τροφής',
+    foodSubsEmpty: 'Δεν έχεις συνδρομή τροφής. Ξεκίνα μία από ένα προϊόν του καταστήματος.',
+    recentOrders: 'Πρόσφατες παραγγελίες',
+    recentBookings: 'Πρόσφατες κρατήσεις',
+    aiRenews: 'Ανανεώνεται στις {{date}}',
+  },
+  myReviews: {
+    empty: 'Δεν έχεις γράψει κριτικές ακόμη',
+    emptyDesc: 'Μετά από μια ολοκληρωμένη κράτηση, μπορείς να αξιολογήσεις την υπηρεσία από τις κρατήσεις σου.',
+    stars_one: '{{count}} αστέρι από 5',
+    stars_other: '{{count}} αστέρια από 5',
+  },
+  homeGuest: {
+    title: 'Ο ιατρικός φάκελος του κατοικιδίου σου, πάντα μαζί σου',
+    text: 'Εμβόλια, φάρμακα, αλλεργίες και επισκέψεις στον κτηνίατρο, οργανωμένα σε ένα σημείο.',
+    cta: 'Κάνε εγγραφή',
+  },
+  passportForm: {
+    vaccines: {
+      vaccine_name: {
+        label: 'Όνομα εμβολίου',
+        ph: 'π.χ. DHPPi, Λύσσα (Nobivac Rabies)',
+      },
+      vaccine_type: {
+        label: 'Κατηγορία εμβολίου',
+        hint: 'Επίλεξε «Λύσσα» για το αντιλυσσικό — απαιτείται για ταξίδια',
+      },
+      date_administered: {
+        label: 'Ημερομηνία χορήγησης',
+      },
+      next_due_date: {
+        label: 'Επόμενη δόση (ημερομηνία)',
+        hint: 'Όπως τη σημείωσε ο κτηνίατρος στο βιβλιάριο',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      notes: {
+        ph: 'π.χ. Αρ. παρτίδας (Lot) A123B45, καμία αντίδραση',
+      },
+    },
+    health: {
+      title: {
+        label: 'Λόγος επίσκεψης',
+        ph: 'π.χ. Ετήσιος έλεγχος, Εμετός από χθες',
+      },
+      date: {
+        label: 'Ημερομηνία επίσκεψης',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      description: {
+        ph: 'π.χ. Γενική εξέταση, όλα φυσιολογικά',
+      },
+      cost: {
+        ph: 'π.χ. 45',
+      },
+      next_appointment: {
+        label: 'Επόμενο ραντεβού (ημερομηνία)',
+      },
+    },
+    meds: {
+      name: {
+        label: 'Όνομα φαρμάκου',
+        ph: 'π.χ. Synulox 250 mg',
+      },
+      active_ingredient: {
+        ph: 'π.χ. Αμοξικιλλίνη / κλαβουλανικό οξύ',
+      },
+      dosage: {
+        ph: 'π.χ. 1 δισκίο 2 φορές τη μέρα',
+      },
+      start_date: {
+        label: 'Ημερομηνία έναρξης',
+      },
+      end_date: {
+        label: 'Ημερομηνία λήξης αγωγής',
+        hint: 'Άφησέ το κενό αν η αγωγή συνεχίζεται',
+      },
+      prescribed_by: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      reason: {
+        ph: 'π.χ. Ωτίτιδα',
+      },
+      side_effects: {
+        ph: 'π.χ. Υπνηλία, μειωμένη όρεξη',
+      },
+    },
+    lab: {
+      title: {
+        label: 'Όνομα εξέτασης',
+        ph: 'π.χ. Προεγχειρητικός έλεγχος, Τεστ Leishmania',
+      },
+      date: {
+        label: 'Ημερομηνία εξέτασης',
+      },
+      lab_name: {
+        ph: 'π.χ. IDEXX',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      findings: {
+        ph: 'π.χ. Ελαφρώς αυξημένη ουρία',
+      },
+    },
+    imaging: {
+      imaging_type: {
+        label: 'Είδος απεικόνισης',
+      },
+      date: {
+        label: 'Ημερομηνία εξέτασης',
+      },
+      body_region: {
+        ph: 'π.χ. Θώρακας, αριστερό πίσω πόδι',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      findings: {
+        ph: 'π.χ. Χωρίς ένδειξη κατάγματος',
+      },
+      report: {
+        ph: 'π.χ. Σύνοψη της γνωμάτευσης του ακτινολόγου',
+      },
+    },
+    surgery: {
+      procedure: {
+        label: 'Επέμβαση',
+        ph: 'π.χ. Στείρωση, Αφαίρεση όγκου',
+      },
+      date: {
+        label: 'Ημερομηνία επέμβασης',
+      },
+      surgeon_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      duration_min: {
+        ph: 'π.χ. 45',
+      },
+      complications: {
+        ph: 'π.χ. Καμία',
+      },
+      outcome: {
+        ph: 'π.χ. Επιτυχής, πλήρης ανάρρωση',
+      },
+      follow_up: {
+        ph: 'π.χ. Αφαίρεση ραμμάτων σε 10 ημέρες',
+      },
+      cost: {
+        ph: 'π.χ. 45',
+      },
+    },
+    allergies: {
+      allergen: {
+        label: 'Αλλεργιογόνο',
+        ph: 'π.χ. Κοτόπουλο, Γύρη, Πενικιλίνη',
+      },
+      diagnosed_date: {
+        label: 'Ημερομηνία διάγνωσης',
+      },
+      reaction: {
+        ph: 'π.χ. Φαγούρα, εμετός, πρήξιμο',
+      },
+      treatment: {
+        ph: 'π.χ. Αντιισταμινικό, δίαιτα αποκλεισμού',
+      },
+      diagnosed_by: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+    },
+    chronic: {
+      condition: {
+        label: 'Πάθηση',
+        ph: 'π.χ. Διαβήτης, Χρόνια νεφρική νόσος',
+      },
+      diagnosed_date: {
+        label: 'Ημερομηνία διάγνωσης',
+      },
+      icd_code: {
+        ph: 'π.χ. E11',
+      },
+      diagnosed_by: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      treatment_plan: {
+        ph: 'π.χ. Ινσουλίνη 2 φορές τη μέρα, ειδική τροφή',
+      },
+      monitoring: {
+        ph: 'π.χ. Γλυκόζη κάθε 3 μήνες',
+      },
+    },
+    dental: {
+      procedure: {
+        label: 'Οδοντιατρική πράξη',
+      },
+      date: {
+        label: 'Ημερομηνία πράξης',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      clinic_name: {
+        ph: 'π.χ. Κτηνιατρική Κλινική Αθηνών',
+      },
+      teeth_treated: {
+        ph: 'π.χ. 108, 208 ή «άνω γνάθος»',
+      },
+      findings: {
+        ph: 'π.χ. Πέτρα, ουλίτιδα',
+      },
+      next_due: {
+        label: 'Επόμενος καθαρισμός (ημερομηνία)',
+      },
+      cost: {
+        ph: 'π.χ. 45',
+      },
+    },
+    weight: {
+      weight_kg: {
+        label: 'Βάρος (kg)',
+        ph: 'π.χ. 12,5',
+      },
+      date: {
+        label: 'Ημερομηνία μέτρησης',
+      },
+      bcs: {
+        ph: 'π.χ. 5',
+        hint: '1 = πολύ αδύνατο, 4–5 = ιδανικό, 9 = παχύσαρκο',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      notes: {
+        ph: 'π.χ. Μετά από 2 μήνες δίαιτα',
+      },
+    },
+    genetic: {
+      test_name: {
+        label: 'Γενετικό τεστ',
+        ph: 'π.χ. Embark Breed + Health',
+      },
+      date: {
+        label: 'Ημερομηνία τεστ',
+      },
+      provider: {
+        ph: 'π.χ. Embark, Wisdom Panel',
+      },
+      results: {
+        ph: 'π.χ. Φορέας MDR1, χωρίς άλλα ευρήματα',
+      },
+      breeds_detected: {
+        ph: 'π.χ. Λαμπραντόρ, Μπόρντερ Κόλεϊ',
+      },
+      conditions_found: {
+        ph: 'π.χ. Δυσπλασία ισχίου',
+      },
+    },
+    vitals: {
+      date: {
+        label: 'Ημερομηνία μέτρησης',
+      },
+      temperature_c: {
+        label: 'Θερμοκρασία (°C)',
+        ph: 'π.χ. 38,5',
+      },
+      heart_rate: {
+        label: 'Καρδιακοί παλμοί (bpm)',
+        ph: 'π.χ. 90',
+      },
+      respiratory_rate: {
+        label: 'Αναπνοές (ανά λεπτό)',
+        ph: 'π.χ. 24',
+      },
+      blood_pressure: {
+        ph: 'π.χ. 140/90',
+      },
+      weight_kg: {
+        ph: 'π.χ. 12,5',
+      },
+      vet_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+    },
+    travel: {
+      destination_country: {
+        ph: 'π.χ. Ιταλία',
+      },
+      origin_city: {
+        ph: 'π.χ. Πειραιάς',
+      },
+      destination_city: {
+        ph: 'π.χ. Ηράκλειο',
+      },
+      departure_date: {
+        label: 'Ημερομηνία αναχώρησης',
+      },
+      carrier: {
+        ph: 'π.χ. Aegean, Minoan Lines',
+      },
+      booking_ref: {
+        ph: 'π.χ. ABC123',
+      },
+    },
+    access: {
+      provider_email: {
+        ph: 'π.χ. vet@example.com',
+      },
+      provider_name: {
+        ph: 'π.χ. Δρ. Μαρία Παπαδοπούλου',
+      },
+      reason: {
+        ph: 'π.χ. Δεύτερη γνώμη για δερματίτιδα',
+      },
+      expires_at: {
+        hint: 'Άφησέ το κενό για πρόσβαση χωρίς λήξη',
+      },
+    },
+    pedigree: {
+      registration_number: {
+        ph: 'π.χ. GR-12345',
+      },
+      kennel_club: {
+        ph: 'π.χ. Κυνολογικός Όμιλος Ελλάδος',
+      },
+      breeder_contact: {
+        ph: 'π.χ. τηλέφωνο ή email',
+      },
+    },
+  },
+  loyaltyPage: {
+    title: 'Πρόγραμμα επιβράβευσης',
+    subtitle: 'Κερδίζεις πόντους σε κάθε πληρωμή και ανεβαίνεις επίπεδο',
+    yourTier: 'Το επίπεδό σου',
+    pointsValue: 'Πόντοι: {{points}}',
+    toNext: 'Επόμενο: {{tier}} — λείπουν {{points}} πόντοι',
+    maxTier: 'Ανώτατο επίπεδο',
+    yourDiscount: 'Έχεις έκπτωση {{percent}}% στις συνδρομές AI.',
+    noDiscountYet: 'Ανέβα επίπεδο για να αποκτήσεις έκπτωση στις συνδρομές AI.',
+    loginPrompt: 'Συνδέσου για να δεις τους πόντους και το επίπεδό σου.',
+    login: 'Σύνδεση',
+    earnTitle: 'Πώς κερδίζω πόντους',
+    earnRate: 'Πόντοι για κάθε 1 € που πληρώνεις: {{points}}',
+    source_orders: 'Αγορές από το κατάστημα',
+    source_bookings: 'Κρατήσεις υπηρεσιών',
+    source_telehealth: 'Συνεδρίες τηλεϊατρικής',
+    source_events: 'Συμμετοχές σε εκδηλώσεις',
+    source_subscriptions: 'Συνδρομές AI και τροφής',
+    refundNote: 'Αν μια πληρωμή επιστραφεί, αφαιρούνται αναλογικά οι πόντοι της (σε πλήρη επιστροφή όλοι).',
+    tiersTitle: 'Επίπεδα και οφέλη',
+    current: 'Τρέχον',
+    fromPoints: 'Από {{points}} πόντους',
+    startTier: 'Από την εγγραφή',
+    aiDiscount: '−{{percent}}% στις συνδρομές AI',
+    noDiscount: 'Χωρίς έκπτωση',
+    discountNote: 'Η έκπτωση ισχύει μόνο στις συνδρομές AI της πλατφόρμας, όχι σε προϊόντα ή υπηρεσίες παρόχων. Εφαρμόζεται αυτόματα όταν αγοράζεις νέα συνδρομή, για την πρώτη περίοδο χρέωσης (1 μήνας στη μηνιαία, 12 μήνες στην ετήσια).',
+    seePlans: 'Δες τα πλάνα',
+  },
+  adminLoyalty: {
+    title: 'Πρόγραμμα επιβράβευσης',
+    subtitle: 'Πόντοι ανά ευρώ, όρια επιπέδων και έκπτωση στις συνδρομές AI',
+    saved: 'Οι ρυθμίσεις αποθηκεύτηκαν',
+    saveError: 'Η αποθήκευση απέτυχε',
+    saving: 'Αποθήκευση...',
+    note: 'Οι αλλαγές ισχύουν για τις νέες πληρωμές και τις νέες συνδρομές AI. Οι πόντοι που έχουν ήδη δοθεί και οι υπάρχουσες συνδρομές δεν αλλάζουν. Τα επίπεδα υπολογίζονται αμέσως με τα νέα όρια.',
+    earnTitle: 'Απόδοση πόντων',
+    earnNote: 'Πόντοι = ποσό πληρωμής σε € × πόντοι ανά €, στρογγυλεμένο προς τα κάτω. Με 0 δεν δίνονται πόντοι.',
+    pointsPerEuro: 'Πόντοι ανά 1 €',
+    tiersTitle: 'Επίπεδα',
+    tiersNote: 'Όριο σε πόντους (αυξανόμενο· το πρώτο επίπεδο ξεκινά από 0) και έκπτωση στις συνδρομές AI (0–50%).',
+    colTier: 'Επίπεδο',
+    colThreshold: 'Όριο (πόντοι)',
+    colDiscount: 'Έκπτωση AI',
+    errPointsPerEuro: 'Οι πόντοι ανά € πρέπει να είναι από 0 έως 1000, με έως 2 δεκαδικά.',
+    errThresholds: 'Τα όρια πρέπει να είναι ακέραιοι πόντοι.',
+    errIncreasing: 'Τα όρια των επιπέδων πρέπει να αυξάνονται.',
+    errDiscount: 'Η έκπτωση πρέπει να είναι ακέραιος από 0 έως 50.',
+  },
   nav: {
     orders: 'Παραγγελίες', wishlist: 'Λίστα επιθυμιών', more: 'Περισσότερα', account: 'Λογαριασμός', popular: 'Δημοφιλή', mainNav: 'Κύρια πλοήγηση', mobileNav: 'Πλοήγηση κινητού', moreOptions: 'Περισσότερες επιλογές', search: 'Αναζήτηση', notifications: 'Ειδοποιήσεις', unread: '{{count}} μη αναγνωσμένες', cart: 'Καλάθι', cartItems: '{{count}} αντικείμενα', userMenu: 'Μενού χρήστη', skipToContent: 'Μετάβαση στο περιεχόμενο',
     welfareOrgs: 'Φιλοζωικές',
@@ -2551,11 +2998,11 @@ const el = {
     services: 'Υπηρεσίες', telehealth: 'Τηλεϊατρική', social: 'Social',
     forum: 'Φόρουμ', community: 'Κοινότητα', events: 'Εκδηλώσεις',
     myPets: 'Τα Ζωάκια μου', medicalCenter: 'Ιατρικό Κέντρο',
-    petTracker: 'Tracker', myBookings: 'Κρατήσεις', profile: 'Προφίλ',
+    petTracker: 'Tracker', myBookings: 'Κρατήσεις', profile: 'Λογαριασμός',
     provider: 'Πάροχος', providerDashboard: 'Dashboard Παρόχου',
     providerTools: 'Εργαλεία Παρόχου', admin: 'Admin', login: 'Σύνδεση',
     logout: 'Αποσύνδεση', breeds: 'Ράτσες', insurance: 'Ασφάλιση',
-    aiHealth: 'AI Υγεία', aiEmotion: 'AI Emotion', aiStoolUrine: 'AI Ούρα & Περιττώματα', passport: 'Ιατρικός Φάκελος', playdates: 'Playdates', communities: 'Κοινότητες', legal: 'Νομική Υποστήριξη',
+    aiHealth: 'AI Υγεία', aiEmotion: 'AI Συναισθήματα', aiStoolUrine: 'AI Ούρα & Περιττώματα', passport: 'Ιατρικός Φάκελος', playdates: 'Βόλτες', communities: 'Κοινότητες', legal: 'Νομική Υποστήριξη',
   },
   auth: {
     login: 'Σύνδεση', register: 'Εγγραφή', logout: 'Αποσύνδεση',
@@ -2580,8 +3027,8 @@ const el = {
       expiredSubtitle: 'Επίλεξε ένα πλάνο για να συνεχίσεις',
     },
     hero: { title1: 'Ο γιατρός του κατοικιδίου σου', title2: 'είναι πάντα', title3: 'διαθέσιμος',
-      subtitle: 'Ανάλυση συμπτωμάτων, health tracking, emotion detection και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.',
-      badges: { aiHealth: 'AI Health Check', emotion: 'Emotion Detector', wellness: 'Wellness Tracker', telehealth: 'Τηλεϊατρική' },
+      subtitle: 'Ανάλυση συμπτωμάτων, παρακολούθηση υγείας, ανίχνευση συναισθημάτων και εξατομικευμένα πλάνα διατροφής — όλα με τεχνητή νοημοσύνη.',
+      badges: { aiHealth: 'AI Health Check', emotion: 'Ανίχνευση συναισθημάτων', wellness: 'Wellness Tracker', telehealth: 'Τηλεϊατρική' },
       tryFree: 'Δοκίμασε δωρεάν', learnMore: 'Μάθε περισσότερα' },
     trust: { verified: 'Πιστοποιημένοι πάροχοι', rating: 'Αξιολογήσεις από πελάτες', securePayments: 'Ασφαλείς πληρωμές' },
     trustBar: { owners: 'Ιδιοκτήτες', providers: 'Πάροχοι', pets: 'Κατοικίδια', rating: 'Βαθμολογία' },
@@ -2763,6 +3210,8 @@ const el = {
     checkoutCancelled: 'Η πληρωμή ακυρώθηκε',
     securedByStripe: 'Ασφαλής πληρωμή μέσω Stripe',
     tryFreeFirst: 'Δοκίμασε δωρεάν πρώτα',
+    tierDiscountBanner: 'Ως μέλος του επιπέδου {{tier}} έχεις έκπτωση {{percent}}% στις συνδρομές AI.',
+    tierDiscountMore: 'Πώς λειτουργεί',
   },
   aiGuard: {
     expiredTitle: 'Το AI trial έληξε',
@@ -2817,7 +3266,7 @@ const el = {
         marketplace: { title: 'Marketplace',       desc: 'Ηλεκτρονικό κατάστημα με τροφές, παιχνίδια, αξεσουάρ και φάρμακα. Γρήγορη παράδοση σε ολόκληρη την Ελλάδα.' },
         tracker:     { title: 'GPS Tracker',       desc: 'Ζωντανή παρακολούθηση τοποθεσίας κατοικιδίου. Σύνδεση με δημοφιλείς trackers όπως Tractive και Weenect.' },
         insurance:   { title: 'Ασφάλιση',          desc: 'Ολοκληρωμένα πλάνα ασφάλισης κατοικιδίων. Κάλυψη κτηνιατρικών εξόδων, χειρουργείων και επειγόντων.' },
-        community:   { title: 'Κοινότητα',         desc: 'Playdates, κοινότητες ιδιοκτητών, social feed και events. Συνδέσου με φιλόζωους σε ολόκληρη την Ελλάδα.' },
+        community:   { title: 'Κοινότητα',         desc: 'Βόλτες, κοινότητες ιδιοκτητών, social feed και events. Συνδέσου με φιλόζωους σε ολόκληρη την Ελλάδα.' },
       },
     },
     stats: {
@@ -2878,6 +3327,7 @@ const el = {
     verifications: 'Επαληθεύσεις',
     refunds: 'Επιστροφές',
     deletionRequests: 'Διαγραφές λογαριασμών',
+    loyalty: 'Επιβράβευση',
   },
   adminTranslations: {
     title: 'Μεταφράσεις περιεχομένου',
@@ -3085,11 +3535,11 @@ const el = {
     paymentPendingHint: 'Η κράτηση επιβεβαιώνεται μόλις ολοκληρωθεί η πληρωμή.',
   },
   profile: {
-    title: 'Προφίλ',
+    title: 'Λογαριασμός',
     edit: 'Επεξεργασία', save: 'Αποθήκευση', saving: 'Αποθήκευση...', cancel: 'Ακύρωση',
     saved: 'Το προφίλ αποθηκεύτηκε!',
     bio: 'Bio...', phone: 'Τηλέφωνο', city: 'Πόλη', website: 'Website',
-    loyalty: 'Loyalty Program', points: 'πόντοι',
+    loyalty: 'Πρόγραμμα επιβράβευσης', points: 'πόντοι',
     tabs: { overview: 'Επισκόπηση', achievements: 'Επιτεύγματα', orders: 'Παραγγελίες', bookings: 'Κρατήσεις' },
     noOrders: 'Δεν υπάρχουν παραγγελίες', noBookings: 'Δεν υπάρχουν κρατήσεις',
     stats: { orders: 'Παραγγελίες', bookings: 'Κρατήσεις', achievements: 'Επιτεύγματα', points: 'Πόντοι' },
@@ -3119,8 +3569,8 @@ const el = {
     all: 'Όλα',
   },
   loyalty: {
-    points: 'Πόντοι', tier: 'Επίπεδο', bronze: 'Bronze', silver: 'Silver',
-    gold: 'Gold', platinum: 'Platinum', achievements: 'Επιτεύγματα',
+    points: 'Πόντοι', tier: 'Επίπεδο', bronze: 'Χάλκινο', silver: 'Ασημένιο',
+    gold: 'Χρυσό', platinum: 'Πλατινένιο', achievements: 'Επιτεύγματα',
     rewards: 'Ανταμοιβές', redeem: 'Εξαργύρωση',
   },
   cart: {
@@ -3717,7 +4167,7 @@ const el = {
     pgInsurance: 'Ασφάλεια',
     pgMarketplace: 'Κατάστημα',
     pgMyPets: 'Τα ζώα μου',
-    pgPlaydates: 'Playdates',
+    pgPlaydates: 'Βόλτες',
     pgProductDetail: 'Σελίδα προϊόντος',
     pgServiceDetail: 'Σελίδα υπηρεσίας',
     pgServices: 'Υπηρεσίες',
@@ -4751,6 +5201,19 @@ const en: typeof el = {
       duration: 'Duration (minutes)',
       maxParticipants: 'Maximum participants',
       petTypes: 'Pet types',
+      requiredNote: 'Fields marked * are required.',
+      meetingPoint: 'Meeting point *',
+      mapTitle: 'Point on the map',
+      mapHint: 'Find the point so the city is filled in automatically and participants get directions.',
+      mapNotSet: 'Not found on the map yet — participants will only see the address.',
+      cityAuto: 'City: {{city}} (from the address)',
+      cityOptional: 'City',
+      cityHint: 'Could not be found from the address. It is used for the “near you” list.',
+      details: 'Meeting point details',
+      detailsPlaceholder: 'e.g. by the fountain, north entrance',
+      descriptionPlaceholder: 'e.g. An easy one-hour walk — bring water for the dogs.',
+      maxPlaceholder: 'e.g. 10 (empty = 10)',
+      petTypesHint: 'Leave empty if the walk is open to all.',
     },
     creating: 'Creating...',
     createEvent: 'Create event',
@@ -4770,6 +5233,16 @@ const en: typeof el = {
     deleteQ: 'Delete the event “{{title}}”?',
     deleteFailed: 'Could not delete',
     responseFailed: 'Your response was not saved',
+    directions: 'Directions',
+    err: {
+      title: 'Enter a title (at least 2 characters).',
+      date: 'Pick a date.',
+      time: 'Pick a time.',
+      address: 'Enter the meeting point.',
+      city: 'Enter the city.',
+      number: 'Enter a positive whole number.',
+      summary: 'Please complete the fields marked in red.',
+    },
   },
   pgCommunities: {
     locationFound: 'Location found!',
@@ -6390,6 +6863,430 @@ const en: typeof el = {
     alsoUserRequestHint: 'The user had also requested deletion themselves — it can\'t be cancelled here.',
     status_executing: 'Deletion running or interrupted',
   },
+  navGroups: {
+    health: 'Health',
+    tools: 'Tools',
+    info: 'Info',
+    infoSupport: 'Info & support',
+    pets: 'Pets',
+    explore: 'Explore',
+    popularProducts: 'Popular products',
+  },
+  accountHub: {
+    subscriptions: 'Subscriptions',
+    activity: 'My activity',
+    myReviews: 'My reviews',
+    myPets: 'My pets',
+    rewards: 'Rewards',
+    howTiersWork: 'How tiers work',
+    messages: 'Messages & notifications',
+    security: 'Account & security',
+    privacy: 'Privacy & data',
+    help: 'Help & terms',
+    editProfile: 'Edit profile',
+    language: 'Language',
+    consents: 'Consents (cookies)',
+    privacyPolicy: 'Privacy policy',
+    aiNone: 'You don\'t have an AI subscription',
+    aiTrial: 'Free trial in progress',
+    aiTrialEnds: 'Trial ends on {{date}}',
+    aiExpired: 'Your free trial has ended',
+    aiManage: 'Manage',
+    foodSubs: 'Food subscriptions',
+    foodSubsEmpty: 'You have no food subscription. Start one from a product in the shop.',
+    recentOrders: 'Recent orders',
+    recentBookings: 'Recent bookings',
+    aiRenews: 'Renews on {{date}}',
+  },
+  myReviews: {
+    empty: 'You haven\'t written any reviews yet',
+    emptyDesc: 'After a completed booking, you can rate the service from your bookings.',
+    stars_one: '{{count}} out of 5 stars',
+    stars_other: '{{count}} out of 5 stars',
+  },
+  homeGuest: {
+    title: 'Your pet\'s medical record, always with you',
+    text: 'Vaccines, medication, allergies and vet visits, organised in one place.',
+    cta: 'Sign up',
+  },
+  passportForm: {
+    vaccines: {
+      vaccine_name: {
+        label: 'Vaccine name',
+        ph: 'e.g. DHPPi, Rabies (Nobivac Rabies)',
+      },
+      vaccine_type: {
+        label: 'Vaccine category',
+        hint: 'Choose “Rabies” for the rabies vaccine — it is required for travel',
+      },
+      date_administered: {
+        label: 'Date given',
+      },
+      next_due_date: {
+        label: 'Next dose (date)',
+        hint: 'As noted by the vet in the health booklet',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      notes: {
+        ph: 'e.g. Batch (lot) no. A123B45, no reaction',
+      },
+    },
+    health: {
+      title: {
+        label: 'Reason for visit',
+        ph: 'e.g. Annual check-up, Vomiting since yesterday',
+      },
+      date: {
+        label: 'Visit date',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      description: {
+        ph: 'e.g. General examination, everything normal',
+      },
+      cost: {
+        ph: 'e.g. 45',
+      },
+      next_appointment: {
+        label: 'Next appointment (date)',
+      },
+    },
+    meds: {
+      name: {
+        label: 'Medication name',
+        ph: 'e.g. Synulox 250 mg',
+      },
+      active_ingredient: {
+        ph: 'e.g. Amoxicillin / clavulanic acid',
+      },
+      dosage: {
+        ph: 'e.g. 1 tablet twice a day',
+      },
+      start_date: {
+        label: 'Start date',
+      },
+      end_date: {
+        label: 'Treatment end date',
+        hint: 'Leave blank if the treatment is ongoing',
+      },
+      prescribed_by: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      reason: {
+        ph: 'e.g. Ear infection',
+      },
+      side_effects: {
+        ph: 'e.g. Drowsiness, reduced appetite',
+      },
+    },
+    lab: {
+      title: {
+        label: 'Test name',
+        ph: 'e.g. Pre-surgery panel, Leishmania test',
+      },
+      date: {
+        label: 'Test date',
+      },
+      lab_name: {
+        ph: 'e.g. IDEXX',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      findings: {
+        ph: 'e.g. Slightly raised urea',
+      },
+    },
+    imaging: {
+      imaging_type: {
+        label: 'Imaging type',
+      },
+      date: {
+        label: 'Test date',
+      },
+      body_region: {
+        ph: 'e.g. Chest, left hind leg',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      findings: {
+        ph: 'e.g. No sign of fracture',
+      },
+      report: {
+        ph: 'e.g. Summary of the radiologist\'s report',
+      },
+    },
+    surgery: {
+      procedure: {
+        label: 'Procedure',
+        ph: 'e.g. Spay/neuter, Lump removal',
+      },
+      date: {
+        label: 'Surgery date',
+      },
+      surgeon_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      duration_min: {
+        ph: 'e.g. 45',
+      },
+      complications: {
+        ph: 'e.g. None',
+      },
+      outcome: {
+        ph: 'e.g. Successful, full recovery',
+      },
+      follow_up: {
+        ph: 'e.g. Stitches out in 10 days',
+      },
+      cost: {
+        ph: 'e.g. 45',
+      },
+    },
+    allergies: {
+      allergen: {
+        label: 'Allergen',
+        ph: 'e.g. Chicken, Pollen, Penicillin',
+      },
+      diagnosed_date: {
+        label: 'Diagnosis date',
+      },
+      reaction: {
+        ph: 'e.g. Itching, vomiting, swelling',
+      },
+      treatment: {
+        ph: 'e.g. Antihistamine, elimination diet',
+      },
+      diagnosed_by: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+    },
+    chronic: {
+      condition: {
+        label: 'Condition',
+        ph: 'e.g. Diabetes, Chronic kidney disease',
+      },
+      diagnosed_date: {
+        label: 'Diagnosis date',
+      },
+      icd_code: {
+        ph: 'e.g. E11',
+      },
+      diagnosed_by: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      treatment_plan: {
+        ph: 'e.g. Insulin twice a day, prescription diet',
+      },
+      monitoring: {
+        ph: 'e.g. Blood glucose every 3 months',
+      },
+    },
+    dental: {
+      procedure: {
+        label: 'Dental procedure',
+      },
+      date: {
+        label: 'Procedure date',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      clinic_name: {
+        ph: 'e.g. City Vet Clinic',
+      },
+      teeth_treated: {
+        ph: 'e.g. 108, 208 or “upper jaw”',
+      },
+      findings: {
+        ph: 'e.g. Tartar, gingivitis',
+      },
+      next_due: {
+        label: 'Next cleaning (date)',
+      },
+      cost: {
+        ph: 'e.g. 45',
+      },
+    },
+    weight: {
+      weight_kg: {
+        label: 'Weight (kg)',
+        ph: 'e.g. 12.5',
+      },
+      date: {
+        label: 'Measurement date',
+      },
+      bcs: {
+        ph: 'e.g. 5',
+        hint: '1 = emaciated, 4–5 = ideal, 9 = obese',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      notes: {
+        ph: 'e.g. After 2 months on a diet',
+      },
+    },
+    genetic: {
+      test_name: {
+        label: 'Genetic test',
+        ph: 'e.g. Embark Breed + Health',
+      },
+      date: {
+        label: 'Test date',
+      },
+      provider: {
+        ph: 'e.g. Embark, Wisdom Panel',
+      },
+      results: {
+        ph: 'e.g. MDR1 carrier, nothing else found',
+      },
+      breeds_detected: {
+        ph: 'e.g. Labrador, Border Collie',
+      },
+      conditions_found: {
+        ph: 'e.g. Hip dysplasia',
+      },
+    },
+    vitals: {
+      date: {
+        label: 'Measurement date',
+      },
+      temperature_c: {
+        label: 'Temperature (°C)',
+        ph: 'e.g. 38.5',
+      },
+      heart_rate: {
+        label: 'Heart rate (bpm)',
+        ph: 'e.g. 90',
+      },
+      respiratory_rate: {
+        label: 'Respiratory rate (/min)',
+        ph: 'e.g. 24',
+      },
+      blood_pressure: {
+        ph: 'e.g. 140/90',
+      },
+      weight_kg: {
+        ph: 'e.g. 12.5',
+      },
+      vet_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+    },
+    travel: {
+      destination_country: {
+        ph: 'e.g. Italy',
+      },
+      origin_city: {
+        ph: 'e.g. Piraeus',
+      },
+      destination_city: {
+        ph: 'e.g. Heraklion',
+      },
+      departure_date: {
+        label: 'Departure date',
+      },
+      carrier: {
+        ph: 'e.g. Aegean, Minoan Lines',
+      },
+      booking_ref: {
+        ph: 'e.g. ABC123',
+      },
+    },
+    access: {
+      provider_email: {
+        ph: 'e.g. vet@example.com',
+      },
+      provider_name: {
+        ph: 'e.g. Dr Sarah Jones',
+      },
+      reason: {
+        ph: 'e.g. Second opinion on dermatitis',
+      },
+      expires_at: {
+        hint: 'Leave blank for access with no expiry',
+      },
+    },
+    pedigree: {
+      registration_number: {
+        ph: 'e.g. GR-12345',
+      },
+      kennel_club: {
+        ph: 'e.g. The Kennel Club',
+      },
+      breeder_contact: {
+        ph: 'e.g. phone number or email',
+      },
+    },
+  },
+  loyaltyPage: {
+    title: 'Loyalty programme',
+    subtitle: 'Earn points on every payment and move up a tier',
+    yourTier: 'Your tier',
+    pointsValue: 'Points: {{points}}',
+    toNext: 'Next: {{tier}} — {{points}} points to go',
+    maxTier: 'Top tier',
+    yourDiscount: 'You get {{percent}}% off AI subscriptions.',
+    noDiscountYet: 'Move up a tier to unlock a discount on AI subscriptions.',
+    loginPrompt: 'Log in to see your points and tier.',
+    login: 'Log in',
+    earnTitle: 'How to earn points',
+    earnRate: 'Points for every €1 you pay: {{points}}',
+    source_orders: 'Shop purchases',
+    source_bookings: 'Service bookings',
+    source_telehealth: 'Telehealth sessions',
+    source_events: 'Event registrations',
+    source_subscriptions: 'AI and food subscriptions',
+    refundNote: 'If a payment is refunded, its points are removed proportionally (all of them for a full refund).',
+    tiersTitle: 'Tiers and benefits',
+    current: 'Current',
+    fromPoints: 'From {{points}} points',
+    startTier: 'From sign-up',
+    aiDiscount: '{{percent}}% off AI subscriptions',
+    noDiscount: 'No discount',
+    discountNote: 'The discount applies only to the platform’s AI subscriptions, not to providers’ products or services. It is applied automatically when you buy a new subscription, for the first billing period (1 month on monthly, 12 months on yearly billing).',
+    seePlans: 'See the plans',
+  },
+  adminLoyalty: {
+    title: 'Loyalty programme',
+    subtitle: 'Points per euro, tier thresholds and AI subscription discount',
+    saved: 'Settings saved',
+    saveError: 'Saving failed',
+    saving: 'Saving...',
+    note: 'Changes apply to new payments and new AI subscriptions. Points already awarded and existing subscriptions do not change. Tiers are recalculated immediately with the new thresholds.',
+    earnTitle: 'Points earning',
+    earnNote: 'Points = payment amount in € × points per €, rounded down. With 0, no points are awarded.',
+    pointsPerEuro: 'Points per €1',
+    tiersTitle: 'Tiers',
+    tiersNote: 'Threshold in points (increasing; the first tier starts at 0) and AI subscription discount (0–50%).',
+    colTier: 'Tier',
+    colThreshold: 'Threshold (points)',
+    colDiscount: 'AI discount',
+    errPointsPerEuro: 'Points per € must be between 0 and 1000, with up to 2 decimals.',
+    errThresholds: 'Thresholds must be whole numbers of points.',
+    errIncreasing: 'Tier thresholds must increase.',
+    errDiscount: 'The discount must be a whole number from 0 to 50.',
+  },
   nav: {
     orders: 'Orders', wishlist: 'Wishlist', more: 'More', account: 'Account', popular: 'Popular', mainNav: 'Main navigation', mobileNav: 'Mobile navigation', moreOptions: 'More options', search: 'Search', notifications: 'Notifications', unread: '{{count}} unread', cart: 'Cart', cartItems: '{{count}} items', userMenu: 'User menu', skipToContent: 'Skip to content',
     welfareOrgs: 'Welfare orgs',
@@ -6398,7 +7295,7 @@ const en: typeof el = {
     services: 'Services', telehealth: 'Telehealth', social: 'Social',
     forum: 'Forum', community: 'Community', events: 'Events',
     myPets: 'My Pets', medicalCenter: 'Medical Center',
-    petTracker: 'Tracker', myBookings: 'Bookings', profile: 'Profile',
+    petTracker: 'Tracker', myBookings: 'Bookings', profile: 'Account',
     provider: 'Provider', providerDashboard: 'Provider Dashboard',
     providerTools: 'Provider Tools', admin: 'Admin', login: 'Login',
     logout: 'Logout', breeds: 'Breeds', insurance: 'Insurance',
@@ -6592,6 +7489,8 @@ const en: typeof el = {
     checkoutCancelled: 'Payment cancelled',
     securedByStripe: 'Secured by Stripe',
     tryFreeFirst: 'Try free first',
+    tierDiscountBanner: 'As a {{tier}} member you get {{percent}}% off AI subscriptions.',
+    tierDiscountMore: 'How it works',
   },
   aiGuard: {
     expiredTitle: 'AI trial expired',
@@ -6707,6 +7606,7 @@ const en: typeof el = {
     verifications: 'Verifications',
     refunds: 'Refunds',
     deletionRequests: 'Account deletions',
+    loyalty: 'Loyalty',
   },
   adminTranslations: {
     title: 'Content translations',
@@ -6892,7 +7792,7 @@ const en: typeof el = {
     paymentPendingHint: 'The booking is confirmed as soon as the payment is completed.',
   },
   profile: {
-    title: 'Profile', edit: 'Edit', save: 'Save', saving: 'Saving...', cancel: 'Cancel',
+    title: 'Account', edit: 'Edit', save: 'Save', saving: 'Saving...', cancel: 'Cancel',
     saved: 'Profile saved!', bio: 'Bio...', phone: 'Phone', city: 'City', website: 'Website',
     loyalty: 'Loyalty Program', points: 'points',
     tabs: { overview: 'Overview', achievements: 'Achievements', orders: 'Orders', bookings: 'Bookings' },
@@ -8550,6 +9450,19 @@ const es: typeof el = {
       duration: 'Duración (minutos)',
       maxParticipants: 'Máximo de participantes',
       petTypes: 'Tipos de mascota',
+      requiredNote: 'Los campos con * son obligatorios.',
+      meetingPoint: 'Punto de encuentro *',
+      mapTitle: 'Punto en el mapa',
+      mapHint: 'Busca el punto para que la ciudad se rellene automáticamente y los participantes tengan indicaciones.',
+      mapNotSet: 'Aún no se ha encontrado en el mapa — los participantes solo verán la dirección.',
+      cityAuto: 'Ciudad: {{city}} (según la dirección)',
+      cityOptional: 'Ciudad',
+      cityHint: 'No se pudo obtener de la dirección. Se usa para la lista «cerca de ti».',
+      details: 'Detalles del punto',
+      detailsPlaceholder: 'p. ej. junto a la fuente, entrada norte',
+      descriptionPlaceholder: 'p. ej. Paseo tranquilo de una hora — traed agua para los perros.',
+      maxPlaceholder: 'p. ej. 10 (vacío = 10)',
+      petTypesHint: 'Déjalo vacío si el paseo es para todos.',
     },
     creating: 'Creando...',
     createEvent: 'Crear evento',
@@ -8569,6 +9482,16 @@ const es: typeof el = {
     deleteQ: '¿Eliminar el evento «{{title}}»?',
     deleteFailed: 'Error al eliminar',
     responseFailed: 'No se pudo registrar tu respuesta',
+    directions: 'Cómo llegar',
+    err: {
+      title: 'Escribe un título (al menos 2 caracteres).',
+      date: 'Elige una fecha.',
+      time: 'Elige una hora.',
+      address: 'Escribe el punto de encuentro.',
+      city: 'Escribe la ciudad.',
+      number: 'Escribe un número entero positivo.',
+      summary: 'Completa los campos marcados en rojo.',
+    },
   },
   pgCommunities: {
     locationFound: '¡Ubicación encontrada!',
@@ -10189,6 +11112,430 @@ const es: typeof el = {
     alsoUserRequestHint: 'El usuario también había solicitado la eliminación: no se puede cancelar desde aquí.',
     status_executing: 'Eliminación en curso o interrumpida',
   },
+  navGroups: {
+    health: 'Salud',
+    tools: 'Herramientas',
+    info: 'Información',
+    infoSupport: 'Información y ayuda',
+    pets: 'Mascotas',
+    explore: 'Explorar',
+    popularProducts: 'Productos populares',
+  },
+  accountHub: {
+    subscriptions: 'Suscripciones',
+    activity: 'Mi actividad',
+    myReviews: 'Mis reseñas',
+    myPets: 'Mis mascotas',
+    rewards: 'Recompensas',
+    howTiersWork: 'Cómo funcionan los niveles',
+    messages: 'Mensajes y notificaciones',
+    security: 'Cuenta y seguridad',
+    privacy: 'Privacidad y datos',
+    help: 'Ayuda y condiciones',
+    editProfile: 'Editar perfil',
+    language: 'Idioma',
+    consents: 'Consentimientos (cookies)',
+    privacyPolicy: 'Política de privacidad',
+    aiNone: 'No tienes suscripción de IA',
+    aiTrial: 'Prueba gratuita en curso',
+    aiTrialEnds: 'La prueba termina el {{date}}',
+    aiExpired: 'Tu prueba gratuita ha terminado',
+    aiManage: 'Gestionar',
+    foodSubs: 'Suscripciones de comida',
+    foodSubsEmpty: 'No tienes ninguna suscripción de comida. Empieza una desde un producto de la tienda.',
+    recentOrders: 'Pedidos recientes',
+    recentBookings: 'Reservas recientes',
+    aiRenews: 'Se renueva el {{date}}',
+  },
+  myReviews: {
+    empty: 'Aún no has escrito reseñas',
+    emptyDesc: 'Tras una reserva completada, puedes valorar el servicio desde tus reservas.',
+    stars_one: '{{count}} de 5 estrellas',
+    stars_other: '{{count}} de 5 estrellas',
+  },
+  homeGuest: {
+    title: 'La historia clínica de tu mascota, siempre contigo',
+    text: 'Vacunas, medicamentos, alergias y visitas al veterinario, organizados en un solo lugar.',
+    cta: 'Regístrate',
+  },
+  passportForm: {
+    vaccines: {
+      vaccine_name: {
+        label: 'Nombre de la vacuna',
+        ph: 'p. ej. DHPPi, Rabia (Nobivac Rabies)',
+      },
+      vaccine_type: {
+        label: 'Categoría de la vacuna',
+        hint: 'Elige «Rabia» para la vacuna antirrábica: es obligatoria para viajar',
+      },
+      date_administered: {
+        label: 'Fecha de administración',
+      },
+      next_due_date: {
+        label: 'Próxima dosis (fecha)',
+        hint: 'Según la anotó el veterinario en la cartilla',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      notes: {
+        ph: 'p. ej. N.º de lote A123B45, sin reacción',
+      },
+    },
+    health: {
+      title: {
+        label: 'Motivo de la visita',
+        ph: 'p. ej. Revisión anual, Vómitos desde ayer',
+      },
+      date: {
+        label: 'Fecha de la visita',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      description: {
+        ph: 'p. ej. Exploración general, todo normal',
+      },
+      cost: {
+        ph: 'p. ej. 45',
+      },
+      next_appointment: {
+        label: 'Próxima cita (fecha)',
+      },
+    },
+    meds: {
+      name: {
+        label: 'Nombre del medicamento',
+        ph: 'p. ej. Synulox 250 mg',
+      },
+      active_ingredient: {
+        ph: 'p. ej. Amoxicilina / ácido clavulánico',
+      },
+      dosage: {
+        ph: 'p. ej. 1 comprimido 2 veces al día',
+      },
+      start_date: {
+        label: 'Fecha de inicio',
+      },
+      end_date: {
+        label: 'Fecha de fin del tratamiento',
+        hint: 'Déjalo vacío si el tratamiento continúa',
+      },
+      prescribed_by: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      reason: {
+        ph: 'p. ej. Otitis',
+      },
+      side_effects: {
+        ph: 'p. ej. Somnolencia, menos apetito',
+      },
+    },
+    lab: {
+      title: {
+        label: 'Nombre de la prueba',
+        ph: 'p. ej. Analítica prequirúrgica, Test de Leishmania',
+      },
+      date: {
+        label: 'Fecha de la prueba',
+      },
+      lab_name: {
+        ph: 'p. ej. IDEXX',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      findings: {
+        ph: 'p. ej. Urea ligeramente elevada',
+      },
+    },
+    imaging: {
+      imaging_type: {
+        label: 'Tipo de imagen',
+      },
+      date: {
+        label: 'Fecha de la prueba',
+      },
+      body_region: {
+        ph: 'p. ej. Tórax, pata trasera izquierda',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      findings: {
+        ph: 'p. ej. Sin signos de fractura',
+      },
+      report: {
+        ph: 'p. ej. Resumen del informe del radiólogo',
+      },
+    },
+    surgery: {
+      procedure: {
+        label: 'Intervención',
+        ph: 'p. ej. Esterilización, Extirpación de un bulto',
+      },
+      date: {
+        label: 'Fecha de la intervención',
+      },
+      surgeon_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      duration_min: {
+        ph: 'p. ej. 45',
+      },
+      complications: {
+        ph: 'p. ej. Ninguna',
+      },
+      outcome: {
+        ph: 'p. ej. Con éxito, recuperación completa',
+      },
+      follow_up: {
+        ph: 'p. ej. Retirar los puntos en 10 días',
+      },
+      cost: {
+        ph: 'p. ej. 45',
+      },
+    },
+    allergies: {
+      allergen: {
+        label: 'Alérgeno',
+        ph: 'p. ej. Pollo, Polen, Penicilina',
+      },
+      diagnosed_date: {
+        label: 'Fecha del diagnóstico',
+      },
+      reaction: {
+        ph: 'p. ej. Picor, vómitos, hinchazón',
+      },
+      treatment: {
+        ph: 'p. ej. Antihistamínico, dieta de eliminación',
+      },
+      diagnosed_by: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+    },
+    chronic: {
+      condition: {
+        label: 'Enfermedad',
+        ph: 'p. ej. Diabetes, Enfermedad renal crónica',
+      },
+      diagnosed_date: {
+        label: 'Fecha del diagnóstico',
+      },
+      icd_code: {
+        ph: 'p. ej. E11',
+      },
+      diagnosed_by: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      treatment_plan: {
+        ph: 'p. ej. Insulina 2 veces al día, dieta especial',
+      },
+      monitoring: {
+        ph: 'p. ej. Glucosa cada 3 meses',
+      },
+    },
+    dental: {
+      procedure: {
+        label: 'Procedimiento dental',
+      },
+      date: {
+        label: 'Fecha del procedimiento',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      clinic_name: {
+        ph: 'p. ej. Clínica Veterinaria Centro',
+      },
+      teeth_treated: {
+        ph: 'p. ej. 108, 208 o «maxilar superior»',
+      },
+      findings: {
+        ph: 'p. ej. Sarro, gingivitis',
+      },
+      next_due: {
+        label: 'Próxima limpieza (fecha)',
+      },
+      cost: {
+        ph: 'p. ej. 45',
+      },
+    },
+    weight: {
+      weight_kg: {
+        label: 'Peso (kg)',
+        ph: 'p. ej. 12,5',
+      },
+      date: {
+        label: 'Fecha de la medición',
+      },
+      bcs: {
+        ph: 'p. ej. 5',
+        hint: '1 = muy delgado, 4–5 = ideal, 9 = obeso',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      notes: {
+        ph: 'p. ej. Tras 2 meses de dieta',
+      },
+    },
+    genetic: {
+      test_name: {
+        label: 'Prueba genética',
+        ph: 'p. ej. Embark Breed + Health',
+      },
+      date: {
+        label: 'Fecha de la prueba',
+      },
+      provider: {
+        ph: 'p. ej. Embark, Wisdom Panel',
+      },
+      results: {
+        ph: 'p. ej. Portador de MDR1, sin otros hallazgos',
+      },
+      breeds_detected: {
+        ph: 'p. ej. Labrador, Border Collie',
+      },
+      conditions_found: {
+        ph: 'p. ej. Displasia de cadera',
+      },
+    },
+    vitals: {
+      date: {
+        label: 'Fecha de la medición',
+      },
+      temperature_c: {
+        label: 'Temperatura (°C)',
+        ph: 'p. ej. 38,5',
+      },
+      heart_rate: {
+        label: 'Frecuencia cardíaca (lpm)',
+        ph: 'p. ej. 90',
+      },
+      respiratory_rate: {
+        label: 'Frecuencia respiratoria (/min)',
+        ph: 'p. ej. 24',
+      },
+      blood_pressure: {
+        ph: 'p. ej. 140/90',
+      },
+      weight_kg: {
+        ph: 'p. ej. 12,5',
+      },
+      vet_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+    },
+    travel: {
+      destination_country: {
+        ph: 'p. ej. Italia',
+      },
+      origin_city: {
+        ph: 'p. ej. El Pireo',
+      },
+      destination_city: {
+        ph: 'p. ej. Heraclión',
+      },
+      departure_date: {
+        label: 'Fecha de salida',
+      },
+      carrier: {
+        ph: 'p. ej. Aegean, Minoan Lines',
+      },
+      booking_ref: {
+        ph: 'p. ej. ABC123',
+      },
+    },
+    access: {
+      provider_email: {
+        ph: 'p. ej. vet@example.com',
+      },
+      provider_name: {
+        ph: 'p. ej. Dra. Laura García',
+      },
+      reason: {
+        ph: 'p. ej. Segunda opinión sobre una dermatitis',
+      },
+      expires_at: {
+        hint: 'Déjalo vacío para un acceso sin caducidad',
+      },
+    },
+    pedigree: {
+      registration_number: {
+        ph: 'p. ej. GR-12345',
+      },
+      kennel_club: {
+        ph: 'p. ej. Real Sociedad Canina de España',
+      },
+      breeder_contact: {
+        ph: 'p. ej. teléfono o email',
+      },
+    },
+  },
+  loyaltyPage: {
+    title: 'Programa de fidelidad',
+    subtitle: 'Gana puntos con cada pago y sube de nivel',
+    yourTier: 'Tu nivel',
+    pointsValue: 'Puntos: {{points}}',
+    toNext: 'Siguiente: {{tier}} — faltan {{points}} puntos',
+    maxTier: 'Nivel máximo',
+    yourDiscount: 'Tienes un {{percent}} % de descuento en las suscripciones de IA.',
+    noDiscountYet: 'Sube de nivel para obtener descuento en las suscripciones de IA.',
+    loginPrompt: 'Inicia sesión para ver tus puntos y tu nivel.',
+    login: 'Iniciar sesión',
+    earnTitle: 'Cómo ganar puntos',
+    earnRate: 'Puntos por cada 1 € que pagas: {{points}}',
+    source_orders: 'Compras en la tienda',
+    source_bookings: 'Reservas de servicios',
+    source_telehealth: 'Sesiones de telemedicina',
+    source_events: 'Inscripciones a eventos',
+    source_subscriptions: 'Suscripciones de IA y de comida',
+    refundNote: 'Si se reembolsa un pago, se restan sus puntos de forma proporcional (todos en un reembolso total).',
+    tiersTitle: 'Niveles y ventajas',
+    current: 'Actual',
+    fromPoints: 'Desde {{points}} puntos',
+    startTier: 'Desde el registro',
+    aiDiscount: '−{{percent}} % en suscripciones de IA',
+    noDiscount: 'Sin descuento',
+    discountNote: 'El descuento solo se aplica a las suscripciones de IA de la plataforma, no a productos ni servicios de proveedores. Se aplica automáticamente al contratar una nueva suscripción, durante el primer periodo de facturación (1 mes en la mensual, 12 meses en la anual).',
+    seePlans: 'Ver los planes',
+  },
+  adminLoyalty: {
+    title: 'Programa de fidelidad',
+    subtitle: 'Puntos por euro, umbrales de nivel y descuento en suscripciones de IA',
+    saved: 'Ajustes guardados',
+    saveError: 'No se pudo guardar',
+    saving: 'Guardando...',
+    note: 'Los cambios se aplican a los pagos nuevos y a las nuevas suscripciones de IA. Los puntos ya otorgados y las suscripciones existentes no cambian. Los niveles se recalculan de inmediato con los nuevos umbrales.',
+    earnTitle: 'Obtención de puntos',
+    earnNote: 'Puntos = importe del pago en € × puntos por €, redondeado hacia abajo. Con 0 no se otorgan puntos.',
+    pointsPerEuro: 'Puntos por 1 €',
+    tiersTitle: 'Niveles',
+    tiersNote: 'Umbral en puntos (creciente; el primer nivel empieza en 0) y descuento en suscripciones de IA (0–50 %).',
+    colTier: 'Nivel',
+    colThreshold: 'Umbral (puntos)',
+    colDiscount: 'Descuento IA',
+    errPointsPerEuro: 'Los puntos por € deben estar entre 0 y 1000, con hasta 2 decimales.',
+    errThresholds: 'Los umbrales deben ser números enteros de puntos.',
+    errIncreasing: 'Los umbrales de los niveles deben ser crecientes.',
+    errDiscount: 'El descuento debe ser un número entero de 0 a 50.',
+  },
   nav: {
     orders: 'Pedidos', wishlist: 'Lista de deseos', more: 'Más', account: 'Cuenta', popular: 'Populares', mainNav: 'Navegación principal', mobileNav: 'Navegación móvil', moreOptions: 'Más opciones', search: 'Buscar', notifications: 'Notificaciones', unread: '{{count}} sin leer', cart: 'Carrito', cartItems: '{{count}} artículos', userMenu: 'Menú de usuario', skipToContent: 'Ir al contenido',
     welfareOrgs: 'Protectoras',
@@ -10197,7 +11544,7 @@ const es: typeof el = {
     services: 'Servicios', telehealth: 'Telesalud', social: 'Social',
     forum: 'Foro', community: 'Comunidad', events: 'Eventos',
     myPets: 'Mis Mascotas', medicalCenter: 'Centro Médico',
-    petTracker: 'Rastreador', myBookings: 'Reservas', profile: 'Perfil',
+    petTracker: 'Rastreador', myBookings: 'Reservas', profile: 'Cuenta',
     provider: 'Proveedor', providerDashboard: 'Panel Proveedor',
     providerTools: 'Herramientas', admin: 'Admin', login: 'Iniciar sesión',
     logout: 'Cerrar sesión', breeds: 'Razas', insurance: 'Seguro',
@@ -10391,6 +11738,8 @@ const es: typeof el = {
     checkoutCancelled: 'Pago cancelado',
     securedByStripe: 'Pago seguro con Stripe',
     tryFreeFirst: 'Prueba gratis primero',
+    tierDiscountBanner: 'Como miembro del nivel {{tier}} tienes un {{percent}} % de descuento en las suscripciones de IA.',
+    tierDiscountMore: 'Cómo funciona',
   },
   aiGuard: {
     expiredTitle: 'Prueba AI caducada',
@@ -10506,6 +11855,7 @@ const es: typeof el = {
     verifications: 'Verificaciones',
     refunds: 'Reembolsos',
     deletionRequests: 'Eliminación de cuentas',
+    loyalty: 'Fidelidad',
   },
   adminTranslations: {
     title: 'Traducciones de contenido',
@@ -10691,7 +12041,7 @@ const es: typeof el = {
     paymentPendingHint: 'La reserva se confirma en cuanto se complete el pago.',
   },
   profile: {
-    title: 'Perfil', edit: 'Editar', save: 'Guardar', saving: 'Guardando...', cancel: 'Cancelar',
+    title: 'Cuenta', edit: 'Editar', save: 'Guardar', saving: 'Guardando...', cancel: 'Cancelar',
     saved: '¡Perfil guardado!', bio: 'Bio...', phone: 'Teléfono', city: 'Ciudad', website: 'Sitio web',
     loyalty: 'Programa de Fidelidad', points: 'puntos',
     tabs: { overview: 'Resumen', achievements: 'Logros', orders: 'Pedidos', bookings: 'Reservas' },
@@ -12349,6 +13699,19 @@ const fr: typeof el = {
       duration: 'Durée (minutes)',
       maxParticipants: 'Nombre maximum de participants',
       petTypes: 'Types d\'animaux',
+      requiredNote: 'Les champs marqués * sont obligatoires.',
+      meetingPoint: 'Point de rendez-vous *',
+      mapTitle: 'Point sur la carte',
+      mapHint: 'Trouvez le point pour que la ville soit remplie automatiquement et que les participants aient l’itinéraire.',
+      mapNotSet: 'Pas encore trouvé sur la carte — les participants ne verront que l’adresse.',
+      cityAuto: 'Ville : {{city}} (d’après l’adresse)',
+      cityOptional: 'Ville',
+      cityHint: 'Impossible de la déduire de l’adresse. Elle sert à la liste « près de chez vous ».',
+      details: 'Précisions sur le lieu',
+      detailsPlaceholder: 'ex. près de la fontaine, entrée nord',
+      descriptionPlaceholder: 'ex. Balade tranquille d’une heure — apportez de l’eau pour les chiens.',
+      maxPlaceholder: 'ex. 10 (vide = 10)',
+      petTypesHint: 'Laissez vide si la promenade est ouverte à tous.',
     },
     creating: 'Création...',
     createEvent: 'Créer l\'événement',
@@ -12368,6 +13731,16 @@ const fr: typeof el = {
     deleteQ: 'Supprimer l’événement « {{title}} » ?',
     deleteFailed: 'Erreur de suppression',
     responseFailed: 'Votre réponse n’a pas été enregistrée',
+    directions: 'Itinéraire',
+    err: {
+      title: 'Saisissez un titre (au moins 2 caractères).',
+      date: 'Choisissez une date.',
+      time: 'Choisissez une heure.',
+      address: 'Saisissez le point de rendez-vous.',
+      city: 'Saisissez la ville.',
+      number: 'Saisissez un nombre entier positif.',
+      summary: 'Complétez les champs signalés en rouge.',
+    },
   },
   pgCommunities: {
     locationFound: 'Position trouvée !',
@@ -13988,6 +15361,430 @@ const fr: typeof el = {
     alsoUserRequestHint: 'L\'utilisateur avait lui-même demandé la suppression — elle ne peut pas être annulée ici.',
     status_executing: 'Suppression en cours ou interrompue',
   },
+  navGroups: {
+    health: 'Santé',
+    tools: 'Outils',
+    info: 'Infos',
+    infoSupport: 'Infos et assistance',
+    pets: 'Animaux',
+    explore: 'Explorer',
+    popularProducts: 'Produits populaires',
+  },
+  accountHub: {
+    subscriptions: 'Abonnements',
+    activity: 'Mon activité',
+    myReviews: 'Mes avis',
+    myPets: 'Mes animaux',
+    rewards: 'Récompenses',
+    howTiersWork: 'Comment fonctionnent les niveaux',
+    messages: 'Messages et notifications',
+    security: 'Compte et sécurité',
+    privacy: 'Confidentialité et données',
+    help: 'Aide et conditions',
+    editProfile: 'Modifier le profil',
+    language: 'Langue',
+    consents: 'Consentements (cookies)',
+    privacyPolicy: 'Politique de confidentialité',
+    aiNone: 'Vous n\'avez pas d\'abonnement IA',
+    aiTrial: 'Essai gratuit en cours',
+    aiTrialEnds: 'L\'essai se termine le {{date}}',
+    aiExpired: 'Votre essai gratuit est terminé',
+    aiManage: 'Gérer',
+    foodSubs: 'Abonnements alimentaires',
+    foodSubsEmpty: 'Vous n\'avez aucun abonnement alimentaire. Démarrez-en un depuis un produit de la boutique.',
+    recentOrders: 'Commandes récentes',
+    recentBookings: 'Réservations récentes',
+    aiRenews: 'Renouvellement le {{date}}',
+  },
+  myReviews: {
+    empty: 'Vous n\'avez encore écrit aucun avis',
+    emptyDesc: 'Après une réservation terminée, vous pouvez noter le service depuis vos réservations.',
+    stars_one: '{{count}} étoile sur 5',
+    stars_other: '{{count}} étoiles sur 5',
+  },
+  homeGuest: {
+    title: 'Le dossier médical de votre animal, toujours avec vous',
+    text: 'Vaccins, traitements, allergies et visites chez le vétérinaire, réunis en un seul endroit.',
+    cta: 'S\'inscrire',
+  },
+  passportForm: {
+    vaccines: {
+      vaccine_name: {
+        label: 'Nom du vaccin',
+        ph: 'p. ex. CHPPi, Rage (Nobivac Rabies)',
+      },
+      vaccine_type: {
+        label: 'Catégorie du vaccin',
+        hint: 'Choisissez « Rage » pour le vaccin antirabique — il est obligatoire pour voyager',
+      },
+      date_administered: {
+        label: 'Date d\'administration',
+      },
+      next_due_date: {
+        label: 'Prochaine dose (date)',
+        hint: 'Telle que notée par le vétérinaire dans le carnet',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      notes: {
+        ph: 'p. ex. N° de lot A123B45, aucune réaction',
+      },
+    },
+    health: {
+      title: {
+        label: 'Motif de la visite',
+        ph: 'p. ex. Bilan annuel, Vomissements depuis hier',
+      },
+      date: {
+        label: 'Date de la visite',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      description: {
+        ph: 'p. ex. Examen général, tout est normal',
+      },
+      cost: {
+        ph: 'p. ex. 45',
+      },
+      next_appointment: {
+        label: 'Prochain rendez-vous (date)',
+      },
+    },
+    meds: {
+      name: {
+        label: 'Nom du médicament',
+        ph: 'p. ex. Synulox 250 mg',
+      },
+      active_ingredient: {
+        ph: 'p. ex. Amoxicilline / acide clavulanique',
+      },
+      dosage: {
+        ph: 'p. ex. 1 comprimé 2 fois par jour',
+      },
+      start_date: {
+        label: 'Date de début',
+      },
+      end_date: {
+        label: 'Date de fin du traitement',
+        hint: 'Laissez vide si le traitement est en cours',
+      },
+      prescribed_by: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      reason: {
+        ph: 'p. ex. Otite',
+      },
+      side_effects: {
+        ph: 'p. ex. Somnolence, perte d\'appétit',
+      },
+    },
+    lab: {
+      title: {
+        label: 'Nom de l\'analyse',
+        ph: 'p. ex. Bilan préopératoire, Test Leishmania',
+      },
+      date: {
+        label: 'Date de l\'analyse',
+      },
+      lab_name: {
+        ph: 'p. ex. IDEXX',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      findings: {
+        ph: 'p. ex. Urée légèrement élevée',
+      },
+    },
+    imaging: {
+      imaging_type: {
+        label: 'Type d\'imagerie',
+      },
+      date: {
+        label: 'Date de l\'analyse',
+      },
+      body_region: {
+        ph: 'p. ex. Thorax, patte arrière gauche',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      findings: {
+        ph: 'p. ex. Aucun signe de fracture',
+      },
+      report: {
+        ph: 'p. ex. Résumé du compte rendu du radiologue',
+      },
+    },
+    surgery: {
+      procedure: {
+        label: 'Intervention',
+        ph: 'p. ex. Stérilisation, Ablation d\'une masse',
+      },
+      date: {
+        label: 'Date de l\'intervention',
+      },
+      surgeon_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      duration_min: {
+        ph: 'p. ex. 45',
+      },
+      complications: {
+        ph: 'p. ex. Aucune',
+      },
+      outcome: {
+        ph: 'p. ex. Réussie, rétablissement complet',
+      },
+      follow_up: {
+        ph: 'p. ex. Retrait des points dans 10 jours',
+      },
+      cost: {
+        ph: 'p. ex. 45',
+      },
+    },
+    allergies: {
+      allergen: {
+        label: 'Allergène',
+        ph: 'p. ex. Poulet, Pollen, Pénicilline',
+      },
+      diagnosed_date: {
+        label: 'Date du diagnostic',
+      },
+      reaction: {
+        ph: 'p. ex. Démangeaisons, vomissements, gonflement',
+      },
+      treatment: {
+        ph: 'p. ex. Antihistaminique, régime d\'éviction',
+      },
+      diagnosed_by: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+    },
+    chronic: {
+      condition: {
+        label: 'Affection',
+        ph: 'p. ex. Diabète, Maladie rénale chronique',
+      },
+      diagnosed_date: {
+        label: 'Date du diagnostic',
+      },
+      icd_code: {
+        ph: 'p. ex. E11',
+      },
+      diagnosed_by: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      treatment_plan: {
+        ph: 'p. ex. Insuline 2 fois par jour, alimentation spécifique',
+      },
+      monitoring: {
+        ph: 'p. ex. Glycémie tous les 3 mois',
+      },
+    },
+    dental: {
+      procedure: {
+        label: 'Acte dentaire',
+      },
+      date: {
+        label: 'Date de l\'acte',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      clinic_name: {
+        ph: 'p. ex. Clinique vétérinaire du Centre',
+      },
+      teeth_treated: {
+        ph: 'p. ex. 108, 208 ou « mâchoire supérieure »',
+      },
+      findings: {
+        ph: 'p. ex. Tartre, gingivite',
+      },
+      next_due: {
+        label: 'Prochain détartrage (date)',
+      },
+      cost: {
+        ph: 'p. ex. 45',
+      },
+    },
+    weight: {
+      weight_kg: {
+        label: 'Poids (kg)',
+        ph: 'p. ex. 12,5',
+      },
+      date: {
+        label: 'Date de la mesure',
+      },
+      bcs: {
+        ph: 'p. ex. 5',
+        hint: '1 = très maigre, 4–5 = idéal, 9 = obèse',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      notes: {
+        ph: 'p. ex. Après 2 mois de régime',
+      },
+    },
+    genetic: {
+      test_name: {
+        label: 'Test génétique',
+        ph: 'p. ex. Embark Breed + Health',
+      },
+      date: {
+        label: 'Date du test',
+      },
+      provider: {
+        ph: 'p. ex. Embark, Wisdom Panel',
+      },
+      results: {
+        ph: 'p. ex. Porteur MDR1, rien d\'autre',
+      },
+      breeds_detected: {
+        ph: 'p. ex. Labrador, Border Collie',
+      },
+      conditions_found: {
+        ph: 'p. ex. Dysplasie de la hanche',
+      },
+    },
+    vitals: {
+      date: {
+        label: 'Date de la mesure',
+      },
+      temperature_c: {
+        label: 'Température (°C)',
+        ph: 'p. ex. 38,5',
+      },
+      heart_rate: {
+        label: 'Fréquence cardiaque (bpm)',
+        ph: 'p. ex. 90',
+      },
+      respiratory_rate: {
+        label: 'Fréquence respiratoire (/min)',
+        ph: 'p. ex. 24',
+      },
+      blood_pressure: {
+        ph: 'p. ex. 140/90',
+      },
+      weight_kg: {
+        ph: 'p. ex. 12,5',
+      },
+      vet_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+    },
+    travel: {
+      destination_country: {
+        ph: 'p. ex. Italie',
+      },
+      origin_city: {
+        ph: 'p. ex. Le Pirée',
+      },
+      destination_city: {
+        ph: 'p. ex. Héraklion',
+      },
+      departure_date: {
+        label: 'Date de départ',
+      },
+      carrier: {
+        ph: 'p. ex. Aegean, Minoan Lines',
+      },
+      booking_ref: {
+        ph: 'p. ex. ABC123',
+      },
+    },
+    access: {
+      provider_email: {
+        ph: 'p. ex. vet@example.com',
+      },
+      provider_name: {
+        ph: 'p. ex. Dr Claire Martin',
+      },
+      reason: {
+        ph: 'p. ex. Deuxième avis sur une dermatite',
+      },
+      expires_at: {
+        hint: 'Laissez vide pour un accès sans expiration',
+      },
+    },
+    pedigree: {
+      registration_number: {
+        ph: 'p. ex. GR-12345',
+      },
+      kennel_club: {
+        ph: 'p. ex. Société Centrale Canine',
+      },
+      breeder_contact: {
+        ph: 'p. ex. téléphone ou e-mail',
+      },
+    },
+  },
+  loyaltyPage: {
+    title: 'Programme de fidélité',
+    subtitle: 'Gagnez des points à chaque paiement et montez de niveau',
+    yourTier: 'Votre niveau',
+    pointsValue: 'Points : {{points}}',
+    toNext: 'Suivant : {{tier}} — encore {{points}} points',
+    maxTier: 'Niveau maximal',
+    yourDiscount: 'Vous bénéficiez de {{percent}} % de réduction sur les abonnements IA.',
+    noDiscountYet: 'Montez de niveau pour obtenir une réduction sur les abonnements IA.',
+    loginPrompt: 'Connectez-vous pour voir vos points et votre niveau.',
+    login: 'Se connecter',
+    earnTitle: 'Comment gagner des points',
+    earnRate: 'Points pour chaque euro payé : {{points}}',
+    source_orders: 'Achats dans la boutique',
+    source_bookings: 'Réservations de services',
+    source_telehealth: 'Séances de téléconsultation',
+    source_events: 'Inscriptions aux événements',
+    source_subscriptions: 'Abonnements IA et alimentation',
+    refundNote: 'Si un paiement est remboursé, ses points sont retirés au prorata (tous en cas de remboursement intégral).',
+    tiersTitle: 'Niveaux et avantages',
+    current: 'Actuel',
+    fromPoints: 'À partir de {{points}} points',
+    startTier: 'Dès l’inscription',
+    aiDiscount: '−{{percent}} % sur les abonnements IA',
+    noDiscount: 'Sans réduction',
+    discountNote: 'La réduction s’applique uniquement aux abonnements IA de la plateforme, pas aux produits ni aux services des prestataires. Elle est appliquée automatiquement à l’achat d’un nouvel abonnement, pour la première période de facturation (1 mois en mensuel, 12 mois en annuel).',
+    seePlans: 'Voir les formules',
+  },
+  adminLoyalty: {
+    title: 'Programme de fidélité',
+    subtitle: 'Points par euro, seuils des niveaux et réduction sur les abonnements IA',
+    saved: 'Paramètres enregistrés',
+    saveError: 'L’enregistrement a échoué',
+    saving: 'Enregistrement...',
+    note: 'Les modifications s’appliquent aux nouveaux paiements et aux nouveaux abonnements IA. Les points déjà attribués et les abonnements existants ne changent pas. Les niveaux sont recalculés immédiatement avec les nouveaux seuils.',
+    earnTitle: 'Attribution des points',
+    earnNote: 'Points = montant du paiement en € × points par €, arrondi à l’inférieur. Avec 0, aucun point n’est attribué.',
+    pointsPerEuro: 'Points par euro',
+    tiersTitle: 'Niveaux',
+    tiersNote: 'Seuil en points (croissant ; le premier niveau commence à 0) et réduction sur les abonnements IA (0–50 %).',
+    colTier: 'Niveau',
+    colThreshold: 'Seuil (points)',
+    colDiscount: 'Réduction IA',
+    errPointsPerEuro: 'Les points par € doivent être compris entre 0 et 1000, avec au plus 2 décimales.',
+    errThresholds: 'Les seuils doivent être des nombres entiers de points.',
+    errIncreasing: 'Les seuils des niveaux doivent être croissants.',
+    errDiscount: 'La réduction doit être un nombre entier de 0 à 50.',
+  },
   nav: {
     orders: 'Commandes', wishlist: 'Liste d’envies', more: 'Plus', account: 'Compte', popular: 'Populaires', mainNav: 'Navigation principale', mobileNav: 'Navigation mobile', moreOptions: 'Plus d’options', search: 'Rechercher', notifications: 'Notifications', unread: '{{count}} non lues', cart: 'Panier', cartItems: '{{count}} articles', userMenu: 'Menu utilisateur', skipToContent: 'Aller au contenu',
     welfareOrgs: 'Protection animale',
@@ -13996,7 +15793,7 @@ const fr: typeof el = {
     services: 'Services', telehealth: 'Télésanté', social: 'Social',
     forum: 'Forum', community: 'Communauté', events: 'Événements',
     myPets: 'Mes Animaux', medicalCenter: 'Centre Médical',
-    petTracker: 'Tracker', myBookings: 'Réservations', profile: 'Profil',
+    petTracker: 'Tracker', myBookings: 'Réservations', profile: 'Compte',
     provider: 'Prestataire', providerDashboard: 'Tableau de bord',
     providerTools: 'Outils', admin: 'Admin', login: 'Connexion',
     logout: 'Déconnexion', breeds: 'Races', insurance: 'Assurance',
@@ -14190,6 +15987,8 @@ const fr: typeof el = {
     checkoutCancelled: 'Paiement annulé',
     securedByStripe: 'Sécurisé par Stripe',
     tryFreeFirst: 'Essayer gratuitement d\'abord',
+    tierDiscountBanner: 'En tant que membre {{tier}}, vous bénéficiez de {{percent}} % de réduction sur les abonnements IA.',
+    tierDiscountMore: 'Comment ça marche',
   },
   aiGuard: {
     expiredTitle: 'Essai IA expiré',
@@ -14305,6 +16104,7 @@ const fr: typeof el = {
     verifications: 'Vérifications',
     refunds: 'Remboursements',
     deletionRequests: 'Suppressions de comptes',
+    loyalty: 'Fidélité',
   },
   adminTranslations: {
     title: 'Traductions de contenu',
@@ -14490,7 +16290,7 @@ const fr: typeof el = {
     paymentPendingHint: 'La réservation est confirmée dès que le paiement est finalisé.',
   },
   profile: {
-    title: 'Profil', edit: 'Modifier', save: 'Enregistrer', saving: 'Enregistrement...', cancel: 'Annuler',
+    title: 'Compte', edit: 'Modifier', save: 'Enregistrer', saving: 'Enregistrement...', cancel: 'Annuler',
     saved: 'Profil enregistré!', bio: 'Bio...', phone: 'Téléphone', city: 'Ville', website: 'Site web',
     loyalty: 'Programme de fidélité', points: 'points',
     tabs: { overview: 'Aperçu', achievements: 'Réalisations', orders: 'Commandes', bookings: 'Réservations' },
@@ -16148,6 +17948,19 @@ const zh: typeof el = {
       duration: '时长（分钟）',
       maxParticipants: '最多参与人数',
       petTypes: '宠物种类',
+      requiredNote: '带 * 的字段为必填项。',
+      meetingPoint: '集合地点 *',
+      mapTitle: '地图上的位置',
+      mapHint: '查找该地点，城市会自动填写，参与者也能获得路线。',
+      mapNotSet: '尚未在地图上找到——参与者只能看到地址。',
+      cityAuto: '城市：{{city}}（根据地址）',
+      cityOptional: '城市',
+      cityHint: '无法根据地址自动识别。该信息用于“你附近”列表。',
+      details: '地点详情',
+      detailsPlaceholder: '例如：喷泉旁，北门入口',
+      descriptionPlaceholder: '例如：轻松散步一小时——请为狗狗带水。',
+      maxPlaceholder: '例如：10（留空 = 10）',
+      petTypesHint: '如果所有宠物都可参加，请留空。',
     },
     creating: '创建中...',
     createEvent: '创建活动',
@@ -16167,6 +17980,16 @@ const zh: typeof el = {
     deleteQ: '删除活动“{{title}}”？',
     deleteFailed: '删除失败',
     responseFailed: '回复未能记录',
+    directions: '路线',
+    err: {
+      title: '请输入标题（至少 2 个字符）。',
+      date: '请选择日期。',
+      time: '请选择时间。',
+      address: '请输入集合地点。',
+      city: '请输入城市。',
+      number: '请输入正整数。',
+      summary: '请填写标红的字段。',
+    },
   },
   pgCommunities: {
     locationFound: '已定位！',
@@ -17787,6 +19610,430 @@ const zh: typeof el = {
     alsoUserRequestHint: '用户本人也曾申请删除，无法在此取消。',
     status_executing: '删除进行中或已中断',
   },
+  navGroups: {
+    health: '健康',
+    tools: '工具',
+    info: '信息',
+    infoSupport: '信息与支持',
+    pets: '宠物',
+    explore: '探索',
+    popularProducts: '热门产品',
+  },
+  accountHub: {
+    subscriptions: '订阅',
+    activity: '我的动态',
+    myReviews: '我的评价',
+    myPets: '我的宠物',
+    rewards: '奖励',
+    howTiersWork: '等级如何运作',
+    messages: '消息与通知',
+    security: '账户与安全',
+    privacy: '隐私与数据',
+    help: '帮助与条款',
+    editProfile: '编辑资料',
+    language: '语言',
+    consents: '同意设置（Cookie）',
+    privacyPolicy: '隐私政策',
+    aiNone: '你还没有 AI 订阅',
+    aiTrial: '免费试用中',
+    aiTrialEnds: '试用将于 {{date}} 结束',
+    aiExpired: '免费试用已结束',
+    aiManage: '管理',
+    foodSubs: '食品订阅',
+    foodSubsEmpty: '你还没有食品订阅。可在商店的商品页面开始订阅。',
+    recentOrders: '最近的订单',
+    recentBookings: '最近的预约',
+    aiRenews: '将于 {{date}} 续订',
+  },
+  myReviews: {
+    empty: '你还没有写过评价',
+    emptyDesc: '预约完成后，你可以在预约记录中为服务评分。',
+    stars_one: '{{count}} 星（满分 5 星）',
+    stars_other: '{{count}} 星（满分 5 星）',
+  },
+  homeGuest: {
+    title: '宠物医疗档案，随时随身',
+    text: '疫苗、用药、过敏和就诊记录，集中在一处管理。',
+    cta: '注册账户',
+  },
+  passportForm: {
+    vaccines: {
+      vaccine_name: {
+        label: '疫苗名称',
+        ph: '例如：DHPPi、狂犬病（Nobivac Rabies）',
+      },
+      vaccine_type: {
+        label: '疫苗类别',
+        hint: '狂犬病疫苗请选择“狂犬病”——出行时必须提供',
+      },
+      date_administered: {
+        label: '接种日期',
+      },
+      next_due_date: {
+        label: '下次接种（日期）',
+        hint: '以兽医在健康手册上记录的为准',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      notes: {
+        ph: '例如：批号 A123B45，无不良反应',
+      },
+    },
+    health: {
+      title: {
+        label: '就诊原因',
+        ph: '例如：年度体检、昨天起呕吐',
+      },
+      date: {
+        label: '就诊日期',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      description: {
+        ph: '例如：常规检查，一切正常',
+      },
+      cost: {
+        ph: '例如：45',
+      },
+      next_appointment: {
+        label: '下次预约（日期）',
+      },
+    },
+    meds: {
+      name: {
+        label: '药品名称',
+        ph: '例如：Synulox 250 mg',
+      },
+      active_ingredient: {
+        ph: '例如：阿莫西林/克拉维酸',
+      },
+      dosage: {
+        ph: '例如：每次1片，每天2次',
+      },
+      start_date: {
+        label: '开始日期',
+      },
+      end_date: {
+        label: '疗程结束日期',
+        hint: '如仍在用药，请留空',
+      },
+      prescribed_by: {
+        ph: '例如：王医生',
+      },
+      reason: {
+        ph: '例如：耳炎',
+      },
+      side_effects: {
+        ph: '例如：嗜睡、食欲下降',
+      },
+    },
+    lab: {
+      title: {
+        label: '检查名称',
+        ph: '例如：术前检查、利什曼原虫检测',
+      },
+      date: {
+        label: '检查日期',
+      },
+      lab_name: {
+        ph: '例如：IDEXX',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      findings: {
+        ph: '例如：尿素略高',
+      },
+    },
+    imaging: {
+      imaging_type: {
+        label: '影像检查类型',
+      },
+      date: {
+        label: '检查日期',
+      },
+      body_region: {
+        ph: '例如：胸部、左后肢',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      findings: {
+        ph: '例如：未见骨折',
+      },
+      report: {
+        ph: '例如：影像医生报告摘要',
+      },
+    },
+    surgery: {
+      procedure: {
+        label: '手术名称',
+        ph: '例如：绝育、肿物切除',
+      },
+      date: {
+        label: '手术日期',
+      },
+      surgeon_name: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      duration_min: {
+        ph: '例如：45',
+      },
+      complications: {
+        ph: '例如：无',
+      },
+      outcome: {
+        ph: '例如：手术成功，完全康复',
+      },
+      follow_up: {
+        ph: '例如：10天后拆线',
+      },
+      cost: {
+        ph: '例如：45',
+      },
+    },
+    allergies: {
+      allergen: {
+        label: '过敏原',
+        ph: '例如：鸡肉、花粉、青霉素',
+      },
+      diagnosed_date: {
+        label: '诊断日期',
+      },
+      reaction: {
+        ph: '例如：瘙痒、呕吐、肿胀',
+      },
+      treatment: {
+        ph: '例如：抗组胺药、排除饮食',
+      },
+      diagnosed_by: {
+        ph: '例如：王医生',
+      },
+    },
+    chronic: {
+      condition: {
+        label: '疾病名称',
+        ph: '例如：糖尿病、慢性肾病',
+      },
+      diagnosed_date: {
+        label: '诊断日期',
+      },
+      icd_code: {
+        ph: '例如：E11',
+      },
+      diagnosed_by: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      treatment_plan: {
+        ph: '例如：每天2次胰岛素，处方粮',
+      },
+      monitoring: {
+        ph: '例如：每3个月测一次血糖',
+      },
+    },
+    dental: {
+      procedure: {
+        label: '牙科项目',
+      },
+      date: {
+        label: '治疗日期',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      clinic_name: {
+        ph: '例如：城市宠物医院',
+      },
+      teeth_treated: {
+        ph: '例如：108、208 或“上颌”',
+      },
+      findings: {
+        ph: '例如：牙结石、牙龈炎',
+      },
+      next_due: {
+        label: '下次洁牙（日期）',
+      },
+      cost: {
+        ph: '例如：45',
+      },
+    },
+    weight: {
+      weight_kg: {
+        label: '体重（kg）',
+        ph: '例如：12.5',
+      },
+      date: {
+        label: '测量日期',
+      },
+      bcs: {
+        ph: '例如：5',
+        hint: '1 = 极瘦，4–5 = 理想，9 = 肥胖',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+      notes: {
+        ph: '例如：节食2个月后',
+      },
+    },
+    genetic: {
+      test_name: {
+        label: '基因检测项目',
+        ph: '例如：Embark Breed + Health',
+      },
+      date: {
+        label: '检测日期',
+      },
+      provider: {
+        ph: '例如：Embark, Wisdom Panel',
+      },
+      results: {
+        ph: '例如：MDR1 携带者，无其他发现',
+      },
+      breeds_detected: {
+        ph: '例如：拉布拉多、边境牧羊犬',
+      },
+      conditions_found: {
+        ph: '例如：髋关节发育不良',
+      },
+    },
+    vitals: {
+      date: {
+        label: '测量日期',
+      },
+      temperature_c: {
+        label: '体温（°C）',
+        ph: '例如：38.5',
+      },
+      heart_rate: {
+        label: '心率（次/分）',
+        ph: '例如：90',
+      },
+      respiratory_rate: {
+        label: '呼吸频率（次/分）',
+        ph: '例如：24',
+      },
+      blood_pressure: {
+        ph: '例如：140/90',
+      },
+      weight_kg: {
+        ph: '例如：12.5',
+      },
+      vet_name: {
+        ph: '例如：王医生',
+      },
+    },
+    travel: {
+      destination_country: {
+        ph: '例如：意大利',
+      },
+      origin_city: {
+        ph: '例如：比雷埃夫斯',
+      },
+      destination_city: {
+        ph: '例如：伊拉克利翁',
+      },
+      departure_date: {
+        label: '出发日期',
+      },
+      carrier: {
+        ph: '例如：Aegean, Minoan Lines',
+      },
+      booking_ref: {
+        ph: '例如：ABC123',
+      },
+    },
+    access: {
+      provider_email: {
+        ph: '例如：vet@example.com',
+      },
+      provider_name: {
+        ph: '例如：王医生',
+      },
+      reason: {
+        ph: '例如：皮炎的第二诊疗意见',
+      },
+      expires_at: {
+        hint: '留空表示长期有效',
+      },
+    },
+    pedigree: {
+      registration_number: {
+        ph: '例如：GR-12345',
+      },
+      kennel_club: {
+        ph: '例如：CKU',
+      },
+      breeder_contact: {
+        ph: '例如：电话或电子邮箱',
+      },
+    },
+  },
+  loyaltyPage: {
+    title: '会员计划',
+    subtitle: '每次付款都能赚取积分并提升等级',
+    yourTier: '你的等级',
+    pointsValue: '积分：{{points}}',
+    toNext: '下一级：{{tier}}——还差 {{points}} 积分',
+    maxTier: '最高等级',
+    yourDiscount: '你可享受 AI 订阅 {{percent}}% 的折扣。',
+    noDiscountYet: '提升等级即可享受 AI 订阅折扣。',
+    loginPrompt: '登录后即可查看你的积分和等级。',
+    login: '登录',
+    earnTitle: '如何赚取积分',
+    earnRate: '每支付 1 欧元获得积分：{{points}}',
+    source_orders: '商店购物',
+    source_bookings: '服务预订',
+    source_telehealth: '远程医疗咨询',
+    source_events: '活动报名',
+    source_subscriptions: 'AI 订阅和食品订阅',
+    refundNote: '如果付款被退款，其积分将按比例扣除（全额退款则全部扣除）。',
+    tiersTitle: '等级与权益',
+    current: '当前',
+    fromPoints: '{{points}} 积分起',
+    startTier: '注册即享',
+    aiDiscount: 'AI 订阅减 {{percent}}%',
+    noDiscount: '无折扣',
+    discountNote: '折扣仅适用于平台的 AI 订阅，不适用于服务商的商品或服务。购买新订阅时自动生效，适用于首个计费周期（月付为 1 个月，年付为 12 个月）。',
+    seePlans: '查看方案',
+  },
+  adminLoyalty: {
+    title: '会员计划',
+    subtitle: '每欧元积分、等级门槛及 AI 订阅折扣',
+    saved: '设置已保存',
+    saveError: '保存失败',
+    saving: '正在保存...',
+    note: '更改适用于新的付款和新的 AI 订阅。已发放的积分和现有订阅不受影响。等级会按新门槛立即重新计算。',
+    earnTitle: '积分发放',
+    earnNote: '积分 = 付款金额（欧元）× 每欧元积分，向下取整。设为 0 则不发放积分。',
+    pointsPerEuro: '每 1 欧元积分',
+    tiersTitle: '等级',
+    tiersNote: '积分门槛（递增；首个等级从 0 开始）及 AI 订阅折扣（0–50%）。',
+    colTier: '等级',
+    colThreshold: '门槛（积分）',
+    colDiscount: 'AI 折扣',
+    errPointsPerEuro: '每欧元积分须在 0 到 1000 之间，最多 2 位小数。',
+    errThresholds: '门槛必须为整数积分。',
+    errIncreasing: '等级门槛必须递增。',
+    errDiscount: '折扣必须是 0 到 50 之间的整数。',
+  },
   nav: {
     orders: '订单', wishlist: '心愿单', more: '更多', account: '账户', popular: '热门', mainNav: '主导航', mobileNav: '移动端导航', moreOptions: '更多选项', search: '搜索', notifications: '通知', unread: '{{count}} 条未读', cart: '购物车', cartItems: '{{count}} 件商品', userMenu: '用户菜单', skipToContent: '跳到内容',
     welfareOrgs: '动物保护',
@@ -17795,7 +20042,7 @@ const zh: typeof el = {
     services: '服务', telehealth: '远程医疗', social: '社交',
     forum: '论坛', community: '社区', events: '活动',
     myPets: '我的宠物', medicalCenter: '医疗中心',
-    petTracker: '追踪器', myBookings: '预约', profile: '个人资料',
+    petTracker: '追踪器', myBookings: '预约', profile: '账户',
     provider: '服务商', providerDashboard: '服务商面板',
     providerTools: '工具', admin: '管理员', login: '登录',
     logout: '退出', breeds: '品种', insurance: '保险',
@@ -17989,6 +20236,8 @@ const zh: typeof el = {
     checkoutCancelled: '支付已取消',
     securedByStripe: '由 Stripe 提供安全支付',
     tryFreeFirst: '先免费试用',
+    tierDiscountBanner: '作为{{tier}}会员，你可享受 AI 订阅 {{percent}}% 的折扣。',
+    tierDiscountMore: '了解规则',
   },
   aiGuard: {
     expiredTitle: 'AI 试用已过期',
@@ -18104,6 +20353,7 @@ const zh: typeof el = {
     verifications: '认证审核',
     refunds: '退款',
     deletionRequests: '账户删除',
+    loyalty: '会员',
   },
   adminTranslations: {
     title: '内容翻译',
@@ -18289,7 +20539,7 @@ const zh: typeof el = {
     paymentPendingHint: '付款完成后，预约即会确认。',
   },
   profile: {
-    title: '个人资料', edit: '编辑', save: '保存', saving: '保存中...', cancel: '取消',
+    title: '账户', edit: '编辑', save: '保存', saving: '保存中...', cancel: '取消',
     saved: '资料已保存!', bio: '简介...', phone: '电话', city: '城市', website: '网站',
     loyalty: '会员计划', points: '积分',
     tabs: { overview: '概览', achievements: '成就', orders: '订单', bookings: '预约' },

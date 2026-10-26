@@ -89,7 +89,9 @@ export default function MyPets() {
               <div className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">{pet.name}</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white">
+                      <Link to={`/my-pets/${pet.id}`} className="hover:underline">{pet.name}</Link>
+                    </h3>
                     <p className="text-xs text-gray-500">{pet.breed || pet.species}</p>
                   </div>
                   <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', pet.gender === 'male' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700')}>
@@ -103,10 +105,9 @@ export default function MyPets() {
                   {pet.color && <span>🎨 {pet.color}</span>}
                 </div>
 
-                {/* The detail page holds the medical file, vaccinations and
-                    GPS history. Nothing linked to it before, so all of that
-                    was unreachable from the interface. */}
-                <Link to={`/my-pets/${pet.id}`}
+                {/* «Ιατρικός φάκελος» → το διαβατήριο αυτού του κατοικιδίου (όπως στο κινητό,
+                    /passport?petId=…). Η σελίδα λεπτομερειών μένει προσβάσιμη από το όνομα. */}
+                <Link to={`/passport?pet=${encodeURIComponent(pet.id)}`}
                   className="w-full btn-primary text-xs py-2 mb-2 flex items-center justify-center gap-1.5">
                   <FileText size={12} /> {t('pgMyPets.medicalFile')}
                 </Link>

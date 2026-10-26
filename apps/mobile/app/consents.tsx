@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Button, Badge, SkeletonRows } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Συγκαταθέσεις — αντίστοιχο της σελίδας /cookies του web.
@@ -91,7 +92,7 @@ export default function ConsentsScreen() {
                 onPress={() => save.mutate()} />
               {!!current?.created_at && (
                 <Text style={s.last}>
-                  {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString(i18n.language)}
+                  {t('consents.lastChanged')}: {new Date(current.created_at).toLocaleString(dateLocale(i18n.language))}
                 </Text>
               )}
             </>

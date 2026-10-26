@@ -287,7 +287,7 @@ const routes: FastifyPluginAsync = async (app) => {
     const EL_LABELS: Record<string, Record<string, string>> = {
       species: { dog: 'Σκύλος', cat: 'Γάτα', bird: 'Πτηνό', rabbit: 'Κουνέλι', fish: 'Ψάρι', reptile: 'Ερπετό', horse: 'Άλογο', other: 'Άλλο' },
       gender: { male: 'Αρσενικό', female: 'Θηλυκό' },
-      vacType: { core: 'Core', non_core: 'Non-Core', rabies: 'Λύσσα', other: 'Άλλο' },
+      vacType: { core: 'Βασικό (υποχρεωτικό)', non_core: 'Προαιρετικό', rabies: 'Λύσσα', other: 'Άλλο' },
       labType: {
         blood_count: 'Αιματολογικό', biochemistry: 'Βιοχημικός Έλεγχος', urine: 'Ούρων', fecal: 'Κοπράνων',
         biopsy: 'Βιοψία', culture: 'Καλλιέργεια', hormone: 'Ορμόνες', serology: 'Ορολογία', other: 'Άλλο',
@@ -301,6 +301,13 @@ const routes: FastifyPluginAsync = async (app) => {
     }
     const lbl = (group: string, v: unknown): unknown =>
       v == null || v === '' ? v : (EL_LABELS[group]?.[String(v)] ?? v)
+    // Ε17 — Ημερομηνίες όπως τις διαβάζει ο Έλληνας (και όλη η Ευρώπη): ΗΗ/ΜΜ/ΕΕΕΕ.
+    // Το έγγραφο είναι μόνο στα ελληνικά (el-GR), οπότε μία μορφή. Από τα μέρη
+    // του 'YYYY-MM-DD' (όχι new Date(), που είναι UTC)· άγνωστη μορφή ως έχει.
+    const fd = (v: unknown): unknown => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? ''))
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : v
+    }
     const section = (title: string, rows: string) => rows ? `<h2>${title}</h2><table>${rows}</table>` : ''
     const row = (label: string, val: any) => val ? `<tr><td>${esc(label)}</td><td>${esc(val)}</td></tr>` : ''
 
@@ -347,42 +354,42 @@ ${chronicConditions.length ? `<div style="background:#fef9c3;border:2px solid #c
 </div>` : ''}
 
 ${section('Εμβόλια', vaccinations.map(v => `<tr>
-  <td>${esc(v.date_administered)}</td><td>${esc(v.vaccine_name)}</td><td>${esc(lbl('vacType', v.vaccine_type))}</td>
-  <td>${esc(v.vet_name || '-')}</td><td>${esc(v.next_due_date || '-')}</td>
+  <td>${esc(fd(v.date_administered))}</td><td>${esc(v.vaccine_name)}</td><td>${esc(lbl('vacType', v.vaccine_type))}</td>
+  <td>${esc(v.vet_name || '-')}</td><td>${esc(fd(v.next_due_date) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Φάρμακα', medications.map(m => `<tr>
-  <td>${esc(m.name)} ${esc(m.dosage)}</td><td>${esc(m.frequency)}</td><td>${esc(m.start_date)}→${esc(m.end_date || 'τώρα')}</td>
+  <td>${esc(m.name)} ${esc(m.dosage)}</td><td>${esc(m.frequency)}</td><td>${esc(fd(m.start_date))}→${esc(fd(m.end_date) || 'τώρα')}</td>
   <td>${esc(m.prescribed_by || '-')}</td><td>${m.is_active ? '✅ Ενεργό' : '⬛ Ολοκλήρωσε'}</td>
 </tr>`).join(''))}
 
 ${section('Εξετάσεις', healthRecords.map(h => `<tr>
-  <td>${esc(h.date)}</td><td>${esc(h.title)}</td><td>${esc(h.vet_name || '-')}</td>
+  <td>${esc(fd(h.date))}</td><td>${esc(h.title)}</td><td>${esc(h.vet_name || '-')}</td>
   <td>${esc(h.clinic_name || '-')}</td><td>${esc(h.description?.slice(0, 100) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Εργαστηριακές Εξετάσεις', labResults.map(l => `<tr>
-  <td>${esc(l.date)}</td><td>${esc(l.title)}</td><td>${esc(lbl('labType', l.result_type))}</td>
+  <td>${esc(fd(l.date))}</td><td>${esc(l.title)}</td><td>${esc(lbl('labType', l.result_type))}</td>
   <td>${esc(l.vet_name || '-')}</td><td>${l.is_abnormal ? '⚠️ Παθολογικά' : '✅ Φυσιολογικά'}</td>
 </tr>`).join(''))}
 
 ${section('Απεικονιστικές Εξετάσεις', imaging.map(i => `<tr>
-  <td>${esc(i.date)}</td><td>${esc(EL_LABELS.imgType[i.imaging_type] ?? i.imaging_type.toUpperCase())}</td><td>${esc(i.body_region || '-')}</td>
+  <td>${esc(fd(i.date))}</td><td>${esc(EL_LABELS.imgType[i.imaging_type] ?? i.imaging_type.toUpperCase())}</td><td>${esc(i.body_region || '-')}</td>
   <td>${esc(i.vet_name || '-')}</td><td>${esc(i.findings?.slice(0, 100) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Χειρουργεία', surgeries.map(s => `<tr>
-  <td>${esc(s.date)}</td><td>${esc(s.procedure)}</td><td>${esc(s.surgeon_name || '-')}</td>
+  <td>${esc(fd(s.date))}</td><td>${esc(s.procedure)}</td><td>${esc(s.surgeon_name || '-')}</td>
   <td>${esc(s.clinic_name || '-')}</td><td>${esc(s.outcome || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Οδοντιατρικά', dentalRecords.map(d => `<tr>
-  <td>${esc(d.date)}</td><td>${esc(lbl('dentalProc', d.procedure))}</td><td>${esc(d.vet_name || '-')}</td>
-  <td>${esc(d.findings || '-')}</td><td>${esc(d.next_due || '-')}</td>
+  <td>${esc(fd(d.date))}</td><td>${esc(lbl('dentalProc', d.procedure))}</td><td>${esc(d.vet_name || '-')}</td>
+  <td>${esc(d.findings || '-')}</td><td>${esc(fd(d.next_due) || '-')}</td>
 </tr>`).join(''))}
 
 ${section('Ιστορικό Βάρους', weightRecords.map(w => `<tr>
-  <td>${esc(w.date)}</td><td>${esc(w.weight_kg)} kg</td><td>BCS: ${esc(w.bcs || '-')}/9</td><td>${esc(w.notes || '-')}</td>
+  <td>${esc(fd(w.date))}</td><td>${esc(w.weight_kg)} kg</td><td>BCS: ${esc(w.bcs || '-')}/9</td><td>${esc(w.notes || '-')}</td>
 </tr>`).join(''))}
 
 <div class="footer">

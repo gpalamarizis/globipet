@@ -480,6 +480,8 @@ export const AUDIT_STATE_ACTIONS: readonly string[] = [
   'subscription_paid_while_paused',           // routes/admin-refunds.ts FAILURE_ACTIONS
   'external_refund',                          // lib/externalRefund.ts (ήδη εφαρμοσμένη, σύνολο επιστροφών), admin.ts έσοδα
   'admin_user_create', 'admin_user_update',   // routes/users.ts roleAssignedByAdmin (ρόλος από διαχειριστή → χωρίς ημερομηνία γέννησης)
+  'loyalty_award', 'loyalty_revoke',    // lib/loyalty.ts LOYALTY_AWARD_ACTION / LOYALTY_REVOKE_ACTION (κλειδιά ιδεμποτίας πόντων)
+  'loyalty_config_update',                    // lib/loyalty.ts LOYALTY_CONFIG_ACTION (routes/loyalty.ts — ιστορικό ρυθμίσεων)
 ]
 
 const sqlList = (xs: readonly string[]) => xs.map(x => `'${x.replace(/'/g, "''")}'`).join(',')

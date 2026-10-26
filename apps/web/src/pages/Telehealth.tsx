@@ -10,6 +10,7 @@ import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
 import { canAskTelehealthCancel, telehealthCancelQuestion, postTelehealthCancel } from '@/components/features/telehealth/telehealthCancel'
+import { dateLocale } from '@/lib/dates'
 
 // Τοπικό 'YYYY-MM-DD' (όχι toISOString, που δίνει UTC → λάθος μέρα κοντά στα μεσάνυχτα).
 const localYmd = (d: Date = new Date()) =>
@@ -70,7 +71,7 @@ export default function Telehealth() {
   const fmtDay = (ymd: string) => {
     const [y, m, d] = String(ymd).split('-').map(Number)
     if (!y || !m || !d) return String(ymd)
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'short', year: 'numeric' })
   }
   const [activeCall, setActiveCall] = useState<any>(null)
 

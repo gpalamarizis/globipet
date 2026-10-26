@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { ScrollText, Filter, ChevronLeft, ChevronRight, Check, X, Ban } from 'lucide-react'
 import { api } from '@/lib/api'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Admin Audit Logs viewer — reads from GET /api/audit/ (admin-only endpoint).
@@ -152,7 +153,7 @@ export default function AdminAuditLogPage() {
               )}
               {rows.map(r => (
                 <tr key={r.id} onClick={() => setSelected(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer">
-                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleString(i18n.language)}</td>
+                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleString(dateLocale(i18n.language))}</td>
                   <td className="px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">{r.action}</td>
                   <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{r.resource}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">{r.actor_email || <span className="text-gray-400">—</span>}</td>
@@ -188,7 +189,7 @@ export default function AdminAuditLogPage() {
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h2 className="font-bold text-gray-900 dark:text-white">{selected.action}</h2>
-                <p className="text-xs text-gray-500">{new Date(selected.created_at).toLocaleString(i18n.language)}</p>
+                <p className="text-xs text-gray-500">{new Date(selected.created_at).toLocaleString(dateLocale(i18n.language))}</p>
               </div>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={18}/>

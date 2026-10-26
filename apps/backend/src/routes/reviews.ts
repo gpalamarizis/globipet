@@ -197,13 +197,40 @@ const routes: FastifyPluginAsync = async (app) => {
   /**
    * GET /reviews/my — all reviews written by the current user.
    * Used by the profile page.
+   *
+   * Ε17 (προσθετικά, προαιρετικά): service_title / provider_name για κριτικές
+   * υπηρεσίας και product_name για κριτικές προϊόντος — με δύο ομαδικά
+   * ερωτήματα, χωρίς το GET /products/:id (δεν μετράει προβολή). Υπηρεσία ή
+   * προϊόν που διαγράφηκε → null (η εφαρμογή δείχνει τη γενική ετικέτα).
    */
   app.get('/my', { preHandler: [(app as any).authenticate] }, async (req: any) => {
     const { email } = req.user as any
-    const data = await prisma.review.findMany({
+    const rows = await prisma.review.findMany({
       where: { customer_email: email },
       orderBy: { created_at: 'desc' },
       take: 50,
+    })
+    const serviceIds = [...new Set(rows.map(r => r.service_id).filter(Boolean))] as string[]
+    const productIds = [...new Set(rows.map(r => r.product_id).filter(Boolean))] as string[]
+    const [services, products] = await Promise.all([
+      serviceIds.length
+        ? prisma.service.findMany({ where: { id: { in: serviceIds } }, select: { id: true, title: true, provider_name: true } })
+        : Promise.resolve([] as Array<{ id: string; title: string | null; provider_name: string }>),
+      productIds.length
+        ? prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, name: true } })
+        : Promise.resolve([] as Array<{ id: string; name: string }>),
+    ])
+    const svcById = new Map(services.map(s => [s.id, s]))
+    const prodById = new Map(products.map(p => [p.id, p]))
+    const data = rows.map(r => {
+      const svc = r.service_id ? svcById.get(r.service_id) : undefined
+      const prod = r.product_id ? prodById.get(r.product_id) : undefined
+      return {
+        ...r,
+        service_title: svc?.title || null,
+        provider_name: svc?.provider_name || null,
+        product_name: prod?.name || null,
+      }
     })
     return { data, total: data.length }
   })

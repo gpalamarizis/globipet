@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Ε15 — Αιτήματα διαγραφής λογαριασμού (GET /admin/deletion-requests).
@@ -48,7 +49,7 @@ export default function AdminDeletionRequestsPage() {
   })
   const rows: Row[] = data?.data ?? []
 
-  const day = (iso: string) => new Date(iso).toLocaleDateString(i18n.language, {
+  const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(i18n.language), {
     day: '2-digit', month: 'short', year: 'numeric',
   })
   const refresh = () => qc.invalidateQueries({ queryKey: ['admin-deletion-requests'] })

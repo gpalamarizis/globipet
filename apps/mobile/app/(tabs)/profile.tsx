@@ -5,11 +5,13 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Pla
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
-import { PawPrint, Calendar, Package, MapPin, Stethoscope, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone, Inbox } from 'lucide-react-native'
+import { PawPrint, Calendar, Package, MapPin, Globe, ShieldCheck, ChevronRight, LogOut, User as UserIcon, LayoutDashboard, Sparkles, Heart, Pencil, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, RotateCcw, Camera, Phone, MessageSquareText, Settings, Star, Trophy } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { fmtDateShort } from '@/lib/dates'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
+import NotificationBell from '@/components/NotificationBell'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -22,7 +24,16 @@ import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + space.lg, 48)
 
 /**
- * Προφίλ.
+ * Λογαριασμός (πρώην «Προφίλ» — το αρχείο μένει profile.tsx για τα deep links).
+ *
+ * Ε17 — ΔΟΜΗ (ιδιοκτήτης / Product Manager)
+ *   Κεφαλίδα (avatar, όνομα, email, επεξεργασία) και ενότητες με επικεφαλίδα:
+ *   Συνδρομές · Η δραστηριότητά μου · Τα κατοικίδιά μου · Επιβραβεύσεις ·
+ *   Μηνύματα & ειδοποιήσεις · Λογαριασμός & ασφάλεια · Απόρρητο & δεδομένα ·
+ *   Βοήθεια & όροι, και στο τέλος η αποσύνδεση. Οι συντομεύσεις λειτουργιών
+ *   (ιατρικός φάκελος, GPS, τηλεϊατρική) έφυγαν — ζουν στις καρτέλες
+ *   «Κατοικίδια» και «Εξερεύνησε». Συνδρομή «μέλους GlobiPet» δεν υπάρχει·
+ *   δείχνουμε μόνο ό,τι υπάρχει: συνδρομή AI και συνδρομές τροφής.
  *
  * ΤΙ ΑΛΛΑΞΕ
  *   Το μενού έδειχνε σε τρεις διαδρομές που δεν υπάρχουν ως οθόνες στο
@@ -44,36 +55,16 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  */
 
 // Ίδια όρια επιπέδων με το web (Profile.tsx).
-const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
-const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
 
-const MENU = [
-  { key: 'pets',       Icon: PawPrint,    labelKey: 'home.my_pets', route: '/(tabs)/pets' },
-  { key: 'bookings',   Icon: Calendar,    labelKey: 'profile.menu.bookings',         route: '/bookings' },
-  { key: 'orders',     Icon: Package,     labelKey: 'profile.menu.orders',       route: '/orders' },
-  { key: 'subscriptions', Icon: RotateCcw, labelKey: 'mySubs.title',            route: '/subscriptions' },
-  { key: 'passport',   Icon: ShieldCheck, labelKey: 'discover.medical_record',  route: '/passport' },
-  { key: 'tracker',    Icon: MapPin,      labelKey: 'discover.gps_tracking',    route: '/tracker' },
-  { key: 'telehealth', Icon: Stethoscope, labelKey: 'profile.menu.telehealth',       route: '/telehealth' },
-  { key: 'wishlist',   Icon: Heart,       labelKey: 'wishlist.title',            route: '/wishlist' },
-  { key: 'pricing',    Icon: Sparkles,    labelKey: 'pricing.title',             route: '/pricing' },
-  { key: 'notifCenter', Icon: Bell,       labelKey: 'notifCenter.title',         route: '/notifications' },
-  // Μηνύματα από παρόχους (ίδιο με το «Μηνύματα» στο μενού χρήστη του web).
-  { key: 'inbox',      Icon: Inbox,       labelKey: 'inbox.title',               route: '/inbox' },
-  { key: 'notifications', Icon: Bell,     labelKey: 'account.notifications',     route: '/notification-settings' },
-  { key: 'password',   Icon: KeyRound,    labelKey: 'account.changePassword',    route: '/change-password' },
-  { key: 'language',   Icon: Globe,       labelKey: 'language.title',            route: '/language' },
-  { key: 'privacy',    Icon: ShieldCheck, labelKey: 'privacy.title',             route: '/privacy' },
-  { key: 'consents',   Icon: SlidersHorizontal, labelKey: 'consents.title',      route: '/consents' },
-  { key: 'terms',      Icon: FileText,    labelKey: 'legalDocs.terms',           route: '/terms' },
-  { key: 'policy',     Icon: Lock,        labelKey: 'legalDocs.privacyPolicy',   route: '/privacy-policy' },
-  { key: 'help',       Icon: LifeBuoy,    labelKey: 'account.menuHelp',          route: '/help' },
-]
+type MenuItem = { key: string; Icon: any; labelKey?: string; label?: string; route?: string; onPress?: () => void; count?: number; sub?: string }
+
+/** Ενεργή συνδρομή τροφής: ό,τι δεν έχει τερματιστεί (ίδιο με το can_cancel του server). */
+const FOOD_SUB_LIVE = ['active', 'payment_failed', 'paused']
 
 export default function ProfileScreen() {
 
   const tabSpace = useTabSpace()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const { user, isAuthenticated, logout, updateUser } = useAuthStore()
 
@@ -127,6 +118,32 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   })
   const inboxUnread = inbox?.unread ?? 0
+
+  // Αδιάβαστες ειδοποιήσεις — ίδιο query με το καμπανάκι και την οθόνη
+  // app/notifications.tsx (κλειδί ['notifications','center']).
+  const { data: notif } = useQuery({
+    queryKey: ['notifications', 'center'],
+    queryFn: () => api.get('/notifications', { params: { limit: 50 } }).then(r => r.data),
+    enabled: isAuthenticated,
+  })
+  const notifUnread: number = Number(notif?.unread_count ?? 0) || 0
+
+  // Συνδρομή AI — ίδιο κλειδί και endpoint με pricing.tsx / Αρχική.
+  // Ο server (GET /ai-subscriptions/my-status) δίνει κατάσταση, πλάνο,
+  // trial_days_left και (Ε17) current_period_end — ημερομηνία ανανέωσης ενεργής συνδρομής.
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data ?? null),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  // Συνδρομές τροφής — ίδιο κλειδί και endpoint με app/subscriptions.tsx.
+  const { data: foodSubs = [] } = useQuery({
+    queryKey: ['my-food-subscriptions'],
+    queryFn: () => api.get('/subscriptions/food/my').then(r => r.data?.data ?? []),
+    enabled: isAuthenticated,
+  })
+  const foodLive = (foodSubs as any[]).filter(x => FOOD_SUB_LIVE.includes(x?.status)).length
 
   // Επεξεργασία προφίλ
   const [editing, setEditing] = useState(false)
@@ -183,13 +200,14 @@ export default function ProfileScreen() {
   // Επίπεδο και πρόοδος — ίδιος υπολογισμός με το web.
   const tier: string = loyalty?.tier || 'bronze'
   const totalPoints: number = loyalty?.total_points ?? 0
-  const nextTier = TIER_ORDER[TIER_ORDER.indexOf(tier) + 1]
-  const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
+  // Όρια επιπέδων από το GET /loyalty (τρέχουσες ρυθμίσεις διαχειριστή), όχι σταθερές εδώ.
+  const nextTier: string | null = loyalty?.next_tier ?? null
+  const nextThreshold: number | null = typeof loyalty?.next_threshold === 'number' ? loyalty.next_threshold : null
   // Το επίπεδο βγαίνει από τους πόντους όλων των εποχών (backend loyalty.ts), όχι από το
   // τρέχον υπόλοιπο που μειώνεται στις εξαργυρώσεις· η πρόοδος μετράει από το όριο του τρέχοντος επιπέδου.
   const lifetimePoints: number = loyalty?.lifetime_points ?? totalPoints
-  const curThreshold = TIER_THRESHOLDS[tier] ?? 0
-  const tierProgress = nextThreshold
+  const curThreshold: number = typeof loyalty?.current_threshold === 'number' ? loyalty.current_threshold : 0
+  const tierProgress = nextThreshold !== null && nextThreshold > curThreshold
     ? Math.max(0, Math.min(100, ((lifetimePoints - curThreshold) / (nextThreshold - curThreshold)) * 100))
     : 100
   const tierLabel = (k: string) => t(`profile.${k}`, { defaultValue: k })
@@ -210,6 +228,85 @@ export default function ProfileScreen() {
     { key: 'points', value: totalPoints, labelKey: 'profile.points' },
     { key: 'reviews', value: myReviews.length, labelKey: 'productDetail.reviews' },
   ]
+
+  const aiSt: string = aiStatus?.ai_subscription_status ?? 'none'
+  const aiPlan = aiStatus?.plan
+  const aiPlanName = aiPlan ? ((i18n.language === 'el' && aiPlan.name_el) ? aiPlan.name_el : aiPlan.name) : null
+  const aiText =
+    aiSt === 'trial' ? t('accountHub.aiTrial', { count: Math.max(0, Number(aiStatus?.trial_days_left ?? 0)) })
+    : aiSt === 'active' ? (aiPlanName ? t('accountHub.aiActive', { plan: aiPlanName }) : t('mySubs.status_active'))
+    : aiSt === 'payment_failed' ? t('aiGate.paymentFailedShort')
+    : aiSt === 'cancelled' ? t('mySubs.status_cancelled')
+    : aiSt === 'expired' ? t('home.trialExpired')
+    : t('accountHub.aiNone')
+  const aiRenews = aiSt === 'active' && aiStatus?.current_period_end ? fmtDateShort(String(aiStatus.current_period_end), i18n.language) : ''
+  const aiTone = aiSt === 'payment_failed' || aiSt === 'expired' ? colors.danger
+    : aiSt === 'active' || aiSt === 'trial' ? colors.success : colors.textMuted
+
+  const hasPassword = !((user as any)?.google_id || (user as any)?.facebook_id)
+
+  const GROUPS: { key: string; titleKey: string; items: MenuItem[] }[] = [
+    { key: 'activity', titleKey: 'accountHub.activity', items: [
+      { key: 'bookings', Icon: Calendar, labelKey: 'profile.menu.bookings', route: '/bookings' },
+      { key: 'orders',   Icon: Package,  labelKey: 'profile.menu.orders',   route: '/orders' },
+      { key: 'wishlist', Icon: Heart,    labelKey: 'wishlist.title',        route: '/wishlist' },
+      { key: 'reviews',  Icon: Star,     labelKey: 'myReviews.title',       route: '/my-reviews' },
+    ] },
+    { key: 'pets', titleKey: 'home.my_pets', items: [
+      // Η επικεφαλίδα λέει ήδη «Τα κατοικίδιά μου»· η γραμμή δείχνει πόσα είναι.
+      { key: 'pets', Icon: PawPrint, label: t('accountHub.petsCount', { count: pets.length }), route: '/(tabs)/pets' },
+    ] },
+  ]
+  const GROUPS_AFTER: { key: string; titleKey: string; items: MenuItem[] }[] = [
+    { key: 'messages', titleKey: 'accountHub.messages', items: [
+      // Μηνύματα από παρόχους (ίδιο με το «Μηνύματα» στο μενού χρήστη του web).
+      { key: 'inbox',       Icon: MessageSquareText, labelKey: 'inbox.title',          route: '/inbox', count: inboxUnread },
+      { key: 'notifCenter', Icon: Bell,              labelKey: 'notifCenter.title',    route: '/notifications', count: notifUnread },
+      { key: 'notifSettings', Icon: Settings,        labelKey: 'accountHub.notifSettings', route: '/notification-settings' },
+    ] },
+    { key: 'security', titleKey: 'accountHub.security', items: [
+      { key: 'edit',     Icon: Pencil,   labelKey: 'profile.editProfile',    onPress: () => openEdit() },
+      // Λογαριασμός Google/Facebook χωρίς κωδικό: καμία «Αλλαγή κωδικού» (ίδιο με το web).
+      ...(hasPassword ? [{ key: 'password', Icon: KeyRound, labelKey: 'account.changePassword', route: '/change-password' }] : []),
+      { key: 'language', Icon: Globe,    labelKey: 'language.title',         route: '/language' },
+    ] },
+    { key: 'privacy', titleKey: 'accountHub.privacy', items: [
+      { key: 'privacy',  Icon: ShieldCheck,       labelKey: 'privacy.title',           route: '/privacy' },
+      { key: 'consents', Icon: SlidersHorizontal, labelKey: 'consents.title',          route: '/consents' },
+      { key: 'policy',   Icon: Lock,              labelKey: 'legalDocs.privacyPolicy', route: '/privacy-policy' },
+    ] },
+    { key: 'help', titleKey: 'accountHub.helpTerms', items: [
+      { key: 'help',  Icon: LifeBuoy, labelKey: 'account.menuHelp', route: '/help' },
+      { key: 'terms', Icon: FileText, labelKey: 'legalDocs.terms',  route: '/terms' },
+    ] },
+  ]
+
+  const renderRow = (m: MenuItem, last: boolean) => (
+    <TouchableOpacity key={m.key} style={[s.row, last && s.rowLast]} activeOpacity={0.7}
+      onPress={() => m.onPress ? m.onPress() : router.push(m.route as any)}>
+      <View style={s.rowIcon}>
+        <m.Icon size={icon.md} color={colors.brand} />
+      </View>
+      <View style={s.rowBody}>
+        <Text style={s.rowLabel} numberOfLines={1}>{m.label ?? (m.labelKey ? t(m.labelKey) : '')}</Text>
+        {!!m.sub && <Text style={s.rowSub} numberOfLines={1}>{m.sub}</Text>}
+      </View>
+      {!!m.count && m.count > 0 && (
+        <View style={s.countPill}>
+          <Text style={s.countPillText}>{m.count > 99 ? '99+' : m.count}</Text>
+        </View>
+      )}
+      <ChevronRight size={icon.md} color={colors.textLight} />
+    </TouchableOpacity>
+  )
+  const renderGroup = (g: { key: string; titleKey: string; items: MenuItem[] }) => (
+    <View key={g.key} style={s.group}>
+      <Text style={s.groupTitle}>{t(g.titleKey)}</Text>
+      <View style={s.menu}>
+        {g.items.map((m, i) => renderRow(m, i === g.items.length - 1))}
+      </View>
+    </View>
+  )
 
   const confirmLogout = () => {
     Alert.alert(t('profile.logout_title'), t('profile.logout_question'), [
@@ -264,7 +361,13 @@ export default function ProfileScreen() {
                 : profile.role === 'service_provider' ? t('profile.provider') : t('profile.owner')}
             </Text>
           </View>
+          {/* Ε17: ίδιο καμπανάκι με τις άλλες καρτέλες, πάνω δεξιά. */}
+          <View style={s.headerBell}><NotificationBell /></View>
         </View>
+        <TouchableOpacity style={s.editPill} activeOpacity={0.8} onPress={openEdit}>
+          <Pencil size={icon.xs} color={colors.textOnDark} />
+          <Text style={s.editPillText} numberOfLines={1}>{t('profile.editProfile')}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Στοιχεία προφίλ — όπως στο web. */}
@@ -290,8 +393,68 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <View style={s.loyaltyWrap}>
-        {/* Επίπεδο επιβράβευσης και πρόοδος — όπως στο web. */}
+      {/* Ο «both» είναι και πάροχος: του δίνουμε την είσοδο στον χώρο
+          παρόχου πάνω από τα υπόλοιπα, γιατί είναι η δουλειά του. Ο καθαρός
+          πάροχος δεν φτάνει ποτέ εδώ — τον στέλνει κατευθείαν το _layout. */}
+      {(user?.role === 'both' || user?.role === 'service_provider') && (
+        <TouchableOpacity activeOpacity={0.7} style={[s.row, s.rowProvider]}
+          onPress={() => router.push('/(provider)' as any)}>
+          <View style={[s.rowIcon, { backgroundColor: colors.brandTint }]}>
+            <LayoutDashboard size={icon.md} color={colors.brand} />
+          </View>
+          <Text style={[s.rowLabel, { flex: 1, color: colors.brand, fontWeight: weight.bold }]}>{t('providerDash.title')}</Text>
+          <ChevronRight size={icon.sm} color={colors.brand} />
+        </TouchableOpacity>
+      )}
+
+      {/* Προσκλήσεις στο προσωπικό παρόχου — ίδια κάρτα με το web· κρύβεται όταν δεν υπάρχει καμία. */}
+      <StaffInvitationsCard style={s.invitations} />
+
+      {/* Σύνοψη δραστηριότητας (συγκεντρωτικά στοιχεία). */}
+      <View style={[s.statsGrid, s.statsWrap]}>
+        {STATS.map(st => (
+          <View key={st.key} style={s.stat}>
+            <Text style={s.statValue}>{st.value}</Text>
+            <Text style={s.statLabel} numberOfLines={1}>{t(st.labelKey)}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* (1) Συνδρομές: συνδρομή AI (κατάσταση / μέρες δοκιμής) και τροφής. */}
+      <View style={s.group}>
+        <Text style={s.groupTitle}>{t('accountHub.subscriptions')}</Text>
+        <View style={s.menu}>
+          <TouchableOpacity style={s.row} activeOpacity={0.7}
+            onPress={() => router.push('/pricing' as any)}>
+            <View style={s.rowIcon}><Sparkles size={icon.md} color={colors.brand} /></View>
+            <View style={s.rowBody}>
+              <Text style={s.rowLabel} numberOfLines={1}>{t('aiGate.subscriptionLabel')}</Text>
+              <Text style={[s.rowSub, { color: aiTone }]} numberOfLines={1}>{aiText}</Text>
+              {!!aiRenews && <Text style={s.rowSub} numberOfLines={1}>{t('accountHub.aiRenews', { date: aiRenews })}</Text>}
+            </View>
+            <Text style={s.rowAction} numberOfLines={1}>{t('accountHub.plans')}</Text>
+            <ChevronRight size={icon.md} color={colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.row, s.rowLast]} activeOpacity={0.7}
+            onPress={() => router.push('/subscriptions' as any)}>
+            <View style={s.rowIcon}><RotateCcw size={icon.md} color={colors.brand} /></View>
+            <View style={s.rowBody}>
+              <Text style={s.rowLabel} numberOfLines={1}>{t('accountHub.foodSubs')}</Text>
+              <Text style={s.rowSub} numberOfLines={1}>
+                {foodLive > 0 ? t('accountHub.foodSubsCount', { count: foodLive }) : t('accountHub.foodSubsNone')}
+              </Text>
+            </View>
+            <ChevronRight size={icon.md} color={colors.textLight} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* (2) Η δραστηριότητά μου · (3) Τα κατοικίδιά μου */}
+      {GROUPS.map(renderGroup)}
+
+      {/* (4) Επιβραβεύσεις — επίπεδο, πρόοδος και επιτεύγματα (όπως στο web). */}
+      <View style={s.group}>
+        <Text style={s.groupTitle}>{t('accountHub.rewards')}</Text>
         <View style={s.tierCard}>
           <Text style={s.tierTitle}>{t('profile.tier')} — {tierLabel(tier)}</Text>
           <View style={s.track}>
@@ -300,7 +463,7 @@ export default function ProfileScreen() {
           <View style={s.tierMeta}>
             <Text style={s.statLabel}>{lifetimePoints} {t('profile.points')}</Text>
             <Text style={s.statLabel}>
-              {nextThreshold ? t('profile.pointsForTier', { points: nextThreshold, tier: tierLabel(nextTier) }) : t('profile.maxTier')}
+              {!loyalty ? '' : nextTier && nextThreshold !== null ? t('profile.pointsForTier', { points: nextThreshold, tier: tierLabel(nextTier) }) : t('profile.maxTier')}
             </Text>
           </View>
         </View>
@@ -316,60 +479,14 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-      </View>
 
-      {/* Προσκλήσεις στο προσωπικό παρόχου — ίδια κάρτα με το web· κρύβεται όταν δεν υπάρχει καμία. */}
-      <StaffInvitationsCard style={s.invitations} />
-
-      <View style={s.menu}>
-        {/* Ο «both» είναι και πάροχος: του δίνουμε την είσοδο στον χώρο
-            παρόχου πάνω από τα υπόλοιπα, γιατί είναι η δουλειά του. Ο καθαρός
-            πάροχος δεν φτάνει ποτέ εδώ — τον στέλνει κατευθείαν το _layout. */}
-        {(user?.role === 'both' || user?.role === 'service_provider') && (
-          <TouchableOpacity activeOpacity={0.7} style={[s.row, s.rowProvider]}
-            onPress={() => router.push('/(provider)' as any)}>
-            <View style={[s.rowIcon, { backgroundColor: colors.brandTint }]}>
-              <LayoutDashboard size={icon.md} color={colors.brand} />
-            </View>
-            <Text style={[s.rowLabel, { color: colors.brand, fontWeight: weight.bold }]}>{t('providerDash.title')}</Text>
-            <ChevronRight size={icon.sm} color={colors.brand} />
-          </TouchableOpacity>
-        )}
-
-        {/* Σύνοψη δραστηριότητας: τέσσερις αριθμοί που ο χρήστης δεν
-            έβλεπε πουθενά στο κινητό. */}
-        <View style={s.statsGrid}>
-          {STATS.map(st => (
-            <View key={st.key} style={s.stat}>
-              <Text style={s.statValue}>{st.value}</Text>
-              <Text style={s.statLabel} numberOfLines={1}>{t(st.labelKey)}</Text>
-            </View>
-          ))}
+        <View style={s.menu}>
+          {renderRow({ key: 'loyalty', Icon: Trophy, labelKey: 'accountHub.tiersHow', route: '/loyalty' }, true)}
         </View>
-
-        <TouchableOpacity activeOpacity={0.7} style={s.row} onPress={openEdit}>
-          <View style={s.rowIcon}><Pencil size={icon.md} color={colors.brand} /></View>
-          <Text style={s.rowLabel}>{t('profile.editProfile')}</Text>
-          <ChevronRight size={icon.sm} color={colors.textLight} />
-        </TouchableOpacity>
-
-        {/* Λογαριασμός Google/Facebook χωρίς κωδικό: καμία «Αλλαγή κωδικού» (ίδιο με το web). */}
-        {MENU.filter(m => !(m.key === 'password' && (!!(user as any)?.google_id || !!(user as any)?.facebook_id))).map(({ key, Icon, labelKey, route }) => (
-          <TouchableOpacity key={key} style={s.row} activeOpacity={0.7}
-            onPress={() => router.push(route as any)}>
-            <View style={s.rowIcon}>
-              <Icon size={icon.md} color={colors.brand} />
-            </View>
-            <Text style={s.rowLabel}>{t(labelKey)}</Text>
-            {key === 'inbox' && inboxUnread > 0 && (
-              <View style={s.countPill}>
-                <Text style={s.countPillText}>{inboxUnread > 99 ? '99+' : inboxUnread}</Text>
-              </View>
-            )}
-            <ChevronRight size={icon.md} color={colors.textLight} />
-          </TouchableOpacity>
-        ))}
       </View>
+
+      {/* (5)–(8) */}
+      {GROUPS_AFTER.map(renderGroup)}
 
       <TouchableOpacity style={s.logout} activeOpacity={0.7} onPress={confirmLogout}>
         <LogOut size={icon.md} color={colors.danger} />
@@ -447,7 +564,10 @@ const s = StyleSheet.create({
   infoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
   infoItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs, maxWidth: '100%' },
   infoTxt: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
-  loyaltyWrap: { marginTop: space.xl, marginHorizontal: space.lg },
+  statsWrap: { marginTop: space.xl, marginHorizontal: space.lg, marginBottom: 0 },
+  // Ενότητα: επικεφαλίδα + κάρτα γραμμών. Ίδιο στυλ επικεφαλίδας με την «Εξερεύνησε».
+  group: { marginTop: space.xl, marginHorizontal: space.lg },
+  groupTitle: { ...type.section, color: colors.text, fontWeight: weight.bold, marginBottom: space.md },
   invitations: { marginTop: space.xl, marginHorizontal: space.lg },
   tierCard: {
     padding: space.md, marginBottom: space.md,
@@ -496,6 +616,17 @@ const s = StyleSheet.create({
   },
   title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  // Το καμπανάκι στοιχίζεται στην κορυφή της γραμμής (ίδιο ύψος με τις άλλες καρτέλες).
+  headerBell: { alignSelf: 'flex-start' },
+  editPill: {
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    alignSelf: 'flex-start',
+    marginTop: space.md, marginLeft: 72 + space.lg,
+    minHeight: 32, paddingHorizontal: space.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.navySoft,
+  },
+  editPillText: { ...type.caption, color: colors.textOnDark, fontWeight: weight.semibold },
   avatar: {
     width: 72, height: 72, borderRadius: radius.full,
     backgroundColor: colors.navySoft,
@@ -508,7 +639,6 @@ const s = StyleSheet.create({
   email: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 
   menu: {
-    marginTop: space.xl, marginHorizontal: space.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -520,13 +650,21 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
-  rowProvider: { borderWidth: 1.5, borderColor: colors.brand, marginBottom: space.sm },
+  rowLast: { borderBottomWidth: 0 },
+  rowBody: { flex: 1, minWidth: 0 },
+  rowSub: { ...type.caption, color: colors.textMuted, marginTop: 1 },
+  rowAction: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, maxWidth: 110 },
+  rowProvider: {
+    borderWidth: 1.5, borderColor: colors.brand, borderBottomWidth: 1.5, borderBottomColor: colors.brand,
+    borderRadius: radius.lg, backgroundColor: colors.surface,
+    marginTop: space.xl, marginHorizontal: space.lg,
+  },
   rowIcon: {
     width: 38, height: 38, borderRadius: radius.md,
     backgroundColor: colors.brandLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  rowLabel: { flex: 1, ...type.body, color: colors.text, fontWeight: weight.medium },
+  rowLabel: { flexShrink: 1, ...type.body, color: colors.text, fontWeight: weight.medium },
   countPill: {
     minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11,
     backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center',

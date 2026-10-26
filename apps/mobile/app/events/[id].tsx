@@ -10,6 +10,7 @@ import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/compone
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { ErrorState } from '@/components/ErrorState'
 import { EventAttendees } from '@/components/EventAttendees'
+import { dateLocale } from '@/lib/dates'
 
 // 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη (όπως στο
 // event-confirmation): το new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω
@@ -17,7 +18,7 @@ import { EventAttendees } from '@/components/EventAttendees'
 const fmtYmd = (d: string | undefined, lang: string) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d ?? '')
   if (!m) return d ?? ''
-  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(dateLocale(lang), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 /**
@@ -208,7 +209,7 @@ export default function EventDetailScreen() {
   const cancelSettled = !!cancelPreview?.already_cancelled && cancelPreview?.settled === true
   const refundHours = registration?.refund_hours ?? 48
   const refundUntil = registration?.refund_deadline
-    ? new Date(registration.refund_deadline).toLocaleString(i18n.language, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ? new Date(registration.refund_deadline).toLocaleString(dateLocale(i18n.language), { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : null
 
   return (

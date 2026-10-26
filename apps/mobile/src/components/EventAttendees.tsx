@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Users, ChevronDown, ChevronUp } from 'lucide-react-native'
 import { Badge } from '@/components/ui'
 import { colors, space, type, weight, icon } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Λίστα συμμετεχόντων για τον διοργανωτή — ίδια με το web
@@ -68,7 +69,7 @@ export function EventAttendees({ registrations, isLoading, isError }: {
               {t('eventAttendees.people', { count: 1 + Number(r.guests ?? 0) })}
               {r.pet_name ? ` · ${r.pet_name}` : ''}
               {Number(r.amount_paid ?? 0) > 0 ? ` · €${Number(r.amount_paid).toFixed(2)}` : ''}
-              {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(i18n.language)}` : ''}
+              {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(dateLocale(i18n.language))}` : ''}
             </Text>
             {!!r.user_email && (
               <Text style={s.email} onPress={() => Linking.openURL(`mailto:${r.user_email}`).catch(() => {})}>

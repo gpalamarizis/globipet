@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { useLocation } from 'react-router-dom'
+import { useLocation, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut } from 'lucide-react'
+import { Camera, Edit3, Save, X, Star, Package, Calendar, Award, MapPin, Phone, Globe, LogOut, ChevronRight, Sparkles, RotateCcw, Heart, PawPrint, Inbox, Languages, Cookie, ShieldCheck, HelpCircle, MessageSquare, Mail, FileText } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api, uploadFile } from '@/lib/api'
-import { cn, getInitials } from '@/lib/utils'
+import { cn, getInitials, speciesEmoji } from '@/lib/utils'
+import { fmtDateShort } from '@/lib/dates'
+import { localName } from '@/lib/localName'
+import LanguageSelector from '@/components/ui/LanguageSelector'
 import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 import NotificationSettingsCard from '@/components/NotificationSettingsCard'
@@ -14,18 +17,59 @@ import MyDataCard from '@/components/MyDataCard'
 import MySubscriptionsCard from '@/components/MySubscriptionsCard'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
-const TIER_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 1000, gold: 5000, platinum: 10000 }
 const TIER_LABEL_KEYS: Record<string, string> = { bronze: 'loyalty.bronze', silver: 'loyalty.silver', gold: 'loyalty.gold', platinum: 'loyalty.platinum' }
-const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum']
 /** Ε13: μόνο αυτές οι ιστοσελίδες γίνονται σύνδεσμος (ίδιος κανόνας με το κινητό). */
 const WEB_URL_RE = /^https?:\/\//i
 
+/**
+ * Ε17 — η σελίδα «Λογαριασμός» σε ενότητες, όπως στο κινητό: Συνδρομές, Η
+ * δραστηριότητά μου, Τα κατοικίδιά μου, Επιβραβεύσεις, Μηνύματα &
+ * ειδοποιήσεις, Λογαριασμός & ασφάλεια, Απόρρητο & δεδομένα, Βοήθεια & όροι.
+ */
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="mt-8 scroll-mt-20" aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`} className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function RowCard({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn('card divide-y divide-gray-100 dark:divide-gray-800', className)}>{children}</div>
+}
+
+/** Γραμμή λίστας: σύνδεσμος (to) ή ενέργεια (onClick)· προαιρετικά πλήθος ή σήμα αδιάβαστων. */
+function Row({ to, onClick, icon: Icon, label, hint, value, badge }: {
+  to?: string; onClick?: () => void; icon: any; label: string; hint?: string; value?: number; badge?: number
+}) {
+  const cls = 'w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors first:rounded-t-2xl last:rounded-b-2xl'
+  const body = (
+    <>
+      <Icon size={18} className="text-gray-400 shrink-0" aria-hidden="true" />
+      <span className="flex-1 min-w-0">
+        <span className="block truncate">{label}</span>
+        {hint && <span className="block text-xs text-gray-500 mt-0.5">{hint}</span>}
+      </span>
+      {value !== undefined && <span className="text-xs text-gray-500 shrink-0">{value}</span>}
+      {!!badge && badge > 0 && (
+        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand-900 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+      <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+    </>
+  )
+  return to
+    ? <Link to={to} className={cls}>{body}</Link>
+    : <button type="button" onClick={onClick} className={cls}>{body}</button>
+}
+
 export default function Profile() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user, updateUser, logout } = useAuthStore()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState('overview')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
@@ -51,6 +95,8 @@ export default function Profile() {
   // Λογαριασμός Google/Facebook χωρίς κωδικό: καμία αλλαγή κωδικού (ίδιος
   // κανόνας με το μενού του παρόχου, ProviderLayout, και με το κινητό).
   const hasGoogleAuth = !!(user as any)?.google_id || !!(user as any)?.facebook_id
+  // Καθαρός πάροχος: χωρίς τις ενότητες πελάτη (βλ. παρακάτω) — ούτε τα αντίστοιχα αιτήματα.
+  const providerOnly = user?.role === 'service_provider'
 
   // Σύνδεσμοι από το μενού λογαριασμού του παρόχου (/profile#password κ.λπ.):
   // ο router δεν κυλά μόνος του στο #, οπότε το κάνουμε εδώ.
@@ -66,43 +112,85 @@ export default function Profile() {
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
     queryFn: () => api.get('/orders/my').then(r => r.data?.data ?? []),
-    enabled: !!user,
+    enabled: !!user && !providerOnly,
   })
 
   const { data: bookings = [] } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: () => api.get('/bookings/my').then(r => r.data?.data ?? []),
-    enabled: !!user,
+    enabled: !!user && !providerOnly,
   })
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
     queryFn: () => api.get('/pets').then(r => r.data?.data ?? []),
-    enabled: !!user,
+    enabled: !!user && !providerOnly,
   })
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['my-reviews'],
     queryFn: () => api.get('/reviews/my').then(r => r.data?.data ?? []).catch(() => []),
-    enabled: !!user,
+    enabled: !!user && !providerOnly,
   })
 
   const { data: loyalty } = useQuery({
     queryKey: ['my-loyalty'],
     queryFn: () => api.get('/loyalty').then(r => r.data?.data),
+    enabled: !!user && !providerOnly,
+  })
+
+  // Συνδρομή AI — ίδιο query (και κλειδί) με Αρχική/Τιμές. Το my-status δεν
+  // επιστρέφει ημερομηνία ανανέωσης· για τη δοκιμή δίνει trial_days_left.
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-subscription-status'],
+    queryFn: () => api.get('/ai-subscriptions/my-status').then(r => r.data?.data),
+    enabled: !!user && !providerOnly,
+  })
+  // Συνδρομές τροφής — ίδιο query (και κλειδί) με το MySubscriptionsCard.
+  const { data: foodSubs = [] } = useQuery<any[]>({
+    queryKey: ['my-food-subscriptions'],
+    queryFn: () => api.get('/subscriptions/food/my').then(r => r.data?.data ?? []),
+    enabled: !!user && !providerOnly,
+  })
+  // Αδιάβαστα μηνύματα — ίδιο query (και κλειδί) με την κεφαλίδα και το /inbox.
+  const { data: inbox } = useQuery<{ unread: number }>({
+    queryKey: ['inbox'],
+    queryFn: () => api.get('/customers/inbox').then(r => r.data),
     enabled: !!user,
   })
+  const inboxUnread = inbox?.unread ?? 0
+
+  const aiSt: string = aiStatus?.ai_subscription_status ?? (user as any)?.ai_subscription_status ?? 'none'
+  const aiPlanName = aiStatus?.plan ? localName(aiStatus.plan, i18n.language) : ''
+  const aiTitle = aiSt === 'active' ? t('aiSub.activeTitle')
+    : aiSt === 'cancelled' ? t('aiSub.cancelledTitle')
+    : aiSt === 'payment_failed' ? t('aiGate.paymentFailedShort')
+    : aiSt === 'trial' ? t('accountHub.aiTrial')
+    : aiSt === 'expired' ? t('accountHub.aiExpired')
+    : t('accountHub.aiNone')
+  // Λήξη δοκιμής: σήμερα + trial_days_left (ο server μετράει με το TRIAL_DAYS του).
+  const aiTrialEnd = aiSt === 'trial' && aiStatus?.trial_days_left != null
+    ? (() => { const d = new Date(); d.setDate(d.getDate() + Math.max(0, Number(aiStatus.trial_days_left))); return fmtDateShort(d.toISOString(), i18n.language) })()
+    : ''
+  // Ίδιος κανόνας με το κουμπί της Αρχικής: δοκιμή μόνο από 'none'.
+  // Ε17: ημερομηνία ανανέωσης (my-status current_period_end — μόνο για ενεργή συνδρομή).
+  const aiRenews = aiSt === 'active' && aiStatus?.current_period_end ? fmtDateShort(String(aiStatus.current_period_end), i18n.language) : ''
+  const aiCta = aiSt === 'active' || aiSt === 'payment_failed' || aiSt === 'trial'
+    ? { to: '/pricing', label: t('accountHub.aiManage') }
+    : aiSt === 'none'
+      ? { to: '/pricing', label: t('home.hero.tryFree') }
+      : { to: '/pricing', label: t('aiGate.choosePlan') }
 
   const tier = loyalty?.tier || 'bronze'
   const totalPoints = loyalty?.total_points ?? 0
-  const tierIdx = TIER_ORDER.indexOf(tier)
-  const nextTier = TIER_ORDER[tierIdx + 1]
-  const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null
+  // Όρια επιπέδων από το GET /loyalty (τρέχουσες ρυθμίσεις διαχειριστή), όχι σταθερές εδώ.
+  const nextTier: string | null = loyalty?.next_tier ?? null
+  const nextThreshold: number | null = typeof loyalty?.next_threshold === 'number' ? loyalty.next_threshold : null
   // Το επίπεδο βγαίνει από τους πόντους όλων των εποχών (backend loyalty.ts), όχι από το
   // τρέχον υπόλοιπο που μειώνεται στις εξαργυρώσεις· η πρόοδος μετράει από το όριο του τρέχοντος επιπέδου.
   const lifetimePoints: number = loyalty?.lifetime_points ?? totalPoints
-  const curThreshold = TIER_THRESHOLDS[tier] ?? 0
-  const tierProgress = nextThreshold
+  const curThreshold: number = typeof loyalty?.current_threshold === 'number' ? loyalty.current_threshold : 0
+  const tierProgress = nextThreshold !== null && nextThreshold > curThreshold
     ? Math.max(0, Math.min(100, ((lifetimePoints - curThreshold) / (nextThreshold - curThreshold)) * 100))
     : 100
 
@@ -133,13 +221,6 @@ export default function Profile() {
     }
   }
 
-  const tabs = [
-    { id: 'overview',      label: t('profile.tabs.overview') },
-    { id: 'achievements',  label: t('profile.tabs.achievements') },
-    { id: 'orders',        label: t('profile.tabs.orders') },
-    { id: 'bookings',      label: t('profile.tabs.bookings') },
-  ]
-
   // Achievements computed from real user data, not hardcoded
   const achievements = [
     { icon: '🐾', title: t('pgProfile.ach.firstPetTitle'), desc: t('pgProfile.ach.firstPetDesc'), unlocked: pets.length >= 1 },
@@ -160,6 +241,8 @@ export default function Profile() {
 
   return (
     <div className="page-container py-8 pb-24 lg:pb-8 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-6">{t('profile.title')}</h1>
+
       {/* Profile card */}
       <div className="card p-6 mb-6">
         <div className="flex items-start gap-4">
@@ -184,7 +267,7 @@ export default function Profile() {
               <input className="input text-lg font-bold mb-2" value={form.full_name}
                 onChange={e => setForm(f => ({...f, full_name: e.target.value}))} />
             ) : (
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{user.full_name}</h1>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">{user.full_name}</h2>
             )}
             <p className="text-sm text-gray-500">{user.email}</p>
             <span className="inline-block mt-1 text-xs bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400 px-2 py-0.5 rounded-full font-medium">
@@ -202,8 +285,10 @@ export default function Profile() {
                 </button>
               </>
             ) : (
-              <button onClick={() => setEditing(true)} className="btn-secondary px-3 py-2 text-sm flex items-center gap-1.5">
-                <Edit3 size={14}/>{t('profile.edit')}
+              <button onClick={() => setEditing(true)} aria-label={t('profile.edit')}
+                className="btn-secondary px-3 py-2 text-sm flex items-center gap-1.5">
+                {/* Σε στενή οθόνη μόνο το εικονίδιο — αλλιώς το όνομα στρίμωχνε σε ~60px. */}
+                <Edit3 size={14}/><span className="hidden sm:inline">{t('profile.edit')}</span>
               </button>
             )}
           </div>
@@ -249,8 +334,9 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      {/* Stats — όχι για καθαρό πάροχο (παραγγελίες/κρατήσεις/πόντοι πελάτη) */}
+      {!providerOnly && (
+      <div className="grid grid-cols-4 gap-3">
         {[
           { icon: Package,  label: t('profile.stats.orders'),       value: orders.length },
           { icon: Calendar, label: t('profile.stats.bookings'),     value: bookings.length },
@@ -264,20 +350,143 @@ export default function Profile() {
           </div>
         ))}
       </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={cn('flex-1 text-xs font-medium py-2 rounded-lg transition-all',
-              activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500')}>
-            {tab.label}
-          </button>
-        ))}
+      {/* Προσκλήσεις στο προσωπικό παρόχου — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
+      <div id="staff-invitations" className="mt-6 scroll-mt-20 empty:hidden">
+        <StaffInvitationsCard />
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'overview' && (
+      {/* Καθαρός πάροχος (service_provider): μόνο μηνύματα, λογαριασμός, απόρρητο και βοήθεια —
+          οι ενότητες πελάτη οδηγούν σε σελίδες που τον στέλνουν στο /provider (MainLayout). */}
+      {!providerOnly && (<>
+      {/* ── Συνδρομές ─────────────────────────────────────────── */}
+      <Section id="subscriptions" title={t('accountHub.subscriptions')}>
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-brand-900" />
+            <h3 className="font-bold text-gray-900 dark:text-white">{t('aiGate.subscriptionLabel')}</h3>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-gray-900 dark:text-white">{aiTitle}</p>
+              {!!aiPlanName && <p className="text-xs text-gray-500 mt-0.5">{t('aiSub.plan', { plan: aiPlanName })}</p>}
+              {aiTrialEnd && <p className="text-xs text-gray-500 mt-0.5">{t('accountHub.aiTrialEnds', { date: aiTrialEnd })}</p>}
+              {!!aiRenews && <p className="text-xs text-gray-500 mt-0.5">{t('accountHub.aiRenews', { date: aiRenews })}</p>}
+            </div>
+            <Link to={aiCta.to} className="btn-secondary shrink-0 px-3 py-2 text-sm">{aiCta.label}</Link>
+          </div>
+        </div>
+        {/* Συνδρομές τροφής — η κάρτα κρύβεται όταν δεν υπάρχει καμία· τότε
+            ένας σύνδεσμος στο κατάστημα (εκεί ξεκινά μια συνδρομή). */}
+        {foodSubs.length > 0 ? (
+          <div className="mt-3"><MySubscriptionsCard /></div>
+        ) : (
+          <RowCard className="mt-3">
+            <Row to="/marketplace" icon={RotateCcw} label={t('accountHub.foodSubs')} hint={t('accountHub.foodSubsEmpty')} />
+          </RowCard>
+        )}
+      </Section>
+
+      {/* ── Η δραστηριότητά μου ──────────────────────────────── */}
+      <Section id="activity" title={t('accountHub.activity')}>
+        <RowCard>
+          <Row to="/bookings"   icon={Calendar}    label={t('nav.myBookings')}      value={bookings.length} />
+          <Row to="/orders"     icon={Package}     label={t('nav.orders')}          value={orders.length} />
+          <Row to="/wishlist"   icon={Heart}       label={t('nav.wishlist')} />
+          <Row to="/my-reviews" icon={Star}        label={t('accountHub.myReviews')} value={reviews.length} />
+        </RowCard>
+
+        {/* Πρόσφατες παραγγελίες — αναγνώσιμη περίληψη αντί για σκέτο id. */}
+        {orders.length > 0 && (
+          <div className="card mt-3">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-white">{t('accountHub.recentOrders')}</h3>
+              <Link to="/orders" className="text-xs text-brand-900 dark:text-brand-400 font-medium hover:underline">{t('common.viewAll')}</Link>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {orders.slice(0, 3).map((o: any) => {
+                const lines: any[] = Array.isArray(o.items) ? o.items : []
+                const first = lines[0]?.name || lines[0]?.product_name
+                const summary = first
+                  ? (lines.length > 1 ? `${first} ${t('orders.andMore', { count: lines.length - 1 })}` : first)
+                  : `${t('orders.orderNumber')} #${String(o.id ?? '').slice(0, 8).toUpperCase()}`
+                return (
+                  <Link key={o.id} to={`/orders/${o.id}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors last:rounded-b-2xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{summary}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{fmtDateShort(o.created_at, i18n.language)}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">€{Number(o.total_amount ?? 0).toFixed(2)}</p>
+                      <span className="inline-block mt-0.5 text-[11px] px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                        {String(t(`orders.status.${o.status}`, o.status))}
+                      </span>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Πρόσφατες κρατήσεις — υπηρεσία, πάροχος, ημερομηνία, ποσό, κατάσταση. */}
+        {bookings.length > 0 && (
+          <div className="card mt-3">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-white">{t('accountHub.recentBookings')}</h3>
+              <Link to="/bookings" className="text-xs text-brand-900 dark:text-brand-400 font-medium hover:underline">{t('common.viewAll')}</Link>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {bookings.slice(0, 3).map((b: any) => (
+                <Link key={b.id} to="/bookings"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors last:rounded-b-2xl">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{b.service?.title || t('bookingsExtra.service')}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                      {[b.provider_name, fmtDateShort(b.booking_date, i18n.language), b.booking_time].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">€{Number(b.total_price ?? 0).toFixed(2)}</p>
+                    <span className="inline-block mt-0.5 text-[11px] px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                      {String(t(`bookings.status.${b.status}`, { defaultValue: b.status }))}
+                    </span>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* ── Τα κατοικίδιά μου ────────────────────────────────── */}
+      <Section id="pets" title={t('accountHub.myPets')}>
+        <RowCard>
+          {pets.slice(0, 5).map((pet: any) => (
+            <Link key={pet.id} to={`/my-pets/${pet.id}`}
+              className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+              <div className="w-8 h-8 rounded-full bg-brand-100 overflow-hidden flex items-center justify-center shrink-0">
+                {pet.image_url
+                  ? <img src={pet.image_url} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-base">{speciesEmoji[pet.species] || '🐾'}</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 dark:text-white truncate">{pet.name}</p>
+                {pet.breed && <p className="text-xs text-gray-500 truncate">{pet.breed}</p>}
+              </div>
+              <ChevronRight size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
+            </Link>
+          ))}
+          <Row to="/my-pets" icon={PawPrint} label={pets.length > 0 ? t('nav.myPets') : t('home.cards.noPets')} value={pets.length > 0 ? pets.length : undefined} />
+        </RowCard>
+      </Section>
+
+      {/* ── Επιβραβεύσεις ────────────────────────────────────── */}
+      <Section id="rewards" title={t('accountHub.rewards')}>
         <div className="card p-5">
           <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">{t('loyalty.tier')} — {TIER_LABEL_KEYS[tier] ? t(TIER_LABEL_KEYS[tier]) : tier}</h3>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-2">
@@ -286,12 +495,13 @@ export default function Profile() {
           </div>
           <div className="flex justify-between text-xs text-gray-500">
             <span>{lifetimePoints} {t('loyalty.points')}</span>
-            <span>{nextThreshold ? t('pgProfile.pointsForTier', { points: nextThreshold, tier: t(TIER_LABEL_KEYS[nextTier]) }) : t('pgProfile.maxTier')}</span>
+            <span>{!loyalty ? '' : nextTier && nextThreshold !== null ? t('pgProfile.pointsForTier', { points: nextThreshold, tier: TIER_LABEL_KEYS[nextTier] ? t(TIER_LABEL_KEYS[nextTier]) : nextTier }) : t('pgProfile.maxTier')}</span>
           </div>
+          <Link to="/loyalty" className="inline-flex items-center gap-1 mt-4 text-sm text-brand-900 dark:text-brand-400 font-medium hover:underline">
+            {t('accountHub.howTiersWork')} <ChevronRight size={14} aria-hidden="true" />
+          </Link>
         </div>
-      )}
-
-      {activeTab === 'achievements' && (
+        <h3 className="font-semibold text-sm text-gray-900 dark:text-white mt-4 mb-3">{t('profile.tabs.achievements')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {achievements.map((a, i) => (
             <div key={i} className={cn('card p-4 text-center', !a.unlocked && 'opacity-40')}>
@@ -301,55 +511,66 @@ export default function Profile() {
             </div>
           ))}
         </div>
-      )}
+      </Section>
+      </>)}
 
-      {activeTab === 'orders' && (
-        <div className="card p-5">
-          {orders.length === 0
-            ? <p className="text-center text-gray-500 py-8">{t('profile.noOrders')}</p>
-            : orders.map((o: any) => <div key={o.id} className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 text-sm">{o.id}</div>)
-          }
+      {/* ── Μηνύματα & ειδοποιήσεις ──────────────────────────── */}
+      <Section id="messages" title={t('accountHub.messages')}>
+        <RowCard>
+          <Row to="/inbox" icon={Inbox} label={t('pgInbox.title')} badge={inboxUnread} />
+        </RowCard>
+        {/* Ειδοποιήσεις — η κάρτα κρύβεται μόνη της σε browser που δεν τις
+            υποστηρίζει, οπότε δεν χρειάζεται έλεγχος εδώ. */}
+        <div id="notifications" className="mt-3 scroll-mt-20">
+          <NotificationSettingsCard />
         </div>
-      )}
+      </Section>
 
-      {activeTab === 'bookings' && (
-        <div className="card p-5">
-          {bookings.length === 0
-            ? <p className="text-center text-gray-500 py-8">{t('profile.noBookings')}</p>
-            : bookings.map((b: any) => <div key={b.id} className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 text-sm">{b.id}</div>)
-          }
+      {/* ── Λογαριασμός & ασφάλεια ───────────────────────────── */}
+      <Section id="security" title={t('accountHub.security')}>
+        {/* Χωρίς overflow-hidden: το μενού γλώσσας ανοίγει έξω από την κάρτα. */}
+        <RowCard>
+          <Row icon={Edit3} label={t('accountHub.editProfile')}
+            onClick={() => { setEditing(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
+          {/* pl-4/pr-1: το κουμπί γλώσσας έχει δικό του px-3, έτσι το βελάκι του
+              στοιχίζεται με τα βελάκια των άλλων γραμμών (16px από τη δεξιά άκρη). */}
+          <div className="flex items-center gap-3 pl-4 pr-1 py-0.5 text-sm text-gray-700 dark:text-gray-300">
+            <Languages size={18} className="text-gray-400 shrink-0" aria-hidden="true" />
+            <span className="flex-1 min-w-0">{t('accountHub.language')}</span>
+            <LanguageSelector />
+          </div>
+        </RowCard>
+        {/* Αλλαγή κωδικού — μόνο με πραγματικό κωδικό (όχι μόνο Google/Facebook). */}
+        {!hasGoogleAuth && (
+          <div id="password" className="mt-3 scroll-mt-20">
+            <ChangeMyPasswordCard />
+          </div>
+        )}
+      </Section>
+
+      {/* ── Απόρρητο & δεδομένα ──────────────────────────────── */}
+      <Section id="privacy" title={t('accountHub.privacy')}>
+        {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων. ΕΚΤΟΣ του
+            ελέγχου Google: το δικαίωμα ισχύει για κάθε λογαριασμό, όπως και
+            στο κινητό. */}
+        <div id="my-data" className="scroll-mt-20">
+          <MyDataCard />
         </div>
-      )}
+        <RowCard className="mt-3">
+          <Row to="/cookies" icon={Cookie}      label={t('accountHub.consents')} />
+          <Row to="/privacy" icon={ShieldCheck} label={t('accountHub.privacyPolicy')} />
+        </RowCard>
+      </Section>
 
-      {/* Προσκλήσεις στο προσωπικό παρόχου — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
-      <div id="staff-invitations" className="mt-6 scroll-mt-20 empty:hidden">
-        <StaffInvitationsCard />
-      </div>
-
-      {/* Συνδρομές τροφής — η κάρτα κρύβεται όταν δεν υπάρχει καμία. */}
-      <div className="mt-6 empty:hidden">
-        <MySubscriptionsCard />
-      </div>
-
-      {/* Ειδοποιήσεις — η κάρτα κρύβεται μόνη της σε browser που δεν τις
-          υποστηρίζει, οπότε δεν χρειάζεται έλεγχος εδώ. */}
-      <div id="notifications" className="mt-6 scroll-mt-20">
-        <NotificationSettingsCard />
-      </div>
-
-      {/* Change Password — only for users with an actual password (not Google sign-in) */}
-      {!hasGoogleAuth && (
-        <div id="password" className="mt-6 scroll-mt-20">
-          <ChangeMyPasswordCard />
-        </div>
-      )}
-
-      {/* GDPR Άρθρα 17 και 20 — εξαγωγή και διαγραφή δεδομένων. ΕΚΤΟΣ του
-          ελέγχου Google: το δικαίωμα ισχύει για κάθε λογαριασμό, όπως και
-          στο κινητό. */}
-      <div id="my-data" className="mt-6 scroll-mt-20">
-        <MyDataCard />
-      </div>
+      {/* ── Βοήθεια & όροι ───────────────────────────────────── */}
+      <Section id="help" title={t('accountHub.help')}>
+        <RowCard>
+          <Row to="/help"    icon={HelpCircle}    label={t('footer.help')} />
+          <Row to="/faq"     icon={MessageSquare} label={t('footer.faq')} />
+          <Row to="/contact" icon={Mail}          label={t('footer.contact')} />
+          <Row to="/terms"   icon={FileText}      label={t('footer.terms')} />
+        </RowCard>
+      </Section>
 
       {/* Logout */}
       <button onClick={logout} className="w-full mt-6 flex items-center justify-center gap-2 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">

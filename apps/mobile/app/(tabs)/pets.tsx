@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, FlatList, Image, Modal, Alert, RefreshControl, KeyboardAvoidingView, Platform, StatusBar } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Plus, X, AlertTriangle, ChevronRight, PawPrint } from 'lucide-react-native'
+import { Plus, X, AlertTriangle, ChevronRight, PawPrint, ShieldCheck } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { PetFormFields, EMPTY_PET_FORM, petPayload, petEmoji } from '@/components/PetForm'
+import NotificationBell from '@/components/NotificationBell'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -94,9 +95,13 @@ export default function PetsScreen() {
       <View style={s.header}>
         <View style={s.headerRow}>
           <Text style={s.title}>{t('tabs.pets')}</Text>
-          <TouchableOpacity style={s.addBtn} activeOpacity={0.8} onPress={() => setShowAdd(true)}>
-            <Plus size={icon.md} color={colors.textOnDark} />
-          </TouchableOpacity>
+          <View style={s.headerActions}>
+            <NotificationBell />
+            <TouchableOpacity style={s.addBtn} activeOpacity={0.8} onPress={() => setShowAdd(true)}
+              accessibilityLabel={t('pets.add_button')}>
+              <Plus size={icon.md} color={colors.textOnDark} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -130,33 +135,44 @@ export default function PetsScreen() {
               </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.card} activeOpacity={0.85}
-            onPress={() => router.push(`/pets/${item.id}` as any)}>
-            <View style={s.avatar}>
-              {item.image_url
-                ? <Image source={{ uri: item.image_url }} style={s.avatarImg} />
-                : <Text style={s.avatarEmoji}>{emojiFor(item.species)}</Text>}
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={s.nameRow}>
-                <Text style={s.name} numberOfLines={1}>{item.name}</Text>
-                {item.is_lost && (
-                  <View style={s.lostTag}>
-                    <AlertTriangle size={icon.xs} color={colors.danger} />
-                    <Text style={s.lostText}>{t('pets.lost')}</Text>
-                  </View>
-                )}
+          <View style={s.petCard}>
+            <TouchableOpacity style={s.petRow} activeOpacity={0.85}
+              onPress={() => router.push(`/pets/${item.id}` as any)}>
+              <View style={s.avatar}>
+                {item.image_url
+                  ? <Image source={{ uri: item.image_url }} style={s.avatarImg} />
+                  : <Text style={s.avatarEmoji}>{emojiFor(item.species)}</Text>}
               </View>
-              <Text style={s.sub} numberOfLines={1}>
-                {[item.breed || item.species, item.age && t('pets.age_years', { count: item.age })]
-                  .filter(Boolean).join(' · ')}
-              </Text>
-              <Text style={s.link}>{t('discover.medical_record')}</Text>
-            </View>
 
-            <ChevronRight size={icon.md} color={colors.textLight} />
-          </TouchableOpacity>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={s.nameRow}>
+                  <Text style={s.name} numberOfLines={1}>{item.name}</Text>
+                  {item.is_lost && (
+                    <View style={s.lostTag}>
+                      <AlertTriangle size={icon.xs} color={colors.danger} />
+                      <Text style={s.lostText}>{t('pets.lost')}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={s.sub} numberOfLines={1}>
+                  {[item.breed || item.species, item.age && t('pets.age_years', { count: item.age })]
+                    .filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+
+              <ChevronRight size={icon.md} color={colors.textLight} />
+            </TouchableOpacity>
+
+            {/* Ε17: ο ιατρικός φάκελος του συγκεκριμένου κατοικιδίου — ίδια
+                διαδρομή με την καρτέλα του κατοικιδίου (pets/[id].tsx):
+                /passport?petId=… (το passport.tsx διαβάζει το petId). */}
+            <TouchableOpacity style={s.medicalBtn} activeOpacity={0.8}
+              accessibilityRole="button"
+              onPress={() => router.push(`/passport?petId=${encodeURIComponent(item.id)}` as any)}>
+              <ShieldCheck size={icon.sm} color={colors.brand} />
+              <Text style={s.medicalBtnText} numberOfLines={1}>{t('discover.medical_record')}</Text>
+            </TouchableOpacity>
+          </View>
         )}
       />
 
@@ -212,6 +228,8 @@ const s = StyleSheet.create({
     borderBottomRightRadius: radius.xxl,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Στην κορυφή της γραμμής, όπως στην Αρχική (ίδιο ύψος κουμπιών σε όλες τις καρτέλες).
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm, alignSelf: 'flex-start' },
   title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
   addBtn: {
     width: touch.min, height: touch.min, borderRadius: radius.md,
@@ -227,6 +245,24 @@ const s = StyleSheet.create({
     marginBottom: space.md,
     ...shadow.sm,
   },
+  // Κάρτα κατοικιδίου: πάνω η γραμμή (→ καρτέλα), κάτω το κουμπί φακέλου
+  // σε όλο το πλάτος, ώστε να στοιχίζεται ίδια σε κάθε κάρτα.
+  petCard: {
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  petRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  medicalBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
+    height: touch.min, marginTop: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.brandLight,
+  },
+  medicalBtnText: { ...type.body, color: colors.brand, fontWeight: weight.semibold },
+
   avatar: {
     width: 64, height: 64, borderRadius: radius.md,
     backgroundColor: colors.surfaceAlt,
@@ -246,7 +282,6 @@ const s = StyleSheet.create({
   },
   lostText: { ...type.caption, color: colors.danger, fontWeight: weight.bold },
   sub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
-  link: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, marginTop: space.xs },
 
   skeleton: { backgroundColor: colors.surfaceAlt },
 

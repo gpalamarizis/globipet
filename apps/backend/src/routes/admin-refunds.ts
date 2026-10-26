@@ -10,6 +10,7 @@ import {
 } from './events.js'
 import { EXTERNAL_REFUND_ACTION } from '../lib/externalRefund.js'
 import { settleRefundTx, type SettleResult } from '../lib/refundSettlement.js'
+import { revokeEventRefund } from '../lib/loyalty.js'
 
 /**
  * Αποτυχημένες / κολλημένες επιστροφές χρημάτων — χειρισμός από τον admin.
@@ -692,6 +693,7 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
       if (out === 'refunded' && fin.count > 0) {
         await notifyRegistrationRefunded(reg.user_email, reg.event_id, paid)
       }
+      if (fin.count > 0) await revokeEventRefund(reg.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
       return { success: true, status: 'refunded', already: out === 'already', amount: paid }
     }
     if (out === 'unknown') {
@@ -766,6 +768,7 @@ const adminRefundsRoutes: FastifyPluginAsync = async (app) => {
           return r.count > 0
         })
         if (!changed) return 'changed'
+        await revokeEventRefund(fresh.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
         if (releaseSeat) {
           await prisma.event.updateMany({ where: { id: fresh.event_id, registered_count: { lt: 0 } }, data: { registered_count: 0 } })
         }

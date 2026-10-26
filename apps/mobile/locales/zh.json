@@ -40,11 +40,11 @@
     "marketplace": "商城",
     "pets": "宠物",
     "social": "社区",
-    "profile": "我的",
+    "profile": "账户",
     "animals": "宠物",
     "community": "社区",
-    "discover": "发现",
-    "shop": "购物"
+    "discover": "探索",
+    "shop": "商店"
   },
   "auth": {
     "login": "登录",
@@ -260,7 +260,8 @@
     "deleteQ": "确定永久删除 {{name}} 及其记录吗？",
     "deleteFailed": "删除失败",
     "kind_horse": "马",
-    "kind_other": "其他"
+    "kind_other": "其他",
+    "weight_placeholder": "例如：12.5"
   },
   "social": {
     "title": "社区动态",
@@ -375,7 +376,7 @@
     "pet_protection": "宠物保障",
     "photo_analysis": "照片分析",
     "subtitle": "GlobiPet 的全部功能",
-    "title": "发现",
+    "title": "探索",
     "upcoming_events": "即将举行的活动",
     "ai_emotion": "AI 情绪",
     "playdates": "玩伴聚会"
@@ -728,7 +729,7 @@
     "revokeTitle": "撤销访问权限",
     "revokeQ": "该兽医将无法再查看你宠物的档案。确定撤销访问权限吗？",
     "revoke": "撤销",
-    "invalidDate": "日期无效。请按 YYYY-MM-DD 格式填写（例如 2026-03-15）。",
+    "invalidDate": "日期无效，请在日历中选择。",
     "rt_examination": "检查",
     "rt_diagnosis": "诊断",
     "rt_follow_up": "复诊",
@@ -839,7 +840,53 @@
     "inviteTo": "邀请对象：{{name}}",
     "createEventFirst": "请先创建一个活动",
     "messageOptional": "留言（可选）",
-    "messagePlaceholder": "一起遛狗吧！"
+    "messagePlaceholder": "一起遛狗吧！",
+    "types": {
+      "walk": "散步",
+      "play": "玩耍",
+      "meetup": "聚会",
+      "training": "训练",
+      "other": "其他"
+    },
+    "petTypes": {
+      "dog": "狗",
+      "cat": "猫",
+      "rabbit": "兔子",
+      "bird": "鸟",
+      "other": "其他"
+    },
+    "directions": "路线",
+    "f": {
+      "requiredNote": "带 * 的字段为必填项。",
+      "title": "标题",
+      "titlePh": "例如：在 Pedion Areos 公园散步",
+      "type": "类型",
+      "date": "日期",
+      "time": "时间",
+      "addressPh": "例如：Pedion Areos，雅典",
+      "mapTitle": "地图上的位置",
+      "mapHint": "查找该地点，城市会自动填写，参与者也能获得路线。",
+      "mapNotSet": "尚未在地图上找到——参与者只能看到地址。",
+      "cityAuto": "城市：{{city}}（根据地址）",
+      "cityHint": "无法根据地址自动识别。该信息用于“你附近”列表。",
+      "details": "地点详情",
+      "detailsPh": "例如：喷泉旁，北门入口",
+      "description": "描述",
+      "descriptionPh": "例如：轻松散步一小时——请为狗狗带水。",
+      "duration": "时长（分钟）",
+      "maxPh": "例如：10（留空 = 10）",
+      "petTypes": "宠物种类",
+      "petTypesHint": "如果所有宠物都可参加，请留空。"
+    },
+    "err": {
+      "title": "请输入标题（至少 2 个字符）。",
+      "date": "请选择日期。",
+      "time": "请选择时间。",
+      "address": "请输入集合地点。",
+      "city": "请输入城市。",
+      "number": "请输入正整数。",
+      "summary": "请填写标红的字段。"
+    }
   },
   "soon": {
     "title": "手机应用即将推出",
@@ -1500,7 +1547,9 @@
     "recommended": "推荐",
     "choose": "选择此方案",
     "noPlans": "暂无可用方案",
-    "vivaNote": "通过 Viva 付款。您可随时取消订阅。"
+    "vivaNote": "通过 Viva 付款。您可随时取消订阅。",
+    "tierDiscountBanner": "作为{{tier}}会员，你可享受 AI 订阅 {{percent}}% 的折扣。",
+    "tierDiscountMore": "了解规则"
   },
   "stool": {
     "title": "样本分析",
@@ -2266,7 +2315,7 @@
     "yearsExp": "{{count}} 年经验",
     "details": "详情",
     "vetSearch": "搜索兽医或专业...",
-    "invalidSchedule": "请选择有效日期（今天或以后）和时间（时:分）。"
+    "invalidSchedule": "请选择日期（今天或以后）和时间。"
   },
   "notifCenter": {
     "title": "通知中心",
@@ -2409,12 +2458,12 @@
     "addImage": "添加图片",
     "changeImage": "更换图片",
     "errRequired": "请填写标题、日期、时间、地点和城市。",
-    "errDate": "日期格式必须为 YYYY-MM-DD（如 2026-11-15）。",
+    "errDate": "日期无效，请在日历中选择。",
     "errPast": "开始日期已过。",
-    "errTime": "时间格式必须为 HH:MM（如 18:30）。",
-    "errEndDate": "结束日期须为 YYYY-MM-DD，且不得早于开始日期。",
+    "errTime": "时间无效，请重新选择。",
+    "errEndDate": "结束日期不得早于开始日期。",
     "errPrice": "价格无效：请输入欧元金额（如 15 或 15.50），或留空。",
-    "errPaidFormat": "付费活动需要 YYYY-MM-DD 格式的日期和 HH:MM 格式的时间。",
+    "errPaidFormat": "付费活动需要日期和时间。",
     "errCapacity": "容量必须是不小于 1 的整数，留空表示不限。",
     "errCapacityBelow": "容量不能少于已报名人数（{{count}}）。",
     "created": "活动已创建",
@@ -2481,5 +2530,413 @@
   },
   "paging": {
     "loadMore": "加载更多"
+  },
+  "accountHub": {
+    "subscriptions": "订阅",
+    "plans": "方案",
+    "activity": "我的动态",
+    "rewards": "奖励",
+    "tiersHow": "等级如何运作",
+    "messages": "消息与通知",
+    "notifSettings": "通知设置",
+    "security": "账户与安全",
+    "privacy": "隐私与数据",
+    "helpTerms": "帮助与条款",
+    "aiNone": "未订阅 — 查看方案",
+    "aiTrial": "免费试用 · 剩余 {{count}} 天",
+    "aiTrial_one": "免费试用 · 剩余 {{count}} 天",
+    "aiActive": "有效 · {{plan}}",
+    "foodSubs": "食品订阅",
+    "foodSubsCount": "{{count}} 个有效",
+    "foodSubsCount_one": "{{count}} 个有效",
+    "foodSubsNone": "暂无有效订阅",
+    "petsCount": "{{count}} 只宠物",
+    "petsCount_one": "{{count}} 只宠物",
+    "aiRenews": "将于 {{date}} 续订"
+  },
+  "myReviews": {
+    "title": "我的评价",
+    "empty": "您还没有写过评价",
+    "emptyHint": "完成预约或购买后，您可以评价相应的服务或产品。",
+    "openService": "查看服务",
+    "openProduct": "查看产品"
+  },
+  "bell": {
+    "unread": "{{count}} 条未读通知",
+    "unread_one": "{{count}} 条未读通知"
+  },
+  "explore": {
+    "health": "健康",
+    "tools": "工具",
+    "community": "社区",
+    "info": "信息与支持"
+  },
+  "homeGuest": {
+    "medTitle": "宠物医疗档案，随时随身",
+    "medText": "疫苗、用药、过敏和就诊记录，集中在一处管理。"
+  },
+  "dateField": {
+    "pickDate": "选择日期",
+    "pickTime": "选择时间",
+    "clear": "清除",
+    "done": "完成"
+  },
+  "passportForm": {
+    "vaccines": {
+      "vaccine_name": {
+        "label": "疫苗名称",
+        "ph": "例如：DHPPi、狂犬病（Nobivac Rabies）"
+      },
+      "vaccine_type": {
+        "label": "疫苗类别",
+        "hint": "狂犬病疫苗请选择“狂犬病”——出行时必须提供"
+      },
+      "date_administered": {
+        "label": "接种日期"
+      },
+      "next_due_date": {
+        "label": "下次接种（日期）",
+        "hint": "以兽医在健康手册上记录的为准"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "notes": {
+        "ph": "例如：批号 A123B45，无不良反应"
+      }
+    },
+    "health": {
+      "title": {
+        "label": "就诊原因",
+        "ph": "例如：年度体检、昨天起呕吐"
+      },
+      "date": {
+        "label": "就诊日期"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "description": {
+        "ph": "例如：常规检查，一切正常"
+      },
+      "cost": {
+        "ph": "例如：45"
+      },
+      "next_appointment": {
+        "label": "下次预约（日期）"
+      }
+    },
+    "meds": {
+      "name": {
+        "label": "药品名称",
+        "ph": "例如：Synulox 250 mg"
+      },
+      "active_ingredient": {
+        "ph": "例如：阿莫西林/克拉维酸"
+      },
+      "dosage": {
+        "ph": "例如：每次1片，每天2次"
+      },
+      "start_date": {
+        "label": "开始日期"
+      },
+      "end_date": {
+        "label": "疗程结束日期",
+        "hint": "如仍在用药，请留空"
+      },
+      "prescribed_by": {
+        "ph": "例如：王医生"
+      },
+      "reason": {
+        "ph": "例如：耳炎"
+      },
+      "side_effects": {
+        "ph": "例如：嗜睡、食欲下降"
+      }
+    },
+    "lab": {
+      "title": {
+        "label": "检查名称",
+        "ph": "例如：术前检查、利什曼原虫检测"
+      },
+      "date": {
+        "label": "检查日期"
+      },
+      "lab_name": {
+        "ph": "例如：IDEXX"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "findings": {
+        "ph": "例如：尿素略高"
+      }
+    },
+    "imaging": {
+      "imaging_type": {
+        "label": "影像检查类型"
+      },
+      "date": {
+        "label": "检查日期"
+      },
+      "body_region": {
+        "ph": "例如：胸部、左后肢"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "findings": {
+        "ph": "例如：未见骨折"
+      },
+      "report": {
+        "ph": "例如：影像医生报告摘要"
+      }
+    },
+    "surgery": {
+      "procedure": {
+        "label": "手术名称",
+        "ph": "例如：绝育、肿物切除"
+      },
+      "date": {
+        "label": "手术日期"
+      },
+      "surgeon_name": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "duration_min": {
+        "ph": "例如：45"
+      },
+      "complications": {
+        "ph": "例如：无"
+      },
+      "outcome": {
+        "ph": "例如：手术成功，完全康复"
+      },
+      "follow_up": {
+        "ph": "例如：10天后拆线"
+      },
+      "cost": {
+        "ph": "例如：45"
+      }
+    },
+    "allergies": {
+      "allergen": {
+        "label": "过敏原",
+        "ph": "例如：鸡肉、花粉、青霉素"
+      },
+      "diagnosed_date": {
+        "label": "诊断日期"
+      },
+      "reaction": {
+        "ph": "例如：瘙痒、呕吐、肿胀"
+      },
+      "treatment": {
+        "ph": "例如：抗组胺药、排除饮食"
+      },
+      "diagnosed_by": {
+        "ph": "例如：王医生"
+      }
+    },
+    "chronic": {
+      "condition": {
+        "label": "疾病名称",
+        "ph": "例如：糖尿病、慢性肾病"
+      },
+      "diagnosed_date": {
+        "label": "诊断日期"
+      },
+      "icd_code": {
+        "ph": "例如：E11"
+      },
+      "diagnosed_by": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "treatment_plan": {
+        "ph": "例如：每天2次胰岛素，处方粮"
+      },
+      "monitoring": {
+        "ph": "例如：每3个月测一次血糖"
+      }
+    },
+    "dental": {
+      "procedure": {
+        "label": "牙科项目"
+      },
+      "date": {
+        "label": "治疗日期"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "clinic_name": {
+        "ph": "例如：城市宠物医院"
+      },
+      "teeth_treated": {
+        "ph": "例如：108、208 或“上颌”"
+      },
+      "findings": {
+        "ph": "例如：牙结石、牙龈炎"
+      },
+      "next_due": {
+        "label": "下次洁牙（日期）"
+      },
+      "cost": {
+        "ph": "例如：45"
+      }
+    },
+    "weight": {
+      "weight_kg": {
+        "label": "体重（kg）",
+        "ph": "例如：12.5"
+      },
+      "date": {
+        "label": "测量日期"
+      },
+      "bcs": {
+        "ph": "例如：5",
+        "hint": "1 = 极瘦，4–5 = 理想，9 = 肥胖"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      },
+      "notes": {
+        "ph": "例如：节食2个月后"
+      }
+    },
+    "genetic": {
+      "test_name": {
+        "label": "基因检测项目",
+        "ph": "例如：Embark Breed + Health"
+      },
+      "date": {
+        "label": "检测日期"
+      },
+      "provider": {
+        "ph": "例如：Embark, Wisdom Panel"
+      },
+      "results": {
+        "ph": "例如：MDR1 携带者，无其他发现"
+      },
+      "breeds_detected": {
+        "ph": "例如：拉布拉多、边境牧羊犬"
+      },
+      "conditions_found": {
+        "ph": "例如：髋关节发育不良"
+      }
+    },
+    "vitals": {
+      "date": {
+        "label": "测量日期"
+      },
+      "temperature_c": {
+        "label": "体温（°C）",
+        "ph": "例如：38.5"
+      },
+      "heart_rate": {
+        "label": "心率（次/分）",
+        "ph": "例如：90"
+      },
+      "respiratory_rate": {
+        "label": "呼吸频率（次/分）",
+        "ph": "例如：24"
+      },
+      "blood_pressure": {
+        "ph": "例如：140/90"
+      },
+      "weight_kg": {
+        "ph": "例如：12.5"
+      },
+      "vet_name": {
+        "ph": "例如：王医生"
+      }
+    },
+    "travel": {
+      "destination_country": {
+        "ph": "例如：意大利"
+      },
+      "origin_city": {
+        "ph": "例如：比雷埃夫斯"
+      },
+      "destination_city": {
+        "ph": "例如：伊拉克利翁"
+      },
+      "departure_date": {
+        "label": "出发日期"
+      },
+      "carrier": {
+        "ph": "例如：Aegean, Minoan Lines"
+      },
+      "booking_ref": {
+        "ph": "例如：ABC123"
+      }
+    },
+    "access": {
+      "provider_email": {
+        "ph": "例如：vet@example.com"
+      },
+      "provider_name": {
+        "ph": "例如：王医生"
+      },
+      "reason": {
+        "ph": "例如：皮炎的第二诊疗意见"
+      },
+      "expires_at": {
+        "hint": "留空表示长期有效"
+      }
+    },
+    "pedigree": {
+      "registration_number": {
+        "ph": "例如：GR-12345"
+      },
+      "kennel_club": {
+        "ph": "例如：CKU"
+      },
+      "breeder_contact": {
+        "ph": "例如：电话或电子邮箱"
+      }
+    }
+  },
+  "loyaltyPage": {
+    "title": "会员计划",
+    "subtitle": "每次付款都能赚取积分并提升等级",
+    "yourTier": "你的等级",
+    "pointsValue": "积分：{{points}}",
+    "toNext": "下一级：{{tier}}——还差 {{points}} 积分",
+    "maxTier": "最高等级",
+    "yourDiscount": "你可享受 AI 订阅 {{percent}}% 的折扣。",
+    "noDiscountYet": "提升等级即可享受 AI 订阅折扣。",
+    "loginPrompt": "登录后即可查看你的积分和等级。",
+    "login": "登录",
+    "earnTitle": "如何赚取积分",
+    "earnRate": "每支付 1 欧元获得积分：{{points}}",
+    "source_orders": "商店购物",
+    "source_bookings": "服务预订",
+    "source_telehealth": "远程医疗咨询",
+    "source_events": "活动报名",
+    "source_subscriptions": "AI 订阅和食品订阅",
+    "refundNote": "如果付款被退款，其积分将按比例扣除（全额退款则全部扣除）。",
+    "tiersTitle": "等级与权益",
+    "current": "当前",
+    "fromPoints": "{{points}} 积分起",
+    "startTier": "注册即享",
+    "aiDiscount": "AI 订阅减 {{percent}}%",
+    "noDiscount": "无折扣",
+    "discountNote": "折扣仅适用于平台的 AI 订阅，不适用于服务商的商品或服务。购买新订阅时自动生效，适用于首个计费周期（月付为 1 个月，年付为 12 个月）。",
+    "seePlans": "查看方案"
   }
 }

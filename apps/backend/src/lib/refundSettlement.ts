@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client'
+import { revokeForRefundTx } from './loyalty.js'
 
 /**
  * Τελική εγγραφή μιας επιστροφής που ΕΓΙΝΕ (ή κρίθηκε ότι έγινε) σε
@@ -126,5 +127,12 @@ export async function settleRefundTx(tx: Prisma.TransactionClient, s: RefundSett
       stockRestored = true
     }
   }
+  // Πόντοι επιβράβευσης αυτής της πληρωμής, αναλογικά (πλήρης → όλοι): στην ΙΔΙΑ
+  // συναλλαγή, μία φορά (εξαρτάται από τη μετάβαση του βήματος 1)· σε SAVEPOINT,
+  // ώστε σφάλμα εκεί να μην ακυρώνει την επιστροφή (lib/loyalty revokeForRefundTx).
+  await revokeForRefundTx(tx, {
+    source: s.type, ref: `${s.id}:${s.paymentRef}`, amount: s.amount, full,
+    refundRef: `settle:${s.type}:${s.id}:${s.paymentRef}:${s.fromStatus}>${s.toStatus}:${round2(s.remainingBefore)}:${round2(s.amount)}`,
+  })
   return { applied: true, cancelled, stockRestored, previousLifeStatus: rec.status, keep }
 }

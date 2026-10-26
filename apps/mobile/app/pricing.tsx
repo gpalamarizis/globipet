@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } 
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Check, Star } from 'lucide-react-native'
+import { Sparkles, Check, Star, Award } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
@@ -105,6 +105,17 @@ export default function PricingScreen() {
     enabled: isAuthenticated,
   })
 
+  // Έκπτωση επιπέδου επιβράβευσης (Ε17) — ίδιο ποσοστό με το κουπόνι του
+  // Stripe που βάζει ο server στο checkout· ίδια εμφάνιση με το web.
+  const { data: loyalty } = useQuery({
+    queryKey: ['loyalty'],
+    queryFn: () => api.get('/loyalty').then(r => r.data?.data ?? r.data),
+    enabled: isAuthenticated,
+  })
+  const tierPct: number = isAuthenticated ? Math.max(0, Math.min(50, Number(loyalty?.ai_discount_percent) || 0)) : 0
+  /** Τιμή μετά την έκπτωση, στρογγυλεμένη στο λεπτό (όπως το Stripe). */
+  const discounted = (v: number) => Math.round(Number(v) * (100 - tierPct)) / 100
+
   const startTrial = useMutation({
     mutationFn: () => api.post('/ai-subscriptions/start-trial', {}),
     onSuccess: () => {
@@ -132,6 +143,9 @@ export default function PricingScreen() {
 
   const monthly = (p: any) =>
     annual && p.price_annual ? p.price_annual / 12 : p.price_monthly
+  // Μετά την έκπτωση: η χρέωση (μηνιαία ή ετήσια) μειώνεται κατά tierPct.
+  const monthlyDiscounted = (p: any) =>
+    annual && p.price_annual ? discounted(p.price_annual) / 12 : discounted(p.price_monthly)
 
   // Ο server ξεκινά δοκιμή μόνο από 'none' (αλλιώς 400).
   const canTrial = isAuthenticated && status?.ai_subscription_status === 'none'
@@ -140,6 +154,19 @@ export default function PricingScreen() {
     <Screen title={t('pricing.title')} back scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.intro}>{t('pricing.subtitle')}</Text>
+
+        {/* Έκπτωση του επιπέδου μου (όπως στο web). */}
+        {tierPct > 0 && (
+          <Card onPress={() => router.push('/loyalty' as any)}>
+            <View style={s.tierRow}>
+              <Award size={icon.md} color={colors.brand} />
+              <Text style={s.tierTxt}>
+                {t('pricing.tierDiscountBanner', { tier: t(`profile.${loyalty?.tier ?? 'bronze'}`), percent: tierPct })}
+              </Text>
+            </View>
+            <Text style={s.tierMore}>{t('pricing.tierDiscountMore')}</Text>
+          </Card>
+        )}
 
         {/* Πληρωμένη συνδρομή AI: κατάσταση και ακύρωση (όπως στο web). */}
         <AiSubscriptionManage />
@@ -186,12 +213,18 @@ export default function PricingScreen() {
             <Text style={s.planName}>{planName(p)}</Text>
             {!!p.description && <Text style={s.planDesc}>{p.description}</Text>}
 
-            <View style={s.priceRow}>
-              <Text style={s.price}>€{monthly(p).toFixed(2)}</Text>
+            {tierPct > 0 && (
+              <View style={s.wasRow}>
+                <Text style={s.was}>€{monthly(p).toFixed(2)}</Text>
+                <Badge label={`−${tierPct}%`} tone="success" />
+              </View>
+            )}
+            <View style={[s.priceRow, tierPct > 0 && { marginTop: space.xs }]}>
+              <Text style={s.price}>€{monthlyDiscounted(p).toFixed(2)}</Text>
               <Text style={s.per}>{t('pricing.perMonth')}</Text>
             </View>
             {annual && p.price_annual && (
-              <Badge label={t('pricing.billedAnnually', { amount: Number(p.price_annual).toFixed(2) })} tone="success" />
+              <Badge label={t('pricing.billedAnnually', { amount: discounted(p.price_annual).toFixed(2) })} tone="success" />
             )}
 
             {!!p.features?.length && (
@@ -249,6 +282,11 @@ const s = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs, marginTop: space.md },
   price: { ...type.display, color: colors.brand, fontWeight: weight.black },
   per: { ...type.caption, color: colors.textLight },
+  wasRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
+  was: { ...type.body, color: colors.textLight, textDecorationLine: 'line-through' },
+  tierRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  tierTxt: { ...type.body, color: colors.text, flex: 1 },
+  tierMore: { ...type.caption, color: colors.brand, fontWeight: weight.semibold, marginTop: space.xs, marginLeft: icon.md + space.sm },
   features: { gap: space.xs, marginTop: space.md },
   feature: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   featureTxt: { ...type.caption, color: colors.textMuted, flex: 1 },

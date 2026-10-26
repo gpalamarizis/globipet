@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router'
 import { useTranslation } from 'react-i18next'
-import { View, StyleSheet, Platform, Dimensions, useWindowDimensions } from 'react-native'
+import { View, Text, StyleSheet, Platform, Dimensions, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Home, Search, PawPrint, ShoppingBag, User } from 'lucide-react-native'
+import { Home, Compass, PawPrint, ShoppingBag, User } from 'lucide-react-native'
 import { colors, radius, type, weight, space } from '@/theme'
 
 /**
@@ -34,14 +34,21 @@ import { colors, radius, type, weight, space } from '@/theme'
  *
  *   Οι ετικέτες είναι πλέον σύντομες — «Ζώα», «Ψάξε», «Αγορά» — οπότε
  *   χωράνε άνετα στα 12px και ο έλεγχος επιστρέφει στον χρήστη.
+ *
+ * Ε17: «Εξερεύνησε» και «Λογαριασμός» (απόφαση ιδιοκτήτη) είναι μεγαλύτερες.
+ *   Αντί για αποσιωπητικά, η ετικέτα μικραίνει ΜΟΝΟ όσο χρειάζεται για να
+ *   χωρέσει στο πλάτος της καρτέλας (adjustsFontSizeToFit, ως 70%)· το font
+ *   scaling του χρήστη εξακολουθεί να ισχύει.
  */
 
+// Ε17 (απόφαση ιδιοκτήτη): Αρχική · Κατοικίδια · Εξερεύνησε · Αγορά · Λογαριασμός.
+// Τα ονόματα αρχείων (discover, profile) μένουν ίδια ώστε να μη σπάσουν deep links.
 const TABS = [
-  { name: 'index',       titleKey: 'tabs.home',   Icon: Home },
-  { name: 'discover',    titleKey: 'tabs.discover',     Icon: Search },
-  { name: 'pets',        titleKey: 'tabs.animals',      Icon: PawPrint },
-  { name: 'marketplace', titleKey: 'tabs.shop',    Icon: ShoppingBag },
-  { name: 'profile',     titleKey: 'tabs.profile',   Icon: User },
+  { name: 'index',       titleKey: 'tabs.home',     Icon: Home },
+  { name: 'pets',        titleKey: 'tabs.animals',  Icon: PawPrint },
+  { name: 'discover',    titleKey: 'tabs.discover', Icon: Compass },
+  { name: 'marketplace', titleKey: 'tabs.shop',     Icon: ShoppingBag },
+  { name: 'profile',     titleKey: 'tabs.profile',  Icon: User },
 ]
 
 /** Οθόνες που υπάρχουν στον φάκελο αλλά δεν εμφανίζονται στη μπάρα. */
@@ -128,6 +135,10 @@ export default function TabLayout() {
         <Tabs.Screen key={name} name={name}
           options={{
             title: t(titleKey),
+            tabBarLabel: ({ color, children }) => (
+              <Text style={[s.label, s.labelFit, { color }]} numberOfLines={1}
+                adjustsFontSizeToFit minimumFontScale={0.7}>{children}</Text>
+            ),
             tabBarIcon: ({ color, focused }) =>
               <TabIcon Icon={Icon} focused={focused} color={color} />,
           }} />
@@ -153,6 +164,8 @@ const s = StyleSheet.create({
     marginTop: 3,
     includeFontPadding: false,
   },
+  // Πλάτος = όλη η καρτέλα, ώστε το adjustsFontSizeToFit να έχει όριο.
+  labelFit: { alignSelf: 'stretch', textAlign: 'center' },
   iconWrap: {
     width: 48, height: 32,
     alignItems: 'center', justifyContent: 'center',

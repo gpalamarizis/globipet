@@ -14,6 +14,7 @@ import {
 } from '../lib/cancellation.js'
 import { fullNameOf } from '../lib/userName.js'
 import { refundExtraVivaPayment } from '../lib/extraPaymentRefund.js'
+import { awardForRecord } from '../lib/loyalty.js'
 
 const TELEHEALTH_PAID_NO_DELETE = 'Η συνεδρία έχει πληρωθεί και δεν διαγράφεται. Χρησιμοποίησε ακύρωση.'
 
@@ -128,6 +129,7 @@ export async function markTelehealthPaid(consultationId: string, transactionId: 
 
   const consultation = await prisma.telehealthConsultation.findUnique({ where: { id: consultationId } })
   if (!consultation) return true
+  await awardForRecord('telehealth', consultationId, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
 
   sendTelehealthConfirmedEmail(consultation.client_email, {
     customerName: consultation.client_name,

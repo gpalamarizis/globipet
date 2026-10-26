@@ -11,6 +11,7 @@ import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import { sendPushToUser } from './push.js'
 import { broadcastToUser } from '../routes/notifications.js'
 import { withRefundLock } from './refundLock.js'
+import { awardForRecord } from './loyalty.js'
 
 /**
  * Πληρωμή κράτησης υπηρεσίας μέσω Viva — επιβεβαίωση και προστασία από
@@ -225,6 +226,7 @@ export async function confirmBookingPayment(bookingId: string, transactionId: st
   })
   if (claimed.count > 0) {
     await firePaidSideEffects(bookingId).catch((err) => console.error('booking paid side effects error:', err))
+    await awardForRecord('booking', bookingId, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
     return 'paid'
   }
 

@@ -1,12 +1,14 @@
 ﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, Plus, X, Check, Dog, Heart, Map, List, Navigation, Info } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
+import ServiceLocationPicker from '@/components/features/services/ServiceLocationPicker'
+import { fmtDateShort } from '@/lib/dates'
 
 const eventTypes = [
   { value: 'walk', emoji: '🚶', labelKey: 'pgPlaydates.types.walk' },
@@ -19,15 +21,71 @@ const eventTypes = [
 const petTypeOptions = ['dog', 'cat', 'rabbit', 'bird', 'other']
 const petTypeEmoji: Record<string, string> = { dog: '🐶', cat: '🐱', rabbit: '🐰', bird: '🐦', other: '🐾' }
 
-// 'YYYY-MM-DD' ως τοπική ημερομηνία στη γλώσσα του χρήστη (όπως το κινητό):
-// το new Date('YYYY-MM-DD') είναι UTC και σε ζώνες πίσω από το UTC έδειχνε την προηγούμενη μέρα.
-const fmtDate = (d: string | undefined, lang: string) => {
-  if (!d) return '—'
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
-  const x = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(d)
-  return isNaN(x.getTime()) ? d
-    : x.toLocaleDateString(lang, { weekday: 'short', day: '2-digit', month: 'short' })
+// Ε17 — ημερομηνία με fmtDateShort (π.χ. 15/03/2026), όπως το κινητό.
+const fmtDate = (d: string | undefined, lang: string) => (d ? fmtDateShort(d, lang) : '—')
+
+/**
+ * Ε17 — «Λεπτομέρειες σημείου» χωρίς αλλαγή σχήματος: αποθηκεύονται στο ίδιο
+ * πεδίο location, μετά τη διεύθυνση, με διαχωριστικό ' · ' (ίδιο στο κινητό).
+ * Παλιές βόλτες χωρίς διαχωριστικό: όλο το κείμενο είναι η διεύθυνση.
+ */
+const LOC_SEP = ' · '
+const splitLocation = (loc: string | null | undefined) => {
+  const v = String(loc ?? '')
+  const i = v.indexOf(LOC_SEP)
+  return i < 0 ? { address: v, details: '' } : { address: v.slice(0, i), details: v.slice(i + LOC_SEP.length) }
 }
+const joinLocation = (address: string, details: string) => {
+  // Το διαχωριστικό δεν επιτρέπεται μέσα στη διεύθυνση, για να χωρίζει σωστά.
+  const a = address.trim().split(LOC_SEP).join(', ')
+  const d = details.trim()
+  return d ? `${a}${LOC_SEP}${d}` : a
+}
+/** Οδηγίες: με συντεταγμένες όταν υπάρχουν, αλλιώς αναζήτηση της διεύθυνσης. */
+const directionsUrl = (ev: any) => {
+  const lat = Number(ev?.latitude), lng = Number(ev?.longitude)
+  if (ev?.latitude != null && ev?.longitude != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  }
+  const q = [splitLocation(ev?.location).address, ev?.city].map(x => String(x ?? '').trim()).filter(Boolean).join(', ')
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
+}
+const todayYmd = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const isPosInt = (v: string) => /^\d+$/.test(v.trim()) && parseInt(v, 10) > 0
+
+/** Σημείο συνάντησης + λεπτομέρειες + «Οδηγίες» — ίδιο σε όλες τις κάρτες. */
+function EventPlace({ ev }: { ev: any }) {
+  const { t } = useTranslation()
+  const loc = splitLocation(ev?.location)
+  return (
+    <>
+      <span className="flex items-center gap-1 min-w-0"><MapPin size={12} className="shrink-0" />
+        <span className="truncate">{[loc.address, ev?.city].filter(Boolean).join(', ')}</span>
+      </span>
+      {loc.details && (
+        <span className="flex items-center gap-1 min-w-0"><Info size={12} className="shrink-0" /><span className="break-words">{loc.details}</span></span>
+      )}
+      <a href={directionsUrl(ev)} target="_blank" rel="noopener noreferrer"
+        className="flex items-center gap-1 text-green-600 hover:underline">
+        <Navigation size={12} className="shrink-0" />{t('pgPlaydates.directions')}
+      </a>
+    </>
+  )
+}
+
+const emptyForm = (city: string) => ({
+  title: '', description: '', event_type: 'meetup',
+  date: '', time: '', duration_minutes: '60',
+  // Σημείο: διεύθυνση → εύρεση (/geocode) → συντεταγμένες + αυτόματη πόλη.
+  address: '', details: '',
+  latitude: null as number | null, longitude: null as number | null, autoCity: '',
+  // Πόλη με το χέρι μόνο όταν δεν προέκυψε από τη διεύθυνση (προσυμπλήρωση από το προφίλ).
+  city,
+  max_participants: '', pet_types: [] as string[], is_public: true,
+})
 
 export default function Playdates() {
   const { t, i18n } = useTranslation()
@@ -39,12 +97,21 @@ export default function Playdates() {
   const [filterType, setFilterType] = useState('all')
   const [cityFilter, setCityFilter] = useState('')
 
-  const [form, setForm] = useState({
-    title: '', description: '', event_type: 'meetup',
-    date: '', time: '', duration_minutes: 60,
-    location: '', city: user?.city || '',
-    max_participants: 10, pet_types: [] as string[], is_public: true,
-  })
+  const [form, setForm] = useState(() => emptyForm(user?.city || ''))
+  // Σφάλματα ανά πεδίο μετά την πρώτη προσπάθεια (όχι σιωπηλά απενεργοποιημένο κουμπί).
+  const [tried, setTried] = useState(false)
+  const errors: Record<string, string> = {}
+  if (form.title.trim().length < 2) errors.title = t('pgPlaydates.err.title')
+  if (!form.date) errors.date = t('pgPlaydates.err.date')
+  if (!form.time) errors.time = t('pgPlaydates.err.time')
+  if (!form.address.trim()) errors.address = t('pgPlaydates.err.address')
+  // Πόλη: ΧΩΡΙΣ υποχρεωτικό έλεγχο εδώ — κενή → ο server βάζει την πόλη του
+  // προφίλ· αν λείπει κι αυτή, απαντά 400 «Συμπλήρωσε την πόλη της βόλτας»
+  // (εμφανίζεται από το onError).
+  if (form.duration_minutes.trim() && !isPosInt(form.duration_minutes)) errors.duration = t('pgPlaydates.err.number')
+  if (form.max_participants.trim() && !isPosInt(form.max_participants)) errors.max = t('pgPlaydates.err.number')
+  const errOf = (k: string) => (tried ? errors[k] : undefined)
+  const closeCreate = () => { setShowCreateModal(false); setTried(false) }
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteUserId, setInviteUserId] = useState<string | null>(null)
   const [inviteMsg, setInviteMsg] = useState('')
@@ -62,10 +129,35 @@ export default function Playdates() {
   })
 
   const createEvent = useMutation({
-    mutationFn: () => api.post('/playdates', form),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); setShowCreateModal(false); setForm({ title: '', description: '', event_type: 'meetup', date: '', time: '', duration_minutes: 60, location: '', city: user?.city || '', max_participants: 10, pet_types: [], is_public: true }); toast.success(t('pgPlaydates.created')) },
-    onError: () => toast.error(t('pgPlaydates.createError')),
+    mutationFn: () => api.post('/playdates', {
+      title: form.title.trim(),
+      description: form.description.trim() || undefined,
+      event_type: form.event_type,
+      date: form.date,
+      time: form.time,
+      duration_minutes: form.duration_minutes.trim() ? parseInt(form.duration_minutes, 10) : undefined,
+      // Διεύθυνση + «Λεπτομέρειες σημείου» στο ίδιο πεδίο (βλ. joinLocation).
+      location: joinLocation(form.address, form.details),
+      // Αυτόματη πόλη· αλλιώς ό,τι έγραψε ο χρήστης· κενή → ο server βάζει την πόλη του προφίλ.
+      city: form.autoCity || form.city.trim() || undefined,
+      latitude: form.latitude ?? undefined,
+      longitude: form.longitude ?? undefined,
+      max_participants: form.max_participants.trim() ? parseInt(form.max_participants, 10) : undefined,
+      pet_types: form.pet_types,
+      is_public: form.is_public,
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['playdates'] }); qc.invalidateQueries({ queryKey: ['playdates-my'] }); closeCreate(); setForm(emptyForm(user?.city || '')); toast.success(t('pgPlaydates.created')) },
+    // Το μήνυμα του server (π.χ. «Συμπλήρωσε την πόλη της βόλτας») αντί για γενικό.
+    onError: (e: any) => toast.error(e?.message || t('pgPlaydates.createError')),
   })
+  const submitCreate = () => {
+    setTried(true)
+    if (Object.keys(errors).length) return
+    createEvent.mutate()
+  }
+  // Νέα διεύθυνση μετά από εύρεση: οι παλιές συντεταγμένες/πόλη δεν ισχύουν πια.
+  const onAddressChange = (v: string) => setForm(f => ({ ...f, address: v,
+    ...(f.latitude != null || f.autoCity ? { latitude: null, longitude: null, autoCity: '' } : {}) }))
 
   const sendInvite = useMutation({
     // invitee_id covers the nearby-owner cards, which no longer receive an
@@ -112,6 +204,8 @@ export default function Playdates() {
 
   const inputCls = "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white"
   const labelCls = "text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block"
+  const errCls = (k: string) => errOf(k) ? ' border-red-400 dark:border-red-500' : ''
+  const FieldError = ({ k }: { k: string }) => errOf(k) ? <p className="text-xs text-red-600 mt-1">{errOf(k)}</p> : null
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
@@ -185,8 +279,8 @@ export default function Playdates() {
                               {ev.description && <p className="text-sm text-gray-500 mb-2">{ev.description}</p>}
                               <div className="flex flex-wrap gap-3 text-xs text-gray-400">
                                 <span className="flex items-center gap-1"><Calendar size={12} />{fmtDate(ev.date, i18n.language)} {ev.time}</span>
-                                <span className="flex items-center gap-1"><MapPin size={12} />{ev.location}, {ev.city}</span>
                                 <span className="flex items-center gap-1"><Users size={12} />{ev.invitations?.length || 0}/{ev.max_participants}</span>
+                                <EventPlace ev={ev} />
                               </div>
                             </div>
                             {/* is_mine / is_me από τον server: τα email δεν επιστρέφονται πια. */}
@@ -280,7 +374,8 @@ export default function Playdates() {
                         <button onClick={() => confirmDelete(ev)} disabled={deleteEvent.isPending} className="p-1 text-gray-400 hover:text-red-500"><X size={14} /></button>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{fmtDate(ev.date, i18n.language)} {ev.time} · {ev.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">{fmtDate(ev.date, i18n.language)} {ev.time}</p>
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-1"><EventPlace ev={ev} /></div>
                     <p className="text-xs text-gray-400">{t('pgPlaydates.acceptedCount', { count: ev.invitations?.filter((i: any) => i.status === 'accepted').length })}</p>
                   </div>
                 ))}
@@ -295,7 +390,8 @@ export default function Playdates() {
                 {myData?.invitations?.map((inv: any) => (
                   <div key={inv.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
                     <h3 className="font-semibold text-gray-900 dark:text-white">{inv.event.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">{fmtDate(inv.event.date, i18n.language)} {inv.event.time} · {inv.event.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">{fmtDate(inv.event.date, i18n.language)} {inv.event.time}</p>
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-1"><EventPlace ev={inv.event} /></div>
                     {inv.message && <p className="text-sm text-gray-500 mt-1 italic">"{inv.message}"</p>}
                     {inv.status === 'pending' ? (
                       <div className="flex gap-2 mt-3">
@@ -325,15 +421,16 @@ export default function Playdates() {
       <AnimatePresence>
         {showCreateModal && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowCreateModal(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={closeCreate} />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="fixed inset-x-4 top-4 bottom-4 z-50 max-w-md mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">{t('pgPlaydates.modalTitle')}</h3>
-                <button onClick={() => setShowCreateModal(false)}><X size={18} className="text-gray-400" /></button>
+                <button onClick={closeCreate}><X size={18} className="text-gray-400" /></button>
               </div>
+              <p className="text-xs text-gray-400 mb-3">{t('pgPlaydates.form.requiredNote')}</p>
               <div className="space-y-3">
-                <div><label className={labelCls}>{t('pgPlaydates.form.title')}</label><input className={inputCls} value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} placeholder={t('pgPlaydates.form.titlePlaceholder')} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.title')}</label><input className={inputCls + errCls('title')} value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} placeholder={t('pgPlaydates.form.titlePlaceholder')} /><FieldError k="title" /></div>
                 <div><label className={labelCls}>{t('pgPlaydates.form.type')}</label>
                   <div className="flex flex-wrap gap-2">
                     {eventTypes.map(et => (
@@ -344,16 +441,34 @@ export default function Playdates() {
                     ))}
                   </div>
                 </div>
-                <div><label className={labelCls}>{t('pgPlaydates.form.description')}</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} /></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className={labelCls}>{t('pgPlaydates.form.date')}</label><input type="date" className={inputCls} value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} /></div>
-                  <div><label className={labelCls}>{t('pgPlaydates.form.time')}</label><input type="time" className={inputCls} value={form.time} onChange={e => setForm(f => ({...f, time: e.target.value}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.date')}</label><input type="date" min={todayYmd()} className={inputCls + errCls('date')} value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} /><FieldError k="date" /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.time')}</label><input type="time" className={inputCls + errCls('time')} value={form.time} onChange={e => setForm(f => ({...f, time: e.target.value}))} /><FieldError k="time" /></div>
                 </div>
-                <div><label className={labelCls}>{t('pgPlaydates.form.location')}</label><input className={inputCls} value={form.location} onChange={e => setForm(f => ({...f, location: e.target.value}))} placeholder={t('pgPlaydates.form.locationPlaceholder')} /></div>
-                <div><label className={labelCls}>{t('pgPlaydates.form.city')}</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.meetingPoint')}</label><input className={inputCls + errCls('address')} value={form.address} onChange={e => onAddressChange(e.target.value)} placeholder={t('pgPlaydates.form.locationPlaceholder')} /><FieldError k="address" /></div>
+                <ServiceLocationPicker
+                  address={form.address}
+                  // Χωρίς αυτόματη πόλη: η πόλη που έγραψε ο χρήστης βοηθά την εύρεση.
+                  city={form.autoCity ? undefined : form.city}
+                  country="gr"
+                  latitude={form.latitude}
+                  longitude={form.longitude}
+                  title={t('pgPlaydates.form.mapTitle')}
+                  hint={t('pgPlaydates.form.mapHint')}
+                  notSet={t('pgPlaydates.form.mapNotSet')}
+                  onChange={c => setForm(f => ({ ...f, latitude: c.latitude, longitude: c.longitude, ...(c.latitude == null ? { autoCity: '' } : {}) }))}
+                  onFound={r => setForm(f => ({ ...f, autoCity: r.city.trim() }))} />
+                {form.autoCity ? (
+                  <p className="text-xs text-gray-500">{t('pgPlaydates.form.cityAuto', { city: form.autoCity })}</p>
+                ) : (
+                  <div><label className={labelCls}>{t('pgPlaydates.form.cityOptional')}</label><input className={inputCls} value={form.city} onChange={e => setForm(f => ({...f, city: e.target.value}))} />
+                    <p className="text-xs text-gray-400 mt-1">{t('pgPlaydates.form.cityHint')}</p></div>
+                )}
+                <div><label className={labelCls}>{t('pgPlaydates.form.details')}</label><input className={inputCls} value={form.details} onChange={e => setForm(f => ({...f, details: e.target.value}))} placeholder={t('pgPlaydates.form.detailsPlaceholder')} /></div>
+                <div><label className={labelCls}>{t('pgPlaydates.form.description')}</label><textarea className={inputCls} rows={2} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} placeholder={t('pgPlaydates.form.descriptionPlaceholder')} /></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className={labelCls}>{t('pgPlaydates.form.duration')}</label><input type="number" className={inputCls} value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: Number(e.target.value)}))} /></div>
-                  <div><label className={labelCls}>{t('pgPlaydates.form.maxParticipants')}</label><input type="number" className={inputCls} value={form.max_participants} onChange={e => setForm(f => ({...f, max_participants: Number(e.target.value)}))} /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.duration')}</label><input type="number" min={1} inputMode="numeric" className={inputCls + errCls('duration')} value={form.duration_minutes} onChange={e => setForm(f => ({...f, duration_minutes: e.target.value}))} placeholder="60" /><FieldError k="duration" /></div>
+                  <div><label className={labelCls}>{t('pgPlaydates.form.maxParticipants')}</label><input type="number" min={1} inputMode="numeric" className={inputCls + errCls('max')} value={form.max_participants} onChange={e => setForm(f => ({...f, max_participants: e.target.value}))} placeholder={t('pgPlaydates.form.maxPlaceholder')} /><FieldError k="max" /></div>
                 </div>
                 <div><label className={labelCls}>{t('pgPlaydates.form.petTypes')}</label>
                   <div className="flex flex-wrap gap-2">
@@ -364,9 +479,11 @@ export default function Playdates() {
                       </button>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-400 mt-1">{t('pgPlaydates.form.petTypesHint')}</p>
                 </div>
               </div>
-              <button onClick={() => createEvent.mutate()} disabled={!form.title || !form.date || !form.time || !form.location || !form.city || createEvent.isPending}
+              {tried && Object.keys(errors).length > 0 && <p className="text-xs text-red-600 mt-4">{t('pgPlaydates.err.summary')}</p>}
+              <button onClick={submitCreate} disabled={createEvent.isPending}
                 className="w-full mt-4 py-3 bg-green-500 text-white rounded-xl font-medium disabled:opacity-50">
                 {createEvent.isPending ? t('pgPlaydates.creating') : t('pgPlaydates.createEvent')}
               </button>

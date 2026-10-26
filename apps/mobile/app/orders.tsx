@@ -8,6 +8,7 @@ import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { ErrorState } from '@/components/ErrorState'
+import { dateLocale } from '@/lib/dates'
 
 /** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
  *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
@@ -91,7 +92,7 @@ export default function OrdersScreen() {
     if (!d) return ''
     const x = new Date(d)
     return isNaN(x.getTime()) ? ''
-      : x.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
+      : x.toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
   if (!isAuthenticated) return (

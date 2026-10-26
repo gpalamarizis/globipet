@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Αποτυχημένες / κολλημένες επιστροφές χρημάτων (GET /admin/refunds/pending).
@@ -77,7 +78,7 @@ export default function AdminRefundsPage() {
   const money = (n: number | null) => n === null || n === undefined
     ? '—'
     : new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'EUR' }).format(n)
-  const when = (iso: string) => new Date(iso).toLocaleString(i18n.language, {
+  const when = (iso: string) => new Date(iso).toLocaleString(dateLocale(i18n.language), {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
   const kindLabel = (r: Item) => r.kind === 'audit' || r.kind === 'order' || r.kind === 'external_refund'

@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
+import { revokeStripeInvoice, aiDiscountForEmail } from './loyalty.js'
 
 /**
  * Κοινή λογική για συνδρομές του Stripe (AI και τροφής) — χρησιμοποιείται από
@@ -206,6 +207,65 @@ export async function openAiCheckoutSessionUrl(
 }
 
 /**
+ * Έκπτωση επιπέδου επιβράβευσης στη συνδρομή AI (Ε17) — η ΜΟΝΗ έκπτωση της
+ * πλατφόρμας από το πρόγραμμα (ποτέ σε προϊόντα/υπηρεσίες παρόχων).
+ *
+ * Κουπόνι του Stripe ανά (ποσοστό, μήνες), κοινό για όλους:
+ * `globipet-tier-<%>-<μήνες>m`, percent_off, duration 'repeating' με
+ * duration_in_months = 12 για ετήσια χρέωση, 1 για μηνιαία — δηλαδή η
+ * έκπτωση καλύπτει ΜΙΑ περίοδο χρέωσης (δημιουργείται την πρώτη φορά, μετά
+ * ξαναχρησιμοποιείται· ταυτόχρονη δημιουργία → resource_already_exists →
+ * ανάγνωση). Μπαίνει στο Checkout Session (`discounts`).
+ *
+ * ΓΙΑΤΙ 'repeating' (απόφαση ιδιοκτήτη: η έκπτωση ακολουθεί το ΤΡΕΧΟΝ
+ * επίπεδο): με 'forever' η έκπτωση «κλείδωνε» στο επίπεδο της αγοράς — πτώση
+ * επιπέδου (π.χ. μετά από επιστροφές) δεν την αφαιρούσε ποτέ. Τώρα λήγει
+ * μετά την πρώτη περίοδο. ΑΝΤΙΤΙΜΟ: οι ανανεώσεις χρεώνονται σε πλήρη τιμή·
+ * η επανεφαρμογή της έκπτωσης του τρέχοντος επιπέδου σε κάθε ανανέωση
+ * (π.χ. στο webhook invoice.upcoming / customer.subscription.updated) ΔΕΝ
+ * υλοποιείται εδώ — εκτός εμβέλειας, χρειάζεται ξεχωριστή απόφαση.
+ *
+ * Αποτυχία (Stripe/βάση, κουπόνι με άλλους όρους) → καμία έκπτωση, καταγραφή
+ * στο log, το checkout συνεχίζει κανονικά. Ποτέ δεν πετάει.
+ */
+export async function aiTierCheckoutDiscount(email: string, interval: 'month' | 'year' = 'month'): Promise<{ discounts?: { coupon: string }[]; percent: number; tier: string }> {
+  let tier = 'bronze'
+  try {
+    const d = await aiDiscountForEmail(email)
+    tier = d.tier
+    const percent = d.percent
+    if (!(percent > 0)) return { percent: 0, tier }
+    const months = interval === 'year' ? 12 : 1
+    const id = `globipet-tier-${percent}-${months}m`
+    let coupon: Stripe.Coupon | null = null
+    try {
+      coupon = await stripe.coupons.retrieve(id)
+    } catch (err: any) {
+      if (err?.code !== 'resource_missing') throw err
+    }
+    if (!coupon) {
+      try {
+        coupon = await stripe.coupons.create({
+          id, percent_off: percent, duration: 'repeating', duration_in_months: months,
+          name: `GlobiPet -${percent}% (${months}m)`,
+        })
+      } catch (err: any) {
+        if (err?.code !== 'resource_already_exists') throw err
+        coupon = await stripe.coupons.retrieve(id)
+      }
+    }
+    if (!coupon.valid || coupon.percent_off !== percent || coupon.duration !== 'repeating' || coupon.duration_in_months !== months) {
+      console.error(`[stripe] coupon ${id} is not a valid repeating ${percent}%/${months}m coupon — AI checkout without tier discount`)
+      return { percent: 0, tier }
+    }
+    return { discounts: [{ coupon: id }], percent, tier }
+  } catch (err: any) {
+    console.error('[stripe] tier discount for AI checkout failed — no discount applied:', err?.message ?? err)
+    return { percent: 0, tier }
+  }
+}
+
+/**
  * Ανοιχτή Checkout Session συνδρομής ΤΡΟΦΗΣ του ίδιου χρήστη για το ίδιο
  * προϊόν, τα τελευταία `minutes` λεπτά — όπως το openAiCheckoutSessionUrl:
  * διπλό πάτημα / δεύτερη συσκευή / δεύτερη καρτέλα έφτιαχναν δεύτερο
@@ -255,7 +315,10 @@ export async function refundStripeInvoice(
       },
       select: { id: true },
     })
-    if (done) return 'already'
+    if (done) {
+      await revokeStripeInvoice(invoiceId) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
+      return 'already'
+    }
     const inv = await stripe.invoices.retrieve(invoiceId)
     if (inv.status !== 'paid' || !(inv.amount_paid > 0)) return 'unpaid'
     const chargeId = typeof inv.charge === 'string' ? inv.charge : inv.charge?.id ?? null
@@ -266,6 +329,7 @@ export async function refundStripeInvoice(
         action: ctx.action, resource: ctx.resource, resource_id: ctx.resourceId, subject_email: ctx.email ?? null,
         metadata: { ...meta, amount: inv.amount_paid / 100, refund_id: null, source: 'already_refunded_in_stripe' },
       })
+      await revokeStripeInvoice(invoiceId) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
       return 'already'
     }
     const refund = await stripe.refunds.create(
@@ -276,6 +340,7 @@ export async function refundStripeInvoice(
       action: ctx.action, resource: ctx.resource, resource_id: ctx.resourceId, subject_email: ctx.email ?? null,
       metadata: { ...meta, amount: (refund.amount ?? 0) / 100, refund_id: refund.id },
     })
+    await revokeStripeInvoice(invoiceId) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
     return 'refunded'
   } catch (err: any) {
     console.error(`[stripe] refund of invoice ${invoiceId} (${ctx.reason}) failed:`, err?.message)

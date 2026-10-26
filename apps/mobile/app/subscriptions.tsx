@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Οι συνδρομές τροφής μου — ίδιο με την κάρτα «Οι συνδρομές μου» του
@@ -62,7 +63,7 @@ export default function SubscriptionsScreen() {
   const fmtDate = (d?: string | null) => {
     if (!d) return ''
     const x = new Date(d)
-    return isNaN(x.getTime()) ? '' : x.toLocaleDateString(i18n.language, { day: '2-digit', month: 'long', year: 'numeric' })
+    return isNaN(x.getTime()) ? '' : x.toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'long', year: 'numeric' })
   }
 
   const confirmCancel = (sub: any, total: number) => {

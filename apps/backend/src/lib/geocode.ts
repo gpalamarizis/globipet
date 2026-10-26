@@ -17,7 +17,13 @@
  *   πετά GeocodeBusyError (το /geocode απαντά 503), αλλιώς επιστρέφει null.
  */
 
-export interface GeocodeResult { lat: number; lon: number; display_name: string }
+/**
+ * city (Ε17, προαιρετικό — νέο πεδίο, τα υπάρχοντα μένουν ίδια): πόλη →
+ * κωμόπολη → χωριό από το address του Nominatim (addressdetails=1)· μόνο αν
+ * λείπουν όλα, ο δήμος χωρίς το πρόθεμα «Δήμος »/«Δήμου ». Ζητείται στα
+ * ελληνικά (accept-language=el). Λείπει όταν δεν προκύπτει.
+ */
+export interface GeocodeResult { lat: number; lon: number; display_name: string; city?: string }
 
 const USER_AGENT = 'GlobiPet/1.0 (info@globipet.com)'
 const MIN_INTERVAL_MS = 1100
@@ -74,7 +80,7 @@ export async function geocodeAddress(
 
   const value = await throttled(async (): Promise<GeocodeResult | null> => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&accept-language=el`
         + (cc ? `&countrycodes=${cc}` : '')
       // Χρονικό όριο: ένα αίτημα που κρέμεται δεν πρέπει να μπλοκάρει την ουρά.
       const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(8000) })
@@ -84,7 +90,10 @@ export async function geocodeAddress(
       const lat = parseFloat(data[0].lat)
       const lon = parseFloat(data[0].lon)
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-      return { lat, lon, display_name: String(data[0].display_name ?? '') }
+      const ad = data[0].address ?? {}
+      const settlement = String(ad.city || ad.town || ad.village || '').trim()
+      const city = settlement || String(ad.municipality || '').trim().replace(/^Δήμο[ςυ]\s+/u, '').trim()
+      return { lat, lon, display_name: String(data[0].display_name ?? ''), ...(city ? { city } : {}) }
     } catch { return null }
   })
 

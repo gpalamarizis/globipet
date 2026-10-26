@@ -28,6 +28,12 @@ const LANGS: Lang[] = ['el', 'en', 'es', 'fr', 'zh']
 
 /** Ελληνικό πρωτότυπο -> [en, es, fr, zh] */
 const MESSAGES: Record<string, [string, string, string, string]> = {
+  'Συμπλήρωσε την πόλη της βόλτας': ['Please enter the city of the walk', 'Indica la ciudad del paseo', 'Indiquez la ville de la promenade', '请填写散步活动所在的城市'],
+  'Μη έγκυροι πόντοι ανά ευρώ (0 έως 1000, έως 2 δεκαδικά)': ['Invalid points per euro (0 to 1000, up to 2 decimals)', 'Puntos por euro no válidos (de 0 a 1000, hasta 2 decimales)', 'Points par euro invalides (de 0 à 1000, au plus 2 décimales)', '每欧元积分无效（0 到 1000，最多 2 位小数）'],
+  'Μη έγκυρα όρια επιπέδων (ακέραιοι πόντοι)': ['Invalid tier thresholds (whole points)', 'Umbrales de nivel no válidos (puntos enteros)', 'Seuils de niveau invalides (points entiers)', '等级门槛无效（须为整数积分）'],
+  'Το όριο του πρώτου επιπέδου πρέπει να είναι 0': ['The first tier threshold must be 0', 'El umbral del primer nivel debe ser 0', 'Le seuil du premier niveau doit être 0', '首个等级的门槛必须为 0'],
+  'Τα όρια των επιπέδων πρέπει να αυξάνονται': ['Tier thresholds must increase', 'Los umbrales de los niveles deben ser crecientes', 'Les seuils des niveaux doivent être croissants', '等级门槛必须递增'],
+  'Μη έγκυρο ποσοστό έκπτωσης (ακέραιος 0 έως 50)': ['Invalid discount percentage (whole number 0 to 50)', 'Porcentaje de descuento no válido (entero de 0 a 50)', 'Pourcentage de réduction invalide (entier de 0 à 50)', '折扣百分比无效（0 到 50 的整数）'],
   'Συμπλήρωσε πρώτα την ημερομηνία γέννησής σου για να συνεχίσεις.': ['Please enter your date of birth first to continue.', 'Introduce primero tu fecha de nacimiento para continuar.', 'Indique d\'abord votre date de naissance pour continuer.', '请先填写您的出生日期以继续。'],
   'Η εγγραφή υπάρχει ήδη': ['This record already exists', 'Este registro ya existe', 'Cet enregistrement existe déjà', '该记录已存在'],
   'Μη αποδεκτή υπηρεσία ειδοποιήσεων': ['Unsupported notification service', 'Servicio de notificaciones no admitido', 'Service de notifications non pris en charge', '不支持的通知服务'],

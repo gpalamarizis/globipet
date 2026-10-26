@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Download, Trash2, ShieldCheck, Undo2, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
+import { fmtDateShort } from '@/lib/dates'
 import toast from 'react-hot-toast'
 
 /**
@@ -16,7 +17,7 @@ import toast from 'react-hot-toast'
  * ενδιάμεσο διακομιστή, ώστε τα δεδομένα να μην περνούν από αλλού.
  */
 export default function MyDataCard() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const [reason, setReason] = useState('')
@@ -81,7 +82,7 @@ export default function MyDataCard() {
           </div>
           <p className="text-sm text-gray-700 dark:text-gray-300">
             {scheduled
-              ? t('privacy.pendingOn', { date: String(scheduled).slice(0, 10) })
+              ? t('privacy.pendingOn', { date: fmtDateShort(String(scheduled), i18n.language) })
               : t('privacy.pendingHint')}
           </p>
           <button onClick={() => cancelDelete.mutate()} disabled={cancelDelete.isPending}

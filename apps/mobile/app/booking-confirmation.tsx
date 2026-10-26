@@ -7,6 +7,7 @@ import { CheckCircle2, Clock, XCircle, CalendarDays } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Επιβεβαίωση πληρωμής κράτησης υπηρεσίας μετά τη Viva.
@@ -115,7 +116,7 @@ export default function BookingConfirmationScreen() {
   const dateLabel = (() => {
     const [y, m, d] = String(booking?.booking_date ?? '').split('-').map(Number)
     if (!y || !m || !d) return booking?.booking_date ?? '—'
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   })()
 
   // «Οι κρατήσεις μου» → η λίστα κρατήσεων χωρίς να στοιβάζονται οθόνες:

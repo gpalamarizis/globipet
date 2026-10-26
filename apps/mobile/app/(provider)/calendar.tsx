@@ -6,6 +6,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight } from 'lucide-react-nat
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Σύνδεση ημερολογίου Google ή Outlook.
@@ -111,7 +112,7 @@ export default function ProviderCalendar() {
           σύγκριση ως κείμενο — χωρίς new Date('YYYY-MM-DD'), που είναι UTC). */}
       <Card style={{ marginTop: space.lg }}>
         <View style={s.calHead}>
-          <Text style={s.name}>{new Date(view.y, view.m, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}</Text>
+          <Text style={s.name}>{new Date(view.y, view.m, 1).toLocaleDateString(dateLocale(i18n.language), { month: 'long', year: 'numeric' })}</Text>
           <View style={s.row}>
             <TouchableOpacity onPress={() => shiftMonth(-1)} hitSlop={8}>
               <ChevronLeft size={icon.md} color={colors.textMuted} />

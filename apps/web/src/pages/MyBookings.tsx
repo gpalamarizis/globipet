@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { dateLocale } from '@/lib/dates'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
@@ -24,8 +25,7 @@ export default function MyBookings() {
   const [reviewBooking, setReviewBooking] = useState<any>(null)
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
-  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
-  const locale = localeMap[i18n.language] || 'el-GR'
+  const locale = dateLocale(i18n.language)
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['my-bookings'],

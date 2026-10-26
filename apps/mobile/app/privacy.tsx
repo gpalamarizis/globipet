@@ -8,6 +8,7 @@ import { Download, Trash2, ShieldCheck, Undo2, AlertTriangle } from 'lucide-reac
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input } from '@/components/ui'
+import { fmtDateShort } from '@/lib/dates'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -23,7 +24,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
  * λανθασμένο πάτημα και από λογαριασμό που παραβιάστηκε.
  */
 export default function PrivacyScreen() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const qc = useQueryClient()
   const { logout } = useAuthStore()
@@ -108,7 +109,7 @@ export default function PrivacyScreen() {
             </View>
             <Text style={s.warnTxt}>
               {scheduled
-                ? t('privacy.pendingOn', { date: String(scheduled).slice(0, 10) })
+                ? t('privacy.pendingOn', { date: fmtDateShort(String(scheduled), i18n.language) })
                 : t('privacy.pendingHint')}
             </Text>
             <Button label={t('privacy.cancelDelete')}

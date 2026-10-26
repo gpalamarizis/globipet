@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
 import { useParams, useNavigate } from 'react-router-dom'
+import { dateLocale } from '@/lib/dates'
 
 export default function Communities() {
   const { t, i18n } = useTranslation()
@@ -313,7 +314,7 @@ export default function Communities() {
                         {msg.content && <p className="text-sm">{msg.content}</p>}
                         {msg.image_url && <img src={msg.image_url} className="max-w-full rounded-xl mt-1" alt="img" />}
                       </div>
-                      <span className="text-[10px] text-gray-400 mt-0.5 mx-1">{new Date(msg.created_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-[10px] text-gray-400 mt-0.5 mx-1">{new Date(msg.created_at).toLocaleTimeString(dateLocale(i18n.language), { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 )

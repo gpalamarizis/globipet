@@ -14,6 +14,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ReviewReply from '@/components/provider/ReviewReply'
+import { dateLocale } from '@/lib/dates'
 
 // #6: illustration fallback per service type (instead of one generic 🐾 emoji)
 const typeIllustration: Record<string, { Icon: typeof Stethoscope, bg: string, fg: string }> = {
@@ -506,7 +507,7 @@ export default function ServiceDetail() {
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                       {dates.map(d => {
                         const date = fromYmd(d)
-                        const day = date.toLocaleDateString(i18n.language, { weekday: 'short' })
+                        const day = date.toLocaleDateString(dateLocale(i18n.language), { weekday: 'short' })
                         const num = date.getDate()
                         return (
                           <button key={d} onClick={() => setSelectedDate(d)}

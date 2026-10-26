@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint, Clock, Sparkles } from 'lucide-react'
+import { Search, MapPin, Scissors, Stethoscope, ShoppingBag, ArrowRight, Zap, Shield, ShieldCheck, Star, Lock, Users, Car, GraduationCap, Home as HomeIcon, Video, Pill, Calendar, Brain, PawPrint, Clock, Sparkles, FileText } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +10,7 @@ import { effectivePrice, isOnSale } from '@/lib/price'
 import { adminText } from '@/lib/homeContent'
 import ServiceCard from '@/components/features/services/ServiceCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { dateLocale } from '@/lib/dates'
 
 // Σύνδεσμοι καταστημάτων εφαρμογών: ορίζονται μόνο όταν κυκλοφορήσει η εφαρμογή.
 const APP_STORE_URL = import.meta.env.VITE_APP_STORE_URL || ''
@@ -255,39 +256,7 @@ export default function Home() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                {/* Next booking card */}
-                {/* /bookings/:id δεν υπάρχει ως σελίδα (έβγαζε «δεν βρέθηκε»)·
-                    οι κρατήσεις είναι στο /bookings, όπως και στο κινητό. */}
-                <Link to={nextBooking ? '/bookings' : '/services'}
-                  className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                      <Calendar size={20} className="text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{t('home.cards.nextBooking')}</h3>
-                  {nextBooking ? (
-                    <>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || t('home.cards.appointment')}</p>
-                      <p className="text-xs text-brand-900 dark:text-yellow-400 font-semibold mt-1">
-                        {/* Η κράτηση έχει booking_date «YYYY-MM-DD» + booking_time
-                            — το start_time δεν υπάρχει (έβγαινε «Invalid Date»).
-                            Τοπική ημερομηνία από τα μέρη της, όχι new Date(string). */}
-                        {(() => {
-                          const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(nextBooking.booking_date ?? '')
-                          const day = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-                            .toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' }) : ''
-                          return [day, nextBooking.booking_time].filter(Boolean).join(' · ')
-                        })()}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.cards.noBooking')}</p>
-                  )}
-                </Link>
-
-                {/* My pets card */}
+                {/* My pets card — Ε17: πρώτο (τα κατοικίδια είναι το κέντρο της εφαρμογής, όπως στο κινητό). */}
                 <Link to="/my-pets"
                   className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
                   <div className="flex items-center justify-between mb-3">
@@ -316,6 +285,38 @@ export default function Home() {
                   )}
                 </Link>
 
+                {/* Next booking card */}
+                {/* /bookings/:id δεν υπάρχει ως σελίδα (έβγαζε «δεν βρέθηκε»)·
+                    οι κρατήσεις είναι στο /bookings, όπως και στο κινητό. */}
+                <Link to={nextBooking ? '/bookings' : '/services'}
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700 group">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                      <Calendar size={20} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{t('home.cards.nextBooking')}</h3>
+                  {nextBooking ? (
+                    <>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{nextBooking.service?.title || t('home.cards.appointment')}</p>
+                      <p className="text-xs text-brand-900 dark:text-yellow-400 font-semibold mt-1">
+                        {/* Η κράτηση έχει booking_date «YYYY-MM-DD» + booking_time
+                            — το start_time δεν υπάρχει (έβγαινε «Invalid Date»).
+                            Τοπική ημερομηνία από τα μέρη της, όχι new Date(string). */}
+                        {(() => {
+                          const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(nextBooking.booking_date ?? '')
+                          const day = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+                            .toLocaleDateString(dateLocale(i18n.language), { day: 'numeric', month: 'short' }) : ''
+                          return [day, nextBooking.booking_time].filter(Boolean).join(' · ')
+                        })()}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('home.cards.noBooking')}</p>
+                  )}
+                </Link>
+
                 {/* Quick AI check card */}
                 <Link to="/ai-health"
                   className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-700 dark:to-indigo-800 rounded-2xl p-5 text-white hover:shadow-xl transition-all group relative overflow-hidden">
@@ -332,6 +333,28 @@ export default function Home() {
                   </div>
                 </Link>
 
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ── GUEST INTRO (Ε17) — ίδιο μήνυμα με το κινητό ──────────── */}
+      {!isAuthenticated && (
+        <section className="bg-gradient-to-br from-yellow-50 via-orange-50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 px-4 py-8 border-b border-gray-100 dark:border-gray-800">
+          <div className="max-w-6xl mx-auto">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center shrink-0">
+                <FileText size={24} className="text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-display font-bold text-gray-900 dark:text-white">{t('homeGuest.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('homeGuest.text')}</p>
+              </div>
+              <div className="flex gap-2 sm:shrink-0">
+                <Link to="/login" className="btn-secondary shrink-0 px-4 py-2 text-sm inline-flex items-center justify-center whitespace-nowrap">{t('nav.login')}</Link>
+                <Link to="/register" className="btn-primary flex-1 sm:flex-none px-4 py-2 text-sm inline-flex items-center justify-center whitespace-nowrap">{t('homeGuest.cta')}</Link>
               </div>
             </motion.div>
           </div>

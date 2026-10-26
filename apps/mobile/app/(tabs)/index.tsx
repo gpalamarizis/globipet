@@ -14,6 +14,8 @@ import EmailVerifyBanner from '../../src/components/EmailVerifyBanner'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { effectivePrice } from '@/lib/price'
+import NotificationBell from '@/components/NotificationBell'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -131,7 +133,6 @@ export default function HomeScreen() {
   const taglineText = adminText(content, 'tagline') ?? t('home.everything_pet_needs')
   const servicesTitle = adminText(content, 'services_title') ?? t('services.title')
   const servicesSubtitle = adminText(content, 'services_subtitle')
-  const startTitle = adminText(content, 'hero_cta') ?? t('home.start_today')
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
@@ -195,7 +196,7 @@ export default function HomeScreen() {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(nextBooking?.booking_date ?? '')
     if (!m) return ''
     const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-      .toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })
+      .toLocaleDateString(dateLocale(i18n.language), { day: 'numeric', month: 'short' })
     return [day, nextBooking?.booking_time].filter(Boolean).join(' · ')
   })()
 
@@ -241,9 +242,14 @@ export default function HomeScreen() {
             </Text>
             <Text style={s.tagline}>{taglineText}</Text>
           </View>
-          {isAuthenticated && user?.profile_photo
-            ? <Image source={{ uri: user.profile_photo }} style={s.avatar} />
-            : <Image source={require('../../assets/icon.png')} style={s.avatar} />}
+          {/* Ε17: καμπανάκι δίπλα στο avatar (κρυφό για επισκέπτες). Και τα
+              δύο στην κορυφή της γραμμής, στο ίδιο ύψος με τις άλλες καρτέλες. */}
+          <View style={s.headerActions}>
+            <NotificationBell />
+            {isAuthenticated && user?.profile_photo
+              ? <Image source={{ uri: user.profile_photo }} style={s.avatar} />
+              : <Image source={require('../../assets/icon.png')} style={s.avatar} />}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -277,6 +283,77 @@ export default function HomeScreen() {
             </View>
             <ChevronRight size={icon.sm} color={colors.textLight} />
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Τα κατοικίδιά μου ────────────────────────────────────────
+          Πρώτα, γιατί είναι ο λόγος που ανοίγει κανείς την εφαρμογή.
+          Ε17: πάνω από τη δοκιμή AI και το επόμενο ραντεβού· πριν από αυτά
+          μόνο τα κρίσιμα (επιβεβαίωση email, αποτυχημένη πληρωμή). */}
+      {isAuthenticated && (
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>{t('home.my_pets')}</Text>
+            {pets.length > 0 && (
+              <TouchableOpacity onPress={() => router.push('/(tabs)/pets' as any)} style={s.seeAllBtn}>
+                <Text style={s.seeAll}>{t('marketplace.categories.all')}</Text>
+                <ChevronRight size={icon.sm} color={colors.brand} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={{ gap: space.md, paddingRight: space.lg, flexDirection: 'row', flexWrap: 'wrap' }}>
+            {pets.slice(0, 6).map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.petCard} activeOpacity={0.8}
+                onPress={() => router.push(`/pets/${p.id}` as any)}>
+                <View style={s.petAvatar}>
+                  {p.image_url
+                    ? <Image source={{ uri: p.image_url }} style={s.petImg} />
+                    : <Text style={s.petEmoji}>{SPECIES_EMOJI[p.species] ?? '🐾'}</Text>}
+                </View>
+                <Text style={s.petName} numberOfLines={1}>{p.name}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Πάντα τελευταίο, ώστε η προσθήκη να είναι στην ίδια χειρονομία. */}
+            <TouchableOpacity style={s.petCard} activeOpacity={0.8}
+              onPress={() => router.push('/(tabs)/pets' as any)}>
+              <View style={[s.petAvatar, s.petAdd]}>
+                <Plus size={icon.lg} color={colors.brand} />
+              </View>
+              {/* «Νέο» και όχι «Προσθήκη»: με μεγαλωμένα γράμματα στις
+                  ρυθμίσεις του τηλεφώνου, η μεγάλη λέξη έσπαγε σε δύο
+                  γραμμές κάτω από το κυκλικό εικονίδιο. */}
+              <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>{t('home.new')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* ── Επισκέπτης: τι κερδίζει με λογαριασμό (Ε17) ──────────────
+          Στη θέση των «Τα κατοικίδιά μου»: ο ιατρικός φάκελος είναι ο
+          βασικός λόγος να φτιάξει κανείς λογαριασμό. */}
+      {!isAuthenticated && (
+        <View style={s.section}>
+          <View style={s.guestCard}>
+            <View style={s.guestHead}>
+              <View style={s.guestIcon}>
+                <ShieldCheck size={icon.lg} color={colors.brand} />
+              </View>
+              <Text style={s.guestTitle}>{t('homeGuest.medTitle')}</Text>
+            </View>
+            <Text style={s.guestText}>{t('homeGuest.medText')}</Text>
+            <View style={s.authBtns}>
+              <TouchableOpacity style={s.authPrimary} activeOpacity={0.85}
+                onPress={() => router.push('/auth/register' as any)}>
+                <Text style={s.authPrimaryText} numberOfLines={1}>{t('auth.register')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.guestSecondary} activeOpacity={0.85}
+                onPress={() => router.push('/auth/login' as any)}>
+                <Text style={s.guestSecondaryText} numberOfLines={1}>{t('auth.sign_in')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       )}
 
@@ -323,48 +400,6 @@ export default function HomeScreen() {
             </View>
             <ChevronRight size={icon.sm} color={colors.textLight} />
           </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── Τα κατοικίδιά μου ────────────────────────────────────────
-          Πρώτα, γιατί είναι ο λόγος που ανοίγει κανείς την εφαρμογή. */}
-      {isAuthenticated && (
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>{t('home.my_pets')}</Text>
-            {pets.length > 0 && (
-              <TouchableOpacity onPress={() => router.push('/(tabs)/pets' as any)} style={s.seeAllBtn}>
-                <Text style={s.seeAll}>{t('marketplace.categories.all')}</Text>
-                <ChevronRight size={icon.sm} color={colors.brand} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={{ gap: space.md, paddingRight: space.lg, flexDirection: 'row', flexWrap: 'wrap' }}>
-            {pets.slice(0, 6).map((p: any) => (
-              <TouchableOpacity key={p.id} style={s.petCard} activeOpacity={0.8}
-                onPress={() => router.push(`/pets/${p.id}` as any)}>
-                <View style={s.petAvatar}>
-                  {p.image_url
-                    ? <Image source={{ uri: p.image_url }} style={s.petImg} />
-                    : <Text style={s.petEmoji}>{SPECIES_EMOJI[p.species] ?? '🐾'}</Text>}
-                </View>
-                <Text style={s.petName} numberOfLines={1}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-
-            {/* Πάντα τελευταίο, ώστε η προσθήκη να είναι στην ίδια χειρονομία. */}
-            <TouchableOpacity style={s.petCard} activeOpacity={0.8}
-              onPress={() => router.push('/(tabs)/pets' as any)}>
-              <View style={[s.petAvatar, s.petAdd]}>
-                <Plus size={icon.lg} color={colors.brand} />
-              </View>
-              {/* «Νέο» και όχι «Προσθήκη»: με μεγαλωμένα γράμματα στις
-                  ρυθμίσεις του τηλεφώνου, η μεγάλη λέξη έσπαγε σε δύο
-                  γραμμές κάτω από το κυκλικό εικονίδιο. */}
-              <Text style={[s.petName, { color: colors.brand }]} numberOfLines={1}>{t('home.new')}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       )}
 
@@ -481,23 +516,8 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* ── Εγγραφή ──────────────────────────────────────────────── */}
-      {!isAuthenticated && (
-        <View style={s.authBanner}>
-          <Text style={s.authTitle}>{startTitle}</Text>
-          <Text style={s.authSub}>{t('home.free_signup')}</Text>
-          <View style={s.authBtns}>
-            <TouchableOpacity style={s.authPrimary} activeOpacity={0.85}
-              onPress={() => router.push('/auth/register' as any)}>
-              <Text style={s.authPrimaryText}>{t('auth.register')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.authSecondary} activeOpacity={0.85}
-              onPress={() => router.push('/auth/login' as any)}>
-              <Text style={s.authSecondaryText}>{t('auth.sign_in')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      {/* Ε17: χωρίς δεύτερη πρόσκληση εγγραφής στο τέλος για τους επισκέπτες —
+          αρκεί η κάρτα επισκέπτη πιο πάνω (εγγραφή + σύνδεση). */}
     </ScrollView>
   )
 }
@@ -519,6 +539,7 @@ const s = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.lg },
   greeting: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
   tagline: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm, alignSelf: 'flex-start' },
   avatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.surfaceAlt },
 
   search: {
@@ -570,6 +591,29 @@ const s = StyleSheet.create({
   petImg: { width: 68, height: 68, borderRadius: radius.full },
   petEmoji: { fontSize: 30 },
   petName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, textAlign: 'center' },
+
+  // Επισκέπτης — κάρτα ιατρικού φακέλου (Ε17)
+  guestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    borderWidth: 1, borderColor: colors.brandTint,
+    ...shadow.sm,
+  },
+  guestHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  guestIcon: {
+    width: 48, height: 48, borderRadius: radius.md,
+    backgroundColor: colors.brandLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  guestTitle: { flex: 1, ...type.emphasis, color: colors.text, fontWeight: weight.bold },
+  guestText: { ...type.body, color: colors.textMuted, marginTop: space.md, marginBottom: space.lg },
+  guestSecondary: {
+    flex: 1, height: touch.comfortable, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.brand,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  guestSecondaryText: { ...type.emphasis, color: colors.brand, fontWeight: weight.semibold },
 
   // Υπηρεσίες — τρεις στήλες
   serviceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
@@ -655,15 +699,7 @@ const s = StyleSheet.create({
   productName: { ...type.caption, color: colors.text, fontWeight: weight.semibold, minHeight: 32 },
   productPrice: { ...type.emphasis, color: colors.brand, fontWeight: weight.bold, marginTop: space.xs },
 
-  // Εγγραφή
-  authBanner: {
-    margin: space.lg, marginTop: space.xxl,
-    backgroundColor: colors.navy,
-    borderRadius: radius.xl,
-    padding: space.xl,
-  },
-  authTitle: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
-  authSub: { ...type.body, color: 'rgba(255,255,255,0.75)', marginTop: space.sm, marginBottom: space.lg },
+  // Κουμπιά εγγραφής/σύνδεσης της κάρτας επισκέπτη
   authBtns: { flexDirection: 'row', gap: space.md },
   authPrimary: {
     flex: 1, height: touch.comfortable, borderRadius: radius.md,
@@ -671,10 +707,4 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   authPrimaryText: { ...type.emphasis, color: '#fff', fontWeight: weight.bold },
-  authSecondary: {
-    flex: 1, height: touch.comfortable, borderRadius: radius.md,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  authSecondaryText: { ...type.emphasis, color: colors.textOnDark, fontWeight: weight.semibold },
 })

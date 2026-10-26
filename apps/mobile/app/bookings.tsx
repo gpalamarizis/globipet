@@ -7,6 +7,7 @@ import { Calendar, Clock, MapPin, ArrowLeft, PawPrint, Star, X, Stethoscope, Che
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /** Μπάρα κατάστασης συν αναπνοή· τα insets επιστρέφουν 0 στο Android
  *  όταν η εφαρμογή δεν είναι ρητά edge-to-edge. Κατώτατο 48. */
@@ -163,7 +164,7 @@ export default function BookingsScreen() {
 
   const fmtDate = (b: any) => {
     const x = bookingDate(b)
-    return x ? x.toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short' })
+    return x ? x.toLocaleDateString(dateLocale(i18n.language), { weekday: 'short', day: '2-digit', month: 'short' })
       : (b?.booking_date || '—')
   }
 

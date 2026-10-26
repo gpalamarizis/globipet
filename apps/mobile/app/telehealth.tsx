@@ -9,7 +9,9 @@ import { useAuthStore } from '../src/store/auth'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { canAskTelehealthCancel, confirmTelehealthCancel, postTelehealthCancel } from '@/lib/telehealthCancel'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, Input } from '@/components/ui'
+import { DateField, TimeField } from '@/components/DateField'
 import { colors, space, radius, type, weight, icon, touch, font } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 // Κουμπί ακύρωσης όπως στο web (text-red-600 / border-red-200).
 const CANCEL_TEXT = '#DC2626'
@@ -93,7 +95,7 @@ export default function TelehealthScreen() {
   const fmtDay = (ymd: string) => {
     const [y, m, d] = String(ymd).split('-').map(Number)
     if (!y || !m || !d) return String(ymd)
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'short', year: 'numeric' })
   }
   const [joiningId, setJoiningId] = useState<string | null>(null)
   const joinCall = async (sessionId: string) => {
@@ -339,10 +341,11 @@ export default function TelehealthScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               {tab === 'scheduled' && (
                 <>
-                  <Input label={t('tele.date')} value={date} onChangeText={setDate}
-                    placeholder="2026-09-15" />
-                  <Input label={t('tele.time')} value={time} onChangeText={setTime}
-                    placeholder="10:00" keyboardType="numbers-and-punctuation"
+                  {/* Ε17: ημερολόγιο και ρολόι του συστήματος αντί για πληκτρολόγηση
+                      (YYYY-MM-DD / ΩΩ:ΛΛ στέλνονται όπως πριν). Όχι παρελθοντική μέρα. */}
+                  <DateField label={t('tele.date')} value={date} onChange={setDate}
+                    minimumDate={new Date()} />
+                  <TimeField label={t('tele.time')} value={time} onChange={setTime}
                     error={date && !scheduleOk ? t('parity.invalidSchedule') : undefined} />
                 </>
               )}

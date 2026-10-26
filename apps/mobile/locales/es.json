@@ -40,11 +40,11 @@
     "marketplace": "Tienda",
     "pets": "Mascotas",
     "social": "Social",
-    "profile": "Perfil",
+    "profile": "Cuenta",
     "animals": "Mascotas",
     "community": "Comunidad",
-    "discover": "Descubre",
-    "shop": "Comprar"
+    "discover": "Explorar",
+    "shop": "Tienda"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -260,7 +260,8 @@
     "deleteQ": "¿Eliminar definitivamente a {{name}} y su historial?",
     "deleteFailed": "No se pudo eliminar",
     "kind_horse": "Caballo",
-    "kind_other": "Otro"
+    "kind_other": "Otro",
+    "weight_placeholder": "p. ej. 12,5"
   },
   "social": {
     "title": "Social Feed",
@@ -377,7 +378,7 @@
     "photo_analysis": "Análisis de foto",
     "playdates": "Quedadas",
     "subtitle": "Todo lo que ofrece GlobiPet",
-    "title": "Descubre",
+    "title": "Explorar",
     "upcoming_events": "Próximos eventos"
   },
   "insurance": {
@@ -728,7 +729,7 @@
     "revokeTitle": "Revocar acceso",
     "revokeQ": "El veterinario ya no podrá ver el historial de tu mascota. ¿Revocar el acceso?",
     "revoke": "Revocar",
-    "invalidDate": "Fecha no válida. Escríbela con el formato YYYY-MM-DD (p. ej., 2026-03-15).",
+    "invalidDate": "Fecha no válida. Elígela en el calendario.",
     "rt_examination": "Examen",
     "rt_diagnosis": "Diagnóstico",
     "rt_follow_up": "Revisión",
@@ -839,7 +840,53 @@
     "inviteTo": "Invitación para {{name}}",
     "createEventFirst": "Crea primero un paseo",
     "messageOptional": "Mensaje (opcional)",
-    "messagePlaceholder": "¡Vamos a pasear a los perros juntos!"
+    "messagePlaceholder": "¡Vamos a pasear a los perros juntos!",
+    "types": {
+      "walk": "Paseo",
+      "play": "Juego",
+      "meetup": "Quedada",
+      "training": "Adiestramiento",
+      "other": "Otro"
+    },
+    "petTypes": {
+      "dog": "Perro",
+      "cat": "Gato",
+      "rabbit": "Conejo",
+      "bird": "Pájaro",
+      "other": "Otro"
+    },
+    "directions": "Cómo llegar",
+    "f": {
+      "requiredNote": "Los campos con * son obligatorios.",
+      "title": "Título",
+      "titlePh": "p. ej. Paseo por el parque Pedion Areos",
+      "type": "Tipo",
+      "date": "Fecha",
+      "time": "Hora",
+      "addressPh": "p. ej. Pedion Areos, Atenas",
+      "mapTitle": "Punto en el mapa",
+      "mapHint": "Busca el punto para que la ciudad se rellene automáticamente y los participantes tengan indicaciones.",
+      "mapNotSet": "Aún no se ha encontrado en el mapa — los participantes solo verán la dirección.",
+      "cityAuto": "Ciudad: {{city}} (según la dirección)",
+      "cityHint": "No se pudo obtener de la dirección. Se usa para la lista «cerca de ti».",
+      "details": "Detalles del punto",
+      "detailsPh": "p. ej. junto a la fuente, entrada norte",
+      "description": "Descripción",
+      "descriptionPh": "p. ej. Paseo tranquilo de una hora — traed agua para los perros.",
+      "duration": "Duración (minutos)",
+      "maxPh": "p. ej. 10 (vacío = 10)",
+      "petTypes": "Tipos de mascota",
+      "petTypesHint": "Déjalo vacío si el paseo es para todos."
+    },
+    "err": {
+      "title": "Escribe un título (al menos 2 caracteres).",
+      "date": "Elige una fecha.",
+      "time": "Elige una hora.",
+      "address": "Escribe el punto de encuentro.",
+      "city": "Escribe la ciudad.",
+      "number": "Escribe un número entero positivo.",
+      "summary": "Completa los campos marcados en rojo."
+    }
   },
   "soon": {
     "title": "La app móvil llega muy pronto",
@@ -1500,7 +1547,9 @@
     "recommended": "Recomendado",
     "choose": "Elegir este plan",
     "noPlans": "No hay planes disponibles",
-    "vivaNote": "El pago se realiza a través de Viva. Puedes cancelar la suscripción cuando quieras."
+    "vivaNote": "El pago se realiza a través de Viva. Puedes cancelar la suscripción cuando quieras.",
+    "tierDiscountBanner": "Como miembro del nivel {{tier}} tienes un {{percent}} % de descuento en las suscripciones de IA.",
+    "tierDiscountMore": "Cómo funciona"
   },
   "stool": {
     "title": "Análisis de muestra",
@@ -2266,7 +2315,7 @@
     "yearsExp": "{{count}} años de experiencia",
     "details": "Detalles",
     "vetSearch": "Buscar veterinario o especialidad...",
-    "invalidSchedule": "Elige una fecha válida (hoy o posterior) y una hora HH:MM."
+    "invalidSchedule": "Elige una fecha (hoy o posterior) y una hora."
   },
   "notifCenter": {
     "title": "Centro de notificaciones",
@@ -2409,12 +2458,12 @@
     "addImage": "Añadir imagen",
     "changeImage": "Cambiar imagen",
     "errRequired": "Completa título, fecha, hora, lugar y ciudad.",
-    "errDate": "La fecha debe tener el formato AAAA-MM-DD (p. ej. 2026-11-15).",
+    "errDate": "La fecha no es válida. Elígela en el calendario.",
     "errPast": "La fecha de inicio ya ha pasado.",
-    "errTime": "La hora debe tener el formato HH:MM (p. ej. 18:30).",
-    "errEndDate": "La fecha de fin debe ser AAAA-MM-DD y no anterior al inicio.",
+    "errTime": "La hora no es válida. Vuelve a elegirla.",
+    "errEndDate": "La fecha de fin no puede ser anterior al inicio.",
     "errPrice": "Precio no válido: escribe un importe en euros (p. ej. 15 o 15,50) o déjalo vacío.",
-    "errPaidFormat": "Un evento de pago necesita fecha AAAA-MM-DD y hora HH:MM.",
+    "errPaidFormat": "Un evento de pago necesita fecha y hora.",
     "errCapacity": "El aforo debe ser un número entero mayor o igual que 1, o vacío para sin límite.",
     "errCapacityBelow": "El aforo no puede ser inferior a las personas ya inscritas ({{count}}).",
     "created": "Evento creado",
@@ -2481,5 +2530,413 @@
   },
   "paging": {
     "loadMore": "Cargar más"
+  },
+  "accountHub": {
+    "subscriptions": "Suscripciones",
+    "plans": "Planes",
+    "activity": "Mi actividad",
+    "rewards": "Recompensas",
+    "tiersHow": "Cómo funcionan los niveles",
+    "messages": "Mensajes y notificaciones",
+    "notifSettings": "Ajustes de notificaciones",
+    "security": "Cuenta y seguridad",
+    "privacy": "Privacidad y datos",
+    "helpTerms": "Ayuda y condiciones",
+    "aiNone": "Sin suscripción: consulta los planes",
+    "aiTrial": "Prueba gratuita · quedan {{count}} días",
+    "aiTrial_one": "Prueba gratuita · queda {{count}} día",
+    "aiActive": "Activa · {{plan}}",
+    "foodSubs": "Suscripciones de comida",
+    "foodSubsCount": "{{count}} activas",
+    "foodSubsCount_one": "{{count}} activa",
+    "foodSubsNone": "Ninguna suscripción activa",
+    "petsCount": "{{count}} mascotas",
+    "petsCount_one": "{{count}} mascota",
+    "aiRenews": "Se renueva el {{date}}"
+  },
+  "myReviews": {
+    "title": "Mis reseñas",
+    "empty": "Aún no has escrito ninguna reseña",
+    "emptyHint": "Después de una reserva o compra puedes valorar el servicio o el producto.",
+    "openService": "Ver el servicio",
+    "openProduct": "Ver el producto"
+  },
+  "bell": {
+    "unread": "{{count}} notificaciones sin leer",
+    "unread_one": "{{count}} notificación sin leer"
+  },
+  "explore": {
+    "health": "Salud",
+    "tools": "Herramientas",
+    "community": "Comunidad",
+    "info": "Información y ayuda"
+  },
+  "homeGuest": {
+    "medTitle": "La historia clínica de tu mascota, siempre contigo",
+    "medText": "Vacunas, medicamentos, alergias y visitas al veterinario, organizados en un solo lugar."
+  },
+  "dateField": {
+    "pickDate": "Elige una fecha",
+    "pickTime": "Elige una hora",
+    "clear": "Borrar",
+    "done": "Listo"
+  },
+  "passportForm": {
+    "vaccines": {
+      "vaccine_name": {
+        "label": "Nombre de la vacuna",
+        "ph": "p. ej. DHPPi, Rabia (Nobivac Rabies)"
+      },
+      "vaccine_type": {
+        "label": "Categoría de la vacuna",
+        "hint": "Elige «Rabia» para la vacuna antirrábica: es obligatoria para viajar"
+      },
+      "date_administered": {
+        "label": "Fecha de administración"
+      },
+      "next_due_date": {
+        "label": "Próxima dosis (fecha)",
+        "hint": "Según la anotó el veterinario en la cartilla"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "notes": {
+        "ph": "p. ej. N.º de lote A123B45, sin reacción"
+      }
+    },
+    "health": {
+      "title": {
+        "label": "Motivo de la visita",
+        "ph": "p. ej. Revisión anual, Vómitos desde ayer"
+      },
+      "date": {
+        "label": "Fecha de la visita"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "description": {
+        "ph": "p. ej. Exploración general, todo normal"
+      },
+      "cost": {
+        "ph": "p. ej. 45"
+      },
+      "next_appointment": {
+        "label": "Próxima cita (fecha)"
+      }
+    },
+    "meds": {
+      "name": {
+        "label": "Nombre del medicamento",
+        "ph": "p. ej. Synulox 250 mg"
+      },
+      "active_ingredient": {
+        "ph": "p. ej. Amoxicilina / ácido clavulánico"
+      },
+      "dosage": {
+        "ph": "p. ej. 1 comprimido 2 veces al día"
+      },
+      "start_date": {
+        "label": "Fecha de inicio"
+      },
+      "end_date": {
+        "label": "Fecha de fin del tratamiento",
+        "hint": "Déjalo vacío si el tratamiento continúa"
+      },
+      "prescribed_by": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "reason": {
+        "ph": "p. ej. Otitis"
+      },
+      "side_effects": {
+        "ph": "p. ej. Somnolencia, menos apetito"
+      }
+    },
+    "lab": {
+      "title": {
+        "label": "Nombre de la prueba",
+        "ph": "p. ej. Analítica prequirúrgica, Test de Leishmania"
+      },
+      "date": {
+        "label": "Fecha de la prueba"
+      },
+      "lab_name": {
+        "ph": "p. ej. IDEXX"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "findings": {
+        "ph": "p. ej. Urea ligeramente elevada"
+      }
+    },
+    "imaging": {
+      "imaging_type": {
+        "label": "Tipo de imagen"
+      },
+      "date": {
+        "label": "Fecha de la prueba"
+      },
+      "body_region": {
+        "ph": "p. ej. Tórax, pata trasera izquierda"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "findings": {
+        "ph": "p. ej. Sin signos de fractura"
+      },
+      "report": {
+        "ph": "p. ej. Resumen del informe del radiólogo"
+      }
+    },
+    "surgery": {
+      "procedure": {
+        "label": "Intervención",
+        "ph": "p. ej. Esterilización, Extirpación de un bulto"
+      },
+      "date": {
+        "label": "Fecha de la intervención"
+      },
+      "surgeon_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "duration_min": {
+        "ph": "p. ej. 45"
+      },
+      "complications": {
+        "ph": "p. ej. Ninguna"
+      },
+      "outcome": {
+        "ph": "p. ej. Con éxito, recuperación completa"
+      },
+      "follow_up": {
+        "ph": "p. ej. Retirar los puntos en 10 días"
+      },
+      "cost": {
+        "ph": "p. ej. 45"
+      }
+    },
+    "allergies": {
+      "allergen": {
+        "label": "Alérgeno",
+        "ph": "p. ej. Pollo, Polen, Penicilina"
+      },
+      "diagnosed_date": {
+        "label": "Fecha del diagnóstico"
+      },
+      "reaction": {
+        "ph": "p. ej. Picor, vómitos, hinchazón"
+      },
+      "treatment": {
+        "ph": "p. ej. Antihistamínico, dieta de eliminación"
+      },
+      "diagnosed_by": {
+        "ph": "p. ej. Dra. Laura García"
+      }
+    },
+    "chronic": {
+      "condition": {
+        "label": "Enfermedad",
+        "ph": "p. ej. Diabetes, Enfermedad renal crónica"
+      },
+      "diagnosed_date": {
+        "label": "Fecha del diagnóstico"
+      },
+      "icd_code": {
+        "ph": "p. ej. E11"
+      },
+      "diagnosed_by": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "treatment_plan": {
+        "ph": "p. ej. Insulina 2 veces al día, dieta especial"
+      },
+      "monitoring": {
+        "ph": "p. ej. Glucosa cada 3 meses"
+      }
+    },
+    "dental": {
+      "procedure": {
+        "label": "Procedimiento dental"
+      },
+      "date": {
+        "label": "Fecha del procedimiento"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "clinic_name": {
+        "ph": "p. ej. Clínica Veterinaria Centro"
+      },
+      "teeth_treated": {
+        "ph": "p. ej. 108, 208 o «maxilar superior»"
+      },
+      "findings": {
+        "ph": "p. ej. Sarro, gingivitis"
+      },
+      "next_due": {
+        "label": "Próxima limpieza (fecha)"
+      },
+      "cost": {
+        "ph": "p. ej. 45"
+      }
+    },
+    "weight": {
+      "weight_kg": {
+        "label": "Peso (kg)",
+        "ph": "p. ej. 12,5"
+      },
+      "date": {
+        "label": "Fecha de la medición"
+      },
+      "bcs": {
+        "ph": "p. ej. 5",
+        "hint": "1 = muy delgado, 4–5 = ideal, 9 = obeso"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "notes": {
+        "ph": "p. ej. Tras 2 meses de dieta"
+      }
+    },
+    "genetic": {
+      "test_name": {
+        "label": "Prueba genética",
+        "ph": "p. ej. Embark Breed + Health"
+      },
+      "date": {
+        "label": "Fecha de la prueba"
+      },
+      "provider": {
+        "ph": "p. ej. Embark, Wisdom Panel"
+      },
+      "results": {
+        "ph": "p. ej. Portador de MDR1, sin otros hallazgos"
+      },
+      "breeds_detected": {
+        "ph": "p. ej. Labrador, Border Collie"
+      },
+      "conditions_found": {
+        "ph": "p. ej. Displasia de cadera"
+      }
+    },
+    "vitals": {
+      "date": {
+        "label": "Fecha de la medición"
+      },
+      "temperature_c": {
+        "label": "Temperatura (°C)",
+        "ph": "p. ej. 38,5"
+      },
+      "heart_rate": {
+        "label": "Frecuencia cardíaca (lpm)",
+        "ph": "p. ej. 90"
+      },
+      "respiratory_rate": {
+        "label": "Frecuencia respiratoria (/min)",
+        "ph": "p. ej. 24"
+      },
+      "blood_pressure": {
+        "ph": "p. ej. 140/90"
+      },
+      "weight_kg": {
+        "ph": "p. ej. 12,5"
+      },
+      "vet_name": {
+        "ph": "p. ej. Dra. Laura García"
+      }
+    },
+    "travel": {
+      "destination_country": {
+        "ph": "p. ej. Italia"
+      },
+      "origin_city": {
+        "ph": "p. ej. El Pireo"
+      },
+      "destination_city": {
+        "ph": "p. ej. Heraclión"
+      },
+      "departure_date": {
+        "label": "Fecha de salida"
+      },
+      "carrier": {
+        "ph": "p. ej. Aegean, Minoan Lines"
+      },
+      "booking_ref": {
+        "ph": "p. ej. ABC123"
+      }
+    },
+    "access": {
+      "provider_email": {
+        "ph": "p. ej. vet@example.com"
+      },
+      "provider_name": {
+        "ph": "p. ej. Dra. Laura García"
+      },
+      "reason": {
+        "ph": "p. ej. Segunda opinión sobre una dermatitis"
+      },
+      "expires_at": {
+        "hint": "Déjalo vacío para un acceso sin caducidad"
+      }
+    },
+    "pedigree": {
+      "registration_number": {
+        "ph": "p. ej. GR-12345"
+      },
+      "kennel_club": {
+        "ph": "p. ej. Real Sociedad Canina de España"
+      },
+      "breeder_contact": {
+        "ph": "p. ej. teléfono o email"
+      }
+    }
+  },
+  "loyaltyPage": {
+    "title": "Programa de fidelidad",
+    "subtitle": "Gana puntos con cada pago y sube de nivel",
+    "yourTier": "Tu nivel",
+    "pointsValue": "Puntos: {{points}}",
+    "toNext": "Siguiente: {{tier}} — faltan {{points}} puntos",
+    "maxTier": "Nivel máximo",
+    "yourDiscount": "Tienes un {{percent}} % de descuento en las suscripciones de IA.",
+    "noDiscountYet": "Sube de nivel para obtener descuento en las suscripciones de IA.",
+    "loginPrompt": "Inicia sesión para ver tus puntos y tu nivel.",
+    "login": "Iniciar sesión",
+    "earnTitle": "Cómo ganar puntos",
+    "earnRate": "Puntos por cada 1 € que pagas: {{points}}",
+    "source_orders": "Compras en la tienda",
+    "source_bookings": "Reservas de servicios",
+    "source_telehealth": "Sesiones de telemedicina",
+    "source_events": "Inscripciones a eventos",
+    "source_subscriptions": "Suscripciones de IA y de comida",
+    "refundNote": "Si se reembolsa un pago, se restan sus puntos de forma proporcional (todos en un reembolso total).",
+    "tiersTitle": "Niveles y ventajas",
+    "current": "Actual",
+    "fromPoints": "Desde {{points}} puntos",
+    "startTier": "Desde el registro",
+    "aiDiscount": "−{{percent}} % en suscripciones de IA",
+    "noDiscount": "Sin descuento",
+    "discountNote": "El descuento solo se aplica a las suscripciones de IA de la plataforma, no a productos ni servicios de proveedores. Se aplica automáticamente al contratar una nueva suscripción, durante el primer periodo de facturación (1 mes en la mensual, 12 meses en la anual).",
+    "seePlans": "Ver los planes"
   }
 }

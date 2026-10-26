@@ -26,9 +26,18 @@ interface Props {
   latitude?: number | null
   longitude?: number | null
   onChange: (c: Coords) => void
+  /**
+   * Ε17 (προαιρετικά — οι υπάρχουσες φόρμες υπηρεσιών δεν τα δίνουν και
+   * μένουν ίδιες): κείμενα για άλλη χρήση (π.χ. σημείο συνάντησης βόλτας) και
+   * το αποτέλεσμα της εύρεσης (display_name, city από το /geocode).
+   */
+  title?: string
+  hint?: string
+  notSet?: string
+  onFound?: (r: { display_name: string; city: string }) => void
 }
 
-export function ServiceLocationField({ address, city, country, latitude, longitude, onChange }: Props) {
+export function ServiceLocationField({ address, city, country, latitude, longitude, onChange, title, hint, notSet, onFound }: Props) {
   const { t } = useTranslation()
   const [finding, setFinding] = useState(false)
   const [foundName, setFoundName] = useState('')
@@ -42,6 +51,7 @@ export function ServiceLocationField({ address, city, country, latitude, longitu
       const { data } = await api.get('/geocode', { params: { address: q, country: country || undefined } })
       onChange({ latitude: round6(Number(data.lat)), longitude: round6(Number(data.lon)) })
       setFoundName(data.display_name || '')
+      onFound?.({ display_name: String(data.display_name || ''), city: String(data.city || '') })
     } catch (e: any) {
       Alert.alert(t('common.error'), e?.response?.status === 404 ? t('svcLocation.notFound') : t('svcLocation.error'))
     } finally { setFinding(false) }
@@ -57,9 +67,9 @@ export function ServiceLocationField({ address, city, country, latitude, longitu
     <View style={s.box}>
       <View style={s.head}>
         <MapPin size={icon.sm} color={colors.textMuted} />
-        <Text style={s.title}>{t('svcLocation.title')}</Text>
+        <Text style={s.title}>{title || t('svcLocation.title')}</Text>
       </View>
-      <Text style={s.hint}>{t('svcLocation.hint')}</Text>
+      <Text style={s.hint}>{hint || t('svcLocation.hint')}</Text>
 
       {has ? (
         <>
@@ -69,7 +79,7 @@ export function ServiceLocationField({ address, city, country, latitude, longitu
           </Text>
         </>
       ) : (
-        <Text style={s.hint}>{t('svcLocation.notSet')}</Text>
+        <Text style={s.hint}>{notSet || t('svcLocation.notSet')}</Text>
       )}
 
       <Button full size="sm" variant="secondary"

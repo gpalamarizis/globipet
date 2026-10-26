@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Τα μηνύματα που έλαβε ο πελάτης από παρόχους.
@@ -73,7 +74,7 @@ export default function InboxPage() {
     if (h < 24) return t('pgInbox.hoursAgo', { count: h })
     const days = Math.round(h / 24)
     if (days < 7) return t('pgInbox.daysAgo', { count: days })
-    return d.toLocaleDateString(i18n.language)
+    return d.toLocaleDateString(dateLocale(i18n.language))
   }
 
   return (

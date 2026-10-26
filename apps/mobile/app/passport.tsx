@@ -7,6 +7,8 @@ import { BookOpen, Syringe, Stethoscope, Pill, FlaskConical, ScanLine, Scissors,
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
+import { DateField } from '@/components/DateField'
+import { fmtDateShort } from '@/lib/dates'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
 /**
@@ -297,9 +299,9 @@ const LIST_KEYS = new Set(['breeds_detected', 'conditions_found'])
 const BOOL_KEYS = new Set(['is_abnormal'])
 
 // Πεδία ημερομηνίας της φόρμας — τα ίδια που στο web είναι <input type="date">,
-// και το expires_at της πρόσβασης. Στο κινητό γράφονται ως κείμενο, οπότε
-// ελέγχονται πριν φύγουν: το expires_at είναι DateTime στη βάση (ελεύθερο
-// κείμενο → Invalid Date → 500) και τα υπόλοιπα, αν και String, συγκρίνονται
+// και το expires_at της πρόσβασης. Από το Ε17 επιλέγονται με ημερολόγιο
+// (DateField, πάντα YYYY-MM-DD)· ο έλεγχος μένει ως δίχτυ ασφαλείας: το
+// expires_at είναι DateTime στη βάση (ελεύθερο κείμενο → Invalid Date → 500) και τα υπόλοιπα, αν και String, συγκρίνονται
 // και ταξινομούνται ως YYYY-MM-DD (π.χ. λύσσα σε ισχύ, ταξινόμηση λίστας).
 const DATE_KEYS = new Set([
   'date', 'date_administered', 'next_due_date', 'next_appointment', 'start_date', 'end_date',
@@ -315,6 +317,12 @@ function isValidYmd(v: string) {
   return x.getFullYear() === y && x.getMonth() === mo - 1 && x.getDate() === d
 }
 
+// Ε17 — Όνομα εμβολίου που μοιάζει με αντιλυσσικό: η κατηγορία γίνεται
+// «Λύσσα» αυτόματα (αν ο χρήστης δεν έχει διαλέξει ήδη), γιατί από αυτήν
+// εξαρτάται η «Κατάσταση εγγράφων» ταξιδιού. Ίδιος κανόνας με το web.
+// «rabi» = rabies/rabia/rabique· «rage» μόνο ως λέξη (όχι π.χ. «storage»).
+const RABIES_RE = /λύσσ|λυσσ|rabi|\brage\b|狂犬/i
+
 // Σημερινή τοπική ημερομηνία ως YYYY-MM-DD· σύγκριση με το next_due_date
 // χωρίς new Date('YYYY-MM-DD'), που διαβάζεται ως UTC.
 function localToday() {
@@ -324,7 +332,7 @@ function localToday() {
 
 export default function PassportScreen() {
   const qc = useQueryClient()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   // Από την καρτέλα κατοικιδίου ο φάκελος ανοίγει κατευθείαν στο ζώο
@@ -355,6 +363,8 @@ export default function PassportScreen() {
    */
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({})
+  // Ο χρήστης διάλεξε μόνος του κατηγορία εμβολίου → σταματά η αυτόματη «Λύσσα».
+  const [vtTouched, setVtTouched] = useState(false)
 
   const addRecord = useMutation({
     mutationFn: (body: Record<string, any>) => api.post(`/passport/${spec.api}/${petId}`, body),
@@ -409,6 +419,7 @@ export default function PassportScreen() {
       else if (BOOL_KEYS.has(k)) body[k] = v === 'true'
       else if (NUM_INT.has(k) || NUM_FLOAT.has(k)) {
         const n = v.replace(',', '.')
+        // Μόνο μη αρνητικός αριθμός («-5» απορρίπτεται) — ίδιος κανόνας με το web.
         if (!/^\d+(\.\d+)?$/.test(n)) return Alert.alert(t('common.error'), t('passport.invalidNumber'))
         body[k] = NUM_INT.has(k) ? Math.round(parseFloat(n)) : parseFloat(n)
       } else if (LIST_KEYS.has(k)) body[k] = v.split(',').map(x => x.trim()).filter(Boolean)
@@ -476,8 +487,17 @@ export default function PassportScreen() {
     if (v == null || v === '') return null
     if (Array.isArray(v)) return v.join(', ')
     if (typeof v === 'boolean') return v ? t('common.yes') : t('common.no')
-    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10)
+    // Ε17: ημερομηνία στη μορφή της γλώσσας (π.χ. 15/03/2026), όχι 2026-03-15.
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return fmtDateShort(v, i18n.language)
     return String(v)
+  }
+
+  // Ε17 — Κείμενα φόρμας ανά κατηγορία (passportForm.<καρτέλα>.<πεδίο>):
+  // ειδική ετικέτα (ενικός, π.χ. «Όνομα εμβολίου»), παράδειγμα και εξήγηση.
+  // Ίδια κλειδιά με το web. Όπου δεν υπάρχει, μένει η γενική ετικέτα.
+  const formText = (field: string, part: 'label' | 'ph' | 'hint') => {
+    const k = `passportForm.${spec.id}.${field}.${part}`
+    return i18n.exists(k) ? t(k) : undefined
   }
 
   // Τιμή πεδίου με επιλογές → μεταφρασμένο κείμενο (άγνωστη/ελεύθερη τιμή μένει ως έχει).
@@ -516,13 +536,17 @@ export default function PassportScreen() {
 
   // Πεδίο φόρμας: επιλογή (όπως τα <select> του web) ή κείμενο, με το
   // κατάλληλο πληκτρολόγιο για αριθμούς. Τα υποχρεωτικά σημειώνονται με *.
+  // Ε17: ημερομηνίες με ημερολόγιο (DateField, τιμή πάντα YYYY-MM-DD), όχι
+  // πληκτρολόγηση· κάθε πεδίο με παράδειγμα (placeholder) και εξήγηση (hint).
   const renderField = (key: string, labelKey: string) => {
     const req = !!spec.required?.includes(key)
-    const label = req ? `${t(labelKey)} *` : t(labelKey)
+    const base = formText(key, 'label') ?? t(labelKey)
+    const label = req ? `${base} *` : base
+    const hint = formText(key, 'hint') ?? (LIST_KEYS.has(key) ? t('passport.commaHint') : undefined)
     const options = spec.opts?.[key]
     if (options) return (
       <View key={key} style={{ gap: space.xs }}>
-        <Text style={s.k}>{label}</Text>
+        <Text style={s.fieldLabel}>{label}</Text>
         <View style={s.tabs}>
           {options.map(o => {
             const on = form[key] === o.value
@@ -535,12 +559,26 @@ export default function PassportScreen() {
             )
           })}
         </View>
+        {hint ? <Text style={s.hint}>{hint}</Text> : null}
       </View>
+    )
+    if (DATE_KEYS.has(key)) return (
+      <DateField key={key} label={base} required={req} value={form[key] ?? ''}
+        onChange={v => setForm(f => ({ ...f, [key]: v }))}
+        hint={hint} clearable={!req} />
     )
     return (
       <Input key={key} label={label} value={form[key] ?? ''}
-        onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
-        placeholder={DATE_KEYS.has(key) ? 'YYYY-MM-DD' : LIST_KEYS.has(key) ? t('passport.commaHint') : undefined}
+        onChangeText={v => setForm(f => {
+          const next = { ...f, [key]: v }
+          // Αντιλυσσικό → κατηγορία «Λύσσα», μόνο αν δεν τη διάλεξε ο χρήστης.
+          if (spec.id === 'vaccines' && key === 'vaccine_name' && !vtTouched) {
+            next.vaccine_type = RABIES_RE.test(v) ? 'rabies' : ''
+          }
+          return next
+        })}
+        placeholder={formText(key, 'ph')}
+        hint={hint}
         keyboardType={NUM_INT.has(key) || NUM_FLOAT.has(key) ? 'decimal-pad' : undefined} />
     )
   }
@@ -597,7 +635,7 @@ export default function PassportScreen() {
         {!!spec.api && (
           <Button label={tab === 'access' ? t('passport.acc_grantAccess') : t('passport.addRecord')}
             icon={<Plus size={18} color={colors.textOnDark} />}
-            onPress={() => { setForm(spec.defaults?.() ?? {}); setAdding(true) }} full />
+            onPress={() => { setForm(spec.defaults?.() ?? {}); setVtTouched(false); setAdding(true) }} full />
         )}
 
         {isLoading ? <SkeletonRows count={4} /> : (
@@ -742,20 +780,28 @@ export default function PassportScreen() {
                   ['breeder_contact', 'common.phone'],
                 ] as const).map(([key, labelKey]) => (
                   <Input key={key} label={t(labelKey)} value={form[key] ?? ''}
-                    onChangeText={v => setForm(f => ({ ...f, [key]: v }))} />
+                    onChangeText={v => setForm(f => ({ ...f, [key]: v }))}
+                    placeholder={formText(key, 'ph')} />
                 ))
               ) : null}
 
               {tab === 'access' ? (<>
                 <Input label={t('passport.acc_vetEmailReq')} value={form.provider_email ?? ''}
                   onChangeText={v => setForm(f => ({ ...f, provider_email: v }))}
+                  placeholder={formText('provider_email', 'ph')}
                   keyboardType="email-address" autoCapitalize="none" />
                 <Input label={t('passport.acc_vetName')} value={form.provider_name ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, provider_name: v }))} />
+                  onChangeText={v => setForm(f => ({ ...f, provider_name: v }))}
+                  placeholder={formText('provider_name', 'ph')} />
                 <Input label={t('passport.acc_reasonComment')} value={form.reason ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, reason: v }))} />
-                <Input label={t('passport.acc_accessExpiry')} value={form.expires_at ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, expires_at: v }))} placeholder="YYYY-MM-DD" />
+                  onChangeText={v => setForm(f => ({ ...f, reason: v }))}
+                  placeholder={formText('reason', 'ph')} />
+                {/* Κενό = χωρίς λήξη (ο server αποθηκεύει null). Από αύριο και μετά:
+                    λήξη σήμερα θα έκοβε την πρόσβαση αμέσως. */}
+                <DateField label={t('passport.acc_accessExpiry')} value={form.expires_at ?? ''}
+                  onChange={v => setForm(f => ({ ...f, expires_at: v }))}
+                  minimumDate={new Date(Date.now() + 864e5)}
+                  hint={formText('expires_at', 'hint')} clearable />
               </>) : null}
 
               {tab !== 'pedigree' && tab !== 'access' && (<>
@@ -766,19 +812,20 @@ export default function PassportScreen() {
               {!!spec.date && renderField(spec.date, 'serviceDetail.date')}
               {tab === 'vaccines' && (
                 <View style={{ gap: space.xs }}>
-                  <Text style={s.k}>{t('passport.vaccineType')}</Text>
+                  <Text style={s.fieldLabel}>{formText('vaccine_type', 'label')}</Text>
                   <View style={s.tabs}>
                     {VACCINE_TYPES.map(vt => {
                       const on = form.vaccine_type === vt.value
                       return (
                         <TouchableOpacity key={vt.value} activeOpacity={0.7}
                           style={[s.tab, on && s.tabOn]}
-                          onPress={() => setForm(f => ({ ...f, vaccine_type: on ? '' : vt.value }))}>
+                          onPress={() => { setVtTouched(true); setForm(f => ({ ...f, vaccine_type: on ? '' : vt.value })) }}>
                           <Text style={[s.tabTxt, on && s.tabTxtOn]}>{t(vt.labelKey)}</Text>
                         </TouchableOpacity>
                       )
                     })}
                   </View>
+                  <Text style={s.hint}>{formText('vaccine_type', 'hint')}</Text>
                 </View>
               )}
               {spec.fields?.map(f => renderField(f.key, f.labelKey))}
@@ -794,7 +841,8 @@ export default function PassportScreen() {
               )}
               {!spec.noNotes && (
                 <Input label={t('serviceDetail.note')} value={form.notes ?? ''}
-                  onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline />
+                  onChangeText={v => setForm(f => ({ ...f, notes: v }))} multiline
+                  placeholder={formText('notes', 'ph')} />
               )}
               </>)}
             </ScrollView>
@@ -858,5 +906,10 @@ const s = StyleSheet.create({
     marginTop: space.xs,
   },
   k: { ...type.caption, color: colors.textMuted, flexShrink: 0, maxWidth: '42%' },
+  // Ετικέτα πεδίου της φόρμας με επιλογές: ίδιο στυλ με την ετικέτα του Input
+  // (components/ui inputLabel) — το κενό ως τις επιλογές το δίνει το gap του γονέα.
+  fieldLabel: { ...type.caption, fontWeight: weight.semibold, color: colors.textMuted },
+  // Εξήγηση κάτω από επιλογές — ίδια με το hint του Input (ui.tsx).
+  hint: { ...type.caption, color: colors.textLight, marginTop: -space.sm, marginBottom: space.sm },
   v: { ...type.caption, color: colors.text, fontWeight: weight.semibold, flex: 1, textAlign: 'right' },
 })

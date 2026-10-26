@@ -51,6 +51,7 @@ const BreedExplorer     = lazy(() => import('@/pages/BreedExplorer'))
 const BreedDetail       = lazy(() => import('@/pages/BreedDetail'))
 const Profile           = lazy(() => import('@/pages/Profile'))
 const Wishlist          = lazy(() => import('@/pages/Wishlist'))
+const MyReviews         = lazy(() => import('@/pages/MyReviews'))
 const Checkout          = lazy(() => import('@/pages/Checkout'))
 const MyOrders          = lazy(() => import('@/pages/MyOrders'))
 const OrderConfirmation = lazy(() => import('@/pages/OrderConfirmation'))
@@ -73,10 +74,12 @@ const AdminSubscriptionsPage = lazy(() => import('@/pages/admin/AdminSubscriptio
 const AdminAiPlansPage    = lazy(() => import('@/pages/admin/AdminAiPlansPage'))
 const TrialPage           = lazy(() => import('@/pages/TrialPage'))
 const PricingPage         = lazy(() => import('@/pages/PricingPage'))
+const LoyaltyPage         = lazy(() => import('@/pages/LoyaltyPage'))
 const PrivacyPolicyPage   = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage  = lazy(() => import('@/pages/TermsOfServicePage'))
 const CookiePreferencesPage = lazy(() => import('@/pages/CookiePreferencesPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
+const AdminLoyaltyPage     = lazy(() => import('@/pages/admin/AdminLoyaltyPage'))
 const InboxPage = lazy(() => import('@/pages/InboxPage'))
 const AdminMessagesPage    = lazy(() => import('@/pages/admin/AdminMessagesPage'))
 const AdminContentPage     = lazy(() => import('@/pages/admin/AdminContentPage'))
@@ -250,6 +253,8 @@ export default function App() {
                 <Route path="/ai-stool-urine"  element={<PrivateRoute><AiFeatureGuard><AiStoolUrine /></AiFeatureGuard></PrivateRoute>} />
                 <Route path="/trial"           element={<TrialPage />} />
                 <Route path="/pricing"         element={<PricingPage />} />
+                {/* Πρόγραμμα επιβράβευσης: δημόσιο (κανόνες)· συνδεδεμένος βλέπει και την πρόοδό του. */}
+                <Route path="/loyalty"         element={<LoyaltyPage />} />
                 <Route path="/privacy"         element={<PrivacyPolicyPage />} />
                 <Route path="/terms"           element={<TermsOfServicePage />} />
                 <Route path="/cookies"         element={<CookiePreferencesPage />} />
@@ -274,6 +279,7 @@ export default function App() {
                 <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/inbox"           element={<PrivateRoute><InboxPage /></PrivateRoute>} />
                 <Route path="/wishlist"        element={<PrivateRoute><Wishlist /></PrivateRoute>} />
+                <Route path="/my-reviews"      element={<PrivateRoute><MyReviews /></PrivateRoute>} />
                 <Route path="/checkout"        element={<PrivateRoute><Checkout /></PrivateRoute>} />
                 <Route path="/orders"          element={<PrivateRoute><MyOrders /></PrivateRoute>} />
                 <Route path="/orders/:id"      element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
@@ -304,6 +310,7 @@ export default function App() {
                 <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
                 <Route path="/admin/ai-plans"      element={<AdminAiPlansPage />} />
                 <Route path="/admin/commissions"   element={<AdminCommissionsPage />} />
+                <Route path="/admin/loyalty"       element={<AdminLoyaltyPage />} />
                 <Route path="/admin/messages"      element={<AdminMessagesPage />} />
                 <Route path="/admin/content"       element={<AdminContentPage />} />
                 <Route path="/admin/audit-logs"    element={<AdminAuditLogPage />} />

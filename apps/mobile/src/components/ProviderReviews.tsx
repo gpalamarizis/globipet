@@ -9,6 +9,7 @@ import { Card, Button } from '@/components/ui'
 import { Chips } from '@/components/Chips'
 import { ReviewReply } from '@/components/ReviewReply'
 import { colors, space, type, weight } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Κριτικές που έλαβε ο πάροχος, με απάντηση — ίδιο με την καρτέλα «Κριτικές»
@@ -81,7 +82,7 @@ export function ProviderReviews() {
                     <Text style={s.meta} numberOfLines={1}>
                       {r.product_id ? t('reviewReply.product') : t('reviewReply.service')}
                       {target ? `: ${target}` : ''}
-                      {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(i18n.language)}` : ''}
+                      {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(dateLocale(i18n.language))}` : ''}
                     </Text>
                   </View>
                   <View style={s.rating}>

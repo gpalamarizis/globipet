@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Αίτηση επαλήθευσης παρόχου — web.
@@ -102,7 +103,7 @@ export default function ProviderVerificationPage() {
           <p className="text-sm text-gray-700 dark:text-gray-300">{t(st.textKey)}</p>
           <p className="text-xs text-gray-500 mt-2">
             {t('providerVerify.submitted_on', {
-              date: new Date(request.created_at).toLocaleDateString(i18n.language, { day: '2-digit', month: 'long', year: 'numeric' }),
+              date: new Date(request.created_at).toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'long', year: 'numeric' }),
             })}
           </p>
         </div>

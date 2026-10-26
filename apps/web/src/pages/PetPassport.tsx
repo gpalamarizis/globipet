@@ -11,7 +11,9 @@ import {
 import { api, usePrivateUrl } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
+import { fmtDateShort, fmtDateDayMonth } from '@/lib/dates'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 
 // ─── TAB DEFINITIONS ─────────────────────────────────────────────
 const TABS = [
@@ -103,8 +105,12 @@ function Modal({ title, onClose, onSave, saving, children }: any) {
   )
 }
 
-function F({ label, name, form, setForm, type = 'text', options }: any) {
-  const inputCls = "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white"
+// Ε17: ph = παράδειγμα (placeholder), hint = εξήγηση κάτω από το πεδίο, min για ημερομηνίες.
+// Τα αριθμητικά πεδία είναι κείμενο με αριθμητικό πληκτρολόγιο: το <input type="number">
+// σε πολλούς browsers απορρίπτει το «12,5» (ελληνική υποδιαστολή) και έστελνε κενό· το
+// submit δέχεται κόμμα ή τελεία (όπως το κινητό).
+function F({ label, name, form, setForm, type = 'text', options, ph, hint, min }: any) {
+  const inputCls = "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:text-white placeholder:text-gray-400"
   return (
     <div>
       <label className="text-xs font-medium text-gray-500 mb-1 block">{label}</label>
@@ -113,10 +119,12 @@ function F({ label, name, form, setForm, type = 'text', options }: any) {
           {options.map((o: any) => <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o}</option>)}
         </select>
       ) : type === 'textarea' ? (
-        <textarea className={inputCls} rows={3} value={form[name] || ''} onChange={e => setForm((f: any) => ({ ...f, [name]: e.target.value }))} />
+        <textarea className={inputCls} rows={3} placeholder={ph} value={form[name] || ''} onChange={e => setForm((f: any) => ({ ...f, [name]: e.target.value }))} />
       ) : (
-        <input type={type} className={inputCls} value={form[name] || ''} onChange={e => setForm((f: any) => ({ ...f, [name]: e.target.value }))} />
+        <input type={type === 'number' ? 'text' : type} inputMode={type === 'number' ? 'decimal' : undefined}
+          className={inputCls} placeholder={ph} min={min} value={form[name] || ''} onChange={e => setForm((f: any) => ({ ...f, [name]: e.target.value }))} />
       )}
+      {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
     </div>
   )
 }
@@ -127,6 +135,16 @@ function localToday() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+// Αύριο (τοπικά) ως YYYY-MM-DD — ελάχιστη λήξη πρόσβασης (λήξη σήμερα = καμία πρόσβαση).
+function localTomorrow() {
+  const d = new Date(); d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Ε17 — Όνομα εμβολίου που μοιάζει με αντιλυσσικό: η κατηγορία γίνεται «Λύσσα»
+// αυτόματα, αν ο χρήστης δεν έχει διαλέξει ήδη. Ίδιος κανόνας με το κινητό.
+// «rabi» = rabies/rabia/rabique· «rage» μόνο ως λέξη (όχι π.χ. «storage»).
+const RABIES_RE = /λύσσ|λυσσ|rabi|\brage\b|狂犬/i
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────
 export default function PetPassport() {
@@ -137,6 +155,12 @@ export default function PetPassport() {
   const [activeTab, setActiveTab] = useState('identity')
   const [modal, setModal] = useState<string | null>(null)
   const [form, setForm] = useState<any>({})
+  // Ο χρήστης διάλεξε μόνος του κατηγορία εμβολίου → σταματά η αυτόματη «Λύσσα».
+  const [vtTouched, setVtTouched] = useState(false)
+  // Ε17: κείμενα φόρμας (ετικέτα/παράδειγμα/εξήγηση), ίδια κλειδιά με το κινητό.
+  const pf = (tab: string, field: string, part: 'label' | 'ph' | 'hint') => t(`passportForm.${tab}.${field}.${part}`)
+  // Ημερομηνία για εμφάνιση στη μορφή της γλώσσας (15/03/2026)· η τιμή μένει YYYY-MM-DD.
+  const fd = (d?: string | null) => d ? fmtDateShort(String(d), i18n.language) : d
 
   const { data: pets = [] } = useQuery({
     queryKey: ['my-pets'],
@@ -144,7 +168,12 @@ export default function PetPassport() {
     enabled: !!user,
   })
 
-  const activePetId = selectedPetId || (pets.length === 1 ? pets[0]?.id : null)
+  // ?pet=<id> (από «Ιατρικός φάκελος» στα Κατοικίδιά μου / στη σελίδα κατοικιδίου): αρχική επιλογή,
+  // μόνο αν το κατοικίδιο είναι στη λίστα του χρήστη — άγνωστο/ξένο id αγνοείται.
+  const [searchParams] = useSearchParams()
+  const qPet = searchParams.get('pet')
+  const urlPetId: string | null = qPet && pets.some((p: any) => p.id === qPet) ? qPet : null
+  const activePetId = selectedPetId || urlPetId || (pets.length === 1 ? pets[0]?.id : null)
 
   const { data: passport, isLoading } = useQuery({
     queryKey: ['passport', activePetId],
@@ -254,7 +283,13 @@ export default function PetPassport() {
     travel: { travel_type: 'flight' },
   } as Record<string, any>)[type] || {}
 
-  const openModal = (type: string, defaults: any = defaultsFor(type)) => { setModal(type); setForm(defaults) }
+  const openModal = (type: string, defaults: any = defaultsFor(type)) => { setModal(type); setForm(defaults); setVtTouched(false) }
+  // Όνομα εμβολίου: αντιλυσσικό → κατηγορία «Λύσσα» (μόνο αν δεν τη διάλεξε ο χρήστης).
+  const setVaccineName = (upd: (f: any) => any) => setForm((f: any) => {
+    const n = upd(f)
+    return vtTouched ? n : { ...n, vaccine_type: RABIES_RE.test(String(n.vaccine_name || '')) ? 'rabies' : '' }
+  })
+  const setVaccineType = (upd: (f: any) => any) => { setVtTouched(true); setForm(upd) }
 
   // Υποχρεωτικά πεδία ανά φόρμα (schema.prisma / passport.ts) και αριθμητικά
   // πεδία (Int/Float): το <input type="number"> δίνει κείμενο, που το Prisma απορρίπτει.
@@ -276,6 +311,8 @@ export default function PetPassport() {
       if (!(k in data)) continue
       const s = String(data[k] ?? '').trim().replace(',', '.')
       if (s === '') { delete data[k]; continue }
+      // Μόνο μη αρνητικός αριθμός (ίδιος κανόνας με το κινητό): όχι «-5», «1e3».
+      if (!/^\d+(\.\d+)?$/.test(s)) return toast.error(t('pgPassport.invalidNumber'))
       const n = Number(s)
       if (!Number.isFinite(n)) return toast.error(t('pgPassport.invalidNumber'))
       data[k] = NUM_INT.includes(k) ? Math.round(n) : n
@@ -421,11 +458,11 @@ export default function PetPassport() {
                 <button onClick={() => openModal('vaccine')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVaccine')}</button>
                 {(p.vaccinations || []).length === 0 ? <EmptyState label={t('pgPassport.addVaccine')} onAdd={() => openModal('vaccine')} /> :
                   (p.vaccinations || []).map((v: any) => (
-                    <RecordCard key={v.id} title={v.vaccine_name} subtitle={`${code('vacType', v.vaccine_type)} · ${v.vet_name || ''}`} date={v.date_administered}
-                      badge={v.next_due_date && String(v.next_due_date).slice(0, 10) < localToday() ? t('pgPassport.overdue') : v.next_due_date ? t('pgPassport.nextDue', { date: v.next_due_date }) : undefined}
+                    <RecordCard key={v.id} title={v.vaccine_name} subtitle={`${code('vacType', v.vaccine_type)} · ${v.vet_name || ''}`} date={fd(v.date_administered)}
+                      badge={v.next_due_date && String(v.next_due_date).slice(0, 10) < localToday() ? t('pgPassport.overdue') : v.next_due_date ? t('pgPassport.nextDue', { date: fd(v.next_due_date) }) : undefined}
                       badgeColor={v.next_due_date && String(v.next_due_date).slice(0, 10) < localToday() ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => confirmRemove(vac.remove, v.id)}>
-                      <Field label={t('pgPassport.type')} value={code('vacType', v.vaccine_type)} /><Field label={t('pgPassport.vet')} value={v.vet_name} /><Field label={t('pgPassport.notes')} value={v.notes} />
+                      <Field label={pf('vaccines', 'vaccine_type', 'label')} value={code('vacType', v.vaccine_type)} /><Field label={t('pgPassport.vet')} value={v.vet_name} /><Field label={t('pgPassport.notes')} value={v.notes} />
                     </RecordCard>
                   ))}
               </>
@@ -437,8 +474,8 @@ export default function PetPassport() {
                 <button onClick={() => openModal('health')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newExam')}</button>
                 {(p.healthRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addExam')} onAdd={() => openModal('health')} /> :
                   (p.healthRecords || []).map((h: any) => (
-                    <RecordCard key={h.id} title={h.title} subtitle={`${code('recordType', h.record_type)} · ${h.vet_name || ''} · ${h.clinic_name || ''}`} date={h.date} onDelete={() => confirmRemove(health.remove, h.id)}>
-                      <Field label={t('pgPassport.description')} value={h.description} /><Field label={t('pgPassport.cost')} value={h.cost ? `${h.cost}€` : null} /><Field label={t('pgPassport.nextAppointment')} value={h.next_appointment} />
+                    <RecordCard key={h.id} title={h.title} subtitle={`${code('recordType', h.record_type)} · ${h.vet_name || ''} · ${h.clinic_name || ''}`} date={fd(h.date)} onDelete={() => confirmRemove(health.remove, h.id)}>
+                      <Field label={t('pgPassport.description')} value={h.description} /><Field label={t('pgPassport.cost')} value={h.cost ? `${h.cost}€` : null} /><Field label={t('pgPassport.nextAppointment')} value={fd(h.next_appointment)} />
                     </RecordCard>
                   ))}
               </>
@@ -451,7 +488,7 @@ export default function PetPassport() {
                 {(p.medications || []).length === 0 ? <EmptyState label={t('pgPassport.addMed')} onAdd={() => openModal('med')} /> :
                   (p.medications || []).map((m: any) => (
                     <RecordCard key={m.id} title={`${m.name} ${m.dosage}`} subtitle={`${freqLabel(m.frequency)} · ${m.prescribed_by || ''}`}
-                      date={`${m.start_date}${m.end_date ? ' → ' + m.end_date : ''}`}
+                      date={`${fd(m.start_date)}${m.end_date ? ' → ' + fd(m.end_date) : ''}`}
                       badge={m.is_active ? t('pgPassport.activeBadge') : t('pgPassport.completed')} badgeColor={m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
                       onDelete={() => confirmRemove(meds.remove, m.id)}>
                       <Field label={t('pgPassport.activeIngredientShort')} value={m.active_ingredient} /><Field label={t('pgPassport.routeOfAdmin')} value={code('route', m.route)} /><Field label={t('pgPassport.reason')} value={m.reason} /><Field label={t('pgPassport.sideEffects')} value={m.side_effects} />
@@ -466,7 +503,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('lab')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newLab')}</button>
                 {(p.labResults || []).length === 0 ? <EmptyState label={t('pgPassport.addResult')} onAdd={() => openModal('lab')} /> :
                   (p.labResults || []).map((l: any) => (
-                    <RecordCard key={l.id} title={l.title} subtitle={`${code('labType', l.result_type)} · ${l.lab_name || ''} · ${l.vet_name || ''}`} date={l.date}
+                    <RecordCard key={l.id} title={l.title} subtitle={`${code('labType', l.result_type)} · ${l.lab_name || ''} · ${l.vet_name || ''}`} date={fd(l.date)}
                       badge={l.is_abnormal ? t('pgPassport.abnormal') : t('pgPassport.normal')} badgeColor={l.is_abnormal ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => confirmRemove(lab.remove, l.id)}>
                       <Field label={t('pgPassport.findings')} value={l.findings} /><Field label={t('pgPassport.laboratory')} value={l.lab_name} />
@@ -482,7 +519,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('imaging')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newImaging')}</button>
                 {(p.imaging || []).length === 0 ? <EmptyState label={t('pgPassport.addImaging')} onAdd={() => openModal('imaging')} /> :
                   (p.imaging || []).map((img: any) => (
-                    <RecordCard key={img.id} title={code('imgType', img.imaging_type)} subtitle={`${img.body_region || ''} · ${img.vet_name || ''} · ${img.clinic_name || ''}`} date={img.date} onDelete={() => confirmRemove(imaging.remove, img.id)}>
+                    <RecordCard key={img.id} title={code('imgType', img.imaging_type)} subtitle={`${img.body_region || ''} · ${img.vet_name || ''} · ${img.clinic_name || ''}`} date={fd(img.date)} onDelete={() => confirmRemove(imaging.remove, img.id)}>
                       <Field label={t('pgPassport.findings')} value={img.findings} /><Field label={t('pgPassport.report')} value={img.report} />
                       {img.file_urls?.length > 0 && <p>{t('pgPassport.files')}: {img.file_urls.map((u: string, i: number) => <FileLink key={i} url={u} petId={activePetId}>{t('pgPassport.imageN', { n: i+1 })}</FileLink>)}</p>}
                     </RecordCard>
@@ -496,7 +533,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('surgery')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newSurgery')}</button>
                 {(p.surgeries || []).length === 0 ? <EmptyState label={t('pgPassport.addSurgery')} onAdd={() => openModal('surgery')} /> :
                   (p.surgeries || []).map((s: any) => (
-                    <RecordCard key={s.id} title={s.procedure} subtitle={`${s.surgeon_name || ''} · ${s.clinic_name || ''}`} date={s.date} onDelete={() => confirmRemove(surgery.remove, s.id)}>
+                    <RecordCard key={s.id} title={s.procedure} subtitle={`${s.surgeon_name || ''} · ${s.clinic_name || ''}`} date={fd(s.date)} onDelete={() => confirmRemove(surgery.remove, s.id)}>
                       <Field label={t('pgPassport.category')} value={code('surgCat', s.category)} /><Field label={t('pgPassport.anesthesia')} value={code('anesth', s.anesthesia)} /><Field label={t('pgPassport.duration')} value={s.duration_min ? t('pgPassport.minutes', { count: s.duration_min }) : null} />
                       <Field label={t('pgPassport.complications')} value={s.complications} /><Field label={t('pgPassport.outcome')} value={s.outcome} /><Field label={t('pgPassport.followUp')} value={s.follow_up} /><Field label={t('pgPassport.cost')} value={s.cost ? `${s.cost}€` : null} />
                     </RecordCard>
@@ -524,7 +561,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('chronic')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newChronic')}</button>
                 {(p.chronicConditions || []).length === 0 ? <EmptyState label={t('pgPassport.addCondition')} onAdd={() => openModal('chronic')} /> :
                   (p.chronicConditions || []).map((c: any) => (
-                    <RecordCard key={c.id} title={c.condition} subtitle={`${c.diagnosed_by || ''} · ${c.clinic_name || ''}`} date={c.diagnosed_date}
+                    <RecordCard key={c.id} title={c.condition} subtitle={`${c.diagnosed_by || ''} · ${c.clinic_name || ''}`} date={fd(c.diagnosed_date)}
                       badge={c.status === 'active' ? t('pgPassport.chronicStatus.active') : c.status === 'managed' ? t('pgPassport.chronicStatus.managed') : t('pgPassport.chronicStatus.resolved')}
                       badgeColor={c.status === 'active' ? 'bg-red-100 text-red-700' : c.status === 'managed' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}
                       onDelete={() => confirmRemove(chronic.remove, c.id)}>
@@ -540,8 +577,8 @@ export default function PetPassport() {
                 <button onClick={() => openModal('dental')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newDental')}</button>
                 {(p.dentalRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addDental')} onAdd={() => openModal('dental')} /> :
                   (p.dentalRecords || []).map((d: any) => (
-                    <RecordCard key={d.id} title={code('dentalProc', d.procedure)} subtitle={`${d.vet_name || ''} · ${d.clinic_name || ''}`} date={d.date} onDelete={() => confirmRemove(dental.remove, d.id)}>
-                      <Field label={t('pgPassport.teeth')} value={d.teeth_treated} /><Field label={t('pgPassport.findings')} value={d.findings} /><Field label={t('pgPassport.stage')} value={gradeLabel(d.grade)} /><Field label={t('pgPassport.nextCleaning')} value={d.next_due} /><Field label={t('pgPassport.cost')} value={d.cost ? `${d.cost}€` : null} />
+                    <RecordCard key={d.id} title={code('dentalProc', d.procedure)} subtitle={`${d.vet_name || ''} · ${d.clinic_name || ''}`} date={fd(d.date)} onDelete={() => confirmRemove(dental.remove, d.id)}>
+                      <Field label={t('pgPassport.teeth')} value={d.teeth_treated} /><Field label={t('pgPassport.findings')} value={d.findings} /><Field label={t('pgPassport.stage')} value={gradeLabel(d.grade)} /><Field label={t('pgPassport.nextCleaning')} value={fd(d.next_due)} /><Field label={t('pgPassport.cost')} value={d.cost ? `${d.cost}€` : null} />
                     </RecordCard>
                   ))}
               </>
@@ -555,7 +592,7 @@ export default function PetPassport() {
                   <div className="card p-4 mb-4">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pgPassport.weightChart')}</p>
                     <ResponsiveContainer width="100%" height={180}>
-                      <LineChart data={p.weightRecords.map((w: any) => ({ date: w.date.slice(5), kg: w.weight_kg }))}>
+                      <LineChart data={p.weightRecords.map((w: any) => ({ date: fmtDateDayMonth(w.date, i18n.language), kg: w.weight_kg }))}>
                         <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
                         <Tooltip formatter={(v: any) => [`${v} kg`, t('pgPassport.weight')]} />
@@ -566,7 +603,7 @@ export default function PetPassport() {
                 )}
                 {(p.weightRecords || []).length === 0 ? <EmptyState label={t('pgPassport.addMeasurement')} onAdd={() => openModal('weight')} /> :
                   (p.weightRecords || []).slice().reverse().map((w: any) => (
-                    <RecordCard key={w.id} title={`${w.weight_kg} kg`} subtitle={`BCS: ${w.bcs || '-'}/9 · ${w.vet_name || ''}`} date={w.date} onDelete={() => confirmRemove(weight.remove, w.id)}>
+                    <RecordCard key={w.id} title={`${w.weight_kg} kg`} subtitle={`BCS: ${w.bcs || '-'}/9 · ${w.vet_name || ''}`} date={fd(w.date)} onDelete={() => confirmRemove(weight.remove, w.id)}>
                       <Field label={t('pgPassport.notes')} value={w.notes} />
                     </RecordCard>
                   ))}
@@ -579,7 +616,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('genetic')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newGenetic')}</button>
                 {(p.geneticTests || []).length === 0 ? <EmptyState label={t('pgPassport.addGenetic')} onAdd={() => openModal('genetic')} /> :
                   (p.geneticTests || []).map((g: any) => (
-                    <RecordCard key={g.id} title={g.test_name} subtitle={g.provider} date={g.date} onDelete={() => confirmRemove(genetic.remove, g.id)}>
+                    <RecordCard key={g.id} title={g.test_name} subtitle={g.provider} date={fd(g.date)} onDelete={() => confirmRemove(genetic.remove, g.id)}>
                       <Field label={t('pgPassport.results')} value={g.results} />
                       {g.breeds_detected?.length > 0 && <p><span className="font-medium">{t('pgPassport.breeds')}:</span> {g.breeds_detected.join(', ')}</p>}
                       {g.conditions_found?.length > 0 && <p><span className="font-medium">{t('pgPassport.conditions')}:</span> {g.conditions_found.join(', ')}</p>}
@@ -594,7 +631,7 @@ export default function PetPassport() {
                 <button onClick={() => openModal('vitals')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newVitals')}</button>
                 {(p.vitalSigns || []).length === 0 ? <EmptyState label={t('pgPassport.addVitals')} onAdd={() => openModal('vitals')} /> :
                   (p.vitalSigns || []).map((v: any) => (
-                    <RecordCard key={v.id} title={`${v.temperature_c ? v.temperature_c + '°C' : ''} ${v.heart_rate ? v.heart_rate + ' bpm' : ''} ${v.weight_kg ? v.weight_kg + ' kg' : ''}`.trim()} subtitle={v.vet_name} date={v.date} onDelete={() => confirmRemove(vitals.remove, v.id)}>
+                    <RecordCard key={v.id} title={`${v.temperature_c ? v.temperature_c + '°C' : ''} ${v.heart_rate ? v.heart_rate + ' bpm' : ''} ${v.weight_kg ? v.weight_kg + ' kg' : ''}`.trim()} subtitle={v.vet_name} date={fd(v.date)} onDelete={() => confirmRemove(vitals.remove, v.id)}>
                       <Field label={t('pgPassport.temperature')} value={v.temperature_c ? `${v.temperature_c}°C` : null} />
                       <Field label={t('pgPassport.heartRate')} value={v.heart_rate ? `${v.heart_rate} bpm` : null} />
                       <Field label={t('pgPassport.respRate')} value={v.respiratory_rate ? `${v.respiratory_rate} /min` : null} />
@@ -675,8 +712,8 @@ export default function PetPassport() {
                 <button onClick={() => openModal('travel')} className="btn-primary text-sm flex items-center gap-2 mb-4"><Plus size={14} />{t('pgPassport.newTravelDoc')}</button>
                 {(p.travelDocs || []).length === 0 ? <EmptyState label={t('pgPassport.addTravel')} onAdd={() => openModal('travel')} /> :
                   (p.travelDocs || []).map((doc: any) => (
-                    <RecordCard key={doc.id} title={`${doc.origin_city || ''} → ${doc.destination_city}`} subtitle={`${code('travelType', doc.travel_type)} · ${doc.carrier || ''}`} date={doc.departure_date} onDelete={() => confirmRemove(travel.remove, doc.id)}>
-                      <Field label={t('pgPassport.country')} value={doc.destination_country} /><Field label={t('pgPassport.returnLabel')} value={doc.return_date} /><Field label={t('pgPassport.code')} value={doc.booking_ref} />
+                    <RecordCard key={doc.id} title={`${doc.origin_city || ''} → ${doc.destination_city}`} subtitle={`${code('travelType', doc.travel_type)} · ${doc.carrier || ''}`} date={fd(doc.departure_date)} onDelete={() => confirmRemove(travel.remove, doc.id)}>
+                      <Field label={t('pgPassport.country')} value={doc.destination_country} /><Field label={t('pgPassport.returnLabel')} value={fd(doc.return_date)} /><Field label={t('pgPassport.code')} value={doc.booking_ref} />
                     </RecordCard>
                   ))}
               </>
@@ -703,7 +740,7 @@ export default function PetPassport() {
                     badge={expired ? t('pgPassport.expired') : a.status === 'approved' ? t('pgPassport.approved') : t('pgPassport.revoked')}
                     badgeColor={a.status === 'approved' && !expired ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
                     onDelete={a.status === 'approved' ? () => { if (window.confirm(t('pgPassport.revokeQ'))) revokeAccess.mutate(a.id) } : undefined}>
-                    <Field label={t('pgPassport.reason')} value={a.reason} /><Field label={t('pgPassport.grantedOn')} value={a.granted_at ? new Date(a.granted_at).toLocaleDateString(i18n.language) : null} /><Field label={t('pgPassport.expiry')} value={a.expires_at ? new Date(a.expires_at).toLocaleDateString(i18n.language) : t('pgPassport.noExpiry')} />
+                    <Field label={t('pgPassport.reason')} value={a.reason} /><Field label={t('pgPassport.grantedOn')} value={a.granted_at ? fd(a.granted_at) : null} /><Field label={t('pgPassport.expiry')} value={a.expires_at ? fd(a.expires_at) : t('pgPassport.noExpiry')} />
                   </RecordCard>
                   )
                 })}
@@ -719,52 +756,52 @@ export default function PetPassport() {
       <AnimatePresence>
         {modal === 'vaccine' && (
           <Modal title={t('pgPassport.newVaccine')} onClose={() => setModal(null)} onSave={() => submit('vaccine', vac.create)} saving={vac.create.isPending}>
-            <F label={t('pgPassport.vaccineReq')} name="vaccine_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.type')} name="vaccine_type" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'core',label:t('pgPassport.vacType.core')},{value:'non_core',label:t('pgPassport.vacType.nonCore')},{value:'rabies',label:t('pgPassport.vacType.rabies')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.dateAdministeredReq')} name="date_administered" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.nextDose')} name="next_due_date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('vaccines', 'vaccine_name', 'label')} *`} name="vaccine_name" ph={pf('vaccines', 'vaccine_name', 'ph')} form={form} setForm={setVaccineName} />
+            <F label={pf('vaccines', 'vaccine_type', 'label')} name="vaccine_type" hint={pf('vaccines', 'vaccine_type', 'hint')} form={form} setForm={setVaccineType} options={[{value:'',label:'—'},{value:'core',label:t('pgPassport.vacType.core')},{value:'non_core',label:t('pgPassport.vacType.nonCore')},{value:'rabies',label:t('pgPassport.vacType.rabies')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={`${pf('vaccines', 'date_administered', 'label')} *`} name="date_administered" form={form} setForm={setForm} type="date" />
+            <F label={pf('vaccines', 'next_due_date', 'label')} name="next_due_date" hint={pf('vaccines', 'next_due_date', 'hint')} form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('vaccines', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" ph={pf('vaccines', 'notes', 'ph')} form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'health' && (
           <Modal title={t('pgPassport.newExam')} onClose={() => setModal(null)} onSave={() => submit('health', health.create)} saving={health.create.isPending}>
-            <F label={t('pgPassport.titleReq')} name="title" form={form} setForm={setForm} />
+            <F label={`${pf('health', 'title', 'label')} *`} name="title" ph={pf('health', 'title', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.type')} name="record_type" form={form} setForm={setForm} options={[{value:'examination',label:t('pgPassport.recordType.examination')},{value:'diagnosis',label:t('pgPassport.recordType.diagnosis')},{value:'follow_up',label:t('pgPassport.recordType.followUp')},{value:'specialist',label:t('pgPassport.recordType.specialist')},{value:'emergency',label:t('pgPassport.recordType.emergency')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.description')} name="description" form={form} setForm={setForm} type="textarea" />
-            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.nextAppointment')} name="next_appointment" form={form} setForm={setForm} type="date" />
+            <F label={`${pf('health', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('health', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('health', 'clinic_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.description')} name="description" ph={pf('health', 'description', 'ph')} form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.costEur')} name="cost" ph={pf('health', 'cost', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={pf('health', 'next_appointment', 'label')} name="next_appointment" form={form} setForm={setForm} type="date" />
           </Modal>
         )}
 
         {modal === 'med' && (
           <Modal title={t('pgPassport.newMed')} onClose={() => setModal(null)} onSave={() => submit('med', meds.create)} saving={meds.create.isPending}>
-            <F label={t('pgPassport.medNameReq')} name="name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.activeIngredient')} name="active_ingredient" form={form} setForm={setForm} />
-            <F label={t('pgPassport.dosageReq')} name="dosage" form={form} setForm={setForm} />
+            <F label={`${pf('meds', 'name', 'label')} *`} name="name" ph={pf('meds', 'name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.activeIngredient')} name="active_ingredient" ph={pf('meds', 'active_ingredient', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.dosageReq')} name="dosage" ph={pf('meds', 'dosage', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.frequencyReq')} name="frequency" form={form} setForm={setForm} options={['onceDaily','twiceDaily','threeDaily','weekly','monthly','asNeeded'].map(k => ({ value: t(`pgPassport.freq.${k}`, { lng: 'el' }), label: t(`pgPassport.freq.${k}`) }))} />
             <F label={t('pgPassport.routeOfAdminCap')} name="route" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'oral',label:t('pgPassport.route.oral')},{value:'injection',label:t('pgPassport.route.injection')},{value:'topical',label:t('pgPassport.route.topical')},{value:'eye_drops',label:t('pgPassport.route.eyeDrops')},{value:'ear_drops',label:t('pgPassport.route.earDrops')}]} />
-            <F label={t('pgPassport.startDateReq')} name="start_date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.endDate')} name="end_date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.prescribedBy')} name="prescribed_by" form={form} setForm={setForm} />
-            <F label={t('pgPassport.reasonForAdmin')} name="reason" form={form} setForm={setForm} />
-            <F label={t('pgPassport.possibleSideEffects')} name="side_effects" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('meds', 'start_date', 'label')} *`} name="start_date" form={form} setForm={setForm} type="date" />
+            <F label={pf('meds', 'end_date', 'label')} name="end_date" hint={pf('meds', 'end_date', 'hint')} form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.prescribedBy')} name="prescribed_by" ph={pf('meds', 'prescribed_by', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.reasonForAdmin')} name="reason" ph={pf('meds', 'reason', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.possibleSideEffects')} name="side_effects" ph={pf('meds', 'side_effects', 'ph')} form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'lab' && (
           <Modal title={t('pgPassport.newLabTitle')} onClose={() => setModal(null)} onSave={() => submit('lab', lab.create)} saving={lab.create.isPending}>
-            <F label={t('pgPassport.titleReq')} name="title" form={form} setForm={setForm} />
+            <F label={`${pf('lab', 'title', 'label')} *`} name="title" ph={pf('lab', 'title', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.testType')} name="result_type" form={form} setForm={setForm} options={[{value:'blood_count',label:t('pgPassport.labType.bloodCount')},{value:'biochemistry',label:t('pgPassport.labType.biochemistry')},{value:'urine',label:t('pgPassport.labType.urine')},{value:'fecal',label:t('pgPassport.labType.fecal')},{value:'biopsy',label:t('pgPassport.labType.biopsy')},{value:'culture',label:t('pgPassport.labType.culture')},{value:'hormone',label:t('pgPassport.labType.hormone')},{value:'serology',label:t('pgPassport.labType.serology')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.laboratory')} name="lab_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('lab', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.laboratory')} name="lab_name" ph={pf('lab', 'lab_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('lab', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('lab', 'clinic_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" ph={pf('lab', 'findings', 'ph')} form={form} setForm={setForm} type="textarea" />
             <div className="flex items-center gap-2">
               <input type="checkbox" id="abnormal" checked={form.is_abnormal || false} onChange={e => setForm((f: any) => ({ ...f, is_abnormal: e.target.checked }))} />
               <label htmlFor="abnormal" className="text-sm text-gray-700 dark:text-gray-300">{t('pgPassport.abnormalResults')}</label>
@@ -774,100 +811,100 @@ export default function PetPassport() {
 
         {modal === 'imaging' && (
           <Modal title={t('pgPassport.newImagingTitle')} onClose={() => setModal(null)} onSave={() => submit('imaging', imaging.create)} saving={imaging.create.isPending}>
-            <F label={t('pgPassport.typeReq')} name="imaging_type" form={form} setForm={setForm} options={[{value:'xray',label:t('pgPassport.imgType.xray')},{value:'ultrasound',label:t('pgPassport.imgType.ultrasound')},{value:'ct',label:t('pgPassport.imgType.ct')},{value:'mri',label:t('pgPassport.imgType.mri')},{value:'endoscopy',label:t('pgPassport.imgType.endoscopy')},{value:'echocardiogram',label:t('pgPassport.imgType.echocardiogram')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.bodyRegion')} name="body_region" form={form} setForm={setForm} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
-            <F label={t('pgPassport.report')} name="report" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('imaging', 'imaging_type', 'label')} *`} name="imaging_type" form={form} setForm={setForm} options={[{value:'xray',label:t('pgPassport.imgType.xray')},{value:'ultrasound',label:t('pgPassport.imgType.ultrasound')},{value:'ct',label:t('pgPassport.imgType.ct')},{value:'mri',label:t('pgPassport.imgType.mri')},{value:'endoscopy',label:t('pgPassport.imgType.endoscopy')},{value:'echocardiogram',label:t('pgPassport.imgType.echocardiogram')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={t('pgPassport.bodyRegion')} name="body_region" ph={pf('imaging', 'body_region', 'ph')} form={form} setForm={setForm} />
+            <F label={`${pf('imaging', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('imaging', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('imaging', 'clinic_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" ph={pf('imaging', 'findings', 'ph')} form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.report')} name="report" ph={pf('imaging', 'report', 'ph')} form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'surgery' && (
           <Modal title={t('pgPassport.newSurgeryTitle')} onClose={() => setModal(null)} onSave={() => submit('surgery', surgery.create)} saving={surgery.create.isPending}>
-            <F label={t('pgPassport.procedureReq')} name="procedure" form={form} setForm={setForm} />
+            <F label={`${pf('surgery', 'procedure', 'label')} *`} name="procedure" ph={pf('surgery', 'procedure', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.category')} name="category" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'orthopedic',label:t('pgPassport.surgCat.orthopedic')},{value:'soft_tissue',label:t('pgPassport.surgCat.softTissue')},{value:'dental',label:t('pgPassport.surgCat.dental')},{value:'ophthalmic',label:t('pgPassport.surgCat.ophthalmic')},{value:'neurological',label:t('pgPassport.surgCat.neurological')},{value:'reproductive',label:t('pgPassport.surgCat.reproductive')},{value:'other',label:t('pgPassport.otherF')}]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.surgeon')} name="surgeon_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
+            <F label={`${pf('surgery', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.surgeon')} name="surgeon_name" ph={pf('surgery', 'surgeon_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('surgery', 'clinic_name', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.anesthesia')} name="anesthesia" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'general',label:t('pgPassport.anesth.general')},{value:'local',label:t('pgPassport.anesth.local')},{value:'sedation',label:t('pgPassport.anesth.sedation')}]} />
-            <F label={t('pgPassport.durationMin')} name="duration_min" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.complications')} name="complications" form={form} setForm={setForm} type="textarea" />
-            <F label={t('pgPassport.outcome')} name="outcome" form={form} setForm={setForm} />
-            <F label={t('pgPassport.followUp')} name="follow_up" form={form} setForm={setForm} />
-            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.durationMin')} name="duration_min" ph={pf('surgery', 'duration_min', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.complications')} name="complications" ph={pf('surgery', 'complications', 'ph')} form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.outcome')} name="outcome" ph={pf('surgery', 'outcome', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.followUp')} name="follow_up" ph={pf('surgery', 'follow_up', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.costEur')} name="cost" ph={pf('surgery', 'cost', 'ph')} form={form} setForm={setForm} type="number" />
           </Modal>
         )}
 
         {modal === 'allergy' && (
           <Modal title={t('pgPassport.newAllergy')} onClose={() => setModal(null)} onSave={() => submit('allergy', allergy.create)} saving={allergy.create.isPending}>
-            <F label={t('pgPassport.allergenReq')} name="allergen" form={form} setForm={setForm} />
+            <F label={`${pf('allergies', 'allergen', 'label')} *`} name="allergen" ph={pf('allergies', 'allergen', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.type')} name="allergen_type" form={form} setForm={setForm} options={[{value:'food',label:t('pgPassport.allergenType.food')},{value:'medication',label:t('pgPassport.allergenType.medication')},{value:'environmental',label:t('pgPassport.allergenType.environmental')},{value:'insect',label:t('pgPassport.allergenType.insect')},{value:'contact',label:t('pgPassport.allergenType.contact')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.reaction')} name="reaction" form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.reaction')} name="reaction" ph={pf('allergies', 'reaction', 'ph')} form={form} setForm={setForm} type="textarea" />
             <F label={t('pgPassport.severity')} name="severity" form={form} setForm={setForm} options={[{value:'mild',label:t('pgPassport.severityOpt.mild')},{value:'moderate',label:t('pgPassport.severityOpt.moderate')},{value:'severe',label:t('pgPassport.severityOpt.severe')},{value:'anaphylactic',label:t('pgPassport.severityOpt.anaphylactic')}]} />
-            <F label={t('pgPassport.treatment')} name="treatment" form={form} setForm={setForm} />
-            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" form={form} setForm={setForm} />
-            <F label={t('pgPassport.diagnosisDate')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.treatment')} name="treatment" ph={pf('allergies', 'treatment', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" ph={pf('allergies', 'diagnosed_by', 'ph')} form={form} setForm={setForm} />
+            <F label={pf('allergies', 'diagnosed_date', 'label')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
           </Modal>
         )}
 
         {modal === 'chronic' && (
           <Modal title={t('pgPassport.newChronic')} onClose={() => setModal(null)} onSave={() => submit('chronic', chronic.create)} saving={chronic.create.isPending}>
-            <F label={t('pgPassport.conditionReq')} name="condition" form={form} setForm={setForm} />
-            <F label={t('pgPassport.icdCode')} name="icd_code" form={form} setForm={setForm} />
+            <F label={`${pf('chronic', 'condition', 'label')} *`} name="condition" ph={pf('chronic', 'condition', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.icdCode')} name="icd_code" ph={pf('chronic', 'icd_code', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.status')} name="status" form={form} setForm={setForm} options={[{value:'active',label:t('pgPassport.chronicStatus.active')},{value:'managed',label:t('pgPassport.chronicStatus.managed')},{value:'resolved',label:t('pgPassport.chronicStatus.resolved')}]} />
-            <F label={t('pgPassport.diagnosisDate')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.treatmentPlanCap')} name="treatment_plan" form={form} setForm={setForm} type="textarea" />
-            <F label={t('pgPassport.monitoring')} name="monitoring" form={form} setForm={setForm} />
+            <F label={pf('chronic', 'diagnosed_date', 'label')} name="diagnosed_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.diagnosedBy')} name="diagnosed_by" ph={pf('chronic', 'diagnosed_by', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('chronic', 'clinic_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.treatmentPlanCap')} name="treatment_plan" ph={pf('chronic', 'treatment_plan', 'ph')} form={form} setForm={setForm} type="textarea" />
+            <F label={t('pgPassport.monitoring')} name="monitoring" ph={pf('chronic', 'monitoring', 'ph')} form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'dental' && (
           <Modal title={t('pgPassport.newDental')} onClose={() => setModal(null)} onSave={() => submit('dental', dental.create)} saving={dental.create.isPending}>
-            <F label={t('pgPassport.procedureActReq')} name="procedure" form={form} setForm={setForm} options={[{value:'cleaning',label:t('pgPassport.dentalProc.cleaning')},{value:'extraction',label:t('pgPassport.dentalProc.extraction')},{value:'xray',label:t('pgPassport.dentalProc.xray')},{value:'root_canal',label:t('pgPassport.dentalProc.rootCanal')},{value:'other',label:t('pgPassport.other')}]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.clinic')} name="clinic_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.teethArea')} name="teeth_treated" form={form} setForm={setForm} />
-            <F label={t('pgPassport.findings')} name="findings" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('dental', 'procedure', 'label')} *`} name="procedure" form={form} setForm={setForm} options={[{value:'cleaning',label:t('pgPassport.dentalProc.cleaning')},{value:'extraction',label:t('pgPassport.dentalProc.extraction')},{value:'xray',label:t('pgPassport.dentalProc.xray')},{value:'root_canal',label:t('pgPassport.dentalProc.rootCanal')},{value:'other',label:t('pgPassport.other')}]} />
+            <F label={`${pf('dental', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('dental', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.clinic')} name="clinic_name" ph={pf('dental', 'clinic_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.teethArea')} name="teeth_treated" ph={pf('dental', 'teeth_treated', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.findings')} name="findings" ph={pf('dental', 'findings', 'ph')} form={form} setForm={setForm} type="textarea" />
             <F label={t('pgPassport.diseaseStage')} name="grade" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Stage 1',label:t('pgPassport.stageN', { n: 1 })},{value:'Stage 2',label:t('pgPassport.stageN', { n: 2 })},{value:'Stage 3',label:t('pgPassport.stageN', { n: 3 })},{value:'Stage 4',label:t('pgPassport.stageN', { n: 4 })}]} />
-            <F label={t('pgPassport.nextCleaningCap')} name="next_due" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.costEur')} name="cost" form={form} setForm={setForm} type="number" />
+            <F label={pf('dental', 'next_due', 'label')} name="next_due" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.costEur')} name="cost" ph={pf('dental', 'cost', 'ph')} form={form} setForm={setForm} type="number" />
           </Modal>
         )}
 
         {modal === 'weight' && (
           <Modal title={t('pgPassport.newWeightTitle')} onClose={() => setModal(null)} onSave={() => submit('weight', weight.create)} saving={weight.create.isPending}>
-            <F label={t('pgPassport.weightKgReq')} name="weight_kg" form={form} setForm={setForm} type="number" />
-            <F label="BCS (1-9)" name="bcs" form={form} setForm={setForm} options={[{value:'',label:'—'},...[1,2,3,4,5,6,7,8,9].map(n => ({value:String(n),label:`${n} — ${[t('pgPassport.bcs.emaciated'),t('pgPassport.bcs.thin'),t('pgPassport.bcs.slightlyThin'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.slightlyOverweight'),t('pgPassport.bcs.overweight'),t('pgPassport.bcs.obese'),t('pgPassport.bcs.severelyObese')][n-1]}`}))]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} />
+            <F label={`${pf('weight', 'weight_kg', 'label')} *`} name="weight_kg" ph={pf('weight', 'weight_kg', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label="BCS (1-9)" name="bcs" hint={pf('weight', 'bcs', 'hint')} form={form} setForm={setForm} options={[{value:'',label:'—'},...[1,2,3,4,5,6,7,8,9].map(n => ({value:String(n),label:`${n} — ${[t('pgPassport.bcs.emaciated'),t('pgPassport.bcs.thin'),t('pgPassport.bcs.slightlyThin'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.ideal'),t('pgPassport.bcs.slightlyOverweight'),t('pgPassport.bcs.overweight'),t('pgPassport.bcs.obese'),t('pgPassport.bcs.severelyObese')][n-1]}`}))]} />
+            <F label={`${pf('weight', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('weight', 'vet_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.notes')} name="notes" ph={pf('weight', 'notes', 'ph')} form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'genetic' && (
           <Modal title={t('pgPassport.newGenetic')} onClose={() => setModal(null)} onSave={() => submit('genetic', genetic.create)} saving={genetic.create.isPending}>
-            <F label={t('pgPassport.testReq')} name="test_name" form={form} setForm={setForm} />
+            <F label={`${pf('genetic', 'test_name', 'label')} *`} name="test_name" ph={pf('genetic', 'test_name', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.provider')} name="provider" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'Embark',label:'Embark'},{value:'Wisdom Panel',label:'Wisdom Panel'},{value:'DNAmy',label:'DNAmy'},{value:'other',label:t('pgPassport.otherM')}]} />
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.results')} name="results" form={form} setForm={setForm} type="textarea" />
+            <F label={`${pf('genetic', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.results')} name="results" ph={pf('genetic', 'results', 'ph')} form={form} setForm={setForm} type="textarea" />
           </Modal>
         )}
 
         {modal === 'vitals' && (
           <Modal title={t('pgPassport.newVitalsTitle')} onClose={() => setModal(null)} onSave={() => submit('vitals', vitals.create)} saving={vitals.create.isPending}>
-            <F label={t('pgPassport.dateReq')} name="date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.temperatureC')} name="temperature_c" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.heartRateBpm')} name="heart_rate" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.respRateMin')} name="respiratory_rate" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.weightKg')} name="weight_kg" form={form} setForm={setForm} type="number" />
-            <F label={t('pgPassport.bloodPressureCap')} name="blood_pressure" form={form} setForm={setForm} />
+            <F label={`${pf('vitals', 'date', 'label')} *`} name="date" form={form} setForm={setForm} type="date" />
+            <F label={pf('vitals', 'temperature_c', 'label')} name="temperature_c" ph={pf('vitals', 'temperature_c', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={pf('vitals', 'heart_rate', 'label')} name="heart_rate" ph={pf('vitals', 'heart_rate', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={pf('vitals', 'respiratory_rate', 'label')} name="respiratory_rate" ph={pf('vitals', 'respiratory_rate', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.weightKg')} name="weight_kg" ph={pf('vitals', 'weight_kg', 'ph')} form={form} setForm={setForm} type="number" />
+            <F label={t('pgPassport.bloodPressureCap')} name="blood_pressure" ph={pf('vitals', 'blood_pressure', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.crtCap')} name="capillary_refill" form={form} setForm={setForm} options={[{value:'',label:'—'},{value:'<2sec',label:t('pgPassport.crtOpt.normal')},{value:'2-3sec',label:t('pgPassport.crtOpt.prolonged')},{value:'>3sec',label:t('pgPassport.crtOpt.critical')}]} />
-            <F label={t('pgPassport.vet')} name="vet_name" form={form} setForm={setForm} />
+            <F label={t('pgPassport.vet')} name="vet_name" ph={pf('vitals', 'vet_name', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} />
           </Modal>
         )}
@@ -876,12 +913,12 @@ export default function PetPassport() {
           <Modal title={t('pgPassport.pedigreeTitle')} onClose={() => setModal(null)}
             onSave={() => !savePedigree.isPending && savePedigree.mutate({ ...form, certifications: form.certifications ? String(form.certifications).split(',').map((s: string) => s.trim()).filter(Boolean) : [] })}
             saving={savePedigree.isPending}>
-            <F label={t('pgPassport.regNumber')} name="registration_number" form={form} setForm={setForm} />
-            <F label={t('pgPassport.kennelClub')} name="kennel_club" form={form} setForm={setForm} />
+            <F label={t('pgPassport.regNumber')} name="registration_number" ph={pf('pedigree', 'registration_number', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.kennelClub')} name="kennel_club" ph={pf('pedigree', 'kennel_club', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.fatherName')} name="father_name" form={form} setForm={setForm} />
             <F label={t('pgPassport.motherName')} name="mother_name" form={form} setForm={setForm} />
             <F label={t('pgPassport.breeder')} name="breeder_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.breederContact')} name="breeder_contact" form={form} setForm={setForm} />
+            <F label={t('pgPassport.breederContact')} name="breeder_contact" ph={pf('pedigree', 'breeder_contact', 'ph')} form={form} setForm={setForm} />
             <F label={t('pgPassport.certifications')} name="certifications" form={form} setForm={setForm} />
             <F label={t('pgPassport.notes')} name="notes" form={form} setForm={setForm} type="textarea" />
           </Modal>
@@ -890,22 +927,22 @@ export default function PetPassport() {
         {modal === 'travel' && (
           <Modal title={t('pgPassport.newTrip')} onClose={() => setModal(null)} onSave={() => submit('travel', travel.create)} saving={travel.create.isPending}>
             <F label={t('pgPassport.typeReq')} name="travel_type" form={form} setForm={setForm} options={[{value:'flight',label:t('pgPassport.travelType.flight')},{value:'ferry',label:t('pgPassport.travelType.ferry')},{value:'train',label:t('pgPassport.travelType.train')},{value:'road',label:t('pgPassport.travelType.road')},{value:'international',label:t('pgPassport.travelType.international')}]} />
-            <F label={t('pgPassport.origin')} name="origin_city" form={form} setForm={setForm} />
-            <F label={t('pgPassport.destinationReq')} name="destination_city" form={form} setForm={setForm} />
-            <F label={t('pgPassport.destCountry')} name="destination_country" form={form} setForm={setForm} />
-            <F label={t('pgPassport.departureReq')} name="departure_date" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.origin')} name="origin_city" ph={pf('travel', 'origin_city', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.destinationReq')} name="destination_city" ph={pf('travel', 'destination_city', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.destCountry')} name="destination_country" ph={pf('travel', 'destination_country', 'ph')} form={form} setForm={setForm} />
+            <F label={`${pf('travel', 'departure_date', 'label')} *`} name="departure_date" form={form} setForm={setForm} type="date" />
             <F label={t('pgPassport.returnDate')} name="return_date" form={form} setForm={setForm} type="date" />
-            <F label={t('pgPassport.carrier')} name="carrier" form={form} setForm={setForm} />
-            <F label={t('pgPassport.bookingRef')} name="booking_ref" form={form} setForm={setForm} />
+            <F label={t('pgPassport.carrier')} name="carrier" ph={pf('travel', 'carrier', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.bookingRef')} name="booking_ref" ph={pf('travel', 'booking_ref', 'ph')} form={form} setForm={setForm} />
           </Modal>
         )}
 
         {modal === 'access' && (
           <Modal title={t('pgPassport.grantAccessTitle')} onClose={() => setModal(null)} onSave={() => submit('access', addAccess)} saving={addAccess.isPending}>
-            <F label={t('pgPassport.vetEmailReq')} name="provider_email" form={form} setForm={setForm} type="email" />
-            <F label={t('pgPassport.vetName')} name="provider_name" form={form} setForm={setForm} />
-            <F label={t('pgPassport.reasonComment')} name="reason" form={form} setForm={setForm} />
-            <F label={t('pgPassport.accessExpiry')} name="expires_at" form={form} setForm={setForm} type="date" />
+            <F label={t('pgPassport.vetEmailReq')} name="provider_email" ph={pf('access', 'provider_email', 'ph')} form={form} setForm={setForm} type="email" />
+            <F label={t('pgPassport.vetName')} name="provider_name" ph={pf('access', 'provider_name', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.reasonComment')} name="reason" ph={pf('access', 'reason', 'ph')} form={form} setForm={setForm} />
+            <F label={t('pgPassport.accessExpiry')} name="expires_at" hint={pf('access', 'expires_at', 'hint')} min={localTomorrow()} form={form} setForm={setForm} type="date" />
           </Modal>
         )}
       </AnimatePresence>

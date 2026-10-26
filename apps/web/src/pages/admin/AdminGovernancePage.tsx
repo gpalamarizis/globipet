@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ShieldCheck, Users, AlertTriangle, Plus, Edit3, Trash2, X, Check, CircleDot } from 'lucide-react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Admin Governance page — two tabs:
@@ -245,7 +246,7 @@ export default function AdminGovernancePage() {
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{b.title}</td>
                       <td className="px-3 py-2">{severityBadge(b.severity, t)}</td>
                       <td className="px-3 py-2">{statusBadge(b.status, t)}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(b.detected_at).toLocaleString(i18n.language)}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(b.detected_at).toLocaleString(dateLocale(i18n.language))}</td>
                       <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">{b.affected_user_count ?? '—'}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => setEditingBreach(b)} className="text-gray-500 hover:text-brand-900 p-1"><Edit3 size={14}/></button>

@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import JitsiCall from '@/components/features/telehealth/JitsiCall'
 import { useTranslation } from 'react-i18next'
+import { dateLocale } from '@/lib/dates'
 
 export default function TelehealthConfirmation() {
   const { t, i18n } = useTranslation()
@@ -101,7 +102,7 @@ export default function TelehealthConfirmation() {
   const dateLabel = (() => {
     const [y, m, d] = String(consultation?.scheduled_date ?? '').split('-').map(Number)
     if (!y || !m || !d) return consultation?.scheduled_date ?? '—'
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   })()
 
   return (

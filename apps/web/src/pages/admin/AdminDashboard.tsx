@@ -15,6 +15,7 @@ import ProductFormModal from '@/components/admin/ProductFormModal'
 import ServiceFormModal from '@/components/admin/ServiceFormModal'
 import BulkImportModal from '@/components/admin/BulkImportModal'
 import ProviderMarketingPage from '@/pages/provider/ProviderMarketingPage'
+import { dateLocale } from '@/lib/dates'
 
 type Tab = 'overview' | 'users' | 'providers' | 'products' | 'services' | 'orders' | 'database' | 'insurance' | 'bookings' | 'pets' | 'revenue' | 'campaigns'
 
@@ -205,7 +206,7 @@ function UsersTab() {
                   </select>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">
-                  {u.created_at ? new Date(u.created_at).toLocaleDateString(i18n.language) : '—'}
+                  {u.created_at ? new Date(u.created_at).toLocaleDateString(dateLocale(i18n.language)) : '—'}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
@@ -547,7 +548,7 @@ function OrdersTab() {
                     {o.status ? t(`orders.status.${o.status}`, { defaultValue: o.status }) : ''}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-500">{o.created_at ? new Date(o.created_at).toLocaleDateString(i18n.language) : '—'}</td>
+                <td className="px-4 py-3 text-xs text-gray-500">{o.created_at ? new Date(o.created_at).toLocaleDateString(dateLocale(i18n.language)) : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -1091,7 +1092,7 @@ function AdminBookingsTab() {
   const fmtDay = (ymd: string) => {
     const [y, m, d] = String(ymd ?? '').split('-').map(Number)
     if (!y || !m || !d) return ymd
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language)
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language))
   }
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')

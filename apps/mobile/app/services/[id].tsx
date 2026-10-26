@@ -10,6 +10,7 @@ import { Screen, Card, Button, EmptyState, SkeletonRows, Input, Badge } from '@/
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { ReviewReply } from '@/components/ReviewReply'
+import { dateLocale } from '@/lib/dates'
 
 // Τοπική ημερομηνία ⇄ YYYY-MM-DD. Το toISOString() δίνει τη μέρα σε UTC
 // (στην Ελλάδα, μετά τα μεσάνυχτα, ακόμη «χθες») και το new Date('YYYY-MM-DD')
@@ -362,7 +363,7 @@ export default function ServiceDetailScreen() {
                       style={[s.day, on && s.dayOn]}
                       onPress={() => setDate(d)}>
                       <Text style={[s.dayName, on && s.chipTextOn]}>
-                        {dt.toLocaleDateString(i18n.language, { weekday: 'short' })}
+                        {dt.toLocaleDateString(dateLocale(i18n.language), { weekday: 'short' })}
                       </Text>
                       <Text style={[s.dayNum, on && s.chipTextOn]}>{dt.getDate()}</Text>
                     </TouchableOpacity>

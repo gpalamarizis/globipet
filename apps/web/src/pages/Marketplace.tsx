@@ -1,9 +1,10 @@
 ﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Search, Filter, SlidersHorizontal, Grid, List, ChevronDown } from 'lucide-react'
+import { Search, Filter, SlidersHorizontal, Grid, List, ChevronDown, Flame } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
+import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/features/marketplace/ProductCard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -29,6 +30,7 @@ const sortKeys = ['featured', 'price_asc', 'price_desc', 'rating', 'newest']
 
 export default function Marketplace() {
   const { t } = useTranslation()
+  const { isAuthenticated } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') || '')
   const [category, setCategory] = useState<string>(searchParams.get('category') || 'all')
@@ -58,9 +60,21 @@ export default function Marketplace() {
       <CampaignBanner page="marketplace" slot="banner" className="mb-6" />
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="section-title mb-1">{t('marketplace.title')}</h1>
-        <p className="text-gray-500 text-sm">{t('marketplace.subtitle')}</p>
+      {/* Ε17: τα «Δημοφιλή προϊόντα» (/market-insights) ανήκουν πια στο
+          Κατάστημα — όχι στην Κοινότητα της κεφαλίδας. Μόνο για συνδεδεμένους
+          (η σελίδα είναι PrivateRoute). */}
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="section-title mb-1">{t('marketplace.title')}</h1>
+          <p className="text-gray-500 text-sm">{t('marketplace.subtitle')}</p>
+        </div>
+        {isAuthenticated && (
+          <Link to="/market-insights"
+            className="btn-secondary shrink-0 px-3 py-2 text-sm flex items-center gap-1.5">
+            <Flame size={14} className="text-orange-600" aria-hidden="true" />
+            {t('navGroups.popularProducts')}
+          </Link>
+        )}
       </div>
 
       {/* Search + Sort bar */}

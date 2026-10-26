@@ -1,14 +1,17 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View, Text, StyleSheet, Image, Alert, Modal, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Image, Alert, Modal, TouchableOpacity, ScrollView, Linking } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PawPrint, MapPin, Calendar, Clock, Users, Plus, Trash2, Check, X, UserPlus } from 'lucide-react-native'
+import { PawPrint, MapPin, Calendar, Clock, Users, Plus, Trash2, Check, X, UserPlus, Navigation, Info } from 'lucide-react-native'
 import { api } from '../src/lib/api'
 import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, SkeletonRows, SectionHeader, Input } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
+import { DateField, TimeField } from '@/components/DateField'
+import { ServiceLocationField } from '@/components/ServiceLocationField'
+import { fmtDateShort } from '@/lib/dates'
 
 /**
  * Βόλτες και συναντήσεις.
@@ -31,16 +34,41 @@ import CampaignBanner from '@/components/CampaignBanner'
 const TYPE_EMOJI: Record<string, string> = {
   walk: '🚶', play: '🎾', meetup: '🐾', training: '🎓', other: '✨',
 }
+// Ίδιοι τύποι και είδη κατοικίδιων με το web (Playdates.tsx).
+const EVENT_TYPES = ['walk', 'play', 'meetup', 'training', 'other']
+const PET_TYPES = ['dog', 'cat', 'rabbit', 'bird', 'other']
+const PET_EMOJI: Record<string, string> = { dog: '🐶', cat: '🐱', rabbit: '🐰', bird: '🐦', other: '🐾' }
 
-const fmtDate = (d: string | undefined, lang: string) => {
-  if (!d) return '—'
-  // 'YYYY-MM-DD' ως τοπική ημερομηνία: το new Date('YYYY-MM-DD') είναι UTC
-  // και σε ζώνες πίσω από το UTC έδειχνε την προηγούμενη μέρα.
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
-  const x = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(d)
-  return isNaN(x.getTime()) ? d
-    : x.toLocaleDateString(lang, { weekday: 'short', day: '2-digit', month: 'short' })
+// Ε17 — ημερομηνία με fmtDateShort (π.χ. 15/03/2026), όπως όλη η εφαρμογή.
+const fmtDate = (d: string | undefined, lang: string) => (d ? fmtDateShort(d, lang) : '—')
+
+/**
+ * Ε17 — «Λεπτομέρειες σημείου» χωρίς αλλαγή σχήματος: αποθηκεύονται στο ίδιο
+ * πεδίο location, μετά τη διεύθυνση, με διαχωριστικό ' · ' (ίδιο στο web).
+ * Παλιές βόλτες χωρίς διαχωριστικό: όλο το κείμενο είναι η διεύθυνση.
+ */
+const LOC_SEP = ' · '
+const splitLocation = (loc: string | null | undefined) => {
+  const v = String(loc ?? '')
+  const i = v.indexOf(LOC_SEP)
+  return i < 0 ? { address: v, details: '' } : { address: v.slice(0, i), details: v.slice(i + LOC_SEP.length) }
 }
+const joinLocation = (address: string, details: string) => {
+  // Το διαχωριστικό δεν επιτρέπεται μέσα στη διεύθυνση, για να χωρίζει σωστά.
+  const a = address.trim().split(LOC_SEP).join(', ')
+  const d = details.trim()
+  return d ? `${a}${LOC_SEP}${d}` : a
+}
+/** Οδηγίες: με συντεταγμένες όταν υπάρχουν, αλλιώς αναζήτηση της διεύθυνσης. */
+const directionsUrl = (ev: any) => {
+  const lat = Number(ev?.latitude), lng = Number(ev?.longitude)
+  if (ev?.latitude != null && ev?.longitude != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  }
+  const q = [splitLocation(ev?.location).address, ev?.city].map(x => String(x ?? '').trim()).filter(Boolean).join(', ')
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
+}
+const isPosInt = (v: string) => /^\d+$/.test(v.trim()) && parseInt(v, 10) > 0
 
 export default function PlaydatesScreen() {
   const { t, i18n } = useTranslation()
@@ -62,30 +90,84 @@ export default function PlaydatesScreen() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
   const [pTime, setPTime] = useState('18:00')
-  const [pLocation, setPLocation] = useState('')
-  // Προσυμπλήρωση με την πόλη του χρήστη, όπως το web.
+  // Ε17 — ίδια πεδία με το web: τύπος, περιγραφή, διάρκεια, είδη κατοικίδιων.
+  const [pType, setPType] = useState('meetup')
+  const [pDesc, setPDesc] = useState('')
+  const [pDuration, setPDuration] = useState('60')
+  const [pPets, setPPets] = useState<string[]>([])
+  // Σημείο συνάντησης: διεύθυνση → εύρεση (/geocode) → συντεταγμένες + πόλη.
+  const [pAddress, setPAddress] = useState('')
+  const [pDetails, setPDetails] = useState('')
+  const [pLat, setPLat] = useState<number | null>(null)
+  const [pLng, setPLng] = useState<number | null>(null)
+  const [pAutoCity, setPAutoCity] = useState('')
+  // Πόλη με το χέρι μόνο όταν δεν προέκυψε από τη διεύθυνση· προσυμπλήρωση
+  // με την πόλη του προφίλ (τη χρησιμοποιεί η λίστα «κοντά σου»).
   const [pCity, setPCity] = useState(user?.city ?? '')
   const [pMax, setPMax] = useState('')
+  // Σφάλματα ανά πεδίο μετά την πρώτη προσπάθεια αποθήκευσης (όχι σιωπηλά
+  // απενεργοποιημένο κουμπί).
+  const [pTried, setPTried] = useState(false)
+
+  const pErrors: Record<string, string> = {}
+  if (pTitle.trim().length < 2) pErrors.title = t('play.err.title')
+  if (!pDate) pErrors.date = t('play.err.date')
+  if (!pTime) pErrors.time = t('play.err.time')
+  if (!pAddress.trim()) pErrors.address = t('play.err.address')
+  // Πόλη: ΧΩΡΙΣ υποχρεωτικό έλεγχο εδώ — κενή → ο server βάζει την πόλη του
+  // προφίλ· αν λείπει κι αυτή, απαντά 400 «Συμπλήρωσε την πόλη της βόλτας»
+  // (εμφανίζεται από το onError). Ίδιο με το web.
+  if (pDuration.trim() && !isPosInt(pDuration)) pErrors.duration = t('play.err.number')
+  if (pMax.trim() && !isPosInt(pMax)) pErrors.max = t('play.err.number')
+  const errOf = (k: string) => (pTried ? pErrors[k] : undefined)
+  const req = (label: string) => `${label} *`
+
+  const resetCreate = () => {
+    setPTitle(''); setPType('meetup'); setPDesc(''); setPDuration('60'); setPPets([])
+    setPAddress(''); setPDetails(''); setPLat(null); setPLng(null); setPAutoCity('')
+    setPMax(''); setPCity(user?.city ?? ''); setPTried(false)
+  }
+  const closeCreate = () => { setCreating(false); setPTried(false) }
+
+  // Νέα διεύθυνση μετά από εύρεση: οι παλιές συντεταγμένες/πόλη δεν ισχύουν πια.
+  const onAddressChange = (v: string) => {
+    setPAddress(v)
+    if (pLat != null || pAutoCity) { setPLat(null); setPLng(null); setPAutoCity('') }
+  }
 
   const createPlaydate = useMutation({
     mutationFn: () => api.post('/playdates', {
       title: pTitle.trim(),
+      description: pDesc.trim() || undefined,
+      event_type: pType,
       date: pDate,
       time: pTime,
-      // Ο server θέλει υποχρεωτικά title, date, time, location, city (400
-      // αλλιώς) — το κουμπί αποθήκευσης ελέγχει τα ίδια, όπως το web.
-      location: pLocation.trim(),
-      city: pCity.trim(),
-      max_participants: pMax ? parseInt(pMax, 10) : undefined,
+      duration_minutes: pDuration.trim() ? parseInt(pDuration, 10) : undefined,
+      // Διεύθυνση + «Λεπτομέρειες σημείου» στο ίδιο πεδίο (βλ. joinLocation).
+      location: joinLocation(pAddress, pDetails),
+      // Αυτόματη πόλη από τη διεύθυνση· αλλιώς ό,τι έγραψε ο χρήστης· αν
+      // μείνει κενή, ο server βάζει την πόλη του προφίλ.
+      city: pAutoCity || pCity.trim() || undefined,
+      latitude: pLat ?? undefined,
+      longitude: pLng ?? undefined,
+      max_participants: pMax.trim() ? parseInt(pMax, 10) : undefined,
+      pet_types: pPets,
       is_public: true,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['playdates'] })
       qc.invalidateQueries({ queryKey: ['playdates-mine'] })
-      setCreating(false); setPTitle(''); setPLocation(''); setPMax(''); setPCity(user?.city ?? '')
+      setCreating(false); resetCreate()
     },
     onError: (e: any) => Alert.alert(t('common.error'), e?.response?.data?.message || t('common.something_wrong')),
   })
+  const submitCreate = () => {
+    setPTried(true)
+    if (Object.keys(pErrors).length) return
+    createPlaydate.mutate()
+  }
+  const openDirections = (ev: any) => Linking.openURL(directionsUrl(ev))
+    .catch(() => Alert.alert(t('common.error'), t('svcLocation.openMapsFailed')))
 
   const removePlaydate = useMutation({
     mutationFn: (pid: string) => api.delete(`/playdates/${pid}`),
@@ -202,6 +284,12 @@ export default function PlaydatesScreen() {
                   <Text style={s.inviteMsg} numberOfLines={3}>“{inv.message}”</Text>
                 )}
               </View>
+              {!!inv.event && (
+                <TouchableOpacity style={s.navBtn} accessibilityLabel={t('play.directions')}
+                  onPress={() => openDirections(inv.event)}>
+                  <Navigation size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={s.accept}
                 onPress={() => respondInvite.mutate({ id: inv.id, status: 'accepted' })}>
                 <Check size={16} color={colors.success} />
@@ -234,6 +322,7 @@ export default function PlaydatesScreen() {
             const accepted = (ev.invitations ?? []).length
             const full = ev.max_participants && accepted >= ev.max_participants
             const mine = ev.is_mine === true
+            const loc = splitLocation(ev.location)
             return (
               <Card key={ev.id}>
                 <View style={s.head}>
@@ -247,8 +336,16 @@ export default function PlaydatesScreen() {
                     </View>
                     <View style={s.metaRow}>
                       <MapPin size={icon.xs} color={colors.textLight} />
-                      <Text style={s.meta} numberOfLines={1}>{ev.location}</Text>
+                      <Text style={[s.meta, s.metaFlex]} numberOfLines={1}>
+                        {[loc.address, ev.city].filter(Boolean).join(', ')}
+                      </Text>
                     </View>
+                    {!!loc.details && (
+                      <View style={s.metaRow}>
+                        <Info size={icon.xs} color={colors.textLight} />
+                        <Text style={[s.meta, s.metaFlex]} numberOfLines={2}>{loc.details}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -281,6 +378,10 @@ export default function PlaydatesScreen() {
                   </Text>
                 )}
 
+                <Button label={t('play.directions')} size="sm" variant="secondary" full
+                  icon={<Navigation size={icon.sm} color={colors.text} />}
+                  onPress={() => openDirections(ev)} style={{ marginTop: space.md }} />
+
                 {isAuthenticated && !mine && (
                   <Button
                     label={joined ? t('play.leave') : full ? t('play.full') : t('play.join')}
@@ -290,13 +391,13 @@ export default function PlaydatesScreen() {
                     disabled={!joined && !!full}
                     loading={(join.isPending && join.variables === ev.id) || (leave.isPending && leave.variables === ev.id)}
                     onPress={() => joined ? leave.mutate(ev.id) : join.mutate(ev.id)}
-                    style={{ marginTop: space.md }}
+                    style={{ marginTop: space.sm }}
                   />
                 )}
                 {/* Ο διοργανωτής: πρόσκληση και διαγραφή, όπως στο web. Πριν, το
                     παράθυρο πρόσκλησης δεν άνοιγε από πουθενά. */}
                 {isAuthenticated && mine && (
-                  <View style={[s.sheetActions, { marginTop: space.md }]}>
+                  <View style={s.sheetActions}>
                     <Button label={t('play.invitation')} size="sm" variant="secondary"
                       icon={<UserPlus size={icon.sm} color={colors.text} />}
                       onPress={() => { setInviteOwner(null); setInvitingFor(ev) }} style={{ flex: 1 }} />
@@ -312,7 +413,7 @@ export default function PlaydatesScreen() {
                 {!isAuthenticated && (
                   <Button label={t('play.login_join')} variant="secondary" size="sm" full
                     onPress={() => router.push('/auth/login' as any)}
-                    style={{ marginTop: space.md }} />
+                    style={{ marginTop: space.sm }} />
                 )}
               </Card>
             )
@@ -347,30 +448,102 @@ export default function PlaydatesScreen() {
           </View>
         </>
       )}
-      <Modal visible={creating} transparent animationType="slide" onRequestClose={() => setCreating(false)}>
+      <Modal visible={creating} transparent animationType="slide" onRequestClose={closeCreate}>
         <View style={s.backdrop}>
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>{t('play.create')}</Text>
-            <Input label={t('providerMkt.fTitleReq')} value={pTitle} onChangeText={setPTitle} />
-            <View style={s.rowTwo}>
-              <View style={{ flex: 1 }}>
-                <Input label={t('serviceDetail.date')} value={pDate} onChangeText={setPDate} placeholder="YYYY-MM-DD" />
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={s.reqNote}>{t('play.f.requiredNote')}</Text>
+              <Input label={req(t('play.f.title'))} value={pTitle} onChangeText={setPTitle}
+                placeholder={t('play.f.titlePh')} error={errOf('title')} />
+
+              <Text style={s.fieldLabel}>{t('play.f.type')}</Text>
+              <View style={[s.chips, s.group]}>
+                {EVENT_TYPES.map(v => (
+                  <TouchableOpacity key={v} onPress={() => setPType(v)}
+                    style={[s.chip, pType === v && s.chipOn]} accessibilityState={{ selected: pType === v }}>
+                    <Text style={[s.chipText, pType === v && s.chipTextOn]}>{TYPE_EMOJI[v]} {t(`play.types.${v}`)}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <View style={{ flex: 1 }}>
-                <Input label={t('serviceDetail.time')} value={pTime} onChangeText={setPTime} placeholder="18:00" />
+
+              <View style={s.rowTwo}>
+                <View style={{ flex: 1 }}>
+                  <DateField label={t('play.f.date')} required value={pDate} onChange={setPDate}
+                    minimumDate={new Date()} error={errOf('date')} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <TimeField label={t('play.f.time')} required value={pTime} onChange={setPTime} error={errOf('time')} />
+                </View>
               </View>
-            </View>
-            <Input label={t('play.location')} value={pLocation} onChangeText={setPLocation} />
-            <Input label={t('common.city')} value={pCity} onChangeText={setPCity} />
-            <Input label={t('play.maxParticipants')} value={pMax} onChangeText={setPMax} keyboardType="number-pad" />
+
+              <Input label={req(t('play.location'))} value={pAddress} onChangeText={onAddressChange}
+                placeholder={t('play.f.addressPh')} error={errOf('address')} />
+              <ServiceLocationField
+                address={pAddress}
+                // Χωρίς αυτόματη πόλη: η πόλη που έγραψε ο χρήστης βοηθά την εύρεση.
+                city={pAutoCity ? undefined : pCity}
+                country="gr"
+                latitude={pLat}
+                longitude={pLng}
+                title={t('play.f.mapTitle')}
+                hint={t('play.f.mapHint')}
+                notSet={t('play.f.mapNotSet')}
+                onChange={c => {
+                  setPLat(c.latitude); setPLng(c.longitude)
+                  if (c.latitude == null) setPAutoCity('')
+                }}
+                onFound={r => setPAutoCity(r.city.trim())} />
+              {pAutoCity ? (
+                <Text style={s.autoCity}>{t('play.f.cityAuto', { city: pAutoCity })}</Text>
+              ) : (
+                <Input label={t('common.city')} value={pCity} onChangeText={setPCity}
+                  hint={t('play.f.cityHint')} />
+              )}
+              <Input label={t('play.f.details')} value={pDetails} onChangeText={setPDetails}
+                placeholder={t('play.f.detailsPh')} />
+
+              <Input label={t('play.f.description')} value={pDesc} onChangeText={setPDesc}
+                placeholder={t('play.f.descriptionPh')} multiline />
+
+              <View style={s.rowTwo}>
+                <View style={{ flex: 1 }}>
+                  <Input label={t('play.f.duration')} value={pDuration} onChangeText={setPDuration}
+                    keyboardType="number-pad" placeholder="60" error={errOf('duration')} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Input label={t('play.maxParticipants')} value={pMax} onChangeText={setPMax}
+                    keyboardType="number-pad" placeholder={t('play.f.maxPh')} error={errOf('max')} />
+                </View>
+              </View>
+
+              <View style={s.group}>
+                <Text style={s.fieldLabel}>{t('play.f.petTypes')}</Text>
+                <View style={s.chips}>
+                  {PET_TYPES.map(v => {
+                    const on = pPets.includes(v)
+                    return (
+                      <TouchableOpacity key={v} accessibilityState={{ selected: on }}
+                        onPress={() => setPPets(p => on ? p.filter(x => x !== v) : [...p, v])}
+                        style={[s.chip, on && s.chipOn]}>
+                        <Text style={[s.chipText, on && s.chipTextOn]}>{PET_EMOJI[v]} {t(`play.petTypes.${v}`)}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+                <Text style={s.chipsHint}>{t('play.f.petTypesHint')}</Text>
+              </View>
+            </ScrollView>
+            {pTried && Object.keys(pErrors).length > 0 && (
+              <Text style={s.errSummary}>{t('play.err.summary')}</Text>
+            )}
             <View style={s.sheetActions}>
               <Button label={t('common.cancel')} variant="secondary"
-                onPress={() => setCreating(false)} style={{ flex: 1 }} />
+                onPress={closeCreate} style={{ flex: 1 }} />
               <Button label={t('common.save')}
-                disabled={pTitle.trim().length < 2 || !pDate || !pTime.trim()
-                  || !pLocation.trim() || !pCity.trim() || createPlaydate.isPending}
+                disabled={createPlaydate.isPending}
                 loading={createPlaydate.isPending}
-                onPress={() => createPlaydate.mutate()} style={{ flex: 1 }} />
+                onPress={submitCreate} style={{ flex: 1 }} />
             </View>
           </View>
         </View>
@@ -413,6 +586,19 @@ const s = StyleSheet.create({
   inviteMsg: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: 2 },
   accept: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.success, alignItems: 'center', justifyContent: 'center' },
   decline: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  navBtn: { width: 34, height: 34, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  reqNote: { ...type.caption, color: colors.textLight, marginBottom: space.md },
+  // Ίδια ετικέτα με το Input του ui.tsx.
+  fieldLabel: { ...type.caption, fontWeight: weight.semibold, color: colors.textMuted, marginBottom: space.xs },
+  group: { marginBottom: space.lg },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chipsHint: { ...type.caption, color: colors.textLight, marginTop: space.xs },
+  chip: { paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  chipOn: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chipText: { ...type.caption, color: colors.text, fontWeight: weight.medium },
+  chipTextOn: { color: colors.textOnDark },
+  errSummary: { ...type.caption, color: colors.danger },
+  autoCity: { ...type.caption, color: colors.textMuted, marginBottom: space.lg },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.surface, padding: space.lg, gap: space.sm, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, maxHeight: '88%' },
   sheetTitle: { ...type.section, color: colors.text },
@@ -430,6 +616,7 @@ const s = StyleSheet.create({
 
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
   meta: { ...type.caption, color: colors.textMuted, marginRight: space.sm },
+  metaFlex: { flex: 1, marginRight: 0 },
 
   desc: { ...type.body, color: colors.textMuted, marginTop: space.sm, lineHeight: 21 },
   who: { ...type.caption, color: colors.textLight, marginTop: space.sm },

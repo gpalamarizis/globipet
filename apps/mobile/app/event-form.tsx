@@ -8,6 +8,8 @@ import { api } from '@/lib/api'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { DateField, TimeField } from '@/components/DateField'
+import { ymdToDate } from '@/lib/dates'
 import { Chips } from '@/components/Chips'
 import { hasMoneyAtStake } from '@/components/EventAttendees'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -207,13 +209,14 @@ export default function EventFormScreen() {
           </View>
         )}
         <View style={s.row2}>
-          <Input style={s.half} label={`${t('eventForm.date')} *`} value={form.date} editable={!termsDisabled}
-            onChangeText={v => set('date', v)} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
-          <Input style={s.half} label={`${t('eventForm.time')} *`} value={form.time} editable={!termsDisabled}
-            onChangeText={v => set('time', v)} placeholder="HH:MM" keyboardType="numbers-and-punctuation" />
+          {/* Ε17: ημερολόγιο/ρολόι αντί για πληκτρολόγηση· οι τιμές μένουν YYYY-MM-DD / ΩΩ:ΛΛ. */}
+          <DateField style={s.half} label={t('eventForm.date')} required value={form.date} disabled={termsDisabled}
+            onChange={v => set('date', v)} minimumDate={isNew ? new Date() : undefined} />
+          <TimeField style={s.half} label={t('eventForm.time')} required value={form.time} disabled={termsDisabled}
+            onChange={v => set('time', v)} />
         </View>
-        <Input label={t('eventForm.endDate')} value={form.end_date} onChangeText={v => set('end_date', v)}
-          placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" hint={t('eventForm.endDateHint')} />
+        <DateField label={t('eventForm.endDate')} value={form.end_date} onChange={v => set('end_date', v)}
+          minimumDate={ymdToDate(form.date)} clearable hint={t('eventForm.endDateHint')} />
 
         <Input label={`${t('eventForm.location')} *`} value={form.location} placeholder={t('eventForm.locationPlaceholder')}
           onChangeText={v => set('location', v.slice(0, 300))} />

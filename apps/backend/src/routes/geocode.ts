@@ -6,7 +6,7 @@ import { geocodeAddress, GeocodeBusyError } from '../lib/geocode.js'
  * χάρτη υπηρεσιών). Ίδια πηγή με το /communities/geocode, που μένει ως έχει.
  *
  * GET /geocode?address=...&country=GR
- *   200 → { lat, lon, display_name }
+ *   200 → { lat, lon, display_name, city? }   (city: προαιρετικό, Ε17)
  *   400 → διεύθυνση < 3 χαρακτήρες
  *   404 → δεν βρέθηκε
  *   503 → η ουρά προς το Nominatim είναι γεμάτη

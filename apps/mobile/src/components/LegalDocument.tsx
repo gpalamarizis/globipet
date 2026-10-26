@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { getLegalDoc, LEGAL_UPDATED } from '@/lib/legal'
 import { Screen, Card } from '@/components/ui'
 import { colors, space, type, weight } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Νομικό κείμενο — Όροι Χρήσης ή Πολιτική Απορρήτου.
@@ -20,7 +21,7 @@ export default function LegalDocument({ kind }: { kind: 'terms' | 'privacy' }) {
   const doc = getLegalDoc(kind, i18n.language)
   // LEGAL_UPDATED είναι 'YYYY-MM-DD': τοπική ημερομηνία από τα μέρη της —
   // το new Date('YYYY-MM-DD') είναι UTC (προηγούμενη μέρα δυτικά του UTC).
-  const updated = (([y, m, d]) => new Date(y, m - 1, d))(LEGAL_UPDATED.split('-').map(Number)).toLocaleDateString(i18n.language || 'el')
+  const updated = (([y, m, d]) => new Date(y, m - 1, d))(LEGAL_UPDATED.split('-').map(Number)).toLocaleDateString(dateLocale(i18n.language))
 
   return (
     <Screen title={doc.title} back>

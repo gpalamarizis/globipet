@@ -5,6 +5,7 @@ import { CheckCircle, XCircle, Loader2, Smartphone, Clock, Calendar } from 'luci
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { useTranslation } from 'react-i18next'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Επιστροφή από τη Viva μετά την πληρωμή κράτησης υπηρεσίας.
@@ -114,7 +115,7 @@ export default function BookingConfirmation() {
   const dateLabel = (() => {
     const [y, m, d] = String(booking?.booking_date ?? '').split('-').map(Number)
     if (!y || !m || !d) return booking?.booking_date ?? '—'
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   })()
   const waiting = isLoading || (!!booking && unpaid && !cancelled && !invalid && !timedOut)
   // Πέρασε ο χρόνος αναμονής με πληρωμή που ξεκίνησε: εκκρεμότητα, όχι αποτυχία.

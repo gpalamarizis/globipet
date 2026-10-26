@@ -2,7 +2,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame, Inbox } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame, Inbox, Compass, Users, Wrench, Info } from 'lucide-react'
 import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -13,35 +13,54 @@ import PetQuickWidget from '@/components/layout/PetQuickWidget'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
 
+// Ε17 (Product Manager): κεφαλίδα = Αρχική · Υπηρεσίες · Κατάστημα + τέσσερις
+// ομάδες. Ο ιατρικός φάκελος δεν είναι πια στην κορυφή — δένεται με το
+// κατοικίδιο (Τα κατοικίδιά μου → κατοικίδιο → Ιατρικός φάκελος). Τα «Δημοφιλή»
+// πήγαν στο Κατάστημα (σύνδεσμος στη σελίδα του). Ίδια ομαδοποίηση με το κινητό.
 const simpleNavItems = [
   { path: '/',            labelKey: 'nav.home',     icon: Home },
-  { path: '/social',      labelKey: 'nav.social',   icon: Heart },
+  { path: '/services',    labelKey: 'nav.services', icon: Scissors },
   { path: '/marketplace', labelKey: 'nav.shop',     icon: ShoppingBag },
-  { path: '/passport',    labelKey: 'nav.passport', icon: BookOpen },
 ]
 
-const servicesDropdown = [
-  { path: '/services',   labelKey: 'nav.services',   icon: Scissors,    color: 'text-orange-500' },
-  { path: '/medical-center', labelKey: 'nav.medicalCenter', icon: HeartPulse, color: 'text-rose-500' },
-  { path: '/telehealth', labelKey: 'nav.telehealth', icon: Stethoscope, color: 'text-blue-500' },
-  { path: '/insurance',  labelKey: 'nav.insurance',  icon: Shield,      color: 'text-green-500' },
-  { path: '/tracker',    labelKey: 'nav.petTracker', icon: MapPin,      color: 'text-red-500' },
-  { path: '/ai-health',  labelKey: 'nav.aiHealth',   icon: Brain,       color: 'text-purple-500' },
-  { path: '/ai-stool-urine', labelKey: 'nav.aiStoolUrine', icon: FlaskConical, color: 'text-amber-600' },
-  { path: '/ai-emotion', labelKey: 'nav.aiEmotion',  icon: Heart,       color: 'text-pink-500' },
-  { path: '/legal',      labelKey: 'nav.legal',      icon: Scale,       color: 'text-indigo-500' },
+type NavItem = { path: string; labelKey: string; icon: any; color: string }
+
+const healthDropdown: NavItem[] = [
+  { path: '/medical-center', labelKey: 'nav.medicalCenter', icon: HeartPulse,   color: 'text-rose-500' },
+  { path: '/telehealth',     labelKey: 'nav.telehealth',    icon: Stethoscope,  color: 'text-blue-500' },
+  { path: '/ai-health',      labelKey: 'nav.aiHealth',      icon: Brain,        color: 'text-purple-500' },
+  { path: '/ai-stool-urine', labelKey: 'nav.aiStoolUrine',  icon: FlaskConical, color: 'text-amber-600' },
 ]
 
-const communityDropdown = [
-  { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,   color: 'text-green-500' },
-  { path: '/communities', labelKey: 'nav.communities', icon: Building2,  color: 'text-purple-500' },
+const toolsDropdown: NavItem[] = [
+  { path: '/tracker',    labelKey: 'nav.petTracker', icon: MapPin, color: 'text-red-500' },
+  { path: '/ai-emotion', labelKey: 'nav.aiEmotion',  icon: Heart,  color: 'text-pink-500' },
+  { path: '/insurance',  labelKey: 'nav.insurance',  icon: Shield, color: 'text-green-500' },
+]
+
+const communityDropdown: NavItem[] = [
   { path: '/forum',       labelKey: 'nav.forum',       icon: MessageSquare, color: 'text-blue-500' },
+  { path: '/communities', labelKey: 'nav.communities', icon: Building2,     color: 'text-purple-500' },
   { path: '/events',      labelKey: 'nav.events',      icon: CalendarDays,  color: 'text-orange-500' },
-  { path: '/breeds',      labelKey: 'nav.breeds',      icon: Dog,           color: 'text-yellow-600' },
-  { path: '/market-insights', labelKey: 'nav.popular', icon: Flame,         color: 'text-orange-600' },
+  { path: '/playdates',   labelKey: 'nav.playdates',   icon: PawPrint,      color: 'text-green-500' },
+  // Το Social έφυγε από την κάτω μπάρα· μένει προσβάσιμο από την Κοινότητα.
+  { path: '/social',      labelKey: 'nav.social',      icon: Users,         color: 'text-pink-500' },
+]
+
+const infoDropdown: NavItem[] = [
+  { path: '/breeds',      labelKey: 'nav.breeds',      icon: Dog,            color: 'text-yellow-600' },
+  { path: '/legal',       labelKey: 'nav.legal',       icon: Scale,          color: 'text-indigo-500' },
   // Τα δύο επίσημα μητρώα: δημόσια δεδομένα, όχι πάροχοι της πλατφόρμας.
-  { path: '/shelters',    labelKey: 'nav.shelters',    icon: HomeIcon,      color: 'text-amber-600' },
+  { path: '/shelters',    labelKey: 'nav.shelters',    icon: HomeIcon,       color: 'text-amber-600' },
   { path: '/welfare-organisations', labelKey: 'nav.welfareOrgs', icon: HeartHandshake, color: 'text-rose-500' },
+]
+
+/** Ομάδες του «Εξερεύνησε» (κάτω μπάρα) — ίδιες με τις ομάδες της κεφαλίδας. */
+const exploreGroups: { labelKey: string; items: NavItem[] }[] = [
+  { labelKey: 'navGroups.health',      items: healthDropdown },
+  { labelKey: 'navGroups.tools',       items: toolsDropdown },
+  { labelKey: 'nav.community',         items: communityDropdown },
+  { labelKey: 'navGroups.infoSupport', items: infoDropdown },
 ]
 
 /**
@@ -54,15 +73,18 @@ const communityDropdown = [
 const PROVIDER_SHARED_PATHS = ['/profile', '/inbox', '/privacy', '/terms', '/cookies', '/help', '/faq', '/contact', '/about']
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────
-const bottomTabs = [
-  { path: '/',            labelKey: 'nav.home',     icon: Home },
-  { path: '/social',      labelKey: 'nav.social',   icon: Heart },
-  { path: '/marketplace', labelKey: 'nav.shop',     icon: ShoppingBag },
-  { path: '/passport',    labelKey: 'nav.passport', icon: BookOpen },
+// Ίδια σειρά με την εφαρμογή κινητού: Αρχική · Κατοικίδια · Εξερεύνησε ·
+// Κατάστημα · Λογαριασμός. Το «Εξερεύνησε» (null) ανοίγει το μενού ομάδων.
+const bottomTabs: { path: string | null; labelKey: string; icon: any }[] = [
+  { path: '/',            labelKey: 'nav.home',         icon: Home },
+  { path: '/my-pets',     labelKey: 'navGroups.pets',   icon: PawPrint },
+  { path: null,           labelKey: 'navGroups.explore', icon: Compass },
+  { path: '/marketplace', labelKey: 'nav.shop',         icon: ShoppingBag },
+  { path: '/profile',     labelKey: 'nav.profile',      icon: User },
 ]
 
 // ─── Desktop NavDropdown ─────────────────────────────────────────
-function NavDropdown({ label, icon: Icon, items }: { label: string; icon: any; items: typeof servicesDropdown }) {
+function NavDropdown({ label, icon: Icon, items }: { label: string; icon: any; items: NavItem[] }) {
   const { t } = useTranslation()
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -84,11 +106,11 @@ function NavDropdown({ label, icon: Icon, items }: { label: string; icon: any; i
       <button onClick={() => setOpen(o => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+        className={cn('flex items-center gap-1 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
           isActive || open
             ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-        <Icon size={14} aria-hidden="true" />
+        <Icon size={14} aria-hidden="true" className="hidden 2xl:block" />
         {label}
         <ChevronDown size={12} aria-hidden="true" className={cn('transition-transform', open && 'rotate-180')} />
       </button>
@@ -197,9 +219,15 @@ export default function MainLayout() {
     enabled: isAuthenticated,
   })
 
-  const { data: notifications = [] } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => api.get('/notifications?unread=true').then(r => r.data?.data ?? []),
+  // Ε17: αριθμός αδιάβαστων στο καμπανάκι (όχι μόνο κουκκίδα). Το
+  // unread_count του GET /notifications μετράει ΟΛΕΣ τις αδιάβαστες (όχι μόνο
+  // τις 20 της σελίδας)· limit=1 — η λίστα δεν χρειάζεται εδώ. Δικό του
+  // κλειδί κάτω από το ['notifications']: το invalidate του πάνελ το ανανεώνει,
+  // και δεν συγκρούεται με το ['notifications'] (πίνακας) του ProviderLayout.
+  const { data: unreadNotifications = 0 } = useQuery<number>({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => api.get('/notifications?unread=true&limit=1').then(r =>
+      typeof r.data?.unread_count === 'number' ? r.data.unread_count : (r.data?.data?.length ?? 0)),
     enabled: isAuthenticated,
   })
 
@@ -222,7 +250,7 @@ export default function MainLayout() {
       {/* ── HEADER ────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 gap-4">
+          <div className="flex items-center justify-between h-14 gap-2 xl:gap-4">
 
             {/* Logo — icon only on mobile, full logo on desktop */}
             <Link to="/" className="flex items-center shrink-0">
@@ -234,21 +262,24 @@ export default function MainLayout() {
               />
             </Link>
 
-            {/* Desktop nav */}
+            {/* Desktop nav — Ε17: 3 σύνδεσμοι + 4 ομάδες. Εικονίδια μόνο από 2xl:
+                με αυτά η γραμμή δεν χωρούσε στα 1280px. */}
             <nav className="hidden lg:flex items-center gap-0.5" aria-label={t('nav.mainNav')}>
               {simpleNavItems.map(item => (
                 <Link key={item.path} to={item.path}
                   aria-current={location.pathname === item.path ? 'page' : undefined}
-                  className={cn('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+                  className={cn('flex items-center gap-1 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
                     location.pathname === item.path
                       ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}>
-                  <item.icon size={14} aria-hidden="true" />
+                  <item.icon size={14} aria-hidden="true" className="hidden 2xl:block" />
                   {t(item.labelKey)}
                 </Link>
               ))}
-              <NavDropdown label={t('nav.services')} icon={Scissors} items={servicesDropdown} />
+              <NavDropdown label={t('navGroups.health')} icon={HeartPulse} items={healthDropdown} />
+              <NavDropdown label={t('navGroups.tools')} icon={Wrench} items={toolsDropdown} />
               <NavDropdown label={t('nav.community')} icon={PawPrint} items={communityDropdown} />
+              <NavDropdown label={t('navGroups.info')} icon={Info} items={infoDropdown} />
             </nav>
 
             {/* Right side */}
@@ -264,10 +295,14 @@ export default function MainLayout() {
               {isAuthenticated && (
                 <>
                   <button onClick={() => setNotifOpen(!notifOpen)} className="btn-ghost p-2.5 relative"
-                    aria-label={`${t('nav.notifications')}${notifications.length > 0 ? ` (${t('nav.unread', { count: notifications.length })})` : ''}`}
+                    aria-label={`${t('nav.notifications')}${unreadNotifications > 0 ? ` (${t('nav.unread', { count: unreadNotifications })})` : ''}`}
                     aria-expanded={notifOpen}>
                     <Bell size={18} className="text-gray-500" aria-hidden="true" />
-                    {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
+                    {unreadNotifications > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" aria-hidden="true">
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </span>
+                    )}
                   </button>
                   <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative"
                     aria-label={`${t('nav.cart')}${cartItems.length > 0 ? ` (${t('nav.cartItems', { count: cartItems.length })})` : ''}`}>
@@ -291,7 +326,7 @@ export default function MainLayout() {
                           ? <img src={user?.profile_photo || (user as any)?.picture} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                           : <span>{getInitials(user?.full_name || 'U')}</span>}
                       </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                      <span className="hidden xl:inline text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
                         {user?.full_name?.split(' ')[0]}
                       </span>
                       <ChevronDown size={14} className="text-gray-400" />
@@ -422,28 +457,36 @@ export default function MainLayout() {
 
       {/* ── MOBILE BOTTOM TAB BAR ─────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom" aria-label={t('nav.mobileNav')}>
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-1 py-2">
           {bottomTabs.map(tab => {
-            const isActive = tab.path === '/' ? location.pathname === '/' : location.pathname.startsWith(tab.path)
+            // «Εξερεύνησε»: κουμπί που ανοίγει το μενού ομάδων — ενεργό όταν
+            // είναι ανοιχτό ή όταν η τρέχουσα σελίδα ανήκει σε κάποια ομάδα.
+            if (tab.path === null) {
+              const exploreActive = moreOpen || location.pathname === '/services' ||
+                exploreGroups.some(g => g.items.some(i => location.pathname.startsWith(i.path)))
+              return (
+                <button key={tab.labelKey} onClick={() => setMoreOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={moreOpen}
+                  className={cn('flex-1 flex flex-col items-center gap-0.5 px-0.5 py-1 rounded-xl transition-all min-w-0',
+                    exploreActive ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
+                  <tab.icon size={22} strokeWidth={exploreActive ? 2.5 : 1.8} aria-hidden="true" />
+                  <span className="text-[10px] font-medium tracking-tight truncate max-w-full">{t(tab.labelKey)}</span>
+                </button>
+              )
+            }
+            const path = tab.path
+            const isActive = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
             return (
-              <Link key={tab.path} to={tab.path}
+              <Link key={path} to={path}
                 aria-current={isActive ? 'page' : undefined}
-                className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all min-w-0',
+                className={cn('flex-1 flex flex-col items-center gap-0.5 px-0.5 py-1 rounded-xl transition-all min-w-0',
                   isActive ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
                 <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} aria-hidden="true" />
-                <span className="text-[10px] font-medium truncate max-w-[56px]">{t(tab.labelKey)}</span>
+                <span className="text-[10px] font-medium tracking-tight truncate max-w-full">{t(tab.labelKey)}</span>
               </Link>
             )
           })}
-          {/* Περισσότερα */}
-          <button onClick={() => setMoreOpen(true)}
-            aria-label={t('nav.moreOptions')}
-            aria-expanded={moreOpen}
-            className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all',
-              moreOpen ? 'text-brand-900 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500')}>
-            <MoreHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />
-            <span className="text-[10px] font-medium">{t('nav.more')}</span>
-          </button>
         </div>
       </nav>
 
@@ -457,7 +500,7 @@ export default function MainLayout() {
             <motion.div
               role="dialog"
               aria-modal="true"
-              aria-label={t('nav.moreOptions')}
+              aria-label={t('navGroups.explore')}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[90vh] overflow-y-auto">
@@ -483,31 +526,30 @@ export default function MainLayout() {
                   </div>
                 )}
 
-                {/* Υπηρεσίες */}
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-3">{t('nav.services')}</p>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {servicesDropdown.map(item => (
-                    <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
-                      className={cn('flex flex-col items-center gap-1.5 p-3 rounded-2xl text-center transition-all',
-                        location.pathname === item.path ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-gray-800')}>
-                      <item.icon size={22} className={item.color} />
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 leading-tight">{t(item.labelKey)}</span>
-                    </Link>
-                  ))}
-                </div>
+                {/* Υπηρεσίες — δεν είναι στην κάτω μπάρα, οπότε πρώτες εδώ. */}
+                <Link to="/services" onClick={() => setMoreOpen(false)}
+                  className={cn('flex items-center gap-3 p-3 rounded-2xl mt-3 mb-4 transition-all',
+                    location.pathname === '/services' ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-gray-800')}>
+                  <Scissors size={22} className="text-orange-500 shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('nav.services')}</span>
+                </Link>
 
-                {/* Κοινότητα */}
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t('nav.community')}</p>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {communityDropdown.map(item => (
-                    <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
-                      className={cn('flex flex-col items-center gap-1.5 p-3 rounded-2xl text-center transition-all',
-                        location.pathname === item.path ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-gray-800')}>
-                      <item.icon size={22} className={item.color} />
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{t(item.labelKey)}</span>
-                    </Link>
-                  ))}
-                </div>
+                {/* Ομάδες — ίδιες με τα μενού της κεφαλίδας. */}
+                {exploreGroups.map(group => (
+                  <div key={group.labelKey}>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t(group.labelKey)}</p>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {group.items.map(item => (
+                        <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)}
+                          className={cn('flex flex-col items-center gap-1.5 p-3 rounded-2xl text-center transition-all',
+                            location.pathname === item.path ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-gray-800')}>
+                          <item.icon size={22} className={item.color} />
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 leading-tight">{t(item.labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
 
                 {/* Λογαριασμός */}
                 {isAuthenticated ? (

@@ -27,9 +27,18 @@ interface Props {
   latitude?: number | null
   longitude?: number | null
   onChange: (c: Coords) => void
+  /**
+   * Ε17 (προαιρετικά — οι υπάρχουσες φόρμες υπηρεσιών δεν τα δίνουν και
+   * μένουν ίδιες): κείμενα για άλλη χρήση (π.χ. σημείο συνάντησης βόλτας) και
+   * το αποτέλεσμα της εύρεσης (display_name, city από το /geocode).
+   */
+  title?: string
+  hint?: string
+  notSet?: string
+  onFound?: (r: { display_name: string; city: string }) => void
 }
 
-export default function ServiceLocationPicker({ address, city, country, latitude, longitude, onChange }: Props) {
+export default function ServiceLocationPicker({ address, city, country, latitude, longitude, onChange, title, hint, notSet, onFound }: Props) {
   const { t } = useTranslation()
   const [finding, setFinding] = useState(false)
   const [foundName, setFoundName] = useState('')
@@ -43,6 +52,7 @@ export default function ServiceLocationPicker({ address, city, country, latitude
       const { data } = await api.get('/geocode', { params: { address: q, country: country || undefined } })
       onChange({ latitude: round6(Number(data.lat)), longitude: round6(Number(data.lon)) })
       setFoundName(data.display_name || '')
+      onFound?.({ display_name: String(data.display_name || ''), city: String(data.city || '') })
     } catch (e: any) {
       toast.error(e?.response?.status === 404 ? t('svcLocation.notFound') : t('svcLocation.error'))
     } finally { setFinding(false) }
@@ -53,9 +63,9 @@ export default function ServiceLocationPicker({ address, city, country, latitude
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
       <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-        <MapPin size={14} className="shrink-0" />{t('svcLocation.title')}
+        <MapPin size={14} className="shrink-0" />{title || t('svcLocation.title')}
       </div>
-      <p className="text-xs text-gray-400">{t('svcLocation.hint')}</p>
+      <p className="text-xs text-gray-400">{hint || t('svcLocation.hint')}</p>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={find} disabled={finding}
@@ -82,7 +92,7 @@ export default function ServiceLocationPicker({ address, city, country, latitude
           )}
         </>
       ) : (
-        <p className="text-xs text-gray-400">{t('svcLocation.notSet')}</p>
+        <p className="text-xs text-gray-400">{notSet || t('svcLocation.notSet')}</p>
       )}
     </div>
   )

@@ -9,6 +9,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EventFormModal from '@/components/features/events/EventFormModal'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Events listing.
@@ -44,8 +45,7 @@ export default function Events() {
   const [creating, setCreating] = useState(false)
   const onNewEvent = () => { if (!isAuthenticated) { navigate('/login'); return } setCreating(true) }
 
-  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
-  const locale = localeMap[i18n.language] || 'el-GR'
+  const locale = dateLocale(i18n.language)
 
   const { data, isLoading } = useQuery({
     queryKey: ['events', { search, city, eventType, upcomingOnly, mine }],

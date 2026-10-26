@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { localName } from '@/lib/localName'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { dateLocale } from '@/lib/dates'
 
 const TABS = [
   { id: 'overview',  icon: Layers },
@@ -189,7 +190,7 @@ export default function AdminSubscriptionsPage() {
                     </td>
                     <td className="p-3">{overviewPlanName(row)}{row.price ? t('adminSubs.perMonthSuffix', { price: row.price }) : ''}</td>
                     <td className="p-3"><StatusBadge status={row.status} /></td>
-                    <td className="p-3 text-gray-500">{row.started_at ? new Date(row.started_at).toLocaleDateString(i18n.language) : '—'}</td>
+                    <td className="p-3 text-gray-500">{row.started_at ? new Date(row.started_at).toLocaleDateString(dateLocale(i18n.language)) : '—'}</td>
                   </tr>
                 ))}
                 {overview?.length === 0 && (
@@ -234,7 +235,7 @@ export default function AdminSubscriptionsPage() {
                       )}
                     </td>
                     <td className="p-3"><StatusBadge status={u.ai_subscription_status} /></td>
-                    <td className="p-3 text-gray-500">{u.ai_trial_started_at ? new Date(u.ai_trial_started_at).toLocaleDateString(i18n.language) : '—'}</td>
+                    <td className="p-3 text-gray-500">{u.ai_trial_started_at ? new Date(u.ai_trial_started_at).toLocaleDateString(dateLocale(i18n.language)) : '—'}</td>
                     <td className="p-3">
                       {u.trial_days_left !== null && u.ai_subscription_status === 'trial' ? (
                         <span className={cn('text-xs font-semibold',
@@ -325,7 +326,7 @@ export default function AdminSubscriptionsPage() {
                     </td>
                     <td className="p-3">{localName(s.plan, i18n.language)} ({s.plan?.provider?.name})</td>
                     <td className="p-3"><StatusBadge status={s.status} /></td>
-                    <td className="p-3 text-gray-500">{new Date(s.started_at).toLocaleDateString(i18n.language)}</td>
+                    <td className="p-3 text-gray-500">{new Date(s.started_at).toLocaleDateString(dateLocale(i18n.language))}</td>
                   </tr>
                 ))}
                 {insuranceSubs?.length === 0 && (

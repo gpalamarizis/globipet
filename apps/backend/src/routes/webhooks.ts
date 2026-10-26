@@ -8,6 +8,7 @@ import { sendSubscriptionStartedEmail, sendSubscriptionRenewedEmail, sendSubscri
 import { sendPushToUser } from '../lib/push.js'
 import { serverError } from '../lib/errors.js'
 import { auditSystem } from '../lib/audit.js'
+import { awardForStripeInvoice, revokeStripeInvoice } from '../lib/loyalty.js'
 import {
   AI_SUB_ACTIVATED_ACTION, currentAiStripeSubscriptionId, otherLiveAiSubscriptions, cancelStripeSubscription,
   refundLatestPaidInvoice, refundStripeInvoice, type StripeErrorOut,
@@ -378,6 +379,80 @@ async function setAiSubscriptionStatus(
 /** Κλείδωμα βάσης ανά συνδρομή Stripe (σειριακή επεξεργασία πληρωμών της). */
 const SUB_LOCK_SPACE = 'globipet:stripe-subscription'
 
+/**
+ * Ε17 — Μετά από πληρωμένο τιμολόγιο συνδρομής AI: ενημέρωση του
+ * current_period_end στην ΤΕΛΕΥΤΑΙΑ καταγραφή ενεργοποίησης του χρήστη (αν
+ * είναι αυτής της συνδρομής), ώστε το GET /ai-subscriptions/my-status να μη
+ * ρωτά το Stripe μετά από κάθε ανανέωση. Μόνο αν η νέα ημερομηνία είναι
+ * μεταγενέστερη. Ποτέ δεν πετάει (σφάλμα → μόνο log· η πληρωμή έχει ήδη
+ * καταχωριστεί).
+ */
+async function refreshAiPeriodEnd(subscription: Stripe.Subscription): Promise<void> {
+  try {
+    if (subscription.status === 'canceled' || !subscription.current_period_end) return
+    const userId = String(subscription.metadata?.user_id ?? '')
+    if (!userId) return
+    const row = await prisma.auditLog.findFirst({
+      where: { action: AI_SUB_ACTIVATED_ACTION, resource: 'user', resource_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: { id: true, metadata: true },
+    })
+    const meta = (row?.metadata ?? null) as Record<string, any> | null
+    if (!row || !meta || meta.stripe_subscription_id !== subscription.id) return
+    const next = new Date(subscription.current_period_end * 1000)
+    const prev = typeof meta.current_period_end === 'string' ? new Date(meta.current_period_end) : null
+    if (prev && !isNaN(prev.getTime()) && prev.getTime() >= next.getTime()) return
+    await prisma.auditLog.update({
+      where: { id: row.id },
+      data: {
+        metadata: {
+          ...meta,
+          current_period_end: next.toISOString(),
+          ...(subscription.current_period_start ? { current_period_start: new Date(subscription.current_period_start * 1000).toISOString() } : {}),
+        } as any,
+      },
+    })
+  } catch (err: any) {
+    console.error(`[stripe] AI period end refresh for ${subscription.id} failed:`, err?.message ?? err)
+  }
+}
+
+/**
+ * Ε17 — charge.refunded (επιστροφή από το Dashboard του Stripe ή από εμάς):
+ * αφαίρεση των πόντων του ΤΙΜΟΛΟΓΙΟΥ της χρέωσης, αναλογικά, μία φορά ανά
+ * επιστροφή (refundRef = id της επιστροφής). Το charge.amount_refunded είναι
+ * σωρευτικό, γι' αυτό διαβάζονται οι επιστροφές της χρέωσης ξεχωριστά
+ * (ποσό καθεμιάς / πληρωμένο). Πλήρης επιστροφή (charge.refunded) →
+ * επιπλέον αφαίρεση ό,τι έμεινε από στρογγυλέματα (ιδεμποτική ανά χρέωση).
+ * Χρέωση χωρίς τιμολόγιο ή τιμολόγιο χωρίς απόδοση πόντων → τίποτα (το
+ * lib/loyalty βρίσκει τους πόντους από το σημάδι απόδοσης· η πλήρης
+ * επιστροφή αφήνει μόνο το σημάδι που εμποδίζει μεταγενέστερη απόδοση).
+ * Μαζί με το refundStripeInvoice (refundRef ανά τιμολόγιο) δεν αφαιρείται
+ * διπλά: η αφαίρεση περιορίζεται σε ό,τι έμεινε από ΑΥΤΗ την πληρωμή.
+ * Ποτέ δεν πετάει.
+ */
+async function revokeChargeRefund(charge: Stripe.Charge): Promise<void> {
+  try {
+    const invoiceId = idOf(charge.invoice as any)
+    if (!invoiceId || !(charge.amount > 0)) return
+    try {
+      const refunds = await stripe.refunds.list({ charge: charge.id, limit: 100 })
+      for (const r of [...refunds.data].sort((a, b) => a.created - b.created)) {
+        if (r.status === 'failed' || r.status === 'canceled' || !(r.amount > 0)) continue
+        await revokeStripeInvoice(invoiceId, { amount: r.amount / 100, full: false, refundRef: `stripe_refund:${r.id}` })
+      }
+    } catch (err: any) {
+      // Η λίστα δεν διαβάστηκε: μόνο η πλήρης επιστροφή (από το ίδιο το γεγονός).
+      console.error(`[stripe] refunds list for charge ${charge.id} failed:`, err?.message ?? err)
+    }
+    if (charge.refunded || charge.amount_refunded >= charge.amount) {
+      await revokeStripeInvoice(invoiceId, { amount: charge.amount_refunded / 100, full: true, refundRef: `stripe_charge_refunded:${charge.id}` })
+    }
+  } catch (err: any) {
+    console.error(`[stripe] charge.refunded loyalty revoke for ${charge.id} failed:`, err?.message ?? err)
+  }
+}
+
 const webhooksRoutes: FastifyPluginAsync = async (app) => {
 
   // Capture raw body ONLY within this plugin's scope (encapsulated — doesn't affect other routes)
@@ -440,6 +515,8 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
                   await refundAiDuplicate(subscription.id, String(subscription.metadata.user_id), u?.email ?? null, { invoiceId: invoice.id })
                 }
                 await activateAiSubscription(subscription)
+                await refreshAiPeriodEnd(subscription) // Ε17: ημερομηνία ανανέωσης για το my-status (δεν πετάει)
+                if (subscription.status !== 'canceled') await awardForStripeInvoice(invoice.id, invoice.amount_paid, { userId: subscription.metadata?.user_id }) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό ανά τιμολόγιο, δεν πετάει)
                 break
               }
               await ensureProductSubscription(subscription, idOf(subscription.customer as any) ?? idOf(invoice.customer as any))
@@ -600,6 +677,7 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
             }
 
             const { productSub, deliveryNumber, isFinalDelivery, providerEmail, providerPayout } = result
+            await awardForStripeInvoice(invoice.id, invoice.amount_paid, { email: productSub.user.email }) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό ανά τιμολόγιο, δεν πετάει)
 
             if (isFinalDelivery && productSub.stripe_subscription_id) {
               // Stop future charges. The delivery just paid for still ships.
@@ -718,6 +796,12 @@ const webhooksRoutes: FastifyPluginAsync = async (app) => {
               }).catch(() => {})
             }
           }
+          break
+        }
+
+        case 'charge.refunded': {
+          // Πόντοι επιβράβευσης του τιμολογίου (αν δόθηκαν) — δεν πετάει.
+          await revokeChargeRefund(event.data.object as Stripe.Charge)
           break
         }
 

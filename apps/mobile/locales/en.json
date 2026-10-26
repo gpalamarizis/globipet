@@ -40,10 +40,10 @@
     "marketplace": "Shop",
     "pets": "Pets",
     "social": "Social",
-    "profile": "Profile",
+    "profile": "Account",
     "animals": "Pets",
     "community": "Community",
-    "discover": "Discover",
+    "discover": "Explore",
     "shop": "Shop"
   },
   "auth": {
@@ -260,7 +260,8 @@
     "deleteQ": "Permanently delete {{name}} and its history?",
     "deleteFailed": "Could not delete",
     "kind_horse": "Horse",
-    "kind_other": "Other"
+    "kind_other": "Other",
+    "weight_placeholder": "e.g. 12.5"
   },
   "social": {
     "title": "Social Feed",
@@ -377,7 +378,7 @@
     "photo_analysis": "Photo analysis",
     "playdates": "Playdates",
     "subtitle": "Everything GlobiPet offers",
-    "title": "Discover",
+    "title": "Explore",
     "upcoming_events": "Upcoming events"
   },
   "insurance": {
@@ -728,7 +729,7 @@
     "revokeTitle": "Revoke access",
     "revokeQ": "The vet will no longer be able to view your pet's record. Revoke access?",
     "revoke": "Revoke",
-    "invalidDate": "Invalid date. Enter it as YYYY-MM-DD (e.g. 2026-03-15).",
+    "invalidDate": "Invalid date. Please choose it from the calendar.",
     "rt_examination": "Examination",
     "rt_diagnosis": "Diagnosis",
     "rt_follow_up": "Follow-up",
@@ -839,7 +840,53 @@
     "inviteTo": "Invitation to {{name}}",
     "createEventFirst": "Create a walk first",
     "messageOptional": "Message (optional)",
-    "messagePlaceholder": "Let's walk our dogs together!"
+    "messagePlaceholder": "Let's walk our dogs together!",
+    "types": {
+      "walk": "Walk",
+      "play": "Play",
+      "meetup": "Meetup",
+      "training": "Training",
+      "other": "Other"
+    },
+    "petTypes": {
+      "dog": "Dog",
+      "cat": "Cat",
+      "rabbit": "Rabbit",
+      "bird": "Bird",
+      "other": "Other"
+    },
+    "directions": "Directions",
+    "f": {
+      "requiredNote": "Fields marked * are required.",
+      "title": "Title",
+      "titlePh": "e.g. Walk in Pedion Areos park",
+      "type": "Type",
+      "date": "Date",
+      "time": "Time",
+      "addressPh": "e.g. Pedion Areos, Athens",
+      "mapTitle": "Point on the map",
+      "mapHint": "Find the point so the city is filled in automatically and participants get directions.",
+      "mapNotSet": "Not found on the map yet — participants will only see the address.",
+      "cityAuto": "City: {{city}} (from the address)",
+      "cityHint": "Could not be found from the address. It is used for the “near you” list.",
+      "details": "Meeting point details",
+      "detailsPh": "e.g. by the fountain, north entrance",
+      "description": "Description",
+      "descriptionPh": "e.g. An easy one-hour walk — bring water for the dogs.",
+      "duration": "Duration (minutes)",
+      "maxPh": "e.g. 10 (empty = 10)",
+      "petTypes": "Pet types",
+      "petTypesHint": "Leave empty if the walk is open to all."
+    },
+    "err": {
+      "title": "Enter a title (at least 2 characters).",
+      "date": "Pick a date.",
+      "time": "Pick a time.",
+      "address": "Enter the meeting point.",
+      "city": "Enter the city.",
+      "number": "Enter a positive whole number.",
+      "summary": "Please complete the fields marked in red."
+    }
   },
   "soon": {
     "title": "The mobile app is coming very soon",
@@ -1500,7 +1547,9 @@
     "recommended": "Recommended",
     "choose": "Choose this plan",
     "noPlans": "No plans available",
-    "vivaNote": "Payment is handled by Viva. You can cancel your subscription at any time."
+    "vivaNote": "Payment is handled by Viva. You can cancel your subscription at any time.",
+    "tierDiscountBanner": "As a {{tier}} member you get {{percent}}% off AI subscriptions.",
+    "tierDiscountMore": "How it works"
   },
   "stool": {
     "title": "Sample analysis",
@@ -2266,7 +2315,7 @@
     "yearsExp": "{{count}} years of experience",
     "details": "Details",
     "vetSearch": "Search vet or specialty...",
-    "invalidSchedule": "Choose a valid date (today or later) and a time as HH:MM."
+    "invalidSchedule": "Choose a date (today or later) and a time."
   },
   "notifCenter": {
     "title": "Notification centre",
@@ -2409,12 +2458,12 @@
     "addImage": "Add image",
     "changeImage": "Change image",
     "errRequired": "Fill in the title, date, time, venue and city.",
-    "errDate": "The date must be in YYYY-MM-DD format (e.g. 2026-11-15).",
+    "errDate": "The date is not valid. Please choose it from the calendar.",
     "errPast": "The start date is in the past.",
-    "errTime": "The time must be in HH:MM format (e.g. 18:30).",
-    "errEndDate": "The end date must be YYYY-MM-DD and not before the start.",
+    "errTime": "The time is not valid. Please choose it again.",
+    "errEndDate": "The end date cannot be before the start date.",
     "errPrice": "Invalid price: enter an amount in euros (e.g. 15 or 15.50) or leave it empty.",
-    "errPaidFormat": "A paid event needs a YYYY-MM-DD date and an HH:MM time.",
+    "errPaidFormat": "A paid event needs a date and a time.",
     "errCapacity": "Capacity must be a whole number of 1 or more, or empty for no limit.",
     "errCapacityBelow": "Capacity cannot be lower than the people already registered ({{count}}).",
     "created": "Event created",
@@ -2481,5 +2530,413 @@
   },
   "paging": {
     "loadMore": "Load more"
+  },
+  "accountHub": {
+    "subscriptions": "Subscriptions",
+    "plans": "Plans",
+    "activity": "My activity",
+    "rewards": "Rewards",
+    "tiersHow": "How tiers work",
+    "messages": "Messages & notifications",
+    "notifSettings": "Notification settings",
+    "security": "Account & security",
+    "privacy": "Privacy & data",
+    "helpTerms": "Help & terms",
+    "aiNone": "No subscription — see the plans",
+    "aiTrial": "Free trial · {{count}} days left",
+    "aiTrial_one": "Free trial · {{count}} day left",
+    "aiActive": "Active · {{plan}}",
+    "foodSubs": "Food subscriptions",
+    "foodSubsCount": "{{count}} active",
+    "foodSubsCount_one": "{{count}} active",
+    "foodSubsNone": "No active subscriptions",
+    "petsCount": "{{count}} pets",
+    "petsCount_one": "{{count}} pet",
+    "aiRenews": "Renews on {{date}}"
+  },
+  "myReviews": {
+    "title": "My reviews",
+    "empty": "You haven’t written any reviews yet",
+    "emptyHint": "After a booking or purchase you can rate the service or product.",
+    "openService": "View service",
+    "openProduct": "View product"
+  },
+  "bell": {
+    "unread": "{{count}} unread notifications",
+    "unread_one": "{{count}} unread notification"
+  },
+  "explore": {
+    "health": "Health",
+    "tools": "Tools",
+    "community": "Community",
+    "info": "Info & support"
+  },
+  "homeGuest": {
+    "medTitle": "Your pet's medical record, always with you",
+    "medText": "Vaccines, medication, allergies and vet visits, organised in one place."
+  },
+  "dateField": {
+    "pickDate": "Choose a date",
+    "pickTime": "Choose a time",
+    "clear": "Clear",
+    "done": "Done"
+  },
+  "passportForm": {
+    "vaccines": {
+      "vaccine_name": {
+        "label": "Vaccine name",
+        "ph": "e.g. DHPPi, Rabies (Nobivac Rabies)"
+      },
+      "vaccine_type": {
+        "label": "Vaccine category",
+        "hint": "Choose “Rabies” for the rabies vaccine — it is required for travel"
+      },
+      "date_administered": {
+        "label": "Date given"
+      },
+      "next_due_date": {
+        "label": "Next dose (date)",
+        "hint": "As noted by the vet in the health booklet"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "notes": {
+        "ph": "e.g. Batch (lot) no. A123B45, no reaction"
+      }
+    },
+    "health": {
+      "title": {
+        "label": "Reason for visit",
+        "ph": "e.g. Annual check-up, Vomiting since yesterday"
+      },
+      "date": {
+        "label": "Visit date"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "description": {
+        "ph": "e.g. General examination, everything normal"
+      },
+      "cost": {
+        "ph": "e.g. 45"
+      },
+      "next_appointment": {
+        "label": "Next appointment (date)"
+      }
+    },
+    "meds": {
+      "name": {
+        "label": "Medication name",
+        "ph": "e.g. Synulox 250 mg"
+      },
+      "active_ingredient": {
+        "ph": "e.g. Amoxicillin / clavulanic acid"
+      },
+      "dosage": {
+        "ph": "e.g. 1 tablet twice a day"
+      },
+      "start_date": {
+        "label": "Start date"
+      },
+      "end_date": {
+        "label": "Treatment end date",
+        "hint": "Leave blank if the treatment is ongoing"
+      },
+      "prescribed_by": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "reason": {
+        "ph": "e.g. Ear infection"
+      },
+      "side_effects": {
+        "ph": "e.g. Drowsiness, reduced appetite"
+      }
+    },
+    "lab": {
+      "title": {
+        "label": "Test name",
+        "ph": "e.g. Pre-surgery panel, Leishmania test"
+      },
+      "date": {
+        "label": "Test date"
+      },
+      "lab_name": {
+        "ph": "e.g. IDEXX"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "findings": {
+        "ph": "e.g. Slightly raised urea"
+      }
+    },
+    "imaging": {
+      "imaging_type": {
+        "label": "Imaging type"
+      },
+      "date": {
+        "label": "Test date"
+      },
+      "body_region": {
+        "ph": "e.g. Chest, left hind leg"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "findings": {
+        "ph": "e.g. No sign of fracture"
+      },
+      "report": {
+        "ph": "e.g. Summary of the radiologist's report"
+      }
+    },
+    "surgery": {
+      "procedure": {
+        "label": "Procedure",
+        "ph": "e.g. Spay/neuter, Lump removal"
+      },
+      "date": {
+        "label": "Surgery date"
+      },
+      "surgeon_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "duration_min": {
+        "ph": "e.g. 45"
+      },
+      "complications": {
+        "ph": "e.g. None"
+      },
+      "outcome": {
+        "ph": "e.g. Successful, full recovery"
+      },
+      "follow_up": {
+        "ph": "e.g. Stitches out in 10 days"
+      },
+      "cost": {
+        "ph": "e.g. 45"
+      }
+    },
+    "allergies": {
+      "allergen": {
+        "label": "Allergen",
+        "ph": "e.g. Chicken, Pollen, Penicillin"
+      },
+      "diagnosed_date": {
+        "label": "Diagnosis date"
+      },
+      "reaction": {
+        "ph": "e.g. Itching, vomiting, swelling"
+      },
+      "treatment": {
+        "ph": "e.g. Antihistamine, elimination diet"
+      },
+      "diagnosed_by": {
+        "ph": "e.g. Dr Sarah Jones"
+      }
+    },
+    "chronic": {
+      "condition": {
+        "label": "Condition",
+        "ph": "e.g. Diabetes, Chronic kidney disease"
+      },
+      "diagnosed_date": {
+        "label": "Diagnosis date"
+      },
+      "icd_code": {
+        "ph": "e.g. E11"
+      },
+      "diagnosed_by": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "treatment_plan": {
+        "ph": "e.g. Insulin twice a day, prescription diet"
+      },
+      "monitoring": {
+        "ph": "e.g. Blood glucose every 3 months"
+      }
+    },
+    "dental": {
+      "procedure": {
+        "label": "Dental procedure"
+      },
+      "date": {
+        "label": "Procedure date"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "clinic_name": {
+        "ph": "e.g. City Vet Clinic"
+      },
+      "teeth_treated": {
+        "ph": "e.g. 108, 208 or “upper jaw”"
+      },
+      "findings": {
+        "ph": "e.g. Tartar, gingivitis"
+      },
+      "next_due": {
+        "label": "Next cleaning (date)"
+      },
+      "cost": {
+        "ph": "e.g. 45"
+      }
+    },
+    "weight": {
+      "weight_kg": {
+        "label": "Weight (kg)",
+        "ph": "e.g. 12.5"
+      },
+      "date": {
+        "label": "Measurement date"
+      },
+      "bcs": {
+        "ph": "e.g. 5",
+        "hint": "1 = emaciated, 4–5 = ideal, 9 = obese"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "notes": {
+        "ph": "e.g. After 2 months on a diet"
+      }
+    },
+    "genetic": {
+      "test_name": {
+        "label": "Genetic test",
+        "ph": "e.g. Embark Breed + Health"
+      },
+      "date": {
+        "label": "Test date"
+      },
+      "provider": {
+        "ph": "e.g. Embark, Wisdom Panel"
+      },
+      "results": {
+        "ph": "e.g. MDR1 carrier, nothing else found"
+      },
+      "breeds_detected": {
+        "ph": "e.g. Labrador, Border Collie"
+      },
+      "conditions_found": {
+        "ph": "e.g. Hip dysplasia"
+      }
+    },
+    "vitals": {
+      "date": {
+        "label": "Measurement date"
+      },
+      "temperature_c": {
+        "label": "Temperature (°C)",
+        "ph": "e.g. 38.5"
+      },
+      "heart_rate": {
+        "label": "Heart rate (bpm)",
+        "ph": "e.g. 90"
+      },
+      "respiratory_rate": {
+        "label": "Respiratory rate (/min)",
+        "ph": "e.g. 24"
+      },
+      "blood_pressure": {
+        "ph": "e.g. 140/90"
+      },
+      "weight_kg": {
+        "ph": "e.g. 12.5"
+      },
+      "vet_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      }
+    },
+    "travel": {
+      "destination_country": {
+        "ph": "e.g. Italy"
+      },
+      "origin_city": {
+        "ph": "e.g. Piraeus"
+      },
+      "destination_city": {
+        "ph": "e.g. Heraklion"
+      },
+      "departure_date": {
+        "label": "Departure date"
+      },
+      "carrier": {
+        "ph": "e.g. Aegean, Minoan Lines"
+      },
+      "booking_ref": {
+        "ph": "e.g. ABC123"
+      }
+    },
+    "access": {
+      "provider_email": {
+        "ph": "e.g. vet@example.com"
+      },
+      "provider_name": {
+        "ph": "e.g. Dr Sarah Jones"
+      },
+      "reason": {
+        "ph": "e.g. Second opinion on dermatitis"
+      },
+      "expires_at": {
+        "hint": "Leave blank for access with no expiry"
+      }
+    },
+    "pedigree": {
+      "registration_number": {
+        "ph": "e.g. GR-12345"
+      },
+      "kennel_club": {
+        "ph": "e.g. The Kennel Club"
+      },
+      "breeder_contact": {
+        "ph": "e.g. phone number or email"
+      }
+    }
+  },
+  "loyaltyPage": {
+    "title": "Loyalty programme",
+    "subtitle": "Earn points on every payment and move up a tier",
+    "yourTier": "Your tier",
+    "pointsValue": "Points: {{points}}",
+    "toNext": "Next: {{tier}} — {{points}} points to go",
+    "maxTier": "Top tier",
+    "yourDiscount": "You get {{percent}}% off AI subscriptions.",
+    "noDiscountYet": "Move up a tier to unlock a discount on AI subscriptions.",
+    "loginPrompt": "Log in to see your points and tier.",
+    "login": "Log in",
+    "earnTitle": "How to earn points",
+    "earnRate": "Points for every €1 you pay: {{points}}",
+    "source_orders": "Shop purchases",
+    "source_bookings": "Service bookings",
+    "source_telehealth": "Telehealth sessions",
+    "source_events": "Event registrations",
+    "source_subscriptions": "AI and food subscriptions",
+    "refundNote": "If a payment is refunded, its points are removed proportionally (all of them for a full refund).",
+    "tiersTitle": "Tiers and benefits",
+    "current": "Current",
+    "fromPoints": "From {{points}} points",
+    "startTier": "From sign-up",
+    "aiDiscount": "{{percent}}% off AI subscriptions",
+    "noDiscount": "No discount",
+    "discountNote": "The discount applies only to the platform’s AI subscriptions, not to providers’ products or services. It is applied automatically when you buy a new subscription, for the first billing period (1 month on monthly, 12 months on yearly billing).",
+    "seePlans": "See the plans"
   }
 }

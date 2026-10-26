@@ -6,6 +6,7 @@ import { langOfUser, notifyTitle, notifyMsg } from './notifyText.js'
 import { sendPushToUser } from './push.js'
 import { broadcastToUser } from '../routes/notifications.js'
 import { settleRefundTx } from './refundSettlement.js'
+import { revokeCancelRefund } from './loyalty.js'
 
 /**
  * Πολιτική ακύρωσης κρατήσεων.
@@ -317,6 +318,7 @@ export async function cancelBooking(req: any, bookingId: string, by: CancelBy) {
   const updated = terms.paid
     ? await prisma.booking.update({ where: { id: b.id }, data })
     : (await prisma.booking.findUnique({ where: { id: b.id } }))!
+  if (terms.paid) await revokeCancelRefund('booking', b.id, b.payment_ref, terms.refund, terms.total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
 
   await audit(req, {
     action: 'booking_cancel', resource: 'booking', resource_id: b.id,
@@ -431,6 +433,7 @@ export async function resolveStuckBookingRefunds(): Promise<{ completed: number;
           if (b.platform_fee_amount != null) data.platform_fee_amount = round2(b.platform_fee_amount * keep)
           const r = await prisma.booking.updateMany({ where: { id: b.id, payment_status: 'refunding', payment_ref: txn }, data })
           if (r.count === 0) return null
+          await revokeCancelRefund('booking', b.id, txn, refund, total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
           await auditSystem({
             action: 'booking_cancel', resource: 'booking', resource_id: b.id, subject_email: b.customer_email,
             metadata: { by: m.by ?? null, late: !!m.late, refund, fee, refund_tx: m.refund_tx ?? null, transaction_id: txn, resolved_by: 'stuck_refund_job' },
@@ -475,6 +478,7 @@ export async function resolveStuckBookingRefunds(): Promise<{ completed: number;
               where: { id: b.id, payment_status: 'refunding', payment_ref: txn }, data,
             })
             if (r.count === 0) return null
+            await revokeCancelRefund('booking', b.id, txn, u.refund, total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
             await auditSystem({
               action: 'booking_cancel', resource: 'booking', resource_id: b.id, subject_email: b.customer_email,
               metadata: { by: u.by, late: false, refund: u.refund, fee: 0, refund_tx: null, transaction_id: txn, resolved_by: 'stuck_refund_job', source: 'viva_status_R' },
@@ -679,6 +683,7 @@ export async function cancelTelehealth(req: any, consultationId: string, by: Can
     }
   }
   const updated = (await prisma.telehealthConsultation.findUnique({ where: { id: c.id } }))!
+  if (terms.paid) await revokeCancelRefund('telehealth', c.id, txn, terms.refund, terms.total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
 
   await audit(req, {
     action: 'telehealth_cancel', resource: 'telehealth', resource_id: c.id, subject_email: c.client_email,
@@ -760,6 +765,7 @@ export async function resolveStuckTelehealthRefunds(): Promise<{ completed: numb
             data: telehealthCancelledData(c, total, refund, fee),
           })
           if (r.count === 0) return null
+          await revokeCancelRefund('telehealth', c.id, txn, refund, total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
           await auditSystem({
             action: 'telehealth_cancel', resource: 'telehealth', resource_id: c.id, subject_email: c.client_email,
             metadata: { by: m.by ?? null, late: !!m.late, refund, fee, refund_tx: m.refund_tx ?? null, transaction_id: txn, resolved_by: 'stuck_refund_job' },
@@ -800,6 +806,7 @@ export async function resolveStuckTelehealthRefunds(): Promise<{ completed: numb
               data: telehealthCancelledData(c, total, total, 0),
             })
             if (r.count === 0) return null
+            await revokeCancelRefund('telehealth', c.id, txn, total, total) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
             await auditSystem({
               action: 'telehealth_cancel', resource: 'telehealth', resource_id: c.id, subject_email: c.client_email,
               metadata: { by: u.by, late: false, refund: total, fee: 0, refund_tx: null, transaction_id: txn, resolved_by: 'stuck_refund_job', source: 'viva_status_R' },

@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import i18n from './i18n'
+import { dateLocale } from './dates'
 
 /** Η γλώσσα του χρήστη για ημερομηνίες/ποσά (πριν ήταν πάντα el-GR). */
 const locale = () => {
@@ -21,7 +22,7 @@ export function formatCurrency(amount: number, currency = 'EUR'): string {
 }
 
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  return new Date(date).toLocaleDateString(locale(), options ?? {
+  return new Date(date).toLocaleDateString(dateLocale(i18n.language), options ?? {
     day: 'numeric', month: 'long', year: 'numeric'
   })
 }

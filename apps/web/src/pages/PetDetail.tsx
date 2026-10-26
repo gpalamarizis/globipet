@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Syringe, Stethoscope, MapPin, Pill, AlertTriangle,
-  Activity, Weight, ChevronRight, Battery, Clock, ShieldAlert,
+  Activity, Weight, ChevronRight, Battery, Clock, ShieldAlert, FileText,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * One pet, everything about it.
@@ -81,8 +82,7 @@ export default function PetDetail() {
   const { t, i18n } = useTranslation()
   const [tab, setTab] = useState<'overview' | 'medical' | 'vaccines' | 'location'>('overview')
 
-  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
-  const locale = localeMap[i18n.language] || 'el-GR'
+  const locale = dateLocale(i18n.language)
   const d = (v?: string | null) => fmtDate(v, locale)
   // Κωδικοί της βάσης → κείμενο (ίδια κλειδιά με το PetPassport)· άγνωστη τιμή μένει ως έχει.
   const code = (group: string, v?: string | null) => v && /^[a-z][a-z0-9_]*$/.test(v)
@@ -172,6 +172,10 @@ export default function PetDetail() {
             {[pet.breed || code('cmpAddPet.species', pet.species), pet.age && `${pet.age} ${t('pets.years')}`, pet.color]
               .filter(Boolean).join(' · ')}
           </p>
+          <Link to={`/passport?pet=${encodeURIComponent(pet.id)}`}
+            className="btn-secondary text-xs px-3 py-2 mt-3 inline-flex items-center gap-1.5">
+            <FileText size={12} /> {t('pgMyPets.medicalFile')}
+          </Link>
 
           {/* Anything needing attention, surfaced before the tabs. */}
           {(overdueVaccines.length > 0 || allergies.length > 0) && (

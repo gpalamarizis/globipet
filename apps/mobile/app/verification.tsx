@@ -9,6 +9,7 @@ import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Button, Badge, EmptyState, Input, SectionHeader } from '@/components/ui'
 import { colors, space, type, weight, icon } from '@/theme'
 import { ErrorState } from '@/components/ErrorState'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Αίτηση επαλήθευσης παρόχου.
@@ -102,7 +103,7 @@ export default function VerificationScreen() {
                 σταθερά τα ελληνικά: αλλιώς ο Άγγλος πάροχος βλέπει
                 «15 Οκτωβρίου» μέσα σε αγγλικό κείμενο. */}
             {t('ver.submitted_on', {
-              date: new Date(request.created_at).toLocaleDateString(i18n.language, {
+              date: new Date(request.created_at).toLocaleDateString(dateLocale(i18n.language), {
                 day: '2-digit', month: 'long', year: 'numeric',
               }),
             })}

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Heart, Sparkles, Activity, Check, Zap, X, AlertTriangle } from 'lucide-react'
+import { Heart, Sparkles, Activity, Check, Zap, X, AlertTriangle, Award } from 'lucide-react'
 import { api } from '@/lib/api'
 import { localName } from '@/lib/localName'
 import { useAuthStore } from '@/store/auth'
@@ -132,6 +132,17 @@ export default function PricingPage() {
     queryFn: () => api.get('/ai-subscriptions/plans').then(r => r.data?.data ?? []),
   })
 
+  // Έκπτωση επιπέδου επιβράβευσης (Ε17): ίδιο ποσοστό με το κουπόνι που
+  // βάζει ο server στο checkout του Stripe (lib/stripeSubscriptions).
+  const { data: loyalty } = useQuery({
+    queryKey: ['my-loyalty'],
+    queryFn: () => api.get('/loyalty').then(r => r.data?.data),
+    enabled: isAuthenticated,
+  })
+  const tierPct: number = isAuthenticated ? Math.max(0, Math.min(50, Number(loyalty?.ai_discount_percent) || 0)) : 0
+  /** Τιμή μετά την έκπτωση, στρογγυλεμένη στο λεπτό (όπως το Stripe). */
+  const discounted = (v: number) => Math.round(v * (100 - tierPct)) / 100
+
   const startCheckout = useMutation({
     mutationFn: ({ plan_id, billing }: { plan_id: string; billing: 'monthly' | 'annual' }) =>
       api.post('/ai-subscriptions/create-checkout', { plan_id, billing }).then(r => r.data?.data),
@@ -191,6 +202,21 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Έκπτωση του επιπέδου μου */}
+      {tierPct > 0 && (
+        <section className="max-w-xl mx-auto px-4 pb-6">
+          <div className="card p-4 flex items-center gap-3">
+            <Award size={18} className="text-orange-500 shrink-0" />
+            <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+              {t('pricing.tierDiscountBanner', { tier: t(`loyalty.${loyalty?.tier ?? 'bronze'}`), percent: tierPct })}
+            </p>
+            <Link to="/loyalty" className="text-sm font-medium text-brand-900 dark:text-brand-400 underline shrink-0">
+              {t('pricing.tierDiscountMore')}
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Πληρωμένη συνδρομή AI: κατάσταση και ακύρωση */}
       <section className="max-w-xl mx-auto px-4 pb-6 empty:hidden">
         <AiSubscriptionManage />
@@ -202,11 +228,13 @@ export default function PricingPage() {
           {plans.map(plan => {
             const featureCount = [plan.includes_ai_health, plan.includes_emotion_ai, plan.includes_wellness_tracker].filter(Boolean).length
             const isBundle = featureCount > 1
+            // Με έκπτωση επιπέδου: η χρέωση (μηνιαία ή ετήσια) μειώνεται κατά tierPct.
+            const monthlyBase = billing === 'annual' && plan.price_annual ? plan.price_annual / 12 : plan.price_monthly
             const monthlyPrice = billing === 'annual' && plan.price_annual
-              ? (plan.price_annual / 12).toFixed(2)
-              : plan.price_monthly.toFixed(2)
+              ? (discounted(plan.price_annual) / 12).toFixed(2)
+              : discounted(plan.price_monthly).toFixed(2)
             const billedAs = billing === 'annual' && plan.price_annual
-              ? t('pricing.billedAnnually', { amount: plan.price_annual.toFixed(2) })
+              ? t('pricing.billedAnnually', { amount: discounted(plan.price_annual).toFixed(2) })
               : t('pricing.billedMonthly')
             const isCheckoutLoading = startCheckout.isPending && checkoutPlanId === plan.id
 
@@ -228,6 +256,12 @@ export default function PricingPage() {
                 </div>
 
                 <div className="mb-4">
+                  {tierPct > 0 && (
+                    <p className="text-sm text-gray-400 flex items-center gap-2">
+                      <span className="line-through">€{monthlyBase.toFixed(2)}</span>
+                      <span className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">−{tierPct}%</span>
+                    </p>
+                  )}
                   <p className="text-3xl font-black text-brand-900 dark:text-brand-400">
                     €{monthlyPrice}<span className="text-sm font-normal text-gray-500">/{t('pricing.month')}</span>
                   </p>

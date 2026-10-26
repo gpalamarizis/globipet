@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import ReviewReply from '@/components/provider/ReviewReply'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Κριτικές που έλαβε ο πάροχος, με απάντηση.
@@ -79,7 +80,7 @@ export default function ProviderReviewsPage() {
                 <p className="text-xs text-gray-500 truncate">
                   {r.product_id ? t('reviewReply.product') : t('reviewReply.service')}
                   {target ? `: ${target}` : ''}
-                  {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(i18n.language)}` : ''}
+                  {r.created_at ? ` · ${new Date(r.created_at).toLocaleDateString(dateLocale(i18n.language))}` : ''}
                 </p>
               </div>
               <div className="flex gap-0.5 shrink-0 pt-0.5">

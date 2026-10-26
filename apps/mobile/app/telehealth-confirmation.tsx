@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { getTelehealthCallUrl } from '@/lib/telehealthCall'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Επιβεβαίωση παραγγελίας μετά την πληρωμή.
@@ -125,7 +126,7 @@ export default function TelehealthConfirmationScreen() {
   const dateLabel = (() => {
     const [y, m, d] = String(session?.scheduled_date ?? '').split('-').map(Number)
     if (!y || !m || !d) return session?.scheduled_date ?? '—'
-    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(i18n.language), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   })()
 
   // Πίσω στην τηλεϊατρική χωρίς να στοιβάζονται οθόνες· αν δεν υπάρχει στο

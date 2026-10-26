@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Stethoscope, FileText, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake, Flame } from 'lucide-react-native'
+import { Stethoscope, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
+import NotificationBell from '@/components/NotificationBell'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -31,24 +32,37 @@ const HEADER_TOP = Math.max((Platform.OS === 'android' ? StatusBar.currentHeight
  *   όψη ανά συσκευή και δεν χρωματίζεται.
  */
 
-const SECTIONS = [
-  { key: 'medical', Icon: HeartPulse, titleKey: 'medical.title', subKey: 'medical.subtitle', route: '/medical-center', tint: 'veterinary' },
-  { key: 'telehealth',  Icon: Stethoscope, titleKey: 'profile.menu.telehealth',      subKey: 'discover.book_online',   route: '/telehealth', tint: 'veterinary' },
-  { key: 'passport',    Icon: FileText,    titleKey: 'discover.medical_record', subKey: 'discover.full_history',   route: '/passport',   tint: 'pharmacy' },
-  { key: 'ai-health',   Icon: Brain,       titleKey: 'cat.ai_health',          subKey: 'discover.photo_analysis',      route: '/ai-health',  tint: 'training' },
-  { key: 'ai-stool', Icon: FlaskConical, titleKey: 'stool.title', subKey: 'stool.subtitle', route: '/ai-stool-urine', tint: 'veterinary' },
-  { key: 'forum',  Icon: MessagesSquare, titleKey: 'forum.title',  subKey: 'forum.emptyHint',  route: '/forum',  tint: 'training' },
-  { key: 'events', Icon: CalendarDays,   titleKey: 'events.title', subKey: 'events.emptyHint', route: '/events', tint: 'hosting' },
-  { key: 'breeds', Icon: Dog,            titleKey: 'breeds.title', subKey: 'breeds.search',    route: '/breeds', tint: 'grooming' },
-  { key: 'legal', Icon: Scale, titleKey: 'legal.title', subKey: 'legal.subtitle', route: '/pet-legal', tint: 'veterinary' },
-  { key: 'shelters', Icon: HomeIcon, titleKey: 'shelters.title', subKey: 'shelters.subtitle', route: '/shelters', tint: 'hosting' },
-  { key: 'orgs', Icon: HeartHandshake, titleKey: 'orgs.title', subKey: 'orgs.subtitle', route: '/welfare-orgs', tint: 'veterinary' },
-  { key: 'ai-emotion',  Icon: Heart,       titleKey: 'discover.ai_emotion',        subKey: 'discover.how_pet_feels',     route: '/ai-emotion', tint: 'grooming' },
-  { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
-  { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },
-  { key: 'playdates',   Icon: PawPrint,    titleKey: 'discover.playdates',         subKey: 'discover.meet_other_pets',  route: '/playdates',  tint: 'walking' },
-  { key: 'communities', Icon: Users,       titleKey: 'discover.communities',        subKey: 'discover.owner_groups',        route: '/communities',tint: 'photography' },
-  { key: 'popular', Icon: Flame, titleKey: 'insights.popularTitle', subKey: 'insights.discoverSubtitle', route: '/market-insights', tint: 'pharmacy' },
+/**
+ * Ε17 — Ομάδες με επικεφαλίδα (Product Manager): Υγεία, Εργαλεία, Κοινότητα,
+ * Πληροφορίες & υποστήριξη. Ο ιατρικός φάκελος βγήκε από εδώ (ανοίγει ανά
+ * κατοικίδιο από την καρτέλα «Κατοικίδια») και τα «Δημοφιλέστερα προϊόντα»
+ * (/market-insights) πήγαν στην καρτέλα «Αγορά».
+ */
+type Entry = { key: string; Icon: any; titleKey: string; subKey: string; route: string; tint: string }
+const GROUPS: { key: string; titleKey: string; items: Entry[] }[] = [
+  { key: 'health', titleKey: 'explore.health', items: [
+    { key: 'medical', Icon: HeartPulse, titleKey: 'medical.title', subKey: 'medical.subtitle', route: '/medical-center', tint: 'veterinary' },
+    { key: 'telehealth',  Icon: Stethoscope, titleKey: 'profile.menu.telehealth',      subKey: 'discover.book_online',   route: '/telehealth', tint: 'veterinary' },
+    { key: 'ai-health',   Icon: Brain,       titleKey: 'cat.ai_health',          subKey: 'discover.photo_analysis',      route: '/ai-health',  tint: 'training' },
+    { key: 'ai-stool', Icon: FlaskConical, titleKey: 'stool.title', subKey: 'stool.subtitle', route: '/ai-stool-urine', tint: 'veterinary' },
+  ] },
+  { key: 'tools', titleKey: 'explore.tools', items: [
+    { key: 'tracker',     Icon: MapPin,      titleKey: 'discover.gps_tracking',    subKey: 'discover.find_your_pet',   route: '/tracker',    tint: 'pet_taxi' },
+    { key: 'ai-emotion',  Icon: Heart,       titleKey: 'discover.ai_emotion',        subKey: 'discover.how_pet_feels',     route: '/ai-emotion', tint: 'grooming' },
+    { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
+  ] },
+  { key: 'community', titleKey: 'explore.community', items: [
+    { key: 'forum',  Icon: MessagesSquare, titleKey: 'forum.title',  subKey: 'forum.emptyHint',  route: '/forum',  tint: 'training' },
+    { key: 'communities', Icon: Users,       titleKey: 'discover.communities',        subKey: 'discover.owner_groups',        route: '/communities',tint: 'photography' },
+    { key: 'events', Icon: CalendarDays,   titleKey: 'events.title', subKey: 'events.emptyHint', route: '/events', tint: 'hosting' },
+    { key: 'playdates',   Icon: PawPrint,    titleKey: 'discover.playdates',         subKey: 'discover.meet_other_pets',  route: '/playdates',  tint: 'walking' },
+  ] },
+  { key: 'info', titleKey: 'explore.info', items: [
+    { key: 'breeds', Icon: Dog,            titleKey: 'breeds.title', subKey: 'breeds.search',    route: '/breeds', tint: 'grooming' },
+    { key: 'legal', Icon: Scale, titleKey: 'legal.title', subKey: 'legal.subtitle', route: '/pet-legal', tint: 'veterinary' },
+    { key: 'shelters', Icon: HomeIcon, titleKey: 'shelters.title', subKey: 'shelters.subtitle', route: '/shelters', tint: 'hosting' },
+    { key: 'orgs', Icon: HeartHandshake, titleKey: 'orgs.title', subKey: 'orgs.subtitle', route: '/welfare-orgs', tint: 'veterinary' },
+  ] },
 ]
 
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
@@ -80,28 +94,37 @@ export default function DiscoverScreen() {
       }>
 
       <View style={s.header}>
-        <Text style={s.title}>{t('discover.title')}</Text>
-        <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
+        <View style={s.headerRow}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.title}>{t('discover.title')}</Text>
+            <Text style={s.subtitle}>{t('discover.subtitle')}</Text>
+          </View>
+          {/* Στην κορυφή της γραμμής: ίδιο ύψος καμπανακιού σε όλες τις καρτέλες. */}
+          <View style={s.headerBell}><NotificationBell /></View>
+        </View>
       </View>
 
-      <View style={s.section}>
-        {SECTIONS.map(({ key, Icon, titleKey, subKey, route, tint: tn }) => {
-          const c = tint(tn)
-          return (
-            <TouchableOpacity key={key} style={s.card} activeOpacity={0.8}
-              onPress={() => router.push(route as any)}>
-              <View style={[s.cardIcon, { backgroundColor: c.bg }]}>
-                <Icon size={icon.lg} color={c.fg} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.cardTitle}>{t(titleKey)}</Text>
-                <Text style={s.cardSub} numberOfLines={1}>{t(subKey)}</Text>
-              </View>
-              <ChevronRight size={icon.md} color={colors.textLight} />
-            </TouchableOpacity>
-          )
-        })}
-      </View>
+      {GROUPS.map(g => (
+        <View key={g.key} style={s.section}>
+          <Text style={s.sectionTitle}>{t(g.titleKey)}</Text>
+          {g.items.map(({ key, Icon, titleKey, subKey, route, tint: tn }) => {
+            const c = tint(tn)
+            return (
+              <TouchableOpacity key={key} style={s.card} activeOpacity={0.8}
+                onPress={() => router.push(route as any)}>
+                <View style={[s.cardIcon, { backgroundColor: c.bg }]}>
+                  <Icon size={icon.lg} color={c.fg} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.cardTitle}>{t(titleKey)}</Text>
+                  <Text style={s.cardSub} numberOfLines={1}>{t(subKey)}</Text>
+                </View>
+                <ChevronRight size={icon.md} color={colors.textLight} />
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      ))}
 
       {events.length > 0 && (
         <View style={s.section}>
@@ -142,6 +165,8 @@ const s = StyleSheet.create({
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
   },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  headerBell: { alignSelf: 'flex-start' },
   title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
   subtitle: { ...type.body, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 

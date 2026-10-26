@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { identityOf } from '../lib/userName.js'
+import { coordsFromBody } from '../lib/geocode.js'
 
 /**
  * Χωρίς email τρίτων. Η λίστα έδινε σε κάθε συνδεδεμένο το creator_email κάθε
@@ -98,8 +99,24 @@ const routes: FastifyPluginAsync = async (app) => {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return reply.code(404).send({ message: 'User not found' })
 
-    const { title, description, event_type, date, time, duration_minutes, location, city, latitude, longitude, max_participants, pet_types, is_public } = req.body as any
-    if (!title || !date || !time || !location || !city) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    const { title, description, event_type, date, time, duration_minutes, location, city, max_participants, pet_types, is_public } = req.body as any
+    if (!title || !date || !time || !location) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+
+    /**
+     * Ε17 — Πόλη. Οι νέες φόρμες τη συμπληρώνουν αυτόματα από τη γεωκωδικοποίηση
+     * του σημείου συνάντησης (/geocode → city). Αν δεν προέκυψε και ο χρήστης
+     * δεν την έγραψε, χρησιμοποιείται η πόλη του προφίλ του: η λίστα «κοντά
+     * σου» (GET / παραπάνω) φιλτράρει με την πόλη, οπότε δεν μένει ποτέ κενή.
+     * Η εγκατεστημένη εφαρμογή στέλνει πάντα city — καμία αλλαγή γι' αυτήν.
+     */
+    const finalCity = (typeof city === 'string' ? city.trim() : '') || (user.city ?? '').trim()
+    if (!finalCity) return reply.code(400).send({ message: 'Συμπλήρωσε την πόλη της βόλτας' })
+
+    // Συντεταγμένες σημείου: ίδιος έλεγχος με τις υπηρεσίες (και τα δύο ή κανένα,
+    // εντός ορίων). Πριν, ένα string εδώ έριχνε 500 από την Prisma.
+    const coords = coordsFromBody(req.body)
+    if ('error' in coords) return reply.code(400).send({ message: coords.error })
+    const posInt = (v: any) => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : undefined }
 
     const event = await prisma.playdateEvent.create({
       data: {
@@ -108,11 +125,11 @@ const routes: FastifyPluginAsync = async (app) => {
         creator_photo: user.profile_photo,
         title, description, event_type: event_type || 'meetup',
         date, time,
-        duration_minutes: duration_minutes || 60,
-        location, city,
-        latitude: latitude || null,
-        longitude: longitude || null,
-        max_participants: max_participants || 10,
+        duration_minutes: posInt(duration_minutes) ?? 60,
+        location, city: finalCity,
+        latitude: coords.data.latitude ?? null,
+        longitude: coords.data.longitude ?? null,
+        max_participants: posInt(max_participants) ?? 10,
         pet_types: pet_types || [],
         is_public: is_public !== false,
       }

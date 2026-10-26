@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, RefreshControl, Platform, StatusBar, Alert, ActivityIndicator } from 'react-native'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Search, X, ShoppingCart, Package, Star, Heart } from 'lucide-react-native'
+import { Search, X, ShoppingCart, Package, Star, Heart, Flame, ChevronRight } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 import { effectivePrice, isOnSale, salePercent } from '@/lib/price'
 import CampaignBanner from '@/components/CampaignBanner'
+import NotificationBell from '@/components/NotificationBell'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -152,12 +153,15 @@ export default function MarketplaceScreen() {
       <View style={s.header}>
         <View style={s.headerRow}>
           <Text style={s.title}>{t('marketplace.title')}</Text>
-          <TouchableOpacity
-            style={s.cartBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push('/(tabs)/cart' as any)}>
-            <ShoppingCart size={icon.md} color={colors.textOnDark} />
-          </TouchableOpacity>
+          <View style={s.headerActions}>
+            <NotificationBell />
+            <TouchableOpacity
+              style={s.cartBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push('/(tabs)/cart' as any)}>
+              <ShoppingCart size={icon.md} color={colors.textOnDark} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={s.searchRow}>
@@ -215,6 +219,21 @@ export default function MarketplaceScreen() {
                 )
               })}
             </View>
+
+            {/* Ε17: «Δημοφιλέστερα προϊόντα» (/market-insights) — μεταφέρθηκε
+                εδώ από την «Εξερεύνησε». Η ταξινόμηση «featured» δεν είναι το
+                ίδιο: αυτή η οθόνη δείχνει τι αγοράζουν οι άλλοι ιδιοκτήτες. */}
+            <TouchableOpacity style={s.popular} activeOpacity={0.8}
+              onPress={() => router.push('/market-insights' as any)}>
+              <View style={s.popularIcon}>
+                <Flame size={icon.md} color={colors.brand} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.popularTitle} numberOfLines={1}>{t('insights.popularTitle')}</Text>
+                <Text style={s.popularSub} numberOfLines={1}>{t('insights.discoverSubtitle')}</Text>
+              </View>
+              <ChevronRight size={icon.md} color={colors.textLight} />
+            </TouchableOpacity>
 
             <CampaignBanner page="marketplace" slot="banner" />
             {/* Πλήθος αποτελεσμάτων, όπως στο web. */}
@@ -350,6 +369,23 @@ const s = StyleSheet.create({
     marginBottom: space.md,
   },
   title: { ...type.title, color: colors.textOnDark, fontWeight: weight.bold },
+  // Στην κορυφή της γραμμής, όπως στην Αρχική (ίδιο ύψος κουμπιών σε όλες τις καρτέλες).
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm, alignSelf: 'flex-start' },
+  popular: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: colors.surface,
+    padding: space.md,
+    borderRadius: radius.lg,
+    marginBottom: space.md,
+    ...shadow.sm,
+  },
+  popularIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    backgroundColor: colors.brandLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  popularTitle: { ...type.emphasis, color: colors.text, fontWeight: weight.semibold },
+  popularSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   cartBtn: {
     width: touch.min, height: touch.min, borderRadius: radius.md,
     backgroundColor: colors.navySoft,

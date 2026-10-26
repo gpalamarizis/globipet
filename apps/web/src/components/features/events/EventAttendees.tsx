@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Users, ChevronDown, ChevronUp, PawPrint, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Λίστα συμμετεχόντων για τον διοργανωτή (GET /events/:id/registrations —
@@ -79,7 +80,7 @@ export default function EventAttendees({ registrations, isLoading, isError }: {
                       <p className="text-xs text-gray-500 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
                         <span>{t('eventAttendees.people', { count: 1 + Number(r.guests ?? 0) })}</span>
                         {r.pet_name && <span className="inline-flex items-center gap-1"><PawPrint size={10} /> {r.pet_name}</span>}
-                        {r.created_at && <span>{new Date(r.created_at).toLocaleDateString(i18n.language)}</span>}
+                        {r.created_at && <span>{new Date(r.created_at).toLocaleDateString(dateLocale(i18n.language))}</span>}
                       </p>
                       {r.user_email && (
                         <a href={`mailto:${r.user_email}`}

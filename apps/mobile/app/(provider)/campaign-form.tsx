@@ -5,6 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, Input, Loading } from '@/components/ui'
+import { DateField } from '@/components/DateField'
+import { ymdToDate } from '@/lib/dates'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { SwitchRow } from '@/components/SwitchRow'
@@ -138,12 +140,12 @@ export default function CampaignFormScreen() {
 
         <View style={s.row}>
           <View style={s.col}>
-            <Input label={t('providerMkt.fStart')} value={form.starts_at} onChangeText={v => set('starts_at', v)}
-              placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
+            {/* Ε17: ημερολόγιο αντί για πληκτρολόγηση· η τιμή μένει YYYY-MM-DD. */}
+            <DateField label={t('providerMkt.fStart')} value={form.starts_at} onChange={v => set('starts_at', v)} />
           </View>
           <View style={s.col}>
-            <Input label={t('providerMkt.fEnd')} value={form.ends_at} onChangeText={v => set('ends_at', v)}
-              placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
+            <DateField label={t('providerMkt.fEnd')} value={form.ends_at} onChange={v => set('ends_at', v)}
+              minimumDate={ymdToDate(form.starts_at)} />
           </View>
         </View>
 

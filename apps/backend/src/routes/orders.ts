@@ -9,6 +9,7 @@ import { effectivePrice } from '../lib/price.js'
 import { sendOrderConfirmedEmail, sendProviderNewOrderEmail, sendBookingConfirmedEmail, sendProviderNewBookingEmail } from '../lib/email.js'
 import { broadcastToUser } from './notifications.js'
 import { markTelehealthPaid, verifyConsultationPayment } from './telehealth.js'
+import { awardForRecord } from '../lib/loyalty.js'
 import { confirmEventRegistrationPayment, handleEventPaymentWebhook, refundLegacyOrphanEventPayment } from './events.js'
 import { handleBookingPaymentWebhook } from '../lib/bookingPayment.js'
 import { refundExtraVivaPayment, extraPaymentRefunded } from '../lib/extraPaymentRefund.js'
@@ -605,6 +606,7 @@ async function claimOrderPayment(orderId: string, txn: string): Promise<'paid' |
     // Τα είδη της παραγγελίας φεύγουν από το καλάθι ΜΟΝΟ τώρα (πληρώθηκε).
     await clearOrderedCartItems(orderId)
     await firePaidSideEffects(orderId)
+    await awardForRecord('order', orderId, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
     return 'paid'
   }
   const fresh = await prisma.order.findUnique({

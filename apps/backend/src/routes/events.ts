@@ -13,6 +13,7 @@ import { langOfUser, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import { sendPushToUser } from '../lib/push.js'
 import { broadcastToUser } from './notifications.js'
 import { withRefundLock } from '../lib/refundLock.js'
+import { awardForEventRegistration, revokeEventRefund } from '../lib/loyalty.js'
 import { fullNameOf } from '../lib/userName.js'
 
 /**
@@ -453,6 +454,7 @@ export async function markEventRegistrationPaid(
     // Η πληρωμένη δήλωση επιβεβαιώθηκε ΤΩΡΑ (μόνο αυτό το αίτημα κέρδισε τη
     // διεκδίκηση): μία ειδοποίηση στον χρήστη, όποιος κι αν επιβεβαίωσε
     // (webhook ή σελίδα επιβεβαίωσης).
+    await awardForEventRegistration(reg.user_email, reg.id, txn, reg.amount_paid) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
     await notifyRegistrationConfirmed(reg.user_email, reg.event_id, reg.amount_paid)
     return 'registered'
   }
@@ -803,6 +805,7 @@ async function refundForCancelledEvent(
       })
     }
   })
+  if (ok === true) await revokeEventRefund(reg.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
   return ok
 }
 
@@ -963,6 +966,7 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
           const r = await prisma.eventRegistration.updateMany({
             where: { id: reg.id, status: 'refunding', viva_transaction_id: txn }, data: { status: 'refunded' },
           })
+          if (r.count > 0) await revokeEventRefund(reg.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
           if (r.count > 0 && await refundReason({ id: reg.id, status: 'refunded', viva_transaction_id: txn }) === 'event_cancelled') {
             await notifyEventCancelled(reg.user_email, event, 'refunded', reg.amount_paid)
           }
@@ -1022,6 +1026,7 @@ export async function cancelEventWithRefunds(eventId: string): Promise<EventCanc
           pre = 'error'
         }
         if (pre === 'viva_refunded') {
+          await revokeEventRefund(reg.id, preTxn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
           report.refunded++
           report.refunded_amount = round2(report.refunded_amount + (reg.amount_paid ?? 0))
           await notifyEventCancelled(reg.user_email, event, 'refunded', reg.amount_paid)
@@ -1167,6 +1172,7 @@ export async function resolveStuckEventRefunds(): Promise<{ refunded: number; fa
           return r.count > 0
         })
         if (!changed) return null
+        if (verdict === 'refunded') await revokeEventRefund(reg.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
         if (releaseSeat) {
           await prisma.event.updateMany({ where: { id: fresh.event_id, registered_count: { lt: 0 } }, data: { registered_count: 0 } })
         }
@@ -1848,6 +1854,7 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
         where: { id: req.params.id, registered_count: { lt: 0 } },
         data: { registered_count: 0 },
       })
+      await revokeEventRefund(existing.id, txn) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
       return { data: { status: 'refunded', refund_amount: existing.amount_paid } }
     }
 

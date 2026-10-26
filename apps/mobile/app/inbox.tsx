@@ -12,6 +12,7 @@ import {
 import { api } from '@/lib/api'
 import { Screen, Card, Button, Badge, EmptyState, Loading } from '@/components/ui'
 import { colors, space, radius, font, weight, icon, shadow } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Μηνύματα από παρόχους.
@@ -75,7 +76,7 @@ export default function InboxScreen() {
     if (h < 24) return h === 1 ? t('inbox.hour_ago_one') : t('inbox.hours_ago', { count: h })
     const days = Math.round(h / 24)
     if (days < 7) return days === 1 ? t('inbox.day_ago_one') : t('inbox.days_ago', { count: days })
-    return d.toLocaleDateString(i18n.language)
+    return d.toLocaleDateString(dateLocale(i18n.language))
   }
 
   const renderItem = ({ item: m }: { item: Message }) => {

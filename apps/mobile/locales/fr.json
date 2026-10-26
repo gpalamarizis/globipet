@@ -40,10 +40,10 @@
     "marketplace": "Boutique",
     "pets": "Animaux",
     "social": "Social",
-    "profile": "Profil",
+    "profile": "Compte",
     "animals": "Animaux",
     "community": "Communauté",
-    "discover": "Découvrir",
+    "discover": "Explorer",
     "shop": "Boutique"
   },
   "auth": {
@@ -260,7 +260,8 @@
     "deleteQ": "Supprimer définitivement {{name}} et son historique ?",
     "deleteFailed": "Suppression impossible",
     "kind_horse": "Cheval",
-    "kind_other": "Autre"
+    "kind_other": "Autre",
+    "weight_placeholder": "p. ex. 12,5"
   },
   "social": {
     "title": "Fil social",
@@ -375,7 +376,7 @@
     "pet_protection": "Protection de l'animal",
     "photo_analysis": "Analyse de photo",
     "subtitle": "Tout ce que propose GlobiPet",
-    "title": "Découvrir",
+    "title": "Explorer",
     "upcoming_events": "Événements à venir",
     "ai_emotion": "Émotion par IA",
     "playdates": "Rencontres"
@@ -728,7 +729,7 @@
     "revokeTitle": "Révoquer l'accès",
     "revokeQ": "Le vétérinaire ne pourra plus consulter le dossier de votre animal. Révoquer l'accès ?",
     "revoke": "Révoquer",
-    "invalidDate": "Date non valide. Saisissez-la au format YYYY-MM-DD (p. ex. 2026-03-15).",
+    "invalidDate": "Date non valide. Choisissez-la dans le calendrier.",
     "rt_examination": "Examen",
     "rt_diagnosis": "Diagnostic",
     "rt_follow_up": "Contrôle",
@@ -839,7 +840,53 @@
     "inviteTo": "Invitation à {{name}}",
     "createEventFirst": "Créez d'abord une promenade",
     "messageOptional": "Message (facultatif)",
-    "messagePlaceholder": "Venez promener nos chiens ensemble !"
+    "messagePlaceholder": "Venez promener nos chiens ensemble !",
+    "types": {
+      "walk": "Promenade",
+      "play": "Jeu",
+      "meetup": "Rencontre",
+      "training": "Éducation",
+      "other": "Autre"
+    },
+    "petTypes": {
+      "dog": "Chien",
+      "cat": "Chat",
+      "rabbit": "Lapin",
+      "bird": "Oiseau",
+      "other": "Autre"
+    },
+    "directions": "Itinéraire",
+    "f": {
+      "requiredNote": "Les champs marqués * sont obligatoires.",
+      "title": "Titre",
+      "titlePh": "ex. Promenade au parc Pedion Areos",
+      "type": "Type",
+      "date": "Date",
+      "time": "Heure",
+      "addressPh": "ex. Pedion Areos, Athènes",
+      "mapTitle": "Point sur la carte",
+      "mapHint": "Trouvez le point pour que la ville soit remplie automatiquement et que les participants aient l’itinéraire.",
+      "mapNotSet": "Pas encore trouvé sur la carte — les participants ne verront que l’adresse.",
+      "cityAuto": "Ville : {{city}} (d’après l’adresse)",
+      "cityHint": "Impossible de la déduire de l’adresse. Elle sert à la liste « près de chez vous ».",
+      "details": "Précisions sur le lieu",
+      "detailsPh": "ex. près de la fontaine, entrée nord",
+      "description": "Description",
+      "descriptionPh": "ex. Balade tranquille d’une heure — apportez de l’eau pour les chiens.",
+      "duration": "Durée (minutes)",
+      "maxPh": "ex. 10 (vide = 10)",
+      "petTypes": "Types d'animaux",
+      "petTypesHint": "Laissez vide si la promenade est ouverte à tous."
+    },
+    "err": {
+      "title": "Saisissez un titre (au moins 2 caractères).",
+      "date": "Choisissez une date.",
+      "time": "Choisissez une heure.",
+      "address": "Saisissez le point de rendez-vous.",
+      "city": "Saisissez la ville.",
+      "number": "Saisissez un nombre entier positif.",
+      "summary": "Complétez les champs signalés en rouge."
+    }
   },
   "soon": {
     "title": "L'application mobile arrive très bientôt",
@@ -1500,7 +1547,9 @@
     "recommended": "Recommandé",
     "choose": "Choisir cette formule",
     "noPlans": "Aucune formule disponible",
-    "vivaNote": "Le paiement est géré par Viva. Vous pouvez résilier à tout moment."
+    "vivaNote": "Le paiement est géré par Viva. Vous pouvez résilier à tout moment.",
+    "tierDiscountBanner": "En tant que membre {{tier}}, vous bénéficiez de {{percent}} % de réduction sur les abonnements IA.",
+    "tierDiscountMore": "Comment ça marche"
   },
   "stool": {
     "title": "Analyse d'échantillon",
@@ -2266,7 +2315,7 @@
     "yearsExp": "{{count}} ans d'expérience",
     "details": "Détails",
     "vetSearch": "Rechercher vétérinaire ou spécialité...",
-    "invalidSchedule": "Choisissez une date valide (aujourd'hui ou plus tard) et une heure HH:MM."
+    "invalidSchedule": "Choisissez une date (aujourd'hui ou plus tard) et une heure."
   },
   "notifCenter": {
     "title": "Centre de notifications",
@@ -2409,12 +2458,12 @@
     "addImage": "Ajouter une image",
     "changeImage": "Changer l’image",
     "errRequired": "Renseignez le titre, la date, l’heure, le lieu et la ville.",
-    "errDate": "La date doit être au format AAAA-MM-JJ (ex. 2026-11-15).",
+    "errDate": "La date n'est pas valide. Choisissez-la dans le calendrier.",
     "errPast": "La date de début est déjà passée.",
-    "errTime": "L’heure doit être au format HH:MM (ex. 18:30).",
-    "errEndDate": "La date de fin doit être au format AAAA-MM-JJ et pas avant le début.",
+    "errTime": "L’heure n’est pas valide. Choisissez-la à nouveau.",
+    "errEndDate": "La date de fin ne peut pas être antérieure au début.",
     "errPrice": "Tarif invalide : saisissez un montant en euros (ex. 15 ou 15,50) ou laissez vide.",
-    "errPaidFormat": "Un événement payant nécessite une date AAAA-MM-JJ et une heure HH:MM.",
+    "errPaidFormat": "Un événement payant nécessite une date et une heure.",
     "errCapacity": "La capacité doit être un nombre entier d’au moins 1, ou vide pour aucune limite.",
     "errCapacityBelow": "La capacité ne peut pas être inférieure au nombre de personnes déjà inscrites ({{count}}).",
     "created": "Événement créé",
@@ -2481,5 +2530,413 @@
   },
   "paging": {
     "loadMore": "Charger plus"
+  },
+  "accountHub": {
+    "subscriptions": "Abonnements",
+    "plans": "Offres",
+    "activity": "Mon activité",
+    "rewards": "Récompenses",
+    "tiersHow": "Comment fonctionnent les niveaux",
+    "messages": "Messages et notifications",
+    "notifSettings": "Paramètres des notifications",
+    "security": "Compte et sécurité",
+    "privacy": "Confidentialité et données",
+    "helpTerms": "Aide et conditions",
+    "aiNone": "Aucun abonnement — voir les offres",
+    "aiTrial": "Essai gratuit · {{count}} jours restants",
+    "aiTrial_one": "Essai gratuit · {{count}} jour restant",
+    "aiActive": "Actif · {{plan}}",
+    "foodSubs": "Abonnements alimentaires",
+    "foodSubsCount": "{{count}} actifs",
+    "foodSubsCount_one": "{{count}} actif",
+    "foodSubsNone": "Aucun abonnement actif",
+    "petsCount": "{{count}} animaux",
+    "petsCount_one": "{{count}} animal",
+    "aiRenews": "Renouvellement le {{date}}"
+  },
+  "myReviews": {
+    "title": "Mes avis",
+    "empty": "Vous n’avez encore écrit aucun avis",
+    "emptyHint": "Après une réservation ou un achat, vous pouvez évaluer le service ou le produit.",
+    "openService": "Voir le service",
+    "openProduct": "Voir le produit"
+  },
+  "bell": {
+    "unread": "{{count}} notifications non lues",
+    "unread_one": "{{count}} notification non lue"
+  },
+  "explore": {
+    "health": "Santé",
+    "tools": "Outils",
+    "community": "Communauté",
+    "info": "Infos et assistance"
+  },
+  "homeGuest": {
+    "medTitle": "Le dossier médical de votre animal, toujours avec vous",
+    "medText": "Vaccins, traitements, allergies et visites chez le vétérinaire, réunis en un seul endroit."
+  },
+  "dateField": {
+    "pickDate": "Choisir une date",
+    "pickTime": "Choisir une heure",
+    "clear": "Effacer",
+    "done": "OK"
+  },
+  "passportForm": {
+    "vaccines": {
+      "vaccine_name": {
+        "label": "Nom du vaccin",
+        "ph": "p. ex. CHPPi, Rage (Nobivac Rabies)"
+      },
+      "vaccine_type": {
+        "label": "Catégorie du vaccin",
+        "hint": "Choisissez « Rage » pour le vaccin antirabique — il est obligatoire pour voyager"
+      },
+      "date_administered": {
+        "label": "Date d'administration"
+      },
+      "next_due_date": {
+        "label": "Prochaine dose (date)",
+        "hint": "Telle que notée par le vétérinaire dans le carnet"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "notes": {
+        "ph": "p. ex. N° de lot A123B45, aucune réaction"
+      }
+    },
+    "health": {
+      "title": {
+        "label": "Motif de la visite",
+        "ph": "p. ex. Bilan annuel, Vomissements depuis hier"
+      },
+      "date": {
+        "label": "Date de la visite"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "description": {
+        "ph": "p. ex. Examen général, tout est normal"
+      },
+      "cost": {
+        "ph": "p. ex. 45"
+      },
+      "next_appointment": {
+        "label": "Prochain rendez-vous (date)"
+      }
+    },
+    "meds": {
+      "name": {
+        "label": "Nom du médicament",
+        "ph": "p. ex. Synulox 250 mg"
+      },
+      "active_ingredient": {
+        "ph": "p. ex. Amoxicilline / acide clavulanique"
+      },
+      "dosage": {
+        "ph": "p. ex. 1 comprimé 2 fois par jour"
+      },
+      "start_date": {
+        "label": "Date de début"
+      },
+      "end_date": {
+        "label": "Date de fin du traitement",
+        "hint": "Laissez vide si le traitement est en cours"
+      },
+      "prescribed_by": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "reason": {
+        "ph": "p. ex. Otite"
+      },
+      "side_effects": {
+        "ph": "p. ex. Somnolence, perte d'appétit"
+      }
+    },
+    "lab": {
+      "title": {
+        "label": "Nom de l'analyse",
+        "ph": "p. ex. Bilan préopératoire, Test Leishmania"
+      },
+      "date": {
+        "label": "Date de l'analyse"
+      },
+      "lab_name": {
+        "ph": "p. ex. IDEXX"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "findings": {
+        "ph": "p. ex. Urée légèrement élevée"
+      }
+    },
+    "imaging": {
+      "imaging_type": {
+        "label": "Type d'imagerie"
+      },
+      "date": {
+        "label": "Date de l'analyse"
+      },
+      "body_region": {
+        "ph": "p. ex. Thorax, patte arrière gauche"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "findings": {
+        "ph": "p. ex. Aucun signe de fracture"
+      },
+      "report": {
+        "ph": "p. ex. Résumé du compte rendu du radiologue"
+      }
+    },
+    "surgery": {
+      "procedure": {
+        "label": "Intervention",
+        "ph": "p. ex. Stérilisation, Ablation d'une masse"
+      },
+      "date": {
+        "label": "Date de l'intervention"
+      },
+      "surgeon_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "duration_min": {
+        "ph": "p. ex. 45"
+      },
+      "complications": {
+        "ph": "p. ex. Aucune"
+      },
+      "outcome": {
+        "ph": "p. ex. Réussie, rétablissement complet"
+      },
+      "follow_up": {
+        "ph": "p. ex. Retrait des points dans 10 jours"
+      },
+      "cost": {
+        "ph": "p. ex. 45"
+      }
+    },
+    "allergies": {
+      "allergen": {
+        "label": "Allergène",
+        "ph": "p. ex. Poulet, Pollen, Pénicilline"
+      },
+      "diagnosed_date": {
+        "label": "Date du diagnostic"
+      },
+      "reaction": {
+        "ph": "p. ex. Démangeaisons, vomissements, gonflement"
+      },
+      "treatment": {
+        "ph": "p. ex. Antihistaminique, régime d'éviction"
+      },
+      "diagnosed_by": {
+        "ph": "p. ex. Dr Claire Martin"
+      }
+    },
+    "chronic": {
+      "condition": {
+        "label": "Affection",
+        "ph": "p. ex. Diabète, Maladie rénale chronique"
+      },
+      "diagnosed_date": {
+        "label": "Date du diagnostic"
+      },
+      "icd_code": {
+        "ph": "p. ex. E11"
+      },
+      "diagnosed_by": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "treatment_plan": {
+        "ph": "p. ex. Insuline 2 fois par jour, alimentation spécifique"
+      },
+      "monitoring": {
+        "ph": "p. ex. Glycémie tous les 3 mois"
+      }
+    },
+    "dental": {
+      "procedure": {
+        "label": "Acte dentaire"
+      },
+      "date": {
+        "label": "Date de l'acte"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "clinic_name": {
+        "ph": "p. ex. Clinique vétérinaire du Centre"
+      },
+      "teeth_treated": {
+        "ph": "p. ex. 108, 208 ou « mâchoire supérieure »"
+      },
+      "findings": {
+        "ph": "p. ex. Tartre, gingivite"
+      },
+      "next_due": {
+        "label": "Prochain détartrage (date)"
+      },
+      "cost": {
+        "ph": "p. ex. 45"
+      }
+    },
+    "weight": {
+      "weight_kg": {
+        "label": "Poids (kg)",
+        "ph": "p. ex. 12,5"
+      },
+      "date": {
+        "label": "Date de la mesure"
+      },
+      "bcs": {
+        "ph": "p. ex. 5",
+        "hint": "1 = très maigre, 4–5 = idéal, 9 = obèse"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "notes": {
+        "ph": "p. ex. Après 2 mois de régime"
+      }
+    },
+    "genetic": {
+      "test_name": {
+        "label": "Test génétique",
+        "ph": "p. ex. Embark Breed + Health"
+      },
+      "date": {
+        "label": "Date du test"
+      },
+      "provider": {
+        "ph": "p. ex. Embark, Wisdom Panel"
+      },
+      "results": {
+        "ph": "p. ex. Porteur MDR1, rien d'autre"
+      },
+      "breeds_detected": {
+        "ph": "p. ex. Labrador, Border Collie"
+      },
+      "conditions_found": {
+        "ph": "p. ex. Dysplasie de la hanche"
+      }
+    },
+    "vitals": {
+      "date": {
+        "label": "Date de la mesure"
+      },
+      "temperature_c": {
+        "label": "Température (°C)",
+        "ph": "p. ex. 38,5"
+      },
+      "heart_rate": {
+        "label": "Fréquence cardiaque (bpm)",
+        "ph": "p. ex. 90"
+      },
+      "respiratory_rate": {
+        "label": "Fréquence respiratoire (/min)",
+        "ph": "p. ex. 24"
+      },
+      "blood_pressure": {
+        "ph": "p. ex. 140/90"
+      },
+      "weight_kg": {
+        "ph": "p. ex. 12,5"
+      },
+      "vet_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      }
+    },
+    "travel": {
+      "destination_country": {
+        "ph": "p. ex. Italie"
+      },
+      "origin_city": {
+        "ph": "p. ex. Le Pirée"
+      },
+      "destination_city": {
+        "ph": "p. ex. Héraklion"
+      },
+      "departure_date": {
+        "label": "Date de départ"
+      },
+      "carrier": {
+        "ph": "p. ex. Aegean, Minoan Lines"
+      },
+      "booking_ref": {
+        "ph": "p. ex. ABC123"
+      }
+    },
+    "access": {
+      "provider_email": {
+        "ph": "p. ex. vet@example.com"
+      },
+      "provider_name": {
+        "ph": "p. ex. Dr Claire Martin"
+      },
+      "reason": {
+        "ph": "p. ex. Deuxième avis sur une dermatite"
+      },
+      "expires_at": {
+        "hint": "Laissez vide pour un accès sans expiration"
+      }
+    },
+    "pedigree": {
+      "registration_number": {
+        "ph": "p. ex. GR-12345"
+      },
+      "kennel_club": {
+        "ph": "p. ex. Société Centrale Canine"
+      },
+      "breeder_contact": {
+        "ph": "p. ex. téléphone ou e-mail"
+      }
+    }
+  },
+  "loyaltyPage": {
+    "title": "Programme de fidélité",
+    "subtitle": "Gagnez des points à chaque paiement et montez de niveau",
+    "yourTier": "Votre niveau",
+    "pointsValue": "Points : {{points}}",
+    "toNext": "Suivant : {{tier}} — encore {{points}} points",
+    "maxTier": "Niveau maximal",
+    "yourDiscount": "Vous bénéficiez de {{percent}} % de réduction sur les abonnements IA.",
+    "noDiscountYet": "Montez de niveau pour obtenir une réduction sur les abonnements IA.",
+    "loginPrompt": "Connectez-vous pour voir vos points et votre niveau.",
+    "login": "Se connecter",
+    "earnTitle": "Comment gagner des points",
+    "earnRate": "Points pour chaque euro payé : {{points}}",
+    "source_orders": "Achats dans la boutique",
+    "source_bookings": "Réservations de services",
+    "source_telehealth": "Séances de téléconsultation",
+    "source_events": "Inscriptions aux événements",
+    "source_subscriptions": "Abonnements IA et alimentation",
+    "refundNote": "Si un paiement est remboursé, ses points sont retirés au prorata (tous en cas de remboursement intégral).",
+    "tiersTitle": "Niveaux et avantages",
+    "current": "Actuel",
+    "fromPoints": "À partir de {{points}} points",
+    "startTier": "Dès l’inscription",
+    "aiDiscount": "−{{percent}} % sur les abonnements IA",
+    "noDiscount": "Sans réduction",
+    "discountNote": "La réduction s’applique uniquement aux abonnements IA de la plateforme, pas aux produits ni aux services des prestataires. Elle est appliquée automatiquement à l’achat d’un nouvel abonnement, pour la première période de facturation (1 mois en mensuel, 12 mois en annuel).",
+    "seePlans": "Voir les formules"
   }
 }

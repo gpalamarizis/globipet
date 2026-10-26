@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Αιτήσεις επαλήθευσης παρόχων.
@@ -170,7 +171,7 @@ export default function AdminVerificationsPage() {
                 <div className="flex items-center justify-between gap-3 flex-wrap pt-3 border-t border-gray-100 dark:border-gray-800">
                   <span className="text-xs text-gray-400 flex items-center gap-1">
                     <Clock size={11} />
-                    {new Date(r.created_at).toLocaleDateString(i18n.language, {
+                    {new Date(r.created_at).toLocaleDateString(dateLocale(i18n.language), {
                       day: '2-digit', month: 'short', year: 'numeric',
                     })}
                     {r.reviewed_by && t('adminVerif.reviewedBy', { name: r.reviewed_by })}

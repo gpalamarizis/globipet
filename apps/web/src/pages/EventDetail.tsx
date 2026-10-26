@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import EventFormModal from '@/components/features/events/EventFormModal'
 import EventAttendees, { hasMoneyAtStake } from '@/components/features/events/EventAttendees'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * A single event.
@@ -30,8 +31,7 @@ export default function EventDetail() {
   const { isAuthenticated, user } = useAuthStore()
   const queryClient = useQueryClient()
 
-  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
-  const locale = localeMap[i18n.language] || 'el-GR'
+  const locale = dateLocale(i18n.language)
 
   const { data: event, isLoading, isError } = useQuery({
     queryKey: ['event', id],

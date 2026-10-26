@@ -6,6 +6,7 @@ import { RotateCcw, Package, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Οι συνδρομές τροφής μου (Stripe, 12 μηνιαίες παραδόσεις).
@@ -56,7 +57,7 @@ export default function MySubscriptionsCard() {
   const fmtDate = (d?: string | null) => {
     if (!d) return ''
     const x = new Date(d)
-    return isNaN(x.getTime()) ? '' : x.toLocaleDateString(i18n.language || 'el', { day: '2-digit', month: 'long', year: 'numeric' })
+    return isNaN(x.getTime()) ? '' : x.toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'long', year: 'numeric' })
   }
 
   return (

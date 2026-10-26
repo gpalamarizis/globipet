@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
 import { effectivePrice } from '@/lib/price'
-import { fmtYmd } from '@/lib/dates'
+import { fmtYmd, dateLocale } from '@/lib/dates'
 import { Navigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -495,7 +495,7 @@ function CalendarTab() {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            {new Date(view.y, view.m, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
+            {new Date(view.y, view.m, 1).toLocaleDateString(dateLocale(i18n.language), { month: 'long', year: 'numeric' })}
           </h3>
           <div className="flex gap-2">
             <button type="button" className="btn-ghost p-2" onClick={() => shiftMonth(-1)} aria-label={t('common.previous')}>‹</button>

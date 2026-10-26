@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { dateLocale } from '@/lib/dates'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -23,7 +24,6 @@ const statusColors: Record<string, string> = {
 export default function MyOrders() {
   const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
-  const localeMap: Record<string, string> = { el: 'el-GR', en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN' }
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -104,7 +104,7 @@ export default function MyOrders() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString(localeMap[i18n.language] || 'el-GR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      {new Date(order.created_at).toLocaleDateString(dateLocale(i18n.language), { day: '2-digit', month: 'long', year: 'numeric' })}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

@@ -8,6 +8,7 @@ import { internalRoute } from '@/lib/notifications'
 import { useAuthStore } from '@/store/auth'
 import { Screen, EmptyState, Loading } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Κέντρο ειδοποιήσεων — οι ειδοποιήσεις εντός εφαρμογής (GET /notifications).
@@ -55,7 +56,7 @@ export default function NotificationsScreen() {
     if (h < 24) return h === 1 ? t('inbox.hour_ago_one') : t('inbox.hours_ago', { count: h })
     const days = Math.round(h / 24)
     if (days < 7) return days === 1 ? t('inbox.day_ago_one') : t('inbox.days_ago', { count: days })
-    return d.toLocaleDateString(i18n.language)
+    return d.toLocaleDateString(dateLocale(i18n.language))
   }
 
   if (!isAuthenticated) return (

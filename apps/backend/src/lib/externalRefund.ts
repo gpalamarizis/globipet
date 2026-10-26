@@ -4,6 +4,7 @@ import { withRefundLock } from './refundLock.js'
 import { bookingCancelLockKey, telehealthCancelLockKey, notifyCancelRefundCompleted } from './cancellation.js'
 import { eventRefundLockKey, notifyRegistrationRefunded } from '../routes/events.js'
 import { settleRefundTx } from './refundSettlement.js'
+import { revokeEventRefund } from './loyalty.js'
 
 /**
  * Viva webhook EventTypeId 1797 «Transaction Reversal Created».
@@ -357,6 +358,8 @@ export async function handleVivaTransactionReversal(eventData: any, webhookCreat
   if (lock.value === 'applied' && notifyAfter) {
     try { await (notifyAfter as () => Promise<void>)() } catch (err: any) { console.error('[viva] external refund notification failed:', err?.message) }
   }
+  // Εγγραφή εκδήλωσης: οι πόντοι αφαιρούνται εδώ (παραγγελία/κράτηση/συνεδρία: μέσα στο settleRefundTx).
+  if (lock.value === 'applied' && found.type === 'event_registration') await revokeEventRefund(found.id, parent) // πόντοι επιβράβευσης (lib/loyalty — ιδεμποτικό, δεν πετάει)
   if (lock.value === 'external') console.error(`[viva] EXTERNAL refund ${refundTx} of ${found.type} ${found.id} (parent ${parent}) recorded — admin check needed`)
   if (lock.value === 'applied') console.log(`[viva] external refund ${refundTx} of ${found.type} ${found.id} (parent ${parent}) applied automatically`)
   return lock.value

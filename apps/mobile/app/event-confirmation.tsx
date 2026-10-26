@@ -7,6 +7,7 @@ import { CheckCircle2, Clock, XCircle, CalendarDays } from 'lucide-react-native'
 import { api } from '@/lib/api'
 import { Screen, Card, Badge, Button, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight } from '@/theme'
+import { dateLocale } from '@/lib/dates'
 
 /**
  * Επιβεβαίωση θέσης σε εκδήλωση μετά την πληρωμή στη Viva.
@@ -26,7 +27,7 @@ import { colors, space, radius, type, weight } from '@/theme'
 const fmtYmd = (d: string | undefined, lang: string) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d ?? '')
   if (!m) return d ?? ''
-  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(dateLocale(lang), { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export default function EventConfirmationScreen() {

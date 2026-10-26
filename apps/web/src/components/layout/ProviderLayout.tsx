@@ -50,11 +50,13 @@ export default function ProviderLayout() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [])
 
-  // Ειδοποιήσεις — ίδιο query (και κλειδί) με το MainLayout· στο κινητό είναι
+  // Ειδοποιήσεις — ίδιο query (και κλειδί) με το MainLayout: αριθμός αδιάβαστων
+  // (unread_count — ΟΛΕΣ, όχι μόνο της σελίδας), 9+ πάνω από 9. Στο κινητό είναι
   // το «Κέντρο ειδοποιήσεων» στο «Περισσότερα».
-  const { data: notifications = [] } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => api.get('/notifications?unread=true').then(r => r.data?.data ?? []),
+  const { data: unreadNotifications = 0 } = useQuery<number>({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => api.get('/notifications?unread=true&limit=1').then(r =>
+      typeof r.data?.unread_count === 'number' ? r.data.unread_count : (r.data?.data?.length ?? 0)),
     enabled: !!user,
   })
 
@@ -92,10 +94,14 @@ export default function ProviderLayout() {
         <LanguageSelector />
 
         <button type="button" onClick={() => setNotifOpen(o => !o)} className="btn-ghost p-2.5 relative"
-          aria-label={`${t('nav.notifications')}${notifications.length > 0 ? ` (${t('nav.unread', { count: notifications.length })})` : ''}`}
+          aria-label={`${t('nav.notifications')}${unreadNotifications > 0 ? ` (${t('nav.unread', { count: unreadNotifications })})` : ''}`}
           aria-expanded={notifOpen}>
           <Bell size={18} className="text-gray-500" aria-hidden="true" />
-          {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
+          {unreadNotifications > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" aria-hidden="true">
+              {unreadNotifications > 9 ? '9+' : unreadNotifications}
+            </span>
+          )}
         </button>
 
         <div className="relative" ref={ref}>

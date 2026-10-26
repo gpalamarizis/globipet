@@ -136,7 +136,7 @@ export function PetFormFields({ form, onChange }: {
         <Input label={t('pets.age')} value={form.age} keyboardType="decimal-pad"
           onChangeText={v => set('age', v)} placeholder={t('pets.age_placeholder')} style={{ flex: 1 }} />
         <Input label={t('pets.weight')} value={form.weight} keyboardType="decimal-pad"
-          onChangeText={v => set('weight', v)} style={{ flex: 1 }} />
+          onChangeText={v => set('weight', v)} placeholder={t('pets.weight_placeholder')} style={{ flex: 1 }} />
       </View>
 
       <Chips label={t('pets.gender')} value={form.gender} onChange={v => set('gender', v)}
