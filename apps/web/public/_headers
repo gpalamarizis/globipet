@@ -95,10 +95,13 @@
 #     με ανακατεύθυνση, όχι μέσα στη σελίδα.
 #   Cross-Origin-Opener-Policy: same-origin-allow-popups — απομονώνει το
 #     παράθυρο αλλά αφήνει τα popups (π.χ. «Άνοιγμα σε νέα καρτέλα»).
-#   Content-Security-Policy-Report-Only: ΔΕΝ μπλοκάρει τίποτα ακόμη· ο browser
-#     γράφει μόνο στην κονσόλα ό,τι θα είχε μπλοκαριστεί. Όταν η κονσόλα
-#     μείνει καθαρή για λίγες μέρες, αλλάζει το όνομα σε
-#     Content-Security-Policy. Πηγές ανά οδηγία (από grep στον κώδικα web/src):
+#   Content-Security-Policy: Ε21 — ΕΠΙΒΟΛΗ (πριν Report-Only από το Ε16).
+#     Ελέγχθηκε πριν την αλλαγή: στο globipet.com σε παραγωγή καμία παραβίαση
+#     (securitypolicyviolation) σε 19 σελίδες, και σε 285 φορτώσεις σελίδων
+#     (5 γλώσσες) με την πολιτική επιβεβλημένη στις δοκιμές. Νέα εξωτερική πηγή
+#     (script, API, iframe, βίντεο) ΠΡΕΠΕΙ να προστεθεί εδώ, αλλιώς μπλοκάρεται.
+#     Επιστροφή σε μόνο-καταγραφή: μετονομασία σε Content-Security-Policy-Report-Only.
+#     Πηγές ανά οδηγία (από grep στον κώδικα web/src):
 #
 #   default-src 'self'
 #   script-src
@@ -150,4 +153,4 @@
   Strict-Transport-Security: max-age=31536000
   Permissions-Policy: camera=(self "https://8x8.vc" "https://meet.jit.si"), microphone=(self "https://8x8.vc" "https://meet.jit.si"), display-capture=(self "https://8x8.vc" "https://meet.jit.si"), geolocation=(self), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin-allow-popups
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://api.mapbox.com https://8x8.vc https://meet.jit.si https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://globipetbackend-production.up.railway.app https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://cloudflareinsights.com; media-src 'self' blob: https://globipet.com https://*.globipet.com https://*.r2.dev https://*.r2.cloudflarestorage.com; frame-src https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://8x8.vc https://meet.jit.si; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://api.mapbox.com https://8x8.vc https://meet.jit.si https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://globipetbackend-production.up.railway.app https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://cloudflareinsights.com; media-src 'self' blob: https://globipet.com https://*.globipet.com https://*.r2.dev https://*.r2.cloudflarestorage.com; frame-src https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://8x8.vc https://meet.jit.si; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
