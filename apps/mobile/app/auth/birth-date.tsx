@@ -4,9 +4,10 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
   ScrollView, BackHandler, KeyboardAvoidingView, Platform,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useNavigation } from 'expo-router'
 import { Calendar, CalendarHeart } from 'lucide-react-native'
 import { api } from '@/lib/api'
+import { queryClient } from '../../src/lib/queryClient'
 import { useAuthStore } from '../../src/store/auth'
 import { unregisterPushToken } from '../../src/lib/notifications'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
@@ -28,6 +29,7 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
 export default function BirthDateScreen() {
   const { t } = useTranslation()
   const router = useRouter()
+  const navigation = useNavigation()
   const { user, updateUser, refreshUser, logout } = useAuthStore()
   const [dob, setDob] = useState({ d: '', m: '', y: '' })
   const [saving, setSaving] = useState(false)
@@ -41,8 +43,27 @@ export default function BirthDateScreen() {
   const setD = (k: 'd' | 'm' | 'y', v: string) =>
     setDob(o => ({ ...o, [k]: v.replace(/[^0-9]/g, '') }))
 
+  /**
+   * Ε20: η οθόνη ανοίγει (push, modal) ΠΑΝΩ από τη σελίδα όπου βρισκόταν ο
+   * χρήστης — π.χ. το /membership όπου τον έστειλε η σύνδεση με redirect. Μετά
+   * την αποθήκευση επιστρέφει εκεί (back) αντί για την Αρχική. Πάροχος, ή
+   * χωρίς σελίδα από κάτω, ή αν από κάτω είναι οθόνη σύνδεσης/εγγραφής
+   * (auth/*) → όπως πριν.
+   */
   const goApp = () => {
     const role = useAuthStore.getState().user?.role ?? user?.role
+    let below: string | undefined
+    try {
+      const st: any = navigation.getState()
+      below = st?.routes?.[(st?.index ?? 0) - 1]?.name
+    } catch { below = undefined }
+    if (role !== 'service_provider' && below && !below.startsWith('auth') && router.canGoBack()) {
+      // Η σελίδα από κάτω μπορεί να φόρτωσε πριν την πύλη και να πήρε 403
+      // birth_date_required — ξαναφόρτωση των ερωτημάτων με σφάλμα.
+      void queryClient.refetchQueries({ predicate: q => q.state.status === 'error' })
+      router.back()
+      return
+    }
     router.replace((role === 'service_provider' ? '/(provider)' : '/(tabs)') as any)
   }
 

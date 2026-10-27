@@ -18,9 +18,30 @@ const TRIAL_DAYS = 30
  *     κλήση γράφει audit `ai_call` και η μέτρηση γίνεται εκεί.
  *   · Όριο μήκους σε κάθε κείμενο εισόδου (ερώτηση/πλαίσιο/σημειώσεις 2000,
  *     τα υπόλοιπα 400) — ένα τεράστιο κείμενο ήταν τεράστια χρέωση.
- *   · Το web_search έως 3 αναζητήσεις ανά κλήση (κάθε αναζήτηση χρεώνεται
- *     και φέρνει χιλιάδες tokens αποτελεσμάτων στην είσοδο).
+ *   · Ε20: web_search έως AI_WEB_SEARCH_MAX_USES αναζητήσεις ανά κλήση
+ *     (προεπιλογή 1, πριν 3· 0 = χωρίς αναζήτηση) — κάθε αναζήτηση χρεώνεται
+ *     ($10/1000) και φέρνει χιλιάδες tokens αποτελεσμάτων στην είσοδο.
+ *   · Ε20: μοντέλο από AI_MODEL (προεπιλογή claude-sonnet-5-5 — $2/$10 ανά
+ *     εκατ. tokens, έναντι $5/$25 του claude-opus-4-5, που αποσύρεται όχι
+ *     νωρίτερα από 24/11/2026) και ένταση σκέψης από AI_EFFORT (low | medium |
+ *     high, προεπιλογή medium). Αλλάζουν από το Railway χωρίς νέα έκδοση.
+ *     Τα μοντέλα 5.x δεν δέχονται temperature/top_p/prefill (δεν στέλνονται),
+ *     και η απάντηση μπορεί να ξεκινά με μπλοκ thinking — το κείμενο
+ *     διαβάζεται ΠΑΝΤΑ με βάση τον τύπο του μπλοκ, ποτέ με content[0].
+ *     Η σκέψη μετράει στο max_tokens, γι' αυτό τα όρια είναι μεγαλύτερα
+ *     (χρεώνονται μόνο όσα χρησιμοποιηθούν).
  */
+const AI_MODEL = (process.env.AI_MODEL || '').trim() || 'claude-sonnet-5-5'
+// 'off' → δεν στέλνεται effort (για μοντέλο που δεν το υποστηρίζει, π.χ. παλαιότερο).
+const AI_EFFORT_RAW = (process.env.AI_EFFORT || '').trim().toLowerCase()
+const AI_EFFORT: 'low' | 'medium' | 'high' | null = AI_EFFORT_RAW === 'off' ? null
+  : (['low', 'medium', 'high'] as const).find(e => e === AI_EFFORT_RAW) ?? 'medium'
+const AI_WEB_SEARCH_MAX_USES = (() => {
+  const n = Number((process.env.AI_WEB_SEARCH_MAX_USES ?? '').trim() || '1')
+  return Number.isInteger(n) && n >= 0 && n <= 5 ? n : 1
+})()
+/** Κοινές παράμετροι κάθε κλήσης (μοντέλο + ένταση). */
+const aiModelParams = () => (AI_EFFORT ? { model: AI_MODEL, output_config: { effort: AI_EFFORT } } : { model: AI_MODEL })
 const AI_DAILY_LIMIT: Record<string, number> = { trial: 15, active: 60 }
 const AI_CALL_ACTION = 'ai_call'
 const MSG_AI_DAILY_LIMIT = 'Έφτασες το ημερήσιο όριο χρήσης AI — δοκίμασε ξανά αύριο'
@@ -202,10 +223,20 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
   /** Every paid endpoint below goes through authentication then this check. */
   const aiGuard = [(app as any).authenticate, requireAiAccess]
 
-  // Extract the final text block from a response that may include web_search tool blocks
+  /**
+   * Τελικό κείμενο απάντησης. Ε20: με web_search η απάντηση σπάει σε ΠΟΛΛΑ
+   * μπλοκ text (ένα ανά τμήμα με παραπομπή) — ενώνονται όλα τα μπλοκ text μετά
+   * το τελευταίο αποτέλεσμα αναζήτησης (ή όλα, αν δεν έγινε αναζήτηση). Τα
+   * μπλοκ thinking των μοντέλων 5.x αγνοούνται (επιλογή κατά τύπο).
+   */
   function extractFinalText(content: any[]): string {
-    const textBlocks = content.filter((b: any) => b.type === 'text').map((b: any) => b.text)
-    return textBlocks[textBlocks.length - 1] || ''
+    let lastTool = -1
+    content.forEach((b: any, i: number) => {
+      if (b?.type === 'web_search_tool_result' || b?.type === 'server_tool_use' || b?.type === 'tool_use') lastTool = i
+    })
+    return content.slice(lastTool + 1)
+      .filter((b: any) => b?.type === 'text' && typeof b.text === 'string')
+      .map((b: any) => b.text).join('')
   }
 
   function parseJsonResponse(text: string) {
@@ -219,7 +250,28 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
     return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1))
   }
 
-  const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 3 }
+  const webSearchTool = { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: Math.max(1, AI_WEB_SEARCH_MAX_USES) }
+  /** Ε20: εργαλείο αναζήτησης μόνο αν επιτρέπεται (AI_WEB_SEARCH_MAX_USES > 0). */
+  const searchTools = () => (AI_WEB_SEARCH_MAX_USES > 0 ? { tools: [webSearchTool] } : {})
+
+  /**
+   * Ε20: κλήση στο μοντέλο. Αν το μοντέλο απορρίψει το εργαλείο αναζήτησης
+   * (400 που αναφέρει tool/web_search — π.χ. νέα έκδοση εργαλείου), η ίδια
+   * κλήση ξαναγίνεται μία φορά ΧΩΡΙΣ αναζήτηση αντί να αποτύχει η ανάλυση.
+   */
+  async function createMessage(params: any): Promise<any> {
+    try {
+      return await client.messages.create(params)
+    } catch (err: any) {
+      const msg = String(err?.error?.error?.message ?? err?.message ?? '')
+      if (err?.status === 400 && params?.tools && /tool|web_search/i.test(msg)) {
+        console.error('[ai] model rejected web_search — retrying without it:', msg.slice(0, 300))
+        const { tools: _t, ...rest } = params
+        return await client.messages.create(rest)
+      }
+      throw err
+    }
+  }
 
   /**
    * Εικόνα σε base64 (data: URI του /upload ή image_base64): μόνο οι τύποι
@@ -297,11 +349,11 @@ const aiRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       if (!(await recordAiCall(req, reply))) return reply
-      const response = await client.messages.create({
-        model: 'claude-opus-4-5',
-        max_tokens: 1536,
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
         system: systemPrompt + langInstruction(req.body),
-        tools: [webSearchTool],
+        ...searchTools(),
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
       const text = extractFinalText(response.content as any[])
@@ -361,11 +413,11 @@ ${context ? `Πλαίσιο: ${context}` : ''}
       const imageContent = img.block
 
       if (!(await recordAiCall(req, reply))) return reply
-      const response = await client.messages.create({
-        model: 'claude-opus-4-5',
-        max_tokens: 1536,
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
         system: systemPrompt + langInstruction(req.body),
-        tools: [webSearchTool],
+        ...searchTools(),
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
       const text = extractFinalText(response.content as any[])
@@ -418,11 +470,11 @@ ${context ? `Πλαίσιο: ${context}` : ''}
 
     try {
       if (!(await recordAiCall(req, reply))) return reply
-      const response = await client.messages.create({
-        model: 'claude-opus-4-5',
-        max_tokens: 2048,
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
         system: systemPrompt + langInstruction(req.body),
-        tools: [webSearchTool],
+        ...searchTools(),
         messages: [{ role: 'user', content: [...imageContents, { type: 'text', text: userPrompt }] }]
       })
       const text = extractFinalText(response.content as any[])
@@ -515,11 +567,11 @@ ${contextParts}
 
     try {
       if (!(await recordAiCall(req, reply))) return reply
-      const response = await client.messages.create({
-        model: 'claude-opus-4-5',
-        max_tokens: 2048,
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
         system: systemPrompt + langInstruction(req.body),
-        tools: [webSearchTool],
+        ...searchTools(),
         messages: [{ role: 'user', content: [imageContent, { type: 'text', text: userPrompt }] }]
       })
       const text = extractFinalText(response.content as any[])
@@ -613,13 +665,13 @@ ${contextParts}
 
     try {
       if (!(await recordAiCall(req, reply))) return reply
-      const response = await client.messages.create({
-        model: 'claude-opus-4-5',
-        max_tokens: 2048,
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       })
-      const text = (response.content[0] as any)?.text || ''
+      const text = extractFinalText(response.content as any[])
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI legal error:', err)

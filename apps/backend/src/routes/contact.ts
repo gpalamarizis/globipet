@@ -130,7 +130,14 @@ const contactRoutes: FastifyPluginAsync = async (app) => {
   app.get('/messages', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any) => {
     const { status, limit } = req.query ?? {}
     const take = Math.min(Math.max(parseInt(limit) || 100, 1), 500)
+    // Ε20 (προσθετικά): προαιρετική αναζήτηση `q` σε όνομα, email, θέμα,
+    // κείμενο και email λογαριασμού. Χωρίς `q` → ακριβώς όπως πριν.
+    const q = typeof req.query?.q === 'string' ? req.query.q.trim().slice(0, 100) : ''
+    const search: any = q
+      ? { OR: ['name', 'email', 'subject', 'message', 'user_email'].map(f => ({ [f]: { contains: q, mode: 'insensitive' } })) }
+      : null
     const where: any = status ? { status } : {}
+    if (search) where.AND = [search]
 
     let priority: Awaited<ReturnType<typeof prisma.contactMessage.findMany>> = []
     if (!status || status === 'new') {
@@ -141,7 +148,7 @@ const contactRoutes: FastifyPluginAsync = async (app) => {
       const members = await activeMemberEmails(senders.map(s => s.user_email))
       if (members.size) {
         priority = await prisma.contactMessage.findMany({
-          where: { status: 'new', user_email: { in: [...members], mode: 'insensitive' } },
+          where: { status: 'new', user_email: { in: [...members], mode: 'insensitive' }, ...(search ? { AND: [search] } : {}) },
           orderBy: { created_at: 'desc' },
           take,
         })
@@ -175,6 +182,9 @@ const contactRoutes: FastifyPluginAsync = async (app) => {
     if (Object.keys(data).length === 0) {
       return reply.code(400).send({ message: 'Καμία έγκυρη αλλαγή' })
     }
+    // Ε20: άγνωστο id → 404 με μήνυμα (πριν: σφάλμα Prisma → 500).
+    const exists = await prisma.contactMessage.findUnique({ where: { id: String(req.params.id) }, select: { id: true } })
+    if (!exists) return reply.code(404).send({ message: 'Το μήνυμα δεν βρέθηκε' })
     const updated = await prisma.contactMessage.update({ where: { id: req.params.id }, data })
     return { data: updated }
   })

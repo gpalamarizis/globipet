@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home, RotateCcw, UserX, Award, Crown } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home, RotateCcw, UserX, Award, Crown, Inbox, Radar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -16,6 +16,8 @@ const tabs = [
   // Ε18 — GlobiPet Plus (συνδρομή μέλους): τιμή, όνομα, οφέλη.
   { path: '/admin/membership',    labelKey: 'adminMembership.menu',      icon: Crown },
   { path: '/admin/messages',      labelKey: 'adminLayout.messages',      icon: Mail },
+  // Ε20 — μηνύματα της φόρμας επικοινωνίας (το «Μηνύματα» είναι αποστολή email σε χρήστες).
+  { path: '/admin/contact-messages', labelKey: 'adminContact.menu',      icon: Inbox },
   { path: '/admin/audit-logs',    labelKey: 'adminLayout.auditLogs',     icon: ScrollText },
   { path: '/admin/governance',    labelKey: 'adminLayout.governance',    icon: ShieldCheck },
   { path: '/admin/translations',  labelKey: 'adminLayout.translations',  icon: Languages },
@@ -24,6 +26,8 @@ const tabs = [
   { path: '/admin/verifications', labelKey: 'adminLayout.verifications', icon: BadgeCheck },
   { path: '/admin/refunds',       labelKey: 'adminLayout.refunds',       icon: RotateCcw },
   { path: '/admin/deletion-requests', labelKey: 'adminLayout.deletionRequests', icon: UserX },
+  // Ε20 — σάρωση παρόχων (Google Places) για πρόσκληση στο GlobiPet.
+  { path: '/admin/provider-scan', labelKey: 'adminScan.menu', icon: Radar },
 ]
 
 export default function AdminLayout() {

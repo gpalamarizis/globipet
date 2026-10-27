@@ -92,6 +92,8 @@ const AdminTranslationsPage = lazy(() => import('@/pages/admin/AdminTranslations
 const AdminVerificationsPage = lazy(() => import('@/pages/admin/AdminVerificationsPage'))
 const AdminRefundsPage    = lazy(() => import('@/pages/admin/AdminRefundsPage'))
 const AdminDeletionRequestsPage = lazy(() => import('@/pages/admin/AdminDeletionRequestsPage'))
+const AdminContactMessagesPage = lazy(() => import('@/pages/admin/AdminContactMessagesPage'))
+const AdminProviderScanPage = lazy(() => import('@/pages/admin/AdminProviderScanPage'))   // Ε20
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
@@ -331,6 +333,8 @@ export default function App() {
                 <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
                 <Route path="/admin/refunds"       element={<AdminRefundsPage />} />
                 <Route path="/admin/deletion-requests" element={<AdminDeletionRequestsPage />} />
+                <Route path="/admin/contact-messages" element={<AdminContactMessagesPage />} />
+                <Route path="/admin/provider-scan" element={<AdminProviderScanPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

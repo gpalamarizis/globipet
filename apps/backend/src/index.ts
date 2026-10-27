@@ -69,6 +69,7 @@ import adminAiPlansRoutes from './routes/ai-plans-admin.js'
 import userRightsRoutes from './routes/user-rights.js'
 import userConsentsRoutes from './routes/user-consents.js'
 import governanceRoutes from './routes/governance.js'
+import providerScanRoutes from './routes/provider-scan.js'   // Ε20 — σάρωση παρόχων (Google Places)
 
 /**
  * ΤΟ trustProxy ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ ΕΔΩ
@@ -550,6 +551,7 @@ const routes = [
   { prefix: '/api/user-rights', handler: userRightsRoutes },
   { prefix: '/api/user-consents', handler: userConsentsRoutes },
   { prefix: '/api/admin/governance', handler: governanceRoutes },
+  { prefix: '/api/admin/provider-scan', handler: providerScanRoutes },   // Ε20
   { prefix: '/api', handler: insuranceRoutes },
 ]
 

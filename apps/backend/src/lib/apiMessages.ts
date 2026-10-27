@@ -449,6 +449,19 @@ const MESSAGES: Record<string, [string, string, string, string]> = {
   "Συμπλήρωσε email και πλάνο": ["Enter an email and a plan","Indica un correo electrónico y un plan","Indiquez un e-mail et une formule","请填写邮箱和方案"],
   "Δεν βρέθηκε λογαριασμός με αυτό το email": ["No account found with this email","No se encontró ninguna cuenta con este correo electrónico","Aucun compte trouvé avec cet e-mail","未找到使用该邮箱的账户"],
   "Ο λογαριασμός έχει ήδη ενεργή συνδρομή — άλλαξέ την από τη λίστα": ["This account already has an active subscription — change it from the list","Esta cuenta ya tiene una suscripción activa: cámbiala desde la lista","Ce compte a déjà un abonnement actif — modifiez-le depuis la liste","该账户已有有效订阅——请在列表中修改"],
+  // Ε20 — επικοινωνία admin, σάρωση παρόχων
+  "Το μήνυμα δεν βρέθηκε": ["Message not found","Mensaje no encontrado","Message introuvable","未找到消息"],
+  "Η σάρωση παρόχων δεν έχει ρυθμιστεί (λείπει το κλειδί Google Places).": ["Provider scanning is not configured (the Google Places key is missing).","La búsqueda de proveedores no está configurada (falta la clave de Google Places).","La recherche de prestataires n'est pas configurée (la clé Google Places est manquante).","服务商搜索尚未配置（缺少 Google Places 密钥）。"],
+  "Μη έγκυρη κατηγορία": ["Invalid category","Categoría no válida","Catégorie non valide","类别无效"],
+  "Η περιοχή πρέπει να έχει 2 έως 80 χαρακτήρες": ["The area must be 2 to 80 characters long","La zona debe tener entre 2 y 80 caracteres","La zone doit comporter entre 2 et 80 caractères","地区须为 2 至 80 个字符"],
+  "Μη έγκυρη σελίδα αποτελεσμάτων": ["Invalid results page","Página de resultados no válida","Page de résultats non valide","结果页无效"],
+  "Συμπληρώθηκε το μηνιαίο όριο αναζητήσεων Google. Δοκίμασε ξανά τον επόμενο μήνα ή αύξησε το όριο.": ["The monthly Google search limit has been reached. Try again next month or raise the limit.","Se ha alcanzado el límite mensual de búsquedas en Google. Inténtalo de nuevo el próximo mes o aumenta el límite.","La limite mensuelle de recherches Google est atteinte. Réessayez le mois prochain ou augmentez la limite.","本月 Google 搜索次数已达上限。请下月再试或提高上限。"],
+  "Η επόμενη σελίδα δεν είναι πια διαθέσιμη. Κάνε ξανά αναζήτηση.": ["The next page is no longer available. Search again.","La página siguiente ya no está disponible. Vuelve a buscar.","La page suivante n'est plus disponible. Relancez la recherche.","下一页已不可用，请重新搜索。"],
+  "Η αναζήτηση στο Google Maps απέτυχε. Δοκίμασε ξανά σε λίγο.": ["The Google Maps search failed. Try again shortly.","La búsqueda en Google Maps ha fallado. Inténtalo de nuevo en un momento.","La recherche Google Maps a échoué. Réessayez dans un instant.","Google Maps 搜索失败，请稍后重试。"],
+  "Το Google Maps δεν απάντησε εγκαίρως. Δοκίμασε ξανά.": ["Google Maps did not respond in time. Try again.","Google Maps no respondió a tiempo. Inténtalo de nuevo.","Google Maps n'a pas répondu à temps. Réessayez.","Google Maps 响应超时，请重试。"],
+  "Μη έγκυρο αναγνωριστικό τοποθεσίας": ["Invalid place identifier","Identificador de lugar no válido","Identifiant de lieu non valide","地点标识符无效"],
+  "Μη έγκυρη κατάσταση επαφής": ["Invalid contact status","Estado de contacto no válido","Statut de contact non valide","联系状态无效"],
+  "Η σημείωση μπορεί να έχει έως 500 χαρακτήρες": ["The note can be up to 500 characters long","La nota puede tener hasta 500 caracteres","La remarque peut comporter jusqu'à 500 caractères","备注最多 500 个字符"],
 }
 
 const IDX: Record<Exclude<Lang, 'el'>, number> = { en: 0, es: 1, fr: 2, zh: 3 }
