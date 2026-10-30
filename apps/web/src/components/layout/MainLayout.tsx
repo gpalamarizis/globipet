@@ -70,7 +70,7 @@ const exploreGroups: { labelKey: string; items: NavItem[] }[] = [
  * μηνύματα, νομικά, συγκαταθέσεις (cookies) και βοήθεια. Ίδια λίστα με το
  * PROVIDER_SHARED του κινητού (mobile/app/_layout.tsx).
  */
-const PROVIDER_SHARED_PATHS = ['/profile', '/inbox', '/privacy', '/terms', '/cookies', '/help', '/faq', '/contact', '/about']
+const PROVIDER_SHARED_PATHS = ['/profile', '/inbox', '/privacy', '/terms', '/delete-account', '/account-deletion', '/cookies', '/help', '/faq', '/contact', '/about']
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────
 // Ίδια σειρά με την εφαρμογή κινητού: Αρχική · Κατοικίδια · Εξερεύνησε ·
@@ -446,6 +446,7 @@ export default function MainLayout() {
                 <li><Link to="/terms" className="hover:text-white transition-colors">{t('footer.terms')}</Link></li>
                 <li><Link to="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link></li>
                 <li><Link to="/cookies" className="hover:text-white transition-colors">{t('footer.cookies')}</Link></li>
+                <li><Link to="/delete-account" className="hover:text-white transition-colors">{t('deleteAccount.title')}</Link></li>
               </ul>
             </div>
           </div>

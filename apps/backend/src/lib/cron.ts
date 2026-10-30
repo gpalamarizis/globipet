@@ -100,6 +100,9 @@ const DELETE_MAP: DeleteEntry[] = [
   // Καλάθι και επιθυμίες — καθαρά προσωπικά, χωρίς λογιστική αξία
   { accessor: 'cartItem',             field: 'user_email' },
   { accessor: 'wishlist',             field: 'user_email' },
+  // Αποκλεισμοί (App Store 1.2): όσοι έκανε ο χρήστης και όσοι τον αφορούν.
+  { accessor: 'userBlock',            field: 'blocker_email' },
+  { accessor: 'userBlock',            field: 'blocked_email' },
   { accessor: 'loyaltyPoints',        field: 'user_email' },
   { accessor: 'notification',         field: 'user_email' },
   // Τα ζώα τελευταία, γιατί τα ιατρικά δείχνουν σε αυτά

@@ -115,7 +115,8 @@
     "dobMonth": "MM",
     "dobYear": "AAAA",
     "role_both": "Les deux",
-    "role_both_desc": "Propriétaire et prestataire"
+    "role_both_desc": "Propriétaire et prestataire",
+    "err_apple": "Échec de la connexion avec Apple"
   },
   "home": {
     "greeting": "Bonjour, {{name}} ! 👋",
@@ -1549,7 +1550,9 @@
     "noPlans": "Aucune formule disponible",
     "vivaNote": "Le paiement est géré par Viva. Vous pouvez résilier à tout moment.",
     "tierDiscountBanner": "En tant que membre {{tier}}, vous bénéficiez de {{percent}} % de réduction sur les abonnements IA.",
-    "tierDiscountMore": "Comment ça marche"
+    "tierDiscountMore": "Comment ça marche",
+    "noActivePlan": "Vous n'avez pas d'abonnement IA actif.",
+    "trialActive": "Votre essai gratuit de l'IA est actif."
   },
   "stool": {
     "title": "Analyse d'échantillon",
@@ -2976,7 +2979,8 @@
     "cardPaymentFailed": "Paiement échoué — mettez à jour votre carte",
     "banner": "{{name}} : toute l'IA, ×{{multiplier}} points à chaque paiement et une assistance prioritaire.",
     "bannerNoMult": "{{name}} : toute l'IA et une assistance prioritaire.",
-    "bannerMore": "Voir l'adhésion"
+    "bannerMore": "Voir l'adhésion",
+    "notMember": "Vous n'êtes pas membre GlobiPet Plus."
   },
   "payments": {
     "title": "Paiements et justificatifs",
@@ -3022,5 +3026,30 @@
     "notFound": "Aucune adresse trouvée pour votre position. Veuillez saisir le point de rendez-vous manuellement.",
     "busy": "Le service de cartes est occupé — veuillez réessayer dans un instant.",
     "error": "Impossible d'obtenir votre position. Veuillez réessayer."
+  },
+  "moderation": {
+    "more": "Options",
+    "close": "Fermer",
+    "report": "Signaler le contenu",
+    "reportWhy": "Pourquoi signalez-vous ce contenu ?",
+    "blockUser": "Bloquer l'utilisateur",
+    "block": "Bloquer",
+    "blockTitle": "Bloquer l'utilisateur",
+    "blockConfirm": "Vous ne verrez plus les publications, commentaires ni messages de cet utilisateur. Vous pouvez annuler depuis Confidentialité et données.",
+    "blockedTitle": "Utilisateur bloqué",
+    "blockedHint": "Son contenu ne sera plus affiché.",
+    "reportedTitle": "Merci",
+    "reportedHint": "Votre signalement a été envoyé. Notre équipe l'examinera sous 24 heures.",
+    "loginTitle": "Connexion requise",
+    "loginHint": "Connectez-vous pour signaler un contenu ou bloquer un utilisateur.",
+    "reason_spam": "Spam ou publicité",
+    "reason_harassment": "Harcèlement ou intimidation",
+    "reason_hate": "Haine ou violence",
+    "reason_inappropriate": "Contenu inapproprié",
+    "reason_other": "Autre",
+    "blockedUsers": "Utilisateurs bloqués",
+    "noBlocked": "Vous n'avez bloqué personne.",
+    "unknownUser": "Utilisateur",
+    "unblock": "Débloquer"
   }
 }

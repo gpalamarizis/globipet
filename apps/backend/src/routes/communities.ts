@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { langOf, notifyTitle, notifyMsg } from '../lib/notifyText.js'
 import prisma from '../lib/prisma.js'
+import { blockedEmailsFor, withoutBlocked } from '../lib/blocks.js'
 import { isAllowedImageUrl } from '../lib/storage.js'
 import { sendPushToUser } from '../lib/push.js'
 import { geocodeAddress } from '../lib/geocode.js'
@@ -168,7 +169,7 @@ const routes: FastifyPluginAsync = async (app) => {
       ...publicFields,
       is_creator: creator_email === email,
       members: roster,
-      messages: messages.map(m => publicMessage(m, email)),
+      messages: withoutBlocked(messages, await blockedEmailsFor(email)).map(m => publicMessage(m, email)),
       isMember: true,
     }
   })
@@ -354,7 +355,7 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       take,
     })
-    return { messages: messages.reverse().map(m => publicMessage(m, email)) }
+    return { messages: withoutBlocked(messages.reverse(), await blockedEmailsFor(email)).map(m => publicMessage(m, email)) }
   })
 }
 

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { isAllowedImageUrl } from '../lib/storage.js'
 import { identityOf } from '../lib/userName.js'
+import { blockedEmailsFor } from '../lib/blocks.js'
 
 /**
  * Δημόσια προβολή. Το feed, μία δημοσίευση και τα σχόλια είναι ανοιχτά σε
@@ -55,7 +56,10 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     // Trending looks at engagement over the past week, so a post from last
     // year with a thousand likes does not sit at the top forever.
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const where = filter === 'trending' ? { created_at: { gte: weekAgo } } : {}
+    // App Store 1.2: χωρίς posts από χρήστες που ο θεατής έχει αποκλείσει.
+    const blockedAuthors = await blockedEmailsFor(await viewerEmail(req))
+    const where: any = filter === 'trending' ? { created_at: { gte: weekAgo } } : {}
+    if (blockedAuthors.length) where.author_email = { notIn: blockedAuthors }
     const orderBy: any = filter === 'trending'
       ? [{ likes_count: 'desc' }, { comments_count: 'desc' }, { created_at: 'desc' }]
       : { created_at: 'desc' }
@@ -193,8 +197,9 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
   // speech-bubble on every post showed zero and clicking it did nothing.
 
   app.get('/:id/comments', async (req: any) => {
+    const blockedAuthors = await blockedEmailsFor(await viewerEmail(req))
     const data = await prisma.postComment.findMany({
-      where: { post_id: req.params.id },
+      where: { post_id: req.params.id, ...(blockedAuthors.length ? { author_email: { notIn: blockedAuthors } } : {}) },
       orderBy: { created_at: 'asc' },
       take: 200,
     })

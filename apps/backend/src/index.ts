@@ -69,6 +69,7 @@ import adminAiPlansRoutes from './routes/ai-plans-admin.js'
 import userRightsRoutes from './routes/user-rights.js'
 import userConsentsRoutes from './routes/user-consents.js'
 import governanceRoutes from './routes/governance.js'
+import moderationRoutes from './routes/moderation.js'      // App Store 1.2 — αναφορά/αποκλεισμός
 import providerScanRoutes from './routes/provider-scan.js'   // Ε20 — σάρωση παρόχων (Google Places)
 
 /**
@@ -517,6 +518,7 @@ const routes = [
   { prefix: '/api/loyalty', handler: loyaltyRoutes },
   { prefix: '/api/notifications', handler: notificationsRoutes },
   { prefix: '/api/forum', handler: forumRoutes },
+  { prefix: '/api/moderation', handler: moderationRoutes },
   { prefix: '/api/community', handler: communityRoutes },
   { prefix: '/api/tracker', handler: trackerRoutes },
   { prefix: '/api/reviews', handler: reviewsRoutes },

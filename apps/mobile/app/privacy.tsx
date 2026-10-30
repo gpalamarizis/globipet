@@ -8,6 +8,7 @@ import { Download, Trash2, ShieldCheck, Undo2, AlertTriangle } from 'lucide-reac
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input } from '@/components/ui'
+import { BlockedUsersCard } from '@/components/BlockedUsersCard'
 import { fmtDateShort } from '@/lib/dates'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -130,6 +131,9 @@ export default function PrivacyScreen() {
             loading={exportData.isPending}
             onPress={() => exportData.mutate()} full style={{ marginTop: space.md }} />
         </Card>
+
+        {/* App Store 1.2 — αποκλεισμένοι χρήστες */}
+        <BlockedUsersCard />
 
         {/* Άρθρο 17 — διαγραφή */}
         {!pending && (

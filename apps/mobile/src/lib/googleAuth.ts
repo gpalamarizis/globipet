@@ -1,8 +1,20 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
 import Constants from 'expo-constants'
+import { Platform } from 'react-native'
 import i18n from 'i18next'
 
 let isConfigured = false
+
+/**
+ * Διαθέσιμη η σύνδεση με Google σε αυτή την πλατφόρμα; Στο iOS χρειάζεται
+ * iOS OAuth client ID (`extra.googleIosClientId` στο app.json — μαζί του το
+ * app.config.js βάζει και το URL scheme). Χωρίς αυτό το κουμπί κρύβεται στο
+ * iOS αντί να κρασάρει η εφαρμογή.
+ */
+export function isGoogleSignInAvailable(): boolean {
+  if (Platform.OS !== 'ios') return true
+  return !!Constants.expoConfig?.extra?.googleIosClientId
+}
 
 /**
  * Initialize Google Sign-In. Call this once when the app starts.

@@ -9,6 +9,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { ContentActions } from '@/components/ContentActions'
 
 /**
  * Λεπτομέρεια κοινότητας με μηνύματα.
@@ -134,7 +135,13 @@ export default function CommunityDetailScreen() {
           const mine = m.is_mine === true
           return (
             <View key={m.id} style={[s.msg, mine && s.msgMine]}>
-              {!mine && <Text style={s.msgAuthor}>{m.author_name}</Text>}
+              {!mine && (
+                <View style={s.msgHead}>
+                  <Text style={[s.msgAuthor, { flexShrink: 1, marginBottom: 0 }]}>{m.author_name}</Text>
+                  {/* App Store 1.2: αναφορά / αποκλεισμός. */}
+                  <ContentActions type="community_message" id={String(m.id)} isMine={mine} size={icon.sm} />
+                </View>
+              )}
               {!!m.content && <Text style={[s.msgTxt, mine && s.msgTxtMine]}>{m.content}</Text>}
               {/* Μηνύματα με φωτογραφία (από web ή κινητό) — πριν δεν φαίνονταν καθόλου. */}
               {!!m.image_url && <Image source={{ uri: m.image_url }} style={s.msgImg} resizeMode="cover" />}
@@ -163,6 +170,7 @@ export default function CommunityDetailScreen() {
 }
 
 const s = StyleSheet.create({
+  msgHead: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginBottom: 2 },
   body: { padding: space.lg, gap: space.md, paddingBottom: space.xl },
   name: { ...type.section, color: colors.text },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },

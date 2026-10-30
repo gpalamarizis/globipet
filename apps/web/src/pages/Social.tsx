@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import CampaignBanner from '@/components/CampaignBanner'
+import ContentActions from '@/components/ContentActions'
 
 export default function Social() {
   const { t } = useTranslation()
@@ -221,6 +222,9 @@ export default function Social() {
                 {/* Το «⋯» δεν έκανε τίποτα. Η μόνη ενέργεια που υποστηρίζει το
                     backend εδώ είναι η διαγραφή, για τον συντάκτη ή τον admin —
                     στους υπόλοιπους δεν εμφανίζεται. */}
+                <div className="flex items-center gap-1">
+                {/* App Store 1.2 / ίδιο με την εφαρμογή: αναφορά και αποκλεισμός. */}
+                <ContentActions type="post" id={String(post.id)} isMine={post.is_mine === true} />
                 {isAuthenticated && (post.is_mine === true || user?.role === 'admin') && (
                   <div className="relative">
                     <button onClick={() => setMenuFor(menuFor === post.id ? null : post.id)} aria-label={t('common.actions')} className="btn-ghost p-1.5"><MoreHorizontal size={16} className="text-gray-400" /></button>
@@ -237,6 +241,7 @@ export default function Social() {
                     )}
                   </div>
                 )}
+                </div>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">{post.content}</p>
               {post.image_url && <img src={post.image_url} alt="" className="w-full rounded-xl object-cover max-h-80 mb-3" />}
@@ -278,6 +283,7 @@ export default function Social() {
                           <Trash2 size={12} />
                         </button>
                       )}
+                      <ContentActions type="comment" id={String(c.id)} isMine={c.is_mine === true} size={14} className="self-start" />
                     </div>
                   ))}
 

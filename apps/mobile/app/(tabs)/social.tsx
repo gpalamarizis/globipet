@@ -10,6 +10,7 @@ import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 import CampaignBanner from '@/components/CampaignBanner'
+import { ContentActions } from '@/components/ContentActions'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -228,6 +229,8 @@ export default function SocialScreen() {
                 <Text style={s.author} numberOfLines={1}>{item.author_name}</Text>
                 {!!item.pet_name && <Text style={s.petName}>{t('social.with_pet', { name: item.pet_name })}</Text>}
               </View>
+              {/* App Store 1.2: αναφορά / αποκλεισμός (όχι στα δικά μου). */}
+              <ContentActions type="post" id={item.id} isMine={item.is_mine === true} />
             </View>
 
             <Text style={s.content}>{item.content}</Text>
@@ -360,6 +363,7 @@ export default function SocialScreen() {
                       <Trash2 size={14} color={colors.danger} />
                     </TouchableOpacity>
                   )}
+                  <ContentActions type="comment" id={c.id} isMine={c.is_mine === true} size={icon.sm} />
                 </View>
               ))}
             </ScrollView>

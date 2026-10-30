@@ -1649,3 +1649,19 @@ model WelfareOrganisation {
   @@index([kind])
   @@map("welfare_organisations")
 }
+
+// Αποκλεισμός χρήστη (App Store 1.2 — περιεχόμενο χρηστών). Ο blocker δεν
+// βλέπει πια posts, σχόλια, θέματα/απαντήσεις forum και μηνύματα κοινοτήτων
+// του blocked. Με email (όπως author_email παντού)· το blocked_email δεν
+// επιστρέφεται ποτέ στον client — μόνο το blocked_name για τη λίστα.
+model UserBlock {
+  id            String   @id @default(uuid())
+  blocker_email String
+  blocked_email String
+  blocked_name  String?
+  created_at    DateTime @default(now())
+
+  @@unique([blocker_email, blocked_email], map: "user_blocks_pair_key")
+  @@index([blocker_email], map: "user_blocks_blocker_idx")
+  @@map("user_blocks")
+}

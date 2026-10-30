@@ -77,6 +77,7 @@ const PricingPage         = lazy(() => import('@/pages/PricingPage'))
 const LoyaltyPage         = lazy(() => import('@/pages/LoyaltyPage'))
 const PrivacyPolicyPage   = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage  = lazy(() => import('@/pages/TermsOfServicePage'))
+const DeleteAccountPage   = lazy(() => import('@/pages/DeleteAccountPage'))   // Google Play: δημόσιος σύνδεσμος διαγραφής
 const CookiePreferencesPage = lazy(() => import('@/pages/CookiePreferencesPage'))
 const AdminCommissionsPage = lazy(() => import('@/pages/admin/AdminCommissionsPage'))
 const AdminLoyaltyPage     = lazy(() => import('@/pages/admin/AdminLoyaltyPage'))
@@ -264,6 +265,8 @@ export default function App() {
                 <Route path="/membership"      element={<MembershipPage />} />
                 <Route path="/privacy"         element={<PrivacyPolicyPage />} />
                 <Route path="/terms"           element={<TermsOfServicePage />} />
+                <Route path="/delete-account"  element={<DeleteAccountPage />} />
+                <Route path="/account-deletion" element={<DeleteAccountPage />} />
                 <Route path="/cookies"         element={<CookiePreferencesPage />} />
                 <Route path="/legal"           element={<PetLegal />} />
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />

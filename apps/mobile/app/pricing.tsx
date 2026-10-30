@@ -9,6 +9,7 @@ import { useAuthStore } from '../src/store/auth'
 import { Screen, Card, Badge, Button, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { useMembership } from './membership'
+import { DIGITAL_PURCHASES_IN_APP } from '../src/lib/storePolicy'
 
 /**
  * Πλάνα συνδρομής AI και δωρεάν δοκιμή.
@@ -160,9 +161,9 @@ export default function PricingScreen() {
   return (
     <Screen title={t('pricing.title')} back scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
-        <Text style={s.intro}>{t('pricing.subtitle')}</Text>
+        {DIGITAL_PURCHASES_IN_APP && <Text style={s.intro}>{t('pricing.subtitle')}</Text>}
 
-        {plusOn && (
+        {DIGITAL_PURCHASES_IN_APP && plusOn && (
           <Card onPress={() => router.push('/membership' as any)} style={s.plus}>
             <View style={s.tierRow}>
               <Crown size={icon.md} color={colors.brand} />
@@ -180,7 +181,7 @@ export default function PricingScreen() {
         )}
 
         {/* Έκπτωση του επιπέδου μου (όπως στο web). */}
-        {tierPct > 0 && (
+        {DIGITAL_PURCHASES_IN_APP && tierPct > 0 && (
           <Card onPress={() => router.push('/loyalty' as any)}>
             <View style={s.tierRow}>
               <Award size={icon.md} color={colors.brand} />
@@ -213,6 +214,30 @@ export default function PricingScreen() {
           </Card>
         )}
 
+        {/* Χωρίς αγορά στο κινητό (src/lib/storePolicy.ts): μόνο κατάσταση. */}
+        {!DIGITAL_PURCHASES_IN_APP && isAuthenticated && !canTrial
+          && !['trial', 'active', 'payment_failed', 'cancelled'].includes(status?.ai_subscription_status) && (
+          <Card>
+            <View style={s.tierRow}>
+              <Sparkles size={icon.md} color={colors.textLight} />
+              <Text style={s.tierTxt}>{t('pricing.noActivePlan')}</Text>
+            </View>
+          </Card>
+        )}
+        {!DIGITAL_PURCHASES_IN_APP && status?.ai_subscription_status === 'trial' && (
+          <Card>
+            <View style={s.tierRow}>
+              <Sparkles size={icon.md} color={colors.brand} />
+              <Text style={s.tierTxt}>{t('pricing.trialActive')}</Text>
+            </View>
+          </Card>
+        )}
+        {!isAuthenticated && !DIGITAL_PURCHASES_IN_APP && (
+          <Button label={t('auth.login')} variant="secondary"
+            onPress={() => router.push('/auth/login' as any)} full />
+        )}
+
+        {DIGITAL_PURCHASES_IN_APP && <>
         {/* Μηνιαία / ετήσια */}
         <View style={s.toggle}>
           {([[false, 'pricing.monthly'], [true, 'pricing.annual']] as const).map(([v, k]) => (
@@ -277,6 +302,7 @@ export default function PricingScreen() {
         ))}
 
         <Text style={s.note}>{t('pricing.vivaNote')}</Text>
+        </>}
       </ScrollView>
     </Screen>
   )

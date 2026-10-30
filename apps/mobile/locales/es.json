@@ -115,7 +115,8 @@
     "dobMonth": "MM",
     "dobYear": "AAAA",
     "role_both": "Ambos",
-    "role_both_desc": "Propietario y proveedor"
+    "role_both_desc": "Propietario y proveedor",
+    "err_apple": "Error al iniciar sesión con Apple"
   },
   "home": {
     "greeting": "¡Hola, {{name}}! 👋",
@@ -1549,7 +1550,9 @@
     "noPlans": "No hay planes disponibles",
     "vivaNote": "El pago se realiza a través de Viva. Puedes cancelar la suscripción cuando quieras.",
     "tierDiscountBanner": "Como miembro del nivel {{tier}} tienes un {{percent}} % de descuento en las suscripciones de IA.",
-    "tierDiscountMore": "Cómo funciona"
+    "tierDiscountMore": "Cómo funciona",
+    "noActivePlan": "No tienes una suscripción de IA activa.",
+    "trialActive": "Tu prueba gratuita de IA está activa."
   },
   "stool": {
     "title": "Análisis de muestra",
@@ -2976,7 +2979,8 @@
     "cardPaymentFailed": "El pago ha fallado: actualiza tu tarjeta",
     "banner": "{{name}}: toda la IA, ×{{multiplier}} puntos en cada pago y soporte prioritario.",
     "bannerNoMult": "{{name}}: toda la IA y soporte prioritario.",
-    "bannerMore": "Ver la membresía"
+    "bannerMore": "Ver la membresía",
+    "notMember": "No eres miembro de GlobiPet Plus."
   },
   "payments": {
     "title": "Pagos y justificantes",
@@ -3022,5 +3026,30 @@
     "notFound": "No se ha encontrado ninguna dirección para tu ubicación. Escribe el punto de encuentro a mano.",
     "busy": "El servicio de mapas está ocupado. Inténtalo de nuevo en un rato.",
     "error": "No se ha podido obtener tu ubicación. Inténtalo de nuevo."
+  },
+  "moderation": {
+    "more": "Opciones",
+    "close": "Cerrar",
+    "report": "Denunciar contenido",
+    "reportWhy": "¿Por qué lo denuncias?",
+    "blockUser": "Bloquear usuario",
+    "block": "Bloquear",
+    "blockTitle": "Bloquear usuario",
+    "blockConfirm": "Ya no verás publicaciones, comentarios ni mensajes de este usuario. Puedes deshacerlo en Privacidad y datos.",
+    "blockedTitle": "Usuario bloqueado",
+    "blockedHint": "Su contenido ya no se mostrará.",
+    "reportedTitle": "Gracias",
+    "reportedHint": "Tu denuncia se ha enviado. Nuestro equipo la revisará en un plazo de 24 horas.",
+    "loginTitle": "Inicio de sesión necesario",
+    "loginHint": "Inicia sesión para denunciar contenido o bloquear a un usuario.",
+    "reason_spam": "Spam o publicidad",
+    "reason_harassment": "Acoso o intimidación",
+    "reason_hate": "Odio o violencia",
+    "reason_inappropriate": "Contenido inapropiado",
+    "reason_other": "Otro",
+    "blockedUsers": "Usuarios bloqueados",
+    "noBlocked": "No has bloqueado a nadie.",
+    "unknownUser": "Usuario",
+    "unblock": "Desbloquear"
   }
 }

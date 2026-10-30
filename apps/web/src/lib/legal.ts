@@ -21,8 +21,8 @@
  *   Απαιτείται έλεγχος από νομικό σύμβουλο πριν τεθεί σε ισχύ.
  */
 
-export const LEGAL_VERSION = '1.1'
-export const LEGAL_UPDATED = '2026-10-21'
+export const LEGAL_VERSION = '1.2'
+export const LEGAL_UPDATED = '2026-10-30'
 
 export type LegalSection = { title: string; body: string }
 export type LegalDoc = { title: string; intro: string; sections: LegalSection[] }
@@ -125,6 +125,8 @@ const privacyEl: LegalDoc = {
         'Cloud Messaging). ΗΠΑ.\n\n' +
         'Meta (Facebook) — σύνδεση με λογαριασμό Facebook, αν την επιλέξεις. Λαμβάνουμε όνομα, ' +
         'email και φωτογραφία προφίλ. ΗΠΑ.\n\n' +
+        'Apple — σύνδεση με Apple στην εφαρμογή iOS, αν την επιλέξεις. Λαμβάνουμε email (ή ' +
+        'κρυφή διεύθυνση προώθησης της Apple, αν την επιλέξεις) και, την πρώτη φορά, όνομα. ΗΠΑ.\n\n' +
         'Microsoft — συγχρονισμός κρατήσεων με το Outlook Calendar του παρόχου, αν τον ' +
         'ενεργοποιήσει· ίδια στοιχεία με το Google Calendar. ΗΠΑ.\n\n' +
         'Expo — αποστολή ειδοποιήσεων push στην εφαρμογή κινητού. Λαμβάνει το αναγνωριστικό ' +
@@ -137,7 +139,7 @@ const privacyEl: LegalDoc = {
       title: '7. Διαβιβάσεις εκτός Ευρώπης',
       body:
         'Ορισμένοι από τους παρόχους της ενότητας 6 εδρεύουν ή επεξεργάζονται δεδομένα στις ' +
-        'ΗΠΑ: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Microsoft και Expo.\n\n' +
+        'ΗΠΑ: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Apple, Microsoft και Expo.\n\n' +
         'Οι διαβιβάσεις αυτές γίνονται βάσει κατάλληλων εγγυήσεων κατά το κεφάλαιο V του ' +
         'Γενικού Κανονισμού — π.χ. Τυποποιημένες Συμβατικές Ρήτρες της Ευρωπαϊκής Επιτροπής ' +
         'ή το πλαίσιο EU‑US Data Privacy Framework, όπου ο πάροχος είναι πιστοποιημένος.\n\n' +
@@ -328,7 +330,13 @@ const termsEl: LegalDoc = {
         'δικαιώματα τρίτων.\n\n' +
         'Οι αξιολογήσεις πρέπει να βασίζονται σε πραγματική εμπειρία. Μπορείς να αφήσεις μία ' +
         'αξιολόγηση για κάθε κράτηση που ολοκληρώθηκε ή πληρώθηκε.\n\n' +
-        'Μπορούμε να αφαιρέσουμε περιεχόμενο που παραβιάζει τους όρους.',
+        'Μηδενική ανοχή: δεν επιτρέπεται περιεχόμενο που παρενοχλεί, απειλεί, προσβάλλει ή ' +
+        'εκφοβίζει, ρητορική μίσους ή βίας, σεξουαλικό περιεχόμενο, spam και κακοποίηση ζώων.\n\n' +
+        'Σε κάθε δημοσίευση, σχόλιο και μήνυμα μπορείς να επιλέξεις «Αναφορά περιεχομένου» ή ' +
+        '«Αποκλεισμός χρήστη». Ο αποκλεισμένος χρήστης δεν εμφανίζεται πια σε σένα· τον ' +
+        'αποκλεισμό τον αναιρείς από τις ρυθμίσεις απορρήτου.\n\n' +
+        'Εξετάζουμε κάθε αναφορά εντός 24 ωρών. Αφαιρούμε περιεχόμενο που παραβιάζει τους όρους ' +
+        'και αναστέλλουμε ή διακόπτουμε τον λογαριασμό όποιου το δημοσίευσε.',
     },
     {
       title: '8. Υπηρεσίες τεχνητής νοημοσύνης',
@@ -487,6 +495,9 @@ const privacyEn: LegalDoc = {
         'notifications to Android devices (Firebase Cloud Messaging). United States.\n\n' +
         'Meta (Facebook) — Facebook sign-in, if you choose it. We receive name, email and ' +
         'profile photo. United States.\n\n' +
+        'Apple — Sign in with Apple in the iOS app, if you choose it. We receive your email ' +
+        '(or Apple’s private relay address, if you choose it) and, the first time, your name. ' +
+        'United States.\n\n' +
         'Microsoft — syncing bookings to a provider’s Outlook Calendar, if the provider enables ' +
         'it; same details as Google Calendar. United States.\n\n' +
         'Expo — push notifications to the mobile app. Receives your device identifier and the ' +
@@ -499,7 +510,7 @@ const privacyEn: LegalDoc = {
       title: '7. Transfers outside Europe',
       body:
         'Some of the providers in section 6 are based in, or process data in, the United ' +
-        'States: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Microsoft and Expo.\n\n' +
+        'States: Stripe, Resend, Anthropic, 8x8, Mapbox, Google, Meta, Apple, Microsoft and Expo.\n\n' +
         'These transfers rely on appropriate safeguards under Chapter V of the GDPR — e.g. the ' +
         'European Commission’s Standard Contractual Clauses or the EU‑US Data Privacy ' +
         'Framework, where the provider is certified.\n\n' +
@@ -678,7 +689,13 @@ const termsEn: LegalDoc = {
         'not permitted.\n\n' +
         'Reviews must reflect genuine experience. You can leave one review for each booking ' +
         'that was completed or paid.\n\n' +
-        'We may remove content that breaches these terms.',
+        'Zero tolerance: content that harasses, threatens, insults or bullies, hate speech or ' +
+        'violence, sexual content, spam and animal abuse are not permitted.\n\n' +
+        'On every post, comment and message you can choose “Report content” or “Block user”. ' +
+        'A blocked user is no longer shown to you; you can undo a block in your privacy ' +
+        'settings.\n\n' +
+        'We review every report within 24 hours. We remove content that breaches these terms ' +
+        'and suspend or terminate the account of whoever posted it.',
     },
     {
       title: '8. AI services',

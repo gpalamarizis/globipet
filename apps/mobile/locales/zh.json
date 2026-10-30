@@ -115,7 +115,8 @@
     "dobMonth": "月",
     "dobYear": "年",
     "role_both": "两者皆是",
-    "role_both_desc": "宠物主人兼服务商"
+    "role_both_desc": "宠物主人兼服务商",
+    "err_apple": "通过 Apple 登录失败"
   },
   "home": {
     "greeting": "你好，{{name}}！👋",
@@ -1549,7 +1550,9 @@
     "noPlans": "暂无可用方案",
     "vivaNote": "通过 Viva 付款。您可随时取消订阅。",
     "tierDiscountBanner": "作为{{tier}}会员，你可享受 AI 订阅 {{percent}}% 的折扣。",
-    "tierDiscountMore": "了解规则"
+    "tierDiscountMore": "了解规则",
+    "noActivePlan": "您没有有效的 AI 订阅。",
+    "trialActive": "您的 AI 免费试用已激活。"
   },
   "stool": {
     "title": "样本分析",
@@ -2976,7 +2979,8 @@
     "cardPaymentFailed": "付款失败——请更新银行卡",
     "banner": "{{name}}：全部 AI 功能、每笔付款 ×{{multiplier}} 积分，以及优先客服支持。",
     "bannerNoMult": "{{name}}：全部 AI 功能以及优先客服支持。",
-    "bannerMore": "查看会员订阅"
+    "bannerMore": "查看会员订阅",
+    "notMember": "您还不是 GlobiPet Plus 会员。"
   },
   "payments": {
     "title": "付款与凭证",
@@ -3022,5 +3026,30 @@
     "notFound": "未找到你所在位置的地址。请手动填写集合地点。",
     "busy": "地图服务繁忙，请稍后再试。",
     "error": "定位失败，请重试。"
+  },
+  "moderation": {
+    "more": "选项",
+    "close": "关闭",
+    "report": "举报内容",
+    "reportWhy": "举报原因？",
+    "blockUser": "屏蔽用户",
+    "block": "屏蔽",
+    "blockTitle": "屏蔽用户",
+    "blockConfirm": "您将不再看到该用户的帖子、评论和消息。可在“隐私与数据”中撤销。",
+    "blockedTitle": "已屏蔽该用户",
+    "blockedHint": "其内容将不再显示。",
+    "reportedTitle": "谢谢",
+    "reportedHint": "举报已发送。我们的团队将在 24 小时内处理。",
+    "loginTitle": "需要登录",
+    "loginHint": "登录后才能举报内容或屏蔽用户。",
+    "reason_spam": "垃圾信息或广告",
+    "reason_harassment": "骚扰或欺凌",
+    "reason_hate": "仇恨或暴力",
+    "reason_inappropriate": "不当内容",
+    "reason_other": "其他",
+    "blockedUsers": "已屏蔽的用户",
+    "noBlocked": "您尚未屏蔽任何人。",
+    "unknownUser": "用户",
+    "unblock": "取消屏蔽"
   }
 }

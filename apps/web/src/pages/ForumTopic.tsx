@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ContentActions from '@/components/ContentActions'
 
 /**
  * A forum thread and its replies.
@@ -145,6 +146,8 @@ export default function ForumTopic() {
           <div className="ml-auto flex items-center gap-3 text-[11px] text-gray-400">
             <span className="flex items-center gap-1"><MessageSquare size={11} />{topic.replies_count}</span>
             <span className="flex items-center gap-1"><Eye size={11} />{topic.views_count}</span>
+            <ContentActions type="topic" id={String(topic.id)} isMine={topic.is_mine === true} size={14}
+              onBlocked={() => navigate('/forum')} />
           </div>
         </div>
 
@@ -244,6 +247,7 @@ export default function ForumTopic() {
                     <Trash2 size={14} />
                   </button>
                 )}
+                <ContentActions type="reply" id={String(r.id)} isMine={r.is_mine === true} size={14} />
               </div>
             </div>
             {editingReplyId === r.id ? (

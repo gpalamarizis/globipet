@@ -11,6 +11,7 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
 import { fmtDateShort } from '@/lib/dates'
 import { fmtEur } from '@/lib/money'
 import { useBillingPortal } from './payments'
+import { DIGITAL_PURCHASES_IN_APP } from '../src/lib/storePolicy'
 
 /**
  * Ε18 — GlobiPet Plus: συνδρομή μέλους με όλο το AI μέσα (ίδια λειτουργία με
@@ -210,14 +211,16 @@ export default function MembershipScreen() {
                   : t('membership.otherPlanNoName', { name })}
               </Text>
             </View>
-            <Button full variant="secondary" label={t('membership.goToPlans')}
-              onPress={() => router.push('/pricing' as any)} style={{ marginTop: space.md }} />
+            {DIGITAL_PURCHASES_IN_APP && (
+              <Button full variant="secondary" label={t('membership.goToPlans')}
+                onPress={() => router.push('/pricing' as any)} style={{ marginTop: space.md }} />
+            )}
           </Card>
         )}
 
         {/* Οφέλη — πραγματικές τιμές από τον server· όπως το web: όταν το Plus
             διατίθεται, ή για μέλος (και αν ο admin το απενεργοποίησε). */}
-        {(info.available || isMember) && <Card>
+        {(isMember || (DIGITAL_PURCHASES_IN_APP && info.available)) && <Card>
           <Text style={s.section}>{t('membership.benefitsTitle')}</Text>
           <View style={s.benefits}>
             {BENEFITS.map(({ key, Icon, text }) => (
@@ -230,7 +233,17 @@ export default function MembershipScreen() {
         </Card>}
 
         {/* Αγορά */}
-        {!isMember && (!info.available || !plan ? (
+        {!isMember && !DIGITAL_PURCHASES_IN_APP && (
+          <Card>
+            <View style={s.headRow}>
+              <View style={s.iconBox}><Crown size={icon.md} color={colors.textLight} /></View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.strong}>{t('membership.notMember')}</Text>
+              </View>
+            </View>
+          </Card>
+        )}
+        {!isMember && DIGITAL_PURCHASES_IN_APP && (!info.available || !plan ? (
           <Card>
             <View style={s.headRow}>
               <View style={s.iconBox}><Crown size={icon.md} color={colors.brand} /></View>

@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, SkeletonRows, EmptyState } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { DIGITAL_PURCHASES_IN_APP } from '../src/lib/storePolicy'
 
 /**
  * Πρόγραμμα επιβράβευσης — «Πώς λειτουργεί» (Ε17). Ίδιο περιεχόμενο με το
@@ -172,13 +173,13 @@ export default function LoyaltyScreen() {
           )
         })}
 
-        <Card onPress={() => router.push('/pricing' as any)} style={s.info}>
+        {DIGITAL_PURCHASES_IN_APP && <Card onPress={() => router.push('/pricing' as any)} style={s.info}>
           <View style={[s.row, { alignItems: 'flex-start' }]}>
             <Info size={icon.sm} color={colors.info} />
             <Text style={[s.caption, s.infoTxt]}>{t('loyaltyPage.discountNote')}</Text>
           </View>
           <Text style={s.infoLink}>{t('loyaltyPage.seePlans')}</Text>
-        </Card>
+        </Card>}
       </View>
     </Screen>
   )

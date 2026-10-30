@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import CampaignBanner from '@/components/CampaignBanner'
 import { useParams, useNavigate } from 'react-router-dom'
 import { dateLocale } from '@/lib/dates'
+import ContentActions from '@/components/ContentActions'
 
 export default function Communities() {
   const { t, i18n } = useTranslation()
@@ -309,7 +310,13 @@ export default function Communities() {
                       {msg.author_photo ? <img src={msg.author_photo} className="w-full h-full object-cover" /> : <span className="text-purple-700 text-xs font-bold">{msg.author_name[0]}</span>}
                     </div>
                     <div className={`max-w-[70%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
-                      {!isMe && <span className="text-xs text-gray-400 mb-0.5 ml-1">{msg.author_name}</span>}
+                      {!isMe && (
+                        <div className="flex items-center gap-1 mb-0.5 ml-1">
+                          <span className="text-xs text-gray-400">{msg.author_name}</span>
+                          {/* App Store 1.2 / ίδιο με την εφαρμογή: αναφορά και αποκλεισμός. */}
+                          <ContentActions type="community_message" id={String(msg.id)} isMine={isMe} size={12} />
+                        </div>
+                      )}
                       <div className={`rounded-2xl px-3 py-2 ${isMe ? 'bg-purple-500 text-white rounded-tr-sm' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-tl-sm shadow-sm'}`}>
                         {msg.content && <p className="text-sm">{msg.content}</p>}
                         {msg.image_url && <img src={msg.image_url} className="max-w-full rounded-xl mt-1" alt="img" />}

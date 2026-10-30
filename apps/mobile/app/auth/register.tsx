@@ -7,6 +7,8 @@ import {
 import { useRouter } from 'expo-router'
 import { Eye, EyeOff, Mail, Lock, User, Sparkles, Calendar } from 'lucide-react-native'
 import { useAuthStore } from '../../src/store/auth'
+import { isGoogleSignInAvailable } from '../../src/lib/googleAuth'
+import { AppleSignInButton } from '../../src/components/AppleSignInButton'
 import { TermsCheckbox, SocialTermsNotice } from '@/components/LegalLinks'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
 
@@ -52,6 +54,7 @@ export default function RegisterScreen() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [facebookLoading, setFacebookLoading] = useState(false)
+  const [appleLoading, setAppleLoading] = useState(false)
 
   const msg = (err: any, fallback: string) =>
     err?.message || err?.response?.data?.message || fallback
@@ -133,7 +136,7 @@ export default function RegisterScreen() {
     } finally { setFacebookLoading(false) }
   }
 
-  const busy = isLoading || googleLoading || facebookLoading
+  const busy = isLoading || googleLoading || facebookLoading || appleLoading
 
   return (
     <KeyboardAvoidingView style={s.container}
@@ -233,13 +236,19 @@ export default function RegisterScreen() {
             <View style={s.line} /><Text style={s.dividerText}>{t('auth.or')}</Text><View style={s.line} />
           </View>
 
-          <TouchableOpacity style={[s.socialBtn, busy && s.btnDisabled]}
-            activeOpacity={0.85} disabled={busy} onPress={handleGoogle}>
-            {googleLoading
-              ? <ActivityIndicator color={colors.text} />
-              : <><Text style={s.googleG}>G</Text>
-                  <Text style={s.socialText}>{t('auth.continue_google')}</Text></>}
-          </TouchableOpacity>
+          {/* App Store 4.8: «Συνέχεια με Apple» (μόνο iOS) — πρώτο, ισότιμο με τα άλλα. */}
+          <AppleSignInButton disabled={busy} onBusyChange={setAppleLoading}
+            onSignedIn={() => router.replace('/(tabs)')} />
+
+          {isGoogleSignInAvailable() && (
+            <TouchableOpacity style={[s.socialBtn, busy && s.btnDisabled]}
+              activeOpacity={0.85} disabled={busy} onPress={handleGoogle}>
+              {googleLoading
+                ? <ActivityIndicator color={colors.text} />
+                : <><Text style={s.googleG}>G</Text>
+                    <Text style={s.socialText}>{t('auth.continue_google')}</Text></>}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={[s.socialBtn, s.fbBtn, busy && s.btnDisabled]}
             activeOpacity={0.85} disabled={busy} onPress={handleFacebook}>

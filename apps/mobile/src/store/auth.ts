@@ -5,6 +5,7 @@ import { api, setAuthToken, setTokenRotationHandler, setSessionHandlers, setLogg
 import { registerPushToken, unregisterPushToken } from '../lib/notifications'
 import { signInWithGoogle } from '../lib/googleAuth'
 import { signInWithFacebook, signOutFacebook } from '../lib/facebookAuth'
+import { signInWithApple } from '../lib/appleAuth'
 import { queryClient } from '../lib/queryClient'
 import { changeLanguage } from '../../lib/i18n'
 
@@ -66,6 +67,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<boolean>
   loginWithFacebook: () => Promise<boolean>
+  loginWithApple: () => Promise<boolean>
   register: (data: any) => Promise<void>
   logout: () => Promise<void>
   /**
@@ -174,6 +176,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Unlike Google, we don't send user data from the client — the backend
   // fetches it fresh from Graph API using the access_token, so a stolen
   // token cannot be paired with a fake email.
+  // iOS — «Σύνδεση με Apple». Ο server επαληθεύει το identityToken (JWT της
+  // Apple)· το email προκύπτει από το τοκεν, ποτέ από τον client.
+  loginWithApple: async () => {
+    set({ isLoading: true })
+    try {
+      const res = await signInWithApple()
+      if (!res) {
+        set({ isLoading: false })
+        return false // user cancelled
+      }
+      const { data } = await api.post('/auth/apple/mobile', {
+        identity_token: res.identityToken,
+        full_name: res.fullName,
+        locale: (i18n.language || 'el').slice(0, 2),
+      })
+
+      await SecureStore.setItemAsync('token', data.token)
+      await SecureStore.setItemAsync('user', JSON.stringify(data.user))
+      setAuthToken(data.token)
+      void registerPushToken()
+      queryClient.clear()
+      set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
+      void applyUserLanguage(data.user)
+      return true
+    } catch (err) {
+      set({ isLoading: false })
+      throw err
+    }
+  },
+
   loginWithFacebook: async () => {
     set({ isLoading: true })
     try {

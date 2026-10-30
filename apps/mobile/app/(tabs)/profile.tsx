@@ -14,6 +14,7 @@ import { fmtEur } from '@/lib/money'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 import NotificationBell from '@/components/NotificationBell'
 import { useMembership } from '../membership'
+import { DIGITAL_PURCHASES_IN_APP } from '../../src/lib/storePolicy'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -163,7 +164,7 @@ export default function ProfileScreen() {
   const mPrice = mPlan && Number.isFinite(mMonthly) && mMonthly > 0 ? fmtEur(mMonthly, i18n.language) : ''
   const mRenews = mSt === 'member' && membership?.me?.current_period_end
     ? fmtDateShort(membership.me.current_period_end, i18n.language) : ''
-  const showMemberCard = isPlainUser && !!membership && (mIsMember || (membership.available && !!mPlan))
+  const showMemberCard = isPlainUser && !!membership && (mIsMember || (DIGITAL_PURCHASES_IN_APP && membership.available && !!mPlan))
   const mLabel = mSt === 'member'
     ? (mRenews ? t('membership.cardMember', { name: mName, date: mRenews }) : t('membership.cardMemberActive', { name: mName }))
     : mSt === 'payment_failed' ? mName

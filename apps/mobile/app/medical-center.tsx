@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { AiSubscriptionManage } from './pricing'
+import { DIGITAL_PURCHASES_IN_APP } from '../src/lib/storePolicy'
 
 /**
  * Κέντρο υγείας — κόμβος για όλα τα εργαλεία.
@@ -92,7 +93,7 @@ export default function MedicalCenterScreen() {
           {!active && !expired && !isAdmin && st === 'none' && emailUnverified && (
             <Text style={[s.statusMeta, { marginTop: space.md }]}>{t('trialVerify.confirmEmail')}</Text>
           )}
-          {!active && !canTrial && (
+          {DIGITAL_PURCHASES_IN_APP && !active && !canTrial && (
             <Button label={t('ai.see_plans')} variant="secondary"
               onPress={() => router.push('/pricing' as any)} full style={{ marginTop: space.md }} />
           )}
@@ -103,7 +104,7 @@ export default function MedicalCenterScreen() {
         <View style={{ marginBottom: space.md }}>
           <AiSubscriptionManage />
           {/* Ακυρωμένη / αποτυχημένη πληρωμή: επιλογή πλάνου (web: «Επίλεξε πλάνο»). */}
-          {st !== 'active' && (
+          {DIGITAL_PURCHASES_IN_APP && st !== 'active' && (
             <Button label={t('ai.see_plans')} variant="secondary"
               onPress={() => router.push('/pricing' as any)} full style={{ marginTop: space.md }} />
           )}

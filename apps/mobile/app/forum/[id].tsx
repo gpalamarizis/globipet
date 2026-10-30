@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import { Screen, Card, Badge, Button, Input, EmptyState, SkeletonRows } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 import { ErrorState } from '@/components/ErrorState'
+import { ContentActions } from '@/components/ContentActions'
 
 /**
  * Θέμα φόρουμ με απαντήσεις.
@@ -133,7 +134,12 @@ export default function ForumTopicScreen() {
             {topic.is_solved && <CheckCircle2 size={14} color={colors.success} />}
             {!editingTopic && <Text style={s.title}>{topic.title}</Text>}
           </View>
-          <Text style={s.meta}>{topic.author_name}</Text>
+          <View style={s.metaRow}>
+            <Text style={[s.meta, { flex: 1, marginTop: 0 }]}>{topic.author_name}</Text>
+            {/* App Store 1.2: αναφορά / αποκλεισμός. Μετά τον αποκλεισμό το θέμα δεν εμφανίζεται πια. */}
+            {!editingTopic && <ContentActions type="topic" id={String(topic.id)} isMine={topic.is_mine === true}
+              size={icon.sm} onBlocked={() => router.back()} />}
+          </View>
           {editingTopic ? (
             <View style={{ marginTop: space.sm }}>
               <Input label={t('forum.topicTitle')} value={editTitle} onChangeText={setEditTitle} />
@@ -197,6 +203,7 @@ export default function ForumTopicScreen() {
                   <Trash2 size={icon.sm} color={colors.danger} />
                 </TouchableOpacity>
               )}
+              <ContentActions type="reply" id={String(r.id)} isMine={r.is_mine === true} size={icon.sm} />
             </View>
             {editingReplyId === r.id ? (
               <View style={{ marginTop: space.sm }}>
@@ -229,6 +236,7 @@ export default function ForumTopicScreen() {
 }
 
 const s = StyleSheet.create({
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 2 },
   body: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   title: { ...type.section, color: colors.text, flex: 1 },

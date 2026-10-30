@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { blockedEmailsFor, withoutBlocked } from '../lib/blocks.js'
 import { identityOf } from '../lib/userName.js'
 
 /**
@@ -29,6 +30,9 @@ const routes: FastifyPluginAsync = async (app) => {
     // Ε16: παλιά θέματα από το κινητό αποθηκεύτηκαν ως «behaviour» — ίδια κατηγορία με «behavior».
     if (category) where.category = category === 'behavior' ? { in: ['behavior', 'behaviour'] } : category
     if (q) where.OR = [{ title: { contains: q, mode: 'insensitive' } }, { content: { contains: q, mode: 'insensitive' } }]
+    // App Store 1.2: χωρίς θέματα αποκλεισμένων χρηστών.
+    const blockedAuthors = await blockedEmailsFor(await viewerEmail(req))
+    if (blockedAuthors.length) where.author_email = { notIn: blockedAuthors }
     const [data, total] = await Promise.all([
       prisma.forumTopic.findMany({ where, skip, take, orderBy: [{ is_pinned: 'desc' }, { created_at: 'desc' }, { id: 'asc' }] }),
       prisma.forumTopic.count({ where })
@@ -49,7 +53,8 @@ const routes: FastifyPluginAsync = async (app) => {
     await prisma.forumTopic.update({ where: { id: req.params.id }, data: { views_count: { increment: 1 } } })
     const viewer = await viewerEmail(req)
     const { replies, ...rest } = topic
-    return { ...publicRow(rest, viewer), replies: replies.map(r => publicRow(r, viewer)) }
+    const blockedAuthors = await blockedEmailsFor(viewer)
+    return { ...publicRow(rest, viewer), replies: withoutBlocked(replies, blockedAuthors).map(r => publicRow(r, viewer)) }
   })
 
   // ─── Replies ───────────────────────────────────────────────────────
@@ -65,7 +70,8 @@ const routes: FastifyPluginAsync = async (app) => {
       take: 200,
     })
     const viewer = await viewerEmail(req)
-    return { data: data.map(r => publicRow(r, viewer)) }
+    const blockedAuthors = await blockedEmailsFor(viewer)
+    return { data: withoutBlocked(data, blockedAuthors).map(r => publicRow(r, viewer)) }
   })
 
   app.post('/:id/replies', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {

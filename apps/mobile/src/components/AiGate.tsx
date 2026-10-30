@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Screen, Button, Skeleton } from '@/components/ui'
 import theme, { colors, space, radius, weight, icon, touch } from '@/theme'
+import { DIGITAL_PURCHASES_IN_APP } from '../lib/storePolicy'
 
 const typo = theme.type
 
@@ -120,9 +121,11 @@ export default function AiGate({ title, children }: { title: string; children: R
               : t('ai.trial_desc')}
           </Text>
           {expired ? (
-            <Button label={t('ai.see_plans')} full
-              onPress={() => router.push('/pricing' as any)}
-              style={{ marginTop: space.xl }} />
+            DIGITAL_PURCHASES_IN_APP ? (
+              <Button label={t('ai.see_plans')} full
+                onPress={() => router.push('/pricing' as any)}
+                style={{ marginTop: space.xl }} />
+            ) : null
           ) : (user as any)?.email_verified === false ? (
             // Η δοκιμή ξεκινά με την επιβεβαίωση του email — όχι κουμπί (όπως web).
             <Text style={[s.gateText, { marginTop: space.xl, fontWeight: weight.semibold }]}>{t('trialVerify.confirmEmail')}</Text>

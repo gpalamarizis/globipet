@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import ChangeMyPasswordCard from '@/components/ChangeMyPasswordCard'
 import NotificationSettingsCard from '@/components/NotificationSettingsCard'
 import MyDataCard from '@/components/MyDataCard'
+import BlockedUsersCard from '@/components/BlockedUsersCard'
 import MySubscriptionsCard from '@/components/MySubscriptionsCard'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
 
@@ -614,6 +615,8 @@ export default function Profile() {
         <div id="my-data" className="scroll-mt-20">
           <MyDataCard />
         </div>
+        {/* App Store 1.2 — αποκλεισμένοι χρήστες (όπως στην εφαρμογή). */}
+        <div className="mt-3"><BlockedUsersCard /></div>
         <RowCard className="mt-3">
           <Row to="/cookies" icon={Cookie}      label={t('accountHub.consents')} />
           <Row to="/privacy" icon={ShieldCheck} label={t('accountHub.privacyPolicy')} />

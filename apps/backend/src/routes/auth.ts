@@ -6,6 +6,7 @@ import { parseBody, text, email as emailField, phone, language } from '../lib/va
 import prisma from '../lib/prisma.js'
 import { encryptField, decryptField, decryptUserFields } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { verifyAppleIdentityToken } from '../lib/appleAuth.js'
 import { sendEmailVerificationEmail } from '../lib/email.js'
 import { profileSchema, needsBirthDate } from './users.js'
 
@@ -253,7 +254,7 @@ const SUPPORTED_LANGS = ['el', 'en', 'es', 'fr', 'zh']
  *   ενεργά τοκεν ακυρώνονται (token_version+1) — ο «προ-καταληψίας» χάνει την
  *   πρόσβαση. Ο κάτοχος μπορεί να ορίσει κωδικό από το «Ξέχασα τον κωδικό».
  */
-async function upsertOAuthUser(req: any, p: { email: string; name?: string | null; photo?: string | null; lang: string; provider: 'google' | 'facebook' }) {
+async function upsertOAuthUser(req: any, p: { email: string; name?: string | null; photo?: string | null; lang: string; provider: 'google' | 'facebook' | 'apple' }) {
   const now = new Date()
   // Χωρίς διάκριση πεζών/κεφαλαίων: παλιοί λογαριασμοί OAuth γράφτηκαν με το
   // email όπως το έδινε ο πάροχος (το Facebook κρατά τα κεφαλαία του χρήστη).
@@ -265,7 +266,7 @@ async function upsertOAuthUser(req: any, p: { email: string; name?: string | nul
     user = await prisma.user.create({
       data: {
         email: p.email,
-        full_name: (p.name || '').trim().slice(0, 120) || (p.provider === 'facebook' ? 'Facebook User' : p.email.split('@')[0]),
+        full_name: (p.name || '').trim().slice(0, 120) || (p.provider === 'facebook' ? 'Facebook User' : p.provider === 'apple' ? 'GlobiPet User' : p.email.split('@')[0]),
         profile_photo: p.photo || null,
         role: 'user',
         preferred_language: p.lang,
@@ -754,6 +755,49 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       return { user: await toSafeUser(user), token }
     } catch (err: any) {
       console.error('Google mobile OAuth error:', err)
+      return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
+    }
+  })
+
+  // ─── SIGN IN WITH APPLE (iOS) ───────────────────────────────────
+  // App Store Guideline 4.8: όταν υπάρχει σύνδεση με Google/Facebook, η
+  // εφαρμογή iOS πρέπει να προσφέρει και «Σύνδεση με Apple».
+  //
+  // Ο client στέλνει το identityToken (JWT της Apple). Επαληθεύεται εδώ
+  // (lib/appleAuth.ts: υπογραφή, iss, aud = bundle ID, exp). Το email του
+  // τοκεν είναι επαληθευμένο από την Apple — και όταν είναι «κρυφό»
+  // (@privaterelay.appleid.com), που προωθεί κανονικά στο πραγματικό.
+  // Το όνομα η Apple το δίνει ΜΟΝΟ την πρώτη φορά, και μόνο στον client.
+  app.post('/apple/mobile', async (req: any, reply) => {
+    try {
+      const { identity_token, full_name, locale } = (req.body ?? {}) as any
+      if (typeof identity_token !== 'string' || !identity_token || identity_token.length > 8000) {
+        return reply.code(400).send({ message: 'Λείπουν δεδομένα' })
+      }
+      let claims
+      try {
+        claims = await verifyAppleIdentityToken(identity_token)
+      } catch (e: any) {
+        console.warn('[auth] apple/mobile: token rejected', { reason: String(e?.message ?? e) })
+        await audit(req, { action: 'oauth_login', resource: 'user', outcome: 'failure', metadata: { provider: 'apple', reason: String(e?.message ?? 'invalid') } })
+        return reply.code(401).send({ message: 'Μη έγκυρο Apple token' })
+      }
+      if (!claims.email) {
+        return reply.code(400).send({ message: 'Απαιτείται πρόσβαση στο email σας. Αφαιρέστε τη GlobiPet από τις Ρυθμίσεις → Apple ID → Σύνδεση με Apple και ξαναδοκιμάστε.' })
+      }
+      const lang = String(locale || '').toLowerCase().split(/[-_]/)[0]
+      const user = await upsertOAuthUser(req, {
+        email: claims.email,
+        name: typeof full_name === 'string' ? full_name.slice(0, 120) : null,
+        photo: null,
+        lang: SUPPORTED_LANGS.includes(lang) ? lang : 'el',
+        provider: 'apple',
+      })
+      if (await isUnderAgeClosed(user.id)) return reply.code(403).send({ message: UNDER_AGE_MESSAGE })
+      const token = app.jwt.sign(sessionClaims(user), { expiresIn: '7d' })
+      return { user: await toSafeUser(user), token }
+    } catch (err: any) {
+      console.error('Apple mobile sign-in error:', err)
       return reply.code(500).send({ message: 'Σφάλμα διακομιστή' })
     }
   })

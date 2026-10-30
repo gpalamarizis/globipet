@@ -115,7 +115,8 @@
     "dobMonth": "MM",
     "dobYear": "YYYY",
     "role_both": "Both",
-    "role_both_desc": "Owner and provider"
+    "role_both_desc": "Owner and provider",
+    "err_apple": "Sign in with Apple failed"
   },
   "home": {
     "greeting": "Hi, {{name}}! 👋",
@@ -1549,7 +1550,9 @@
     "noPlans": "No plans available",
     "vivaNote": "Payment is handled by Viva. You can cancel your subscription at any time.",
     "tierDiscountBanner": "As a {{tier}} member you get {{percent}}% off AI subscriptions.",
-    "tierDiscountMore": "How it works"
+    "tierDiscountMore": "How it works",
+    "noActivePlan": "You don't have an active AI subscription.",
+    "trialActive": "Your free AI trial is active."
   },
   "stool": {
     "title": "Sample analysis",
@@ -2976,7 +2979,8 @@
     "cardPaymentFailed": "Payment failed — update your card",
     "banner": "{{name}}: all the AI, ×{{multiplier}} points on every payment and priority support.",
     "bannerNoMult": "{{name}}: all the AI and priority support.",
-    "bannerMore": "See the membership"
+    "bannerMore": "See the membership",
+    "notMember": "You are not a GlobiPet Plus member."
   },
   "payments": {
     "title": "Payments and receipts",
@@ -3022,5 +3026,30 @@
     "notFound": "No address was found for your location. Please enter the meeting point manually.",
     "busy": "The map service is busy — please try again shortly.",
     "error": "We couldn't get your location. Please try again."
+  },
+  "moderation": {
+    "more": "Options",
+    "close": "Close",
+    "report": "Report content",
+    "reportWhy": "Why are you reporting this?",
+    "blockUser": "Block user",
+    "block": "Block",
+    "blockTitle": "Block user",
+    "blockConfirm": "You will no longer see posts, comments or messages from this user. You can undo this in Privacy & data.",
+    "blockedTitle": "User blocked",
+    "blockedHint": "Their content will no longer be shown.",
+    "reportedTitle": "Thank you",
+    "reportedHint": "Your report has been sent. Our team will review it within 24 hours.",
+    "loginTitle": "Sign-in required",
+    "loginHint": "Sign in to report content or block a user.",
+    "reason_spam": "Spam or advertising",
+    "reason_harassment": "Harassment or bullying",
+    "reason_hate": "Hate or violence",
+    "reason_inappropriate": "Inappropriate content",
+    "reason_other": "Other",
+    "blockedUsers": "Blocked users",
+    "noBlocked": "You haven't blocked anyone.",
+    "unknownUser": "User",
+    "unblock": "Unblock"
   }
 }
