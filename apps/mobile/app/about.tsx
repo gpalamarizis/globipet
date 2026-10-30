@@ -6,6 +6,7 @@ import {
 } from 'lucide-react-native'
 import { Screen, Card } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { COMPANY } from '@/lib/company'
 
 /**
  * Ποιοι είμαστε — ίδιο περιεχόμενο με το globipet.com/about (ίδια κλειδιά
@@ -99,6 +100,25 @@ export default function AboutScreen() {
           </Card>
         )
       })}
+
+      {/* Εταιρικά στοιχεία — ίδια με το web, το ΓΕΜΗ και το D-U-N-S. */}
+      <Text style={s.section}>{t('about.company.title')}</Text>
+      <Card>
+        {([
+          ['legalNameLabel', t('about.company.legalName')],
+          ['vatLabel', COMPANY.vat],
+          ['gemiLabel', COMPANY.gemi],
+          ['seatLabel', t('about.company.seat')],
+          ['emailLabel', COMPANY.email],
+        ] as const).map(([label, value], i) => (
+          <View key={label} style={[s.companyRow, i > 0 && s.companyRowBorder]}>
+            <Text style={s.companyLabel}>{t(`about.company.${label}`)}</Text>
+            {label === 'emailLabel'
+              ? <Text style={[s.companyValue, s.link]} onPress={() => Linking.openURL(`mailto:${value}`)}>{value}</Text>
+              : <Text style={s.companyValue} selectable>{value}</Text>}
+          </View>
+        ))}
+      </Card>
     </Screen>
   )
 }
@@ -121,5 +141,10 @@ const s = StyleSheet.create({
   linkedin: { ...type.caption, color: colors.info, fontWeight: weight.semibold },
   bio: { ...type.caption, color: colors.textMuted },
   serviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  companyRow: { paddingVertical: space.sm },
+  companyRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  companyLabel: { ...type.caption, color: colors.textMuted },
+  companyValue: { ...type.body, color: colors.text, marginTop: 2 },
+  link: { color: colors.info, fontWeight: weight.semibold },
   serviceIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 })

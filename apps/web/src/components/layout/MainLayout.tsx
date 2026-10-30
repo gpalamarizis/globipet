@@ -12,6 +12,7 @@ import LanguageSelector from '@/components/ui/LanguageSelector'
 import PetQuickWidget from '@/components/layout/PetQuickWidget'
 import CartDrawer from '@/components/features/marketplace/CartDrawer'
 import NotificationsPanel from '@/components/ui/NotificationsPanel'
+import { COMPANY } from '@/lib/company'
 
 // Ε17 (Product Manager): κεφαλίδα = Αρχική · Υπηρεσίες · Κατάστημα + τέσσερις
 // ομάδες. Ο ιατρικός φάκελος δεν είναι πια στην κορυφή — δένεται με το
@@ -451,7 +452,7 @@ export default function MainLayout() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-xs text-gray-600">
-            © {new Date().getFullYear()} GlobiPet. {t('footer.allRights')}
+            © {new Date().getFullYear()} GLOBIPET Ι.Κ.Ε. · {t('about.company.vatLabel')} {COMPANY.vat}. {t('footer.allRights')}
           </div>
         </div>
       </footer>

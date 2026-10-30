@@ -2057,6 +2057,16 @@
       "providers": "Πάροχοι",
       "pets": "Κατοικίδια",
       "rating": "Βαθμολογία"
+    },
+    "company": {
+      "title": "Εταιρικά στοιχεία",
+      "legalNameLabel": "Επωνυμία",
+      "legalName": "GLOBIPET ΙΔΙΩΤΙΚΗ ΚΕΦΑΛΑΙΟΥΧΙΚΗ ΕΤΑΙΡΕΙΑ (GLOBIPET Ι.Κ.Ε.)",
+      "vatLabel": "ΑΦΜ",
+      "gemiLabel": "Αρ. ΓΕΜΗ",
+      "seatLabel": "Έδρα",
+      "seat": "Ελευθερίου Βενιζέλου 59, Καλλιθέα",
+      "emailLabel": "Email"
     }
   },
   "contact": {

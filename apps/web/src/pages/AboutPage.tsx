@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Linkedin, Globe, Heart, Shield, Brain, Stethoscope, Scale, MapPin, ShoppingBag, Users } from 'lucide-react'
+import { Linkedin, Globe, Heart, Shield, Brain, Stethoscope, Scale, MapPin, ShoppingBag, Users, Building2 } from 'lucide-react'
+import { COMPANY } from '@/lib/company'
 
 const FOUNDERS = [
   {
@@ -142,6 +143,28 @@ export default function AboutPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Εταιρικά στοιχεία — ίδια με ΓΕΜΗ / D-U-N-S / Apple / Google Play. */}
+      <section className="py-16 px-4 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-2xl mx-auto card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 size={20} className="text-brand-900 dark:text-yellow-400 shrink-0" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('about.company.title')}</h2>
+          </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-6 gap-y-0.5 sm:gap-y-2 text-sm">
+            <dt className="text-gray-500">{t('about.company.legalNameLabel')}</dt>
+            <dd className="text-gray-900 dark:text-white font-medium mb-2 sm:mb-0">{t('about.company.legalName')}</dd>
+            <dt className="text-gray-500">{t('about.company.vatLabel')}</dt>
+            <dd className="text-gray-900 dark:text-white mb-2 sm:mb-0">{COMPANY.vat}</dd>
+            <dt className="text-gray-500">{t('about.company.gemiLabel')}</dt>
+            <dd className="text-gray-900 dark:text-white mb-2 sm:mb-0">{COMPANY.gemi}</dd>
+            <dt className="text-gray-500">{t('about.company.seatLabel')}</dt>
+            <dd className="text-gray-900 dark:text-white mb-2 sm:mb-0">{t('about.company.seat')}</dd>
+            <dt className="text-gray-500">{t('about.company.emailLabel')}</dt>
+            <dd><a href={`mailto:${COMPANY.email}`} className="text-brand-900 dark:text-yellow-400 hover:underline">{COMPANY.email}</a></dd>
+          </dl>
         </div>
       </section>
 

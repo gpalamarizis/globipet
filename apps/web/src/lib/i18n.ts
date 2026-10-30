@@ -3480,6 +3480,16 @@ const el = {
     tabsAriaLabel: 'Λεπτομέρειες υπηρεσίας', shareAriaLabel: 'Κοινοποίηση υπηρεσίας',
   },
   about: {
+    company: {
+      title: "Εταιρικά στοιχεία",
+      legalNameLabel: "Επωνυμία",
+      legalName: "GLOBIPET ΙΔΙΩΤΙΚΗ ΚΕΦΑΛΑΙΟΥΧΙΚΗ ΕΤΑΙΡΕΙΑ (GLOBIPET Ι.Κ.Ε.)",
+      vatLabel: "ΑΦΜ",
+      gemiLabel: "Αρ. ΓΕΜΗ",
+      seatLabel: "Έδρα",
+      seat: "Ελευθερίου Βενιζέλου 59, Καλλιθέα",
+      emailLabel: "Email",
+    },
     title: 'Ποιοι Είμαστε',
     hero: 'Το GlobiPet είναι ένα ολοκληρωμένο Pet Super-App — μία πλατφόρμα για όλες τις ανάγκες του κατοικιδίου σας και του ιδιοκτήτη του.',
     mission: {
@@ -8050,6 +8060,16 @@ const en: typeof el = {
     tabsAriaLabel: 'Service details', shareAriaLabel: 'Share service',
   },
   about: {
+    company: {
+      title: "Company details",
+      legalNameLabel: "Legal name",
+      legalName: "GLOBIPET I.K.E. (Private Company)",
+      vatLabel: "VAT No.",
+      gemiLabel: "Business Registry (GEMI) No.",
+      seatLabel: "Registered office",
+      seat: "59 Eleftheriou Venizelou, Kallithea, Greece",
+      emailLabel: "Email",
+    },
     title: 'Who We Are',
     hero: 'GlobiPet is a comprehensive Pet Super-App — a single platform for every need of your pet and its owner.',
     mission: {
@@ -12590,6 +12610,16 @@ const es: typeof el = {
     tabsAriaLabel: 'Detalles del servicio', shareAriaLabel: 'Compartir servicio',
   },
   about: {
+    company: {
+      title: "Datos de la empresa",
+      legalNameLabel: "Razón social",
+      legalName: "GLOBIPET I.K.E. (Sociedad Privada de Capital)",
+      vatLabel: "NIF/IVA",
+      gemiLabel: "N.º Registro Mercantil (GEMI)",
+      seatLabel: "Domicilio social",
+      seat: "Eleftheriou Venizelou 59, Kallithea, Grecia",
+      emailLabel: "Email",
+    },
     title: 'Quiénes Somos',
     hero: 'GlobiPet es una Super-App integral para mascotas — una única plataforma para todas las necesidades de tu mascota y su dueño.',
     mission: {
@@ -17130,6 +17160,16 @@ const fr: typeof el = {
     tabsAriaLabel: 'Détails du service', shareAriaLabel: 'Partager le service',
   },
   about: {
+    company: {
+      title: "Informations sur la société",
+      legalNameLabel: "Raison sociale",
+      legalName: "GLOBIPET I.K.E. (Société privée de capitaux)",
+      vatLabel: "N° TVA",
+      gemiLabel: "N° Registre du commerce (GEMI)",
+      seatLabel: "Siège social",
+      seat: "Eleftheriou Venizelou 59, Kallithea, Grèce",
+      emailLabel: "Email",
+    },
     title: 'Qui Sommes-Nous',
     hero: "GlobiPet est une Super-App complète pour animaux de compagnie — une plateforme unique pour tous les besoins de votre animal et de son propriétaire.",
     mission: {
@@ -21670,6 +21710,16 @@ const zh: typeof el = {
     tabsAriaLabel: '服务详情', shareAriaLabel: '分享服务',
   },
   about: {
+    company: {
+      title: "公司信息",
+      legalNameLabel: "公司名称",
+      legalName: "GLOBIPET I.K.E.（私人资本公司）",
+      vatLabel: "增值税号",
+      gemiLabel: "商业登记号（GEMI）",
+      seatLabel: "注册地址",
+      seat: "Eleftheriou Venizelou 59, Kallithea, 希腊",
+      emailLabel: "电子邮件",
+    },
     title: '关于我们',
     hero: 'GlobiPet 是一款综合宠物超级应用 — 满足您宠物及其主人所有需求的统一平台。',
     mission: {

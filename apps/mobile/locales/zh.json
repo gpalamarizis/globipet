@@ -2057,6 +2057,16 @@
       "providers": "服务商",
       "pets": "宠物",
       "rating": "评分"
+    },
+    "company": {
+      "title": "公司信息",
+      "legalNameLabel": "公司名称",
+      "legalName": "GLOBIPET I.K.E.（私人资本公司）",
+      "vatLabel": "增值税号",
+      "gemiLabel": "商业登记号（GEMI）",
+      "seatLabel": "注册地址",
+      "seat": "Eleftheriou Venizelou 59, Kallithea, 希腊",
+      "emailLabel": "电子邮件"
     }
   },
   "contact": {

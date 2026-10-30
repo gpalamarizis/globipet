@@ -2057,6 +2057,16 @@
       "providers": "Providers",
       "pets": "Pets",
       "rating": "Rating"
+    },
+    "company": {
+      "title": "Company details",
+      "legalNameLabel": "Legal name",
+      "legalName": "GLOBIPET I.K.E. (Private Company)",
+      "vatLabel": "VAT No.",
+      "gemiLabel": "Business Registry (GEMI) No.",
+      "seatLabel": "Registered office",
+      "seat": "59 Eleftheriou Venizelou, Kallithea, Greece",
+      "emailLabel": "Email"
     }
   },
   "contact": {

@@ -2057,6 +2057,16 @@
       "providers": "Prestataires",
       "pets": "Animaux",
       "rating": "Note"
+    },
+    "company": {
+      "title": "Informations sur la société",
+      "legalNameLabel": "Raison sociale",
+      "legalName": "GLOBIPET I.K.E. (Société privée de capitaux)",
+      "vatLabel": "N° TVA",
+      "gemiLabel": "N° Registre du commerce (GEMI)",
+      "seatLabel": "Siège social",
+      "seat": "Eleftheriou Venizelou 59, Kallithea, Grèce",
+      "emailLabel": "Email"
     }
   },
   "contact": {
