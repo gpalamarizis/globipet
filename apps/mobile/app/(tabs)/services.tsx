@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTabSpace } from '@/hooks/useTabSpace'
 import { useTranslation } from 'react-i18next'
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, ScrollView, RefreshControl, Platform, StatusBar, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, FlatList, Image, ScrollView, RefreshControl, Platform, StatusBar, ActivityIndicator, useWindowDimensions } from 'react-native'
 import { useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Search, X, Star, MapPin, CheckCircle } from 'lucide-react-native'
@@ -59,9 +59,29 @@ const PAGE_SIZE = 30
 
 const tint = (k: string) => (colors.category as any)[k] ?? colors.category.default
 
+/**
+ * ΠΛΕΓΜΑ 2 ΣΤΗΛΩΝ
+ *   Τα chips είχαν πλάτος ανάλογο του κειμένου, οπότε έμπαιναν 1–2 ανά
+ *   γραμμή με άνισα πλάτη. Τώρα κάθε πλακίδιο έχει σταθερό πλάτος =
+ *   (πλάτος οθόνης − περιθώρια − κενό) / 2: ζεύγη ίσου πλάτους, στοιχισμένα
+ *   και στις δύο άκρες, και το τελευταίο (μονό) κάτω αριστερά με το ίδιο
+ *   πλάτος. Μέσα στο πλακίδιο emoji και κείμενο στοιχίζονται αριστερά, ώστε
+ *   τα emoji να σχηματίζουν κάθετη στήλη.
+ *
+ *   maxFontSizeMultiplier 1.2 (όπως στο Κατάστημα): η μεγάλη γραμματοσειρά
+ *   συστήματος μεγαλώνει το κείμενο ως 20% και όχι απεριόριστα, ώστε το
+ *   πλέγμα να μη σπάει. Μεγάλες λέξεις (π.χ. «Photographie») μικραίνουν
+ *   ελαφρά για να χωρέσουν σε μία γραμμή αντί να κόβονται.
+ */
+const GRID_COLS = 2
+const GRID_GAP = space.sm
+const FS = 1.2
+
 export default function ServicesScreen() {
   const tabSpace = useTabSpace()
   const { t } = useTranslation()
+  const { width: screenW } = useWindowDimensions()
+  const tileW = Math.floor((screenW - space.lg * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS)
   const router = useRouter()
   const queryClient = useQueryClient()
   // Η αρχική περνά τον τύπο εδώ· χωρίς αυτό το πλακίδιο δεν φιλτράριζε.
@@ -157,7 +177,7 @@ export default function ServicesScreen() {
       {/* Πλέγμα που αναδιπλώνεται: όλα τα φίλτρα ορατά με μια ματιά.
           Η οριζόντια κύλιση έκρυβε τα μισά — ο χρήστης δεν καταλαβαίνει
           ότι υπάρχει κι άλλο δεξιά. */}
-      <View style={{ paddingHorizontal: space.lg, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View style={s.typeGrid}>
         {SERVICE_TYPES.map(sv => {
           const isHosting = sv.id === 'hosting'
           const active = isHosting ? HOSTING.includes(serviceType) : serviceType === sv.id
@@ -166,10 +186,11 @@ export default function ServicesScreen() {
             <TouchableOpacity
               key={sv.id}
               activeOpacity={0.7}
-              style={[s.chip, active && { backgroundColor: c.bg, borderColor: c.fg }]}
+              style={[s.chip, { width: tileW }, active && { backgroundColor: c.bg, borderColor: c.fg }]}
               onPress={() => setServiceType(isHosting ? (HOSTING.includes(serviceType) ? serviceType : 'pet_sitting') : sv.id)}>
-              <Text style={s.chipEmoji}>{sv.emoji}</Text>
-              <Text style={[s.chipText, active && { color: c.fg, fontWeight: weight.bold }]}>
+              <Text style={s.chipEmoji} maxFontSizeMultiplier={FS}>{sv.emoji}</Text>
+              <Text style={[s.chipText, active && { color: c.fg, fontWeight: weight.bold }]}
+                numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={FS}>
                 {t(sv.labelKey)}
               </Text>
             </TouchableOpacity>
@@ -179,39 +200,40 @@ export default function ServicesScreen() {
 
       {/* Υποεπιλογές φιλοξενίας: ιδιώτης ή ξενοδοχείο — όπως στο web. */}
       {HOSTING.includes(serviceType) && (
-        <View style={s.filterWrap}>
+        <View style={[s.typeGrid, { paddingTop: GRID_GAP }]}>
           {HOSTING_SUB.map(sub => {
             const on = serviceType === sub.id
             return (
               <TouchableOpacity key={sub.id} activeOpacity={0.7}
-                style={[s.miniChip, on && s.miniChipOn]} onPress={() => setServiceType(sub.id)}>
-                <Text style={s.chipEmoji}>{sub.emoji}</Text>
-                <Text style={[s.miniTxt, on && s.miniTxtOn]}>{t(sub.labelKey)}</Text>
+                style={[s.miniChip, { width: tileW }, on && s.miniChipOn]} onPress={() => setServiceType(sub.id)}>
+                <Text style={s.miniEmoji} maxFontSizeMultiplier={FS}>{sub.emoji}</Text>
+                <Text style={[s.miniTxt, on && s.miniTxtOn]} maxFontSizeMultiplier={FS}>{t(sub.labelKey)}</Text>
               </TouchableOpacity>
             )
           })}
         </View>
       )}
 
-      {/* Γρήγορα φίλτρα — ίδια με το web. */}
-      <View style={s.filterWrap}>
-        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, onlyVerified && s.miniChipOn]}
+      {/* Γρήγορα φίλτρα — ίδια με το web. Στις ίδιες 2 στήλες με τις
+          κατηγορίες, ώστε όλα να στοιχίζονται κάθετα. */}
+      <View style={[s.typeGrid, { paddingTop: GRID_GAP }]}>
+        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, { width: tileW }, onlyVerified && s.miniChipOn]}
           onPress={() => setOnlyVerified(v => !v)}>
           <CheckCircle size={icon.xs} color={onlyVerified ? colors.brand : colors.textMuted} />
-          <Text style={[s.miniTxt, onlyVerified && s.miniTxtOn]}>{t('parity.verified')}</Text>
+          <Text style={[s.miniTxt, onlyVerified && s.miniTxtOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={FS}>{t('parity.verified')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, onlyEmergency && s.miniChipOn]}
+        <TouchableOpacity activeOpacity={0.7} style={[s.miniChip, { width: tileW }, onlyEmergency && s.miniChipOn]}
           onPress={() => setOnlyEmergency(v => !v)}>
-          <Text style={s.chipEmoji}>🚨</Text>
-          <Text style={[s.miniTxt, onlyEmergency && s.miniTxtOn]}>{t('parity.emergency')}</Text>
+          <Text style={s.miniEmoji} maxFontSizeMultiplier={FS}>🚨</Text>
+          <Text style={[s.miniTxt, onlyEmergency && s.miniTxtOn]} maxFontSizeMultiplier={FS}>{t('parity.emergency')}</Text>
         </TouchableOpacity>
         {[4, 4.5].map(r => {
           const on = minRating === r
           return (
-            <TouchableOpacity key={r} activeOpacity={0.7} style={[s.miniChip, on && s.miniChipOn]}
+            <TouchableOpacity key={r} activeOpacity={0.7} style={[s.miniChip, { width: tileW }, on && s.miniChipOn]}
               onPress={() => setMinRating(on ? 0 : r)}>
               <Star size={icon.xs} color={on ? colors.brand : colors.accent} fill={on ? colors.brand : colors.accent} />
-              <Text style={[s.miniTxt, on && s.miniTxtOn]}>{r}+</Text>
+              <Text style={[s.miniTxt, on && s.miniTxtOn]} maxFontSizeMultiplier={FS}>{r}+</Text>
             </TouchableOpacity>
           )
         })}
@@ -319,25 +341,33 @@ const s = StyleSheet.create({
   search: { flex: 1, ...type.body, color: colors.text, padding: 0 },
 
   filterRow: { paddingVertical: space.lg, maxHeight: 68, flexGrow: 0 },
+  // 2 ανά σειρά — βλ. GRID_COLS. space-between: οι άκρες στοιχίζονται
+  // ακριβώς με τα πεδία αναζήτησης, όποιο κι αν είναι το υπόλοιπο του floor.
+  typeGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
+    rowGap: GRID_GAP,
+    paddingHorizontal: space.lg, paddingTop: space.md,
+  },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
-    paddingHorizontal: space.lg,
-    height: touch.min,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: space.sm,
+    paddingHorizontal: space.md,
+    height: 38,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border,
   },
-  chipEmoji: { fontSize: 16 },
-  filterWrap: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.sm, flexDirection: 'row', flexWrap: 'wrap' },
+  chipEmoji: { fontSize: 15, lineHeight: 20 },
   miniChip: {
-    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
     paddingHorizontal: space.md, height: 32, borderRadius: radius.full,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
+  miniEmoji: { fontSize: 13, lineHeight: 17 },
   miniChipOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
-  miniTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold },
+  miniTxt: { ...type.caption, color: colors.textMuted, fontWeight: weight.semibold, flexShrink: 1 },
   miniTxtOn: { color: colors.brand, fontWeight: weight.bold },
-  chipText: { ...type.body, color: colors.textMuted, fontWeight: weight.semibold },
+  // flexShrink: το κείμενο μικραίνει (adjustsFontSizeToFit), το emoji όχι.
+  chipText: { fontSize: 14, lineHeight: 19, color: colors.textMuted, fontWeight: weight.semibold, flexShrink: 1 },
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
