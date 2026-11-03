@@ -1,5 +1,6 @@
 ﻿import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { RouteSeo } from '@/seo/RouteSeo'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -214,6 +215,8 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <OAuthHandler />
+          {/* SEO: τίτλος/περιγραφή/canonical ανά σελίδα και στην πλοήγηση εντός εφαρμογής. */}
+          <RouteSeo />
           {/* Ε12: «Επιβεβαίωσε το email σου — Ξαναστείλε», πάνω από κάθε layout. */}
           <EmailVerifyBanner />
           {/* Ε13: λογαριασμός χωρίς ημερομηνία γέννησης (Google/Facebook) →

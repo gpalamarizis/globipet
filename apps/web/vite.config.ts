@@ -1,10 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+// SEO: prerender των δημόσιων σελίδων μετά από ΚΑΘΕ build, όποια εντολή κι
+// αν το ξεκινήσει (npm run build, npx vite build, Cloudflare Pages).
+// @ts-ignore — απλό ES module χωρίς τύπους
+import { prerender } from './scripts/prerender.mjs'
 
 export default defineConfig({
   plugins: [
     react(),
+    {
+      name: 'globipet-prerender',
+      apply: 'build',
+      closeBundle() { prerender(path.resolve(__dirname, 'dist')) },
+    },
   ],
   resolve: {
     alias: {
