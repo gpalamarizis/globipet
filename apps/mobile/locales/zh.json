@@ -265,7 +265,9 @@
     "deleteFailed": "删除失败",
     "kind_horse": "马",
     "kind_other": "其他",
-    "weight_placeholder": "例如：12.5"
+    "weight_placeholder": "例如：12.5",
+    "breed_hint": "输入以查看带照片的品种，或自由填写。",
+    "breed_mixed": "混种 / 未知品种"
   },
   "social": {
     "title": "社区动态",
@@ -1713,7 +1715,16 @@
     "grooming": "美容需求",
     "pros": "优点",
     "cons": "缺点",
-    "health": "健康问题"
+    "health": "健康问题",
+    "photo": "照片",
+    "recognition": "认可机构",
+    "fci_line": "FCI 编号 {{n}} · 第 {{g}} 组",
+    "no_profile": "该品种目前仅有官方认可信息。关于性格和需求，请咨询兽医或认可的繁育者。",
+    "size_small": "小型",
+    "size_medium": "中型",
+    "size_large": "大型",
+    "size_giant": "巨型",
+    "level": "{{n}}/5"
   },
   "legal": {
     "title": "法律顾问",

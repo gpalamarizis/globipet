@@ -265,7 +265,9 @@
     "deleteFailed": "Could not delete",
     "kind_horse": "Horse",
     "kind_other": "Other",
-    "weight_placeholder": "e.g. 12.5"
+    "weight_placeholder": "e.g. 12.5",
+    "breed_hint": "Type to see breeds with photos — or enter any text.",
+    "breed_mixed": "Mixed / Unknown breed"
   },
   "social": {
     "title": "Social Feed",
@@ -1713,7 +1715,16 @@
     "grooming": "Grooming",
     "pros": "Pros",
     "cons": "Cons",
-    "health": "Health issues"
+    "health": "Health issues",
+    "photo": "Photo",
+    "recognition": "Recognition",
+    "fci_line": "FCI no. {{n}} · Group {{g}}",
+    "no_profile": "For this breed we currently have the official recognition details only. For temperament and needs, ask your vet or a recognised breeder.",
+    "size_small": "Small",
+    "size_medium": "Medium",
+    "size_large": "Large",
+    "size_giant": "Giant",
+    "level": "{{n}}/5"
   },
   "legal": {
     "title": "Legal advisor",

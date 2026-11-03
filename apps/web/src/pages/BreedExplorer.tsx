@@ -30,6 +30,21 @@ const SIZES = [
   { value: 'giant',  labelKey: 'pgBreeds.sizes.giant' },
 ]
 
+/**
+ * Σελίδες προς εμφάνιση: πρώτη, τελευταία και δύο γύρω από την τρέχουσα
+ * (0 = «…»). Με ~430 ράτσες οι 18+ αριθμοί σε σειρά έπιαναν τρεις γραμμές στο κινητό.
+ */
+function pageList(current: number, total: number): number[] {
+  const keep = new Set([1, total, current - 1, current, current + 1].filter(p => p >= 1 && p <= total))
+  const sorted = [...keep].sort((a, b) => a - b)
+  const out: number[] = []
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push(0)
+    out.push(p)
+  })
+  return out
+}
+
 export default function BreedExplorer() {
   const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
@@ -122,7 +137,8 @@ export default function BreedExplorer() {
                   className="card overflow-hidden group hover:shadow-card-hover transition-all block h-full">
                   <div className="aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
                     {b.image_url
-                      ? <img src={b.image_url} alt={b.name}
+                      ? <img src={b.image_url} alt={localName(b, i18n.language)} loading="lazy" decoding="async"
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       : <div className="w-full h-full flex items-center justify-center text-4xl">
                           {b.species === 'cat' ? '🐱' : '🐶'}
@@ -160,8 +176,10 @@ export default function BreedExplorer() {
 
           {data.totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-8 flex-wrap">
-              {Array.from({ length: data.totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => setPage(p)}
+              {pageList(page, data.totalPages).map((p, i) => p === 0 ? (
+                <span key={`gap${i}`} className="w-9 h-9 flex items-center justify-center text-gray-400">…</span>
+              ) : (
+                <button key={p} onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={cn('w-9 h-9 rounded-xl text-sm font-medium transition-all',
                     page === p
                       ? 'bg-brand-900 text-white'

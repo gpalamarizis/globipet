@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Image, Linking } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -27,19 +27,41 @@ export default function BreedDetailScreen() {
 
   const name = (i18n.language === 'el' && breed.name_el) ? breed.name_el : breed.name
 
+  // Μόνο ό,τι είναι γνωστό: οι ράτσες του καταλόγου χωρίς πλήρες προφίλ
+  // έχουν κενά μέγεθος/ανάγκες. Το μέγεθος μεταφρασμένο (όχι «large»), οι
+  // βαθμοί ως «4/5» (όχι σκέτο «4»).
+  const lvl = (v: any) => typeof v === 'number' ? t('breeds.level', { n: v }) : null
   const FACTS: [string, any][] = [
-    ['breeds.size', breed.size],
+    ['breeds.size', breed.size ? t(`breeds.size_${breed.size}`, { defaultValue: breed.size }) : null],
     ['breeds.origin', breed.origin],
     ['breeds.lifespan', (breed.lifespan_min && breed.lifespan_max)
       ? t('breeds.years', { min: breed.lifespan_min, max: breed.lifespan_max }) : null],
-    ['breeds.exercise', breed.exercise_needs],
-    ['breeds.grooming', breed.grooming_needs],
+    ['breeds.exercise', lvl(breed.exercise_needs)],
+    ['breeds.grooming', lvl(breed.grooming_needs)],
+    ['breeds.recognition', [
+      breed.fci_number && breed.fci_group ? t('breeds.fci_line', { n: breed.fci_number, g: breed.fci_group }) : null,
+      ...((breed.recognized_by ?? []) as string[]).filter(o => o !== 'FCI'),
+      breed.registry_codes?.length ? breed.registry_codes.join(' / ') : null,
+    ].filter(Boolean).join(' · ') || null],
   ]
+  const hasProfile = [breed.grooming_needs, breed.exercise_needs, breed.trainability].some(v => typeof v === 'number')
+    || [breed.good_with_children, breed.good_with_pets, breed.apartment_friendly].some(v => typeof v === 'boolean')
 
   return (
     <Screen title={name} back scroll={false}>
       <ScrollView contentContainerStyle={s.body}>
-        {!!breed.image_url && <Image source={{ uri: breed.image_url }} style={s.image} resizeMode="cover" />}
+        {!!breed.image_url && (
+          <View>
+            <Image source={{ uri: breed.image_url }} style={s.image} resizeMode="cover" />
+            {/* Αναφορά δημιουργού/άδειας — υποχρεωτική για CC BY / CC BY-SA. */}
+            {!!breed.image_credit && (
+              <Text style={s.credit} numberOfLines={1}
+                onPress={breed.image_source ? () => Linking.openURL(breed.image_source) : undefined}>
+                {t('breeds.photo')}: {breed.image_credit}{breed.image_license ? ` · ${breed.image_license}` : ''} · Wikimedia Commons
+              </Text>
+            )}
+          </View>
+        )}
 
         <Card>
           <Text style={s.title}>{name}</Text>
@@ -49,16 +71,17 @@ export default function BreedDetailScreen() {
             {breed.apartment_friendly && <Badge label={t('breeds.apartment')} tone="info" />}
           </View>
           {!!breed.description && <Text style={s.desc}>{breed.description}</Text>}
+          {!hasProfile && <Text style={s.note}>{t('breeds.no_profile')}</Text>}
         </Card>
 
-        <Card>
+        {FACTS.some(([, v]) => v) && <Card>
           {FACTS.filter(([, v]) => v).map(([k, v]) => (
             <View key={k} style={s.kv}>
               <Text style={s.k}>{t(k)}</Text>
               <Text style={s.v}>{String(v)}</Text>
             </View>
           ))}
-        </Card>
+        </Card>}
 
         {!!breed.pros?.length && (
           <Card>
@@ -103,6 +126,8 @@ const s = StyleSheet.create({
   title: { ...type.section, color: colors.text },
   badges: { flexDirection: 'row', gap: space.xs, marginTop: space.sm, flexWrap: 'wrap' },
   desc: { ...type.body, color: colors.textMuted, marginTop: space.md },
+  note: { ...type.caption, color: colors.textLight, marginTop: space.md },
+  credit: { ...type.caption, fontSize: 10, color: colors.textLight, marginTop: space.xs, paddingHorizontal: space.xs },
   kv: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space.xs, gap: space.md },
   k: { ...type.caption, color: colors.textMuted },
   v: { ...type.caption, color: colors.text, fontWeight: weight.semibold, flexShrink: 1, textAlign: 'right' },

@@ -259,10 +259,12 @@ export interface Breed {
   name_el?: string
   species: PetSpecies
   fci_number?: string
-  fci_group?: string
+  fci_group?: number | null
+  recognized_by?: string[]
+  registry_codes?: string[]
   description: string
   origin?: string
-  size: 'tiny' | 'small' | 'medium' | 'large' | 'giant'
+  size: 'tiny' | 'small' | 'medium' | 'large' | 'giant' | null
   height_min?: number
   height_max?: number
   weight_min?: number
@@ -273,15 +275,18 @@ export interface Breed {
   health_issues: string[]
   pros: string[]
   cons: string[]
-  grooming_needs: 1 | 2 | 3 | 4 | 5
-  exercise_needs: 1 | 2 | 3 | 4 | 5
-  trainability: 1 | 2 | 3 | 4 | 5
-  good_with_children: boolean
-  good_with_pets: boolean
-  apartment_friendly: boolean
+  grooming_needs: 1 | 2 | 3 | 4 | 5 | null
+  exercise_needs: 1 | 2 | 3 | 4 | 5 | null
+  trainability: 1 | 2 | 3 | 4 | 5 | null
+  good_with_children: boolean | null
+  good_with_pets: boolean | null
+  apartment_friendly: boolean | null
   price_min?: number
   price_max?: number
-  image_url?: string
+  image_url?: string | null
+  image_credit?: string | null
+  image_license?: string | null
+  image_source?: string | null
   popularity: number
 }
 

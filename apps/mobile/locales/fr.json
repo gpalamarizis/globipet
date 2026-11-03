@@ -265,7 +265,9 @@
     "deleteFailed": "Suppression impossible",
     "kind_horse": "Cheval",
     "kind_other": "Autre",
-    "weight_placeholder": "p. ex. 12,5"
+    "weight_placeholder": "p. ex. 12,5",
+    "breed_hint": "Tapez pour voir les races avec photo — ou saisissez librement.",
+    "breed_mixed": "Croisé / Race inconnue"
   },
   "social": {
     "title": "Fil social",
@@ -1713,7 +1715,16 @@
     "grooming": "Toilettage",
     "pros": "Avantages",
     "cons": "Inconvénients",
-    "health": "Problèmes de santé"
+    "health": "Problèmes de santé",
+    "photo": "Photo",
+    "recognition": "Reconnaissance",
+    "fci_line": "FCI n° {{n}} · Groupe {{g}}",
+    "no_profile": "Pour cette race, nous ne disposons pour l’instant que des données officielles de reconnaissance. Pour le caractère et les besoins, demandez à votre vétérinaire ou à un éleveur reconnu.",
+    "size_small": "Petit",
+    "size_medium": "Moyen",
+    "size_large": "Grand",
+    "size_giant": "Géant",
+    "level": "{{n}}/5"
   },
   "legal": {
     "title": "Conseiller juridique",

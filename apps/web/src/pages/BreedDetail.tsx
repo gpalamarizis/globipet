@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Ruler, Clock, MapPin, Scissors, Activity,
-  GraduationCap, Baby, PawPrint, Home, ThumbsUp, ThumbsDown, HeartPulse,
+  GraduationCap, Baby, PawPrint, Home, ThumbsUp, ThumbsDown, HeartPulse, Award,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -59,6 +59,24 @@ export default function BreedDetail() {
   const lifespan = breed.lifespan_min && breed.lifespan_max
     ? `${breed.lifespan_min}–${breed.lifespan_max} ${t('pgBreedDetail.years')}`
     : null
+  // Οι ράτσες του καταλόγου χωρίς πλήρες προφίλ έχουν κενές ανάγκες και
+  // καταλληλότητα: δείχνουμε μόνο ό,τι είναι γνωστό, ποτέ προεπιλεγμένες τιμές.
+  const ratings = [
+    { icon: Scissors,      label: t('pgBreedDetail.grooming'), value: breed.grooming_needs },
+    { icon: Activity,      label: t('pgBreedDetail.exercise'), value: breed.exercise_needs },
+    { icon: GraduationCap, label: t('pgBreedDetail.training'), value: breed.trainability },
+  ].filter(r => typeof r.value === 'number')
+  const fits = [
+    { icon: Baby,     label: t('pgBreedDetail.children'),  ok: breed.good_with_children },
+    { icon: PawPrint, label: t('pgBreedDetail.otherPets'), ok: breed.good_with_pets },
+    { icon: Home,     label: t('pgBreedDetail.apartment'), ok: breed.apartment_friendly },
+  ].filter(c => typeof c.ok === 'boolean')
+  const hasProfile = ratings.length > 0 || fits.length > 0 || breed.temperament?.length > 0
+  const sizeLabel = breed.size ? t(`pgBreeds.sizes.${breed.size}`, { defaultValue: breed.size }) : null
+  const recognition: string[] = []
+  if (breed.fci_number && breed.fci_group) recognition.push(t('pgBreedDetail.fciLine', { n: breed.fci_number, g: breed.fci_group }))
+  for (const org of (breed.recognized_by ?? []) as string[]) if (org !== 'FCI') recognition.push(org)
+  if (breed.registry_codes?.length) recognition.push(breed.registry_codes.join(' / '))
 
   return (
     <div className="page-container py-6 pb-24 lg:pb-8 max-w-3xl mx-auto">
@@ -72,11 +90,21 @@ export default function BreedDetail() {
         <div className="card overflow-hidden">
           <div className="aspect-[16/10] bg-gray-100 dark:bg-gray-800">
             {breed.image_url
-              ? <img src={breed.image_url} alt={breed.name} className="w-full h-full object-cover" />
+              ? <img src={breed.image_url} alt={localName(breed, i18n.language)} referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center text-6xl">
                   {breed.species === 'cat' ? '🐱' : '🐶'}
                 </div>}
           </div>
+          {/* Αναφορά δημιουργού/άδειας: υποχρεωτική για τις φωτογραφίες CC BY / CC BY-SA. */}
+          {breed.image_url && breed.image_credit && (
+            <p className="px-5 pt-2 text-[10px] text-gray-400 truncate">
+              {t('pgBreedDetail.photo')}: {breed.image_credit}
+              {breed.image_license && <> · {breed.image_license}</>}
+              {breed.image_source && <> · <a href={breed.image_source} target="_blank" rel="noopener noreferrer"
+                className="underline hover:text-gray-600">Wikimedia Commons</a></>}
+            </p>
+          )}
           <div className="p-5">
             <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">
               {localName(breed, i18n.language)}
@@ -86,8 +114,8 @@ export default function BreedDetail() {
             )}
 
             <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-600 dark:text-gray-400">
-              {breed.size && (
-                <span className="flex items-center gap-1.5"><Ruler size={14} className="text-gray-400" />{breed.size}</span>
+              {sizeLabel && (
+                <span className="flex items-center gap-1.5"><Ruler size={14} className="text-gray-400" />{sizeLabel}</span>
               )}
               {weight && <span className="flex items-center gap-1.5">⚖️ {weight}</span>}
               {lifespan && (
@@ -97,6 +125,13 @@ export default function BreedDetail() {
                 <span className="flex items-center gap-1.5"><MapPin size={14} className="text-gray-400" />{breed.origin}</span>
               )}
             </div>
+
+            {recognition.length > 0 && (
+              <p className="flex items-center gap-1.5 mt-2 text-xs text-gray-500">
+                <Award size={13} className="text-gray-400 shrink-0" />
+                <span>{t('pgBreedDetail.recognition')}: {recognition.join(' · ')}</span>
+              </p>
+            )}
 
             {breed.temperament?.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-4">
@@ -118,21 +153,24 @@ export default function BreedDetail() {
           </div>
         )}
 
+        {!hasProfile && (
+          <div className="card p-5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{t('pgBreedDetail.noProfile')}</p>
+          </div>
+        )}
+
+        {ratings.length > 0 && (
         <div className="card p-5 space-y-3">
           <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-1">
             {t('pgBreedDetail.needs')}
           </h2>
-          <Rating icon={Scissors}       label={t('pgBreedDetail.grooming')}  value={breed.grooming_needs} />
-          <Rating icon={Activity}       label={t('pgBreedDetail.exercise')}      value={breed.exercise_needs} />
-          <Rating icon={GraduationCap}  label={t('pgBreedDetail.training')}  value={breed.trainability} />
+          {ratings.map(r => <Rating key={r.label} icon={r.icon} label={r.label} value={r.value} />)}
         </div>
+        )}
 
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { icon: Baby,     label: t('pgBreedDetail.children'),      ok: breed.good_with_children },
-            { icon: PawPrint, label: t('pgBreedDetail.otherPets'),   ok: breed.good_with_pets },
-            { icon: Home,     label: t('pgBreedDetail.apartment'), ok: breed.apartment_friendly },
-          ].map((c, i) => (
+        {fits.length > 0 && (
+        <div className={cn('grid gap-3', fits.length === 3 ? 'grid-cols-3' : fits.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+          {fits.map((c, i) => (
             <div key={i} className={cn('card p-3 text-center',
               c.ok ? '' : 'opacity-50')}>
               <c.icon size={16} className={cn('mx-auto mb-1.5', c.ok ? 'text-green-500' : 'text-gray-400')} />
@@ -143,6 +181,7 @@ export default function BreedDetail() {
             </div>
           ))}
         </div>
+        )}
 
         {(breed.pros?.length > 0 || breed.cons?.length > 0) && (
           <div className="grid sm:grid-cols-2 gap-4">

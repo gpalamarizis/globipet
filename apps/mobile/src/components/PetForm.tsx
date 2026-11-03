@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Camera } from 'lucide-react-native'
 import { Input } from '@/components/ui'
 import { Chips } from '@/components/Chips'
+import { BreedPicker } from '@/components/BreedPicker'
 import { pickAndUploadImage } from '@/lib/uploadImage'
 import { colors, space, radius, type, weight, icon } from '@/theme'
 
@@ -127,8 +128,7 @@ export function PetFormFields({ form, onChange }: {
       <Chips label={t('pets.species')} value={form.species} onChange={v => set('species', v)}
         options={PET_SPECIES.map(sp => ({ value: sp.id, label: `${sp.emoji} ${t(sp.labelKey)}` }))} />
 
-      <Input label={t('pets.breed')} value={form.breed} onChangeText={v => set('breed', v)}
-        placeholder={t('pets.breed_placeholder')} />
+      <BreedPicker species={form.species} value={form.breed} onChange={v => set('breed', v)} />
       <Input label={t('pets.color')} value={form.color} onChangeText={v => set('color', v)}
         placeholder={t('pets.color_placeholder')} />
 

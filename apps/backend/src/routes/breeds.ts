@@ -2,12 +2,35 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
 
+// Ίδια αντιστοίχιση στη βάση (translate) και στο κείμενο αναζήτησης: χωρίς
+// τόνους/διαλυτικά, τελικό σίγμα → σ, κεφαλαία → πεζά. Τα ελληνικά κεφαλαία
+// είναι εδώ ρητά, ώστε να μη βασιζόμαστε στο locale της βάσης για το lower().
+const ACCENTED = 'άέήίόύώϊϋΐΰςΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩΆΈΉΊΌΎΏΪΫ'
+const PLAIN = 'αεηιουωιυιυσαβγδεζηθικλμνξοπρστυφχψωαεηιουωιυ'
+function foldGreek(s: string): string {
+  let out = s.toLowerCase().trim()
+  for (let i = 0; i < ACCENTED.length; i++) out = out.split(ACCENTED[i]).join(PLAIN[i])
+  return out
+}
+
 const breedsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (req: any) => {
     const lang = getRequestLang(req)
     const { q, species, size, page = 1, limit = 20 } = req.query
     const where: any = {}
-    if (q) where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { name_el: { contains: q, mode: 'insensitive' } }]
+    if (q) {
+      // Αναζήτηση χωρίς τόνους: «λαμπραντορ» βρίσκει «Λαμπραντόρ», «σκυλος» το
+      // «σκύλος». Το contains της Prisma συγκρίνει και τους τόνους, και οι
+      // περισσότεροι γράφουν στο κινητό χωρίς αυτούς. Ο πίνακας είναι μικρός
+      // (~430 ράτσες), οπότε ένα ερώτημα για τα id αρκεί.
+      const needle = '%' + foldGreek(String(q)).replace(/[\\%_]/g, m => '\\' + m) + '%'
+      const hits = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM breeds
+        WHERE translate(lower(coalesce(name_el, '')), ${ACCENTED}, ${PLAIN}) LIKE ${needle}
+           OR lower(name) LIKE ${needle}
+           OR translate(lower(coalesce(origin, '')), ${ACCENTED}, ${PLAIN}) LIKE ${needle}`
+      where.id = { in: hits.map(h => h.id) }
+    }
     if (species) where.species = species
     if (size) where.size = size
     // Ανώτατο όριο σελίδας (πριν, ?limit=1000000 περνούσε).
@@ -15,7 +38,12 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
     const pageNo = Math.max(1, Number(page) || 1)
     const skip = (pageNo - 1) * take
     const [data, total] = await Promise.all([
-      prisma.breed.findMany({ where, skip, take, orderBy: [{ popularity: 'desc' }, { id: 'asc' }] }),
+      // Πρώτα οι δημοφιλείς (πλήρες προφίλ), μετά αλφαβητικά στη γλώσσα του
+      // χρήστη — όχι κατά id, που στις ~430 ράτσες του καταλόγου έδινε τυχαία σειρά.
+      prisma.breed.findMany({
+        where, skip, take,
+        orderBy: [{ popularity: 'desc' }, lang === 'el' ? { name_el: 'asc' } : { name: 'asc' }, { id: 'asc' }],
+      }),
       prisma.breed.count({ where })
     ])
     const translated = await translateRecords('breed', data, lang)
@@ -45,8 +73,16 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
   /** Only columns that exist on Breed, coerced to the right shape. */
   function pickBreedFields(body: any) {
     const data: any = {}
-    const text = ['name', 'name_el', 'species', 'fci_number', 'description', 'origin', 'size', 'image_url']
-    for (const f of text) if (body[f] !== undefined) data[f] = body[f]
+    const text = ['name', 'name_el', 'species', 'fci_number', 'description', 'origin', 'size', 'image_url',
+      'image_credit', 'image_license', 'image_source']
+    for (const f of text) {
+      if (body[f] === undefined) continue
+      // Κενό = «άγνωστο» (null) για τα προαιρετικά· τα υποχρεωτικά μένουν ως έχουν.
+      data[f] = body[f] === '' && !['name', 'species', 'description'].includes(f) ? null : body[f]
+    }
+    if (data.size !== undefined && data.size !== null && !['small', 'medium', 'large', 'giant'].includes(data.size)) {
+      delete data.size
+    }
 
     const numbers = ['weight_min', 'weight_max']
     for (const f of numbers) {
@@ -55,7 +91,7 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
       data[f] = Number.isFinite(v) && v >= 0 ? v : null
     }
 
-    const ints = ['lifespan_min', 'lifespan_max', 'popularity']
+    const ints = ['lifespan_min', 'lifespan_max', 'popularity', 'fci_group']
     for (const f of ints) {
       if (body[f] === undefined) continue
       const v = parseInt(body[f])
@@ -67,11 +103,12 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
     const ratings = ['grooming_needs', 'exercise_needs', 'trainability']
     for (const f of ratings) {
       if (body[f] === undefined) continue
-      const v = parseInt(body[f])
-      data[f] = Number.isFinite(v) ? Math.min(Math.max(v, 1), 5) : 3
+      // Κενό = «άγνωστο»: η σελίδα κρύβει την ένδειξη αντί να δείχνει ένα αυθαίρετο 3.
+      const v = body[f] === null || body[f] === '' ? NaN : parseInt(body[f])
+      data[f] = Number.isFinite(v) ? Math.min(Math.max(v, 1), 5) : null
     }
 
-    const lists = ['temperament', 'health_issues', 'pros', 'cons']
+    const lists = ['temperament', 'health_issues', 'pros', 'cons', 'recognized_by', 'registry_codes']
     for (const f of lists) {
       if (body[f] === undefined) continue
       data[f] = Array.isArray(body[f])
@@ -80,15 +117,15 @@ const breedsRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const flags = ['good_with_children', 'good_with_pets', 'apartment_friendly']
-    for (const f of flags) if (body[f] !== undefined) data[f] = !!body[f]
+    for (const f of flags) if (body[f] !== undefined) data[f] = body[f] === null || body[f] === '' ? null : !!body[f]
 
     return data
   }
 
   app.post('/', { preHandler: [(app as any).authenticate, isAdmin] }, async (req: any, reply) => {
     const data = pickBreedFields(req.body ?? {})
-    if (!data.name || !data.species || !data.size) {
-      return reply.code(400).send({ message: 'Απαιτούνται name, species και size' })
+    if (!data.name || !data.species) {
+      return reply.code(400).send({ message: 'Απαιτούνται name και species' })
     }
     if (data.description === undefined) data.description = ''
     return prisma.breed.create({ data })

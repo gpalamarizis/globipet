@@ -265,7 +265,9 @@
     "deleteFailed": "No se pudo eliminar",
     "kind_horse": "Caballo",
     "kind_other": "Otro",
-    "weight_placeholder": "p. ej. 12,5"
+    "weight_placeholder": "p. ej. 12,5",
+    "breed_hint": "Escribe para ver razas con foto, o introduce el texto que quieras.",
+    "breed_mixed": "Mestizo / Raza desconocida"
   },
   "social": {
     "title": "Social Feed",
@@ -1713,7 +1715,16 @@
     "grooming": "Cuidado del pelo",
     "pros": "Pros",
     "cons": "Contras",
-    "health": "Problemas de salud"
+    "health": "Problemas de salud",
+    "photo": "Foto",
+    "recognition": "Reconocimiento",
+    "fci_line": "FCI n.º {{n}} · Grupo {{g}}",
+    "no_profile": "Por ahora solo tenemos los datos oficiales de reconocimiento de esta raza. Para carácter y necesidades, consulta a tu veterinario o a un criador reconocido.",
+    "size_small": "Pequeño",
+    "size_medium": "Mediano",
+    "size_large": "Grande",
+    "size_giant": "Gigante",
+    "level": "{{n}}/5"
   },
   "legal": {
     "title": "Asesor legal",

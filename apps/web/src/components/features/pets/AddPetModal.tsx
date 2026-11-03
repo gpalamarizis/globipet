@@ -6,6 +6,7 @@ import { api, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import BreedPicker from './BreedPicker'
 
 interface Props {
   open: boolean
@@ -154,7 +155,12 @@ export default function AddPetModal({ open, onClose, editing }: Props) {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {[['breed',t('cmpAddPet.breed'),t('cmpAddPet.breedPlaceholder')],['color',t('cmpAddPet.color'),t('cmpAddPet.colorPlaceholder')]].map(([k,l,p]) => (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t('cmpAddPet.breed')}</label>
+                  <BreedPicker species={form.species} value={form.breed} placeholder={t('cmpAddPet.breedPlaceholder')}
+                    onChange={v => setForm(f => ({ ...f, breed: v }))} />
+                </div>
+                {[['color',t('cmpAddPet.color'),t('cmpAddPet.colorPlaceholder')]].map(([k,l,p]) => (
                   <div key={k}>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{l}</label>
                     <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800"

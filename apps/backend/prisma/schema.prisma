@@ -319,9 +319,13 @@ model Breed {
   name_el            String?
   species            String
   fci_number         String?
+  /// Ομάδα FCI (1–10) — μόνο για σκύλους.
+  fci_group          Int?
   description        String
   origin             String?
-  size               String
+  /// Κενά (null) στις ράτσες χωρίς πλήρες προφίλ: η εφαρμογή κρύβει όσα δεν
+  /// είναι γνωστά αντί να δείχνει προεπιλεγμένες, λάθος τιμές.
+  size               String?
   weight_min         Float?
   weight_max         Float?
   lifespan_min       Int?
@@ -330,16 +334,25 @@ model Breed {
   health_issues      String[]
   pros               String[]
   cons               String[]
-  grooming_needs     Int
-  exercise_needs     Int
-  trainability       Int
-  good_with_children Boolean  @default(true)
-  good_with_pets     Boolean  @default(true)
-  apartment_friendly Boolean  @default(false)
+  grooming_needs     Int?
+  exercise_needs     Int?
+  trainability       Int?
+  good_with_children Boolean? @default(true)
+  good_with_pets     Boolean? @default(true)
+  apartment_friendly Boolean? @default(false)
+  /// Φορείς αναγνώρισης (FCI, FIFe, TICA) και κωδικοί τους (π.χ. FIFe «EXO»).
+  recognized_by      String[] @default([])
+  registry_codes     String[] @default([])
   image_url          String?
+  /// Στοιχεία άδειας της φωτογραφίας (π.χ. Wikimedia Commons): δημιουργός,
+  /// άδεια και σελίδα πηγής — υποχρεωτική αναφορά για CC BY / CC BY-SA.
+  image_credit       String?
+  image_license      String?
+  image_source       String?
   popularity         Int      @default(0)
   created_at         DateTime @default(now())
 
+  @@index([species, popularity])
   @@map("breeds")
 }
 
