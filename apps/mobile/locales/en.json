@@ -162,9 +162,9 @@
       "grooming": "Grooming",
       "veterinary": "Vet",
       "walking": "Walking",
-      "pet_sitting": "Sitting",
+      "pet_sitting": "Private home",
       "training": "Training",
-      "boarding": "Boarding",
+      "boarding": "Pet hotel",
       "pet_taxi": "Taxi"
     },
     "categories": {

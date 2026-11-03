@@ -162,9 +162,9 @@
       "grooming": "Grooming",
       "veterinary": "Κτηνίατρος",
       "walking": "Βόλτες",
-      "pet_sitting": "Sitting",
+      "pet_sitting": "Ιδιώτης",
       "training": "Εκπαίδευση",
-      "boarding": "Boarding",
+      "boarding": "Ξενοδοχείο",
       "pet_taxi": "Taxi"
     },
     "categories": {
