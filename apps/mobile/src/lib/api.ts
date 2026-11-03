@@ -134,6 +134,24 @@ api.interceptors.response.use(
     // έχουν λόγο να γράφονται στα logs της συσκευής του.
     if (__DEV__) console.error('API Error:', err.response?.status, err.response?.data)
     try { handleAuthError(err) } catch {}
+    /**
+     * ΑΝΑΓΝΩΣΙΜΟ ΜΗΝΥΜΑ ΣΤΟ err.message — όπως το web/src/lib/api.ts.
+     *
+     * Το axios βάζει στο err.message το τεχνικό «Request failed with status
+     * code 400». Οι οθόνες διαβάζουν πρώτα το err.message, οπότε ο χρήστης
+     * έβλεπε αυτό αντί για το μήνυμα του server (π.χ. «Μη έγκυρη διεύθυνση
+     * email»). Το αντικαθιστούμε εδώ, μία φορά για όλη την εφαρμογή· το
+     * err.response μένει ανέγγιχτο για όσες οθόνες το διαβάζουν απευθείας.
+     */
+    try {
+      if (err && typeof err === 'object') {
+        const data: any = err.response?.data
+        const serverMsg = typeof data?.message === 'string' ? data.message.trim() : ''
+        if (serverMsg) err.message = serverMsg
+        else if (err.response) err.message = i18n.t('common.something_wrong')
+        else if (!axios.isCancel(err)) err.message = i18n.t('common.network_error')
+      }
+    } catch {}
     return Promise.reject(err)
   }
 )

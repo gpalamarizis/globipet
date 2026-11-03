@@ -11,6 +11,7 @@ import { isGoogleSignInAvailable } from '../../src/lib/googleAuth'
 import { AppleSignInButton } from '../../src/components/AppleSignInButton'
 import { SocialTermsNotice } from '@/components/LegalLinks'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { isValidEmail } from '@/lib/validation'
 
 /**
  * Σύνδεση.
@@ -18,9 +19,10 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
  * Η λογική OAuth και το store μένουν όπως ήταν — μόνο η εμφάνιση αλλάζει.
  *
  * ΤΑ ΜΗΝΥΜΑΤΑ ΣΦΑΛΜΑΤΟΣ
- *   Διάβαζαν `err.response?.data?.message`. Ο interceptor του api τα
- *   επίπεδο σε `err.message` — και τα δύο σχήματα καλύπτονται τώρα, ώστε
- *   ο χρήστης να βλέπει «Λανθασμένος κωδικός» αντί για γενικό μήνυμα.
+ *   Πρώτα το `err.response.data.message` (το μήνυμα του server), μετά το
+ *   `err.message`. Ο interceptor του api γράφει πλέον κι εκεί το μήνυμα του
+ *   server, ώστε ο χρήστης να βλέπει «Λανθασμένος κωδικός» και όχι το
+ *   τεχνικό «Request failed with status code …» του axios.
  */
 export default function LoginScreen() {
   const { t } = useTranslation()
@@ -41,11 +43,14 @@ export default function LoginScreen() {
   const [appleLoading, setAppleLoading] = useState(false)
 
   const msg = (err: any, fallback: string) =>
-    err?.message || err?.response?.data?.message || fallback
+    err?.response?.data?.message || err?.message || fallback
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
       Alert.alert(t('common.error'), t('auth.enter_both')); return
+    }
+    if (!isValidEmail(email)) {
+      Alert.alert(t('common.error'), t('auth.email_invalid')); return
     }
     try {
       await login(email.trim(), password)

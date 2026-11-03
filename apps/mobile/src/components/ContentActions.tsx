@@ -61,7 +61,7 @@ export function ContentActions({ type, id, isMine, size = icon.md, onBlocked }: 
       close()
       Alert.alert(t('moderation.reportedTitle'), t('moderation.reportedHint'))
     } catch (e: any) {
-      Alert.alert(t('common.error'), e?.message || e?.response?.data?.message || t('common.something_wrong'))
+      Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('common.something_wrong'))
     } finally { setSending(false) }
   }
 
@@ -79,7 +79,7 @@ export function ContentActions({ type, id, isMine, size = icon.md, onBlocked }: 
             onBlocked?.()
             Alert.alert(t('moderation.blockedTitle'), t('moderation.blockedHint'))
           } catch (e: any) {
-            Alert.alert(t('common.error'), e?.message || e?.response?.data?.message || t('common.something_wrong'))
+            Alert.alert(t('common.error'), e?.response?.data?.message || e?.message || t('common.something_wrong'))
           }
         },
       },

@@ -33,7 +33,7 @@ export function AppleSignInButton({ disabled, onBusyChange, onSignedIn }: {
       const ok = await loginWithApple()
       if (ok) onSignedIn()
     } catch (err: any) {
-      Alert.alert(t('auth.err_apple'), err?.message || err?.response?.data?.message || t('common.something_wrong'))
+      Alert.alert(t('auth.err_apple'), err?.response?.data?.message || err?.message || t('common.something_wrong'))
     } finally {
       setBusy(false); onBusyChange?.(false)
     }

@@ -11,6 +11,7 @@ import { isGoogleSignInAvailable } from '../../src/lib/googleAuth'
 import { AppleSignInButton } from '../../src/components/AppleSignInButton'
 import { TermsCheckbox, SocialTermsNotice } from '@/components/LegalLinks'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { isValidEmail } from '@/lib/validation'
 
 /**
  * Εγγραφή.
@@ -56,8 +57,9 @@ export default function RegisterScreen() {
   const [facebookLoading, setFacebookLoading] = useState(false)
   const [appleLoading, setAppleLoading] = useState(false)
 
+  // Πρώτα το μήνυμα του server· το err.message του axios είναι τεχνικό.
   const msg = (err: any, fallback: string) =>
-    err?.message || err?.response?.data?.message || fallback
+    err?.response?.data?.message || err?.message || fallback
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
   const setD = (k: 'd' | 'm' | 'y', v: string) =>
@@ -91,6 +93,10 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!form.full_name.trim() || !form.email.trim() || !form.password) {
       Alert.alert(t('common.error'), t('auth.fill_all')); return
+    }
+    // Ίδιος έλεγχος με τον server — αλλιώς ο χρήστης έβλεπε 400 μετά την υποβολή.
+    if (!isValidEmail(form.email)) {
+      Alert.alert(t('common.error'), t('auth.email_invalid')); return
     }
     // Ο server απορρίπτει κάτω από 8 — καλύτερα να το πει η φόρμα.
     if (form.password.length < 8) {

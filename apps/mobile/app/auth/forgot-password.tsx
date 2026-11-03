@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router'
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon, touch } from '@/theme'
+import { isValidEmail } from '@/lib/validation'
 
 /**
  * Ανάκτηση κωδικού.
@@ -25,12 +26,13 @@ export default function ForgotPasswordScreen() {
 
   const submit = async () => {
     if (!email.trim()) { Alert.alert(t('common.error'), t('auth.enter_email')); return }
+    if (!isValidEmail(email)) { Alert.alert(t('common.error'), t('auth.email_invalid')); return }
     setLoading(true)
     try {
       await api.post('/auth/forgot-password', { email: email.trim() })
       setSent(true)
     } catch (err: any) {
-      Alert.alert(t('common.error'), err?.message || t('common.problem_try_again'))
+      Alert.alert(t('common.error'), err?.response?.data?.message || err?.message || t('common.problem_try_again'))
     } finally { setLoading(false) }
   }
 
