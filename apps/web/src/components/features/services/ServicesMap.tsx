@@ -108,7 +108,7 @@ export default function ServicesMap({ services }: Props) {
       }
 
       const meta = document.createElement('div')
-      meta.textContent = `★ ${Number(s.rating ?? 0).toFixed(1)} · ${t('cmpServiceCard.fromPrice', { price: s.price })}`
+      meta.textContent = `${(s.reviews_count ?? 0) > 0 ? `★ ${Number(s.rating ?? 0).toFixed(1)}` : t('common.noReviewsYet')} · ${t('cmpServiceCard.fromPrice', { price: s.price })}`
       meta.style.cssText = 'font-size:12px;color:#374151;margin-top:4px'
       box.appendChild(meta)
 

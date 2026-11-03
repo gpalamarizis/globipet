@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
+import { viewerOf, withoutProviderEmail } from '../lib/publicView.js'
 import { coordsFromBody } from '../lib/geocode.js'
 import { fullNameOf } from '../lib/userName.js'
 
@@ -33,10 +34,8 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
     // Ανενεργές υπηρεσίες (απενεργοποιημένες από τον πάροχο) εκτός του
     // δημόσιου καταλόγου. Ο διαχειριστής (συνδεδεμένος, role admin) τις βλέπει
     // όλες, όπως πριν· ο πάροχος βλέπει τις δικές του στο GET /my.
-    let isAdmin = false
-    if (req.headers?.authorization) {
-      try { await req.jwtVerify(); isAdmin = (req.user as any)?.role === 'admin' } catch { isAdmin = false }
-    }
+    const viewer = await viewerOf(req)
+    const isAdmin = viewer?.role === 'admin'
     if (!isAdmin) where.is_active = true
     if (q) where.OR = [{ provider_name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }]
     if (city) where.city = { contains: city, mode: 'insensitive' }
@@ -54,7 +53,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
       prisma.service.count({ where })
     ])
     const translated = await translateRecords('service', data, lang)
-    return { data: translated, total, page: pageNo, totalPages: Math.ceil(total / take) }
+    return { data: translated.map((s: any) => withoutProviderEmail(s, viewer)), total, page: pageNo, totalPages: Math.ceil(total / take) }
   })
 
   // Οι υπηρεσίες του συνδεδεμένου παρόχου.
@@ -116,7 +115,7 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const service = await prisma.service.findUniqueOrThrow({ where: { id: req.params.id } })
-    return translateRecord('service', service, lang)
+    return withoutProviderEmail(await translateRecord('service', service, lang) as any, await viewerOf(req))
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {

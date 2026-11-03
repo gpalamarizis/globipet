@@ -52,7 +52,7 @@ export default function ContactScreen() {
             <MapPin size={icon.md} color={colors.warning} />
           </View>
           <Text style={s.infoTitle}>{t('contact.address')}</Text>
-          <Text style={s.infoValue} numberOfLines={1}>{t('contact.addressValue')}</Text>
+          <Text style={s.infoValue} numberOfLines={2}>{t('contact.addressValue')}</Text>
         </Card>
       </View>
 

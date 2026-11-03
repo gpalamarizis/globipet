@@ -280,7 +280,9 @@ export default function ServiceDetail() {
                 ))}
               </div>
               <span className="text-sm text-gray-500">
-                {avgRating.toFixed(1)} ({reviews.length || service.reviews_count || 0} {t('common.reviews')})
+                {(reviews.length || service.reviews_count)
+                  ? `${avgRating.toFixed(1)} (${reviews.length || service.reviews_count} ${t('common.reviews')})`
+                  : t('common.noReviewsYet')}
               </span>
             </div>
 
@@ -386,7 +388,7 @@ export default function ServiceDetail() {
                       {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
                       {/* Απάντηση παρόχου (δημόσια)· ο ίδιος ο πάροχος της κριτικής απαντά/διορθώνει από εδώ. */}
                       <ReviewReply review={r}
-                        canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                        canEdit={isAuthenticated && (r.can_reply === true || user?.role === 'admin')}
                         invalidate={[['service-reviews', id], ['provider-reviews']]} />
                     </div>
                   ))}

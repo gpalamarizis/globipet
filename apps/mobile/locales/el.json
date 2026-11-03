@@ -33,7 +33,8 @@
     "add": "Προσθήκη",
     "email": "Email",
     "edit": "Επεξεργασία",
-    "delete": "Διαγραφή"
+    "delete": "Διαγραφή",
+    "no_reviews_yet": "Χωρίς κριτικές ακόμα"
   },
   "tabs": {
     "home": "Αρχική",
@@ -267,7 +268,7 @@
     "weight_placeholder": "π.χ. 12,5"
   },
   "social": {
-    "title": "Social Feed",
+    "title": "Κοινότητα",
     "no_posts": "Δεν υπάρχουν δημοσιεύσεις",
     "be_first": "Γίνε ο πρώτος που θα μοιραστεί κάτι.",
     "what_others_share": "Τι μοιράζονται οι άλλοι ιδιοκτήτες",
@@ -280,7 +281,7 @@
     "commentHint": "Γράψε σχόλιο",
     "share": "Κοινοποίηση",
     "deleteQ": "Να διαγραφεί οριστικά αυτή η δημοσίευση;",
-    "trending": "Trending",
+    "trending": "Δημοφιλή",
     "hashtagHint": "Προσθήκη hashtag"
   },
   "profile": {
@@ -318,7 +319,7 @@
     "ach_firstPetDesc": "Προσθέσατε το πρώτο σας κατοικίδιο",
     "ach_firstOrderTitle": "Πρώτη Αγορά",
     "ach_firstOrderDesc": "Ολοκληρώσατε την πρώτη σας παραγγελία",
-    "ach_reviewerTitle": "Super Reviewer",
+    "ach_reviewerTitle": "Κορυφαίος κριτικός",
     "ach_reviewerDesc": "Γράψατε 5 κριτικές",
     "ach_regularTitle": "Τακτικός",
     "ach_regularDesc": "10 κρατήσεις υπηρεσιών",
@@ -2072,7 +2073,7 @@
     }
   },
   "contact": {
-    "addressValue": "Αθήνα, Ελλάδα",
+    "addressValue": "Ελευθερίου Βενιζέλου 59, Καλλιθέα",
     "title": "Επικοινωνία",
     "subtitle": "Πες μας πώς μπορούμε να βοηθήσουμε",
     "email": "Email",

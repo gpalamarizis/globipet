@@ -240,7 +240,7 @@ export default function ServiceDetailScreen() {
                 {!!r.comment && <Text style={s.reviewTxt}>{r.comment}</Text>}
                 {/* Απάντηση παρόχου (δημόσια)· ο πάροχος της κριτικής απαντά από εδώ — όπως στο web. */}
                 <ReviewReply review={r}
-                  canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                  canEdit={isAuthenticated && (r.can_reply === true || user?.role === 'admin')}
                   invalidate={[['service-reviews', id], ['provider-reviews']]} />
               </View>
             ))}

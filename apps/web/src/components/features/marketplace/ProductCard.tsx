@@ -78,7 +78,9 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         <div className="flex-1 min-w-0">
           <Link to={`/marketplace/${product.id}`}><p className="font-semibold text-gray-900 dark:text-white hover:text-brand-900 truncate">{product.name}</p></Link>
           <p className="text-xs text-gray-500 mt-0.5 truncate">{product.brand}</p>
-          <div className="flex items-center gap-1 mt-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/><span className="text-xs text-gray-500">{Number(product.rating ?? 0).toFixed(1)}</span></div>
+          {(product.reviews_count ?? 0) > 0
+            ? <div className="flex items-center gap-1 mt-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/><span className="text-xs text-gray-500">{Number(product.rating ?? 0).toFixed(1)}</span></div>
+            : <p className="text-xs text-gray-400 mt-1">{t('common.noReviewsYet')}</p>}
         </div>
         <div className="shrink-0 flex flex-col items-end gap-2">
           <p className="font-bold text-brand-900">{formatCurrency(effectivePrice(product))}</p>
@@ -106,8 +108,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: Props) {
         </Link>
         {product.brand && <p className="text-[10px] text-gray-400 mt-0.5">{product.brand}</p>}
         <div className="flex items-center gap-0.5 mt-1">
-          <Star size={9} className="text-yellow-400 fill-yellow-400"/>
-          <span className="text-[10px] text-gray-500">{Number(product.rating ?? 0).toFixed(1)} ({product.reviews_count ?? 0})</span>
+          {(product.reviews_count ?? 0) > 0 ? (<>
+            <Star size={9} className="text-yellow-400 fill-yellow-400"/>
+            <span className="text-[10px] text-gray-500">{Number(product.rating ?? 0).toFixed(1)} ({product.reviews_count})</span>
+          </>) : <span className="text-[10px] text-gray-400">{t('common.noReviewsYet')}</span>}
         </div>
         <div className="flex items-center justify-between mt-2">
           <div>

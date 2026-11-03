@@ -148,7 +148,8 @@ export default function TelehealthScreen() {
       // Το όνομα του κατοικιδίου, όπως στέλνει το web — αλλιώς ο γιατρός
       // έβλεπε τη συνεδρία χωρίς όνομα ζώου.
       pet_name: pets.find((p: any) => p.id === petId)?.name,
-      provider_email: selected.provider_email,
+      // Ο server βρίσκει τον γιατρό από το service_id — οι δημόσιοι κατάλογοι
+      // δεν δίνουν πια το email του.
       service_id: selected.id,
       scheduled_date: tab === 'now' ? localYmd() : date,
       scheduled_time: tab === 'now' ? new Date().toTimeString().slice(0, 5) : time,

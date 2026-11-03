@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
 import { createHash } from 'node:crypto'
 import { getRequestLang, translateRecord, translateRecords } from '../lib/i18n.js'
+import { viewerOf, withoutProviderEmail } from '../lib/publicView.js'
 import { effectivePrice } from '../lib/price.js'
 
 /**
@@ -123,7 +124,9 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
       ])
     }
     const translated = await translateRecords('product', data, lang)
-    return { data: translated, total, page: pageNo, totalPages: Math.ceil(total / limit) }
+    // Χωρίς το email του πωλητή (βλ. lib/publicView).
+    const viewer = await viewerOf(req)
+    return { data: translated.map((p: any) => withoutProviderEmail(p, viewer)), total, page: pageNo, totalPages: Math.ceil(total / limit) }
   })
 
   // ─── Provider dashboard ────────────────────────────────────────────
@@ -217,7 +220,7 @@ const productsRoutes: FastifyPluginAsync = async (app) => {
     const product = await prisma.product.findUniqueOrThrow({ where: { id: req.params.id } })
     // Fire and forget: a view counter must never delay or fail the page.
     countView(req, product.id).catch(() => {})
-    return translateRecord('product', product, lang)
+    return withoutProviderEmail(await translateRecord('product', product, lang) as any, await viewerOf(req))
   })
 
   // ─── Create / update / delete ──────────────────────────────────────

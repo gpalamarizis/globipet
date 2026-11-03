@@ -126,7 +126,8 @@ export default function Telehealth() {
       // row on the server — a client-supplied price used to go straight into
       // the Viva charge. Sending them here is ignored.
       const { data } = await api.post('/telehealth', {
-        provider_email: selectedVet.provider_email,
+        // Ο server βρίσκει τον γιατρό από το service_id — οι δημόσιοι κατάλογοι
+        // δεν δίνουν πια το email του.
         service_id: selectedVet.id,
         pet_id: selectedPetId || undefined,
         pet_name: pet?.name,
@@ -176,11 +177,15 @@ export default function Telehealth() {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{vet.provider_name}</p>
           <p className="text-xs text-gray-500 mt-0.5">{vet.specializations?.[0] || t('telehealth.generalVet')}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <Star size={11} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{vet.rating || 0}</span>
-            <span className="text-xs text-gray-400">({vet.reviews_count || 0})</span>
-          </div>
+          {(vet.reviews_count ?? 0) > 0 ? (
+            <div className="flex items-center gap-1 mt-1">
+              <Star size={11} className="text-yellow-500 fill-yellow-500" />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{Number(vet.rating ?? 0).toFixed(1)}</span>
+              <span className="text-xs text-gray-400">({vet.reviews_count})</span>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mt-1">{t('common.noReviewsYet')}</p>
+          )}
         </div>
         {vet.is_verified && <Shield size={14} className="text-blue-500 shrink-0 mt-1.5" />}
       </div>

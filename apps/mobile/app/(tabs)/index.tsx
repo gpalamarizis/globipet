@@ -480,7 +480,9 @@ export default function HomeScreen() {
                   <Text style={s.providerName} numberOfLines={1}>{sv.provider_name}</Text>
                   <Text style={s.providerSub} numberOfLines={1}>{sv.city}</Text>
                   <Text style={s.providerRating}>
-                    ⭐ {sv.rating?.toFixed(1) ?? '—'} · {t('home.reviews_count', { count: sv.reviews_count ?? 0 })}
+                    {(sv.reviews_count ?? 0) > 0
+                      ? `⭐ ${Number(sv.rating ?? 0).toFixed(1)} · ${t('home.reviews_count', { count: sv.reviews_count })}`
+                      : t('common.no_reviews_yet')}
                   </Text>
                 </View>
                 <Text style={s.providerPrice}>€{Number(sv.price ?? 0).toFixed(2)}</Text>

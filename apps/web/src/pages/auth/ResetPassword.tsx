@@ -5,7 +5,6 @@ import { api } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, CheckCircle2, Smartphone } from 'lucide-react'
 import toast from 'react-hot-toast'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function ResetPassword() {
   const { t } = useTranslation()
@@ -48,9 +47,8 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4 relative">
-      <div className="absolute top-4 right-4 z-10">
-        <LanguageSwitcher variant="full" />
-      </div>
+      {/* Επιλογή γλώσσας: μία, από το AuthLayout. Εδώ υπήρχε δεύτερη στην ίδια
+          θέση και οι δύο έπεφταν η μία πάνω στην άλλη («GR Ελληνικά GR»). */}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <div className="text-center mb-8">

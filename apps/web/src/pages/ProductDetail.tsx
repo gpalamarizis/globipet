@@ -225,7 +225,9 @@ export default function ProductDetail() {
               ))}
             </div>
             <span className="text-sm text-gray-500">
-              {avgRating.toFixed(1)} ({reviews.length || product.reviews_count || 0} {t('common.reviews')})
+              {(reviews.length || product.reviews_count)
+                ? `${avgRating.toFixed(1)} (${reviews.length || product.reviews_count} ${t('common.reviews')})`
+                : t('common.noReviewsYet')}
             </span>
           </div>
 
@@ -428,7 +430,7 @@ export default function ProductDetail() {
                     {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
                     {/* Απάντηση πωλητή (δημόσια)· ο ίδιος ο πωλητής απαντά/διορθώνει από εδώ. */}
                     <ReviewReply review={r} label={t('reviews.sellerReply')}
-                      canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                      canEdit={isAuthenticated && (r.can_reply === true || user?.role === 'admin')}
                       invalidate={[['product-reviews', id], ['provider-reviews']]} />
                   </div>
                 ))}

@@ -262,14 +262,14 @@ const routes: FastifyPluginAsync = async (app) => {
 
   // GET /telehealth/available-now — public, returns vets currently online
   app.get('/available-now', async (_req, reply) => {
-    // Ρητά πεδία, χωρίς contact_email / contact_phone: δημόσιο endpoint (ο
-    // κατάλογος έδινε τα στοιχεία επικοινωνίας σε οποιονδήποτε). Το
-    // provider_email μένει: το web και το κινητό το στέλνουν στην κράτηση.
+    // Ρητά πεδία, χωρίς contact_email / contact_phone ΚΑΙ χωρίς provider_email:
+    // δημόσιο endpoint — έδινε το προσωπικό email κάθε κτηνιάτρου σε οποιονδήποτε.
+    // Η κράτηση (POST /) βρίσκει πλέον τον πάροχο από το service_id.
     const vets = await prisma.service.findMany({
       where: { service_type: 'veterinary', is_active: true, is_available_now: true },
       orderBy: { available_since: 'asc' },
       select: {
-        id: true, provider_email: true, provider_name: true, title: true, description: true,
+        id: true, provider_name: true, title: true, description: true,
         city: true, location: true, country: true, image_url: true, cover_image: true,
         specializations: true, pet_types: true, languages: true, years_experience: true,
         is_verified: true, is_active: true, rating: true, reviews_count: true, price: true,
@@ -407,8 +407,11 @@ const routes: FastifyPluginAsync = async (app) => {
   // (via /:id/viva/verify or the shared orders.ts webhook fallback) before meeting_url is set.
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply) => {
     const { email, full_name } = req.user as any
-    const { provider_email, service_id, pet_id, pet_name, scheduled_date, scheduled_time, duration, notes } = req.body as any
-    if (!provider_email || !scheduled_date || !scheduled_time) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
+    const { provider_email: bodyProvider, service_id, pet_id, pet_name, scheduled_date, scheduled_time, duration, notes } = req.body as any
+    // Ο πάροχος προκύπτει από το service_id (οι δημόσιοι κατάλογοι δεν δίνουν
+    // πια email). Το provider_email γίνεται δεκτό μόνο για παλιές εκδόσεις της
+    // εφαρμογής χωρίς service_id, και αν σταλεί πρέπει να ταιριάζει.
+    if ((!service_id && !bodyProvider) || !scheduled_date || !scheduled_time) return reply.code(400).send({ message: 'Λείπουν υποχρεωτικά πεδία' })
 
     // The price is read from the provider's service row, never from the body.
     // A client-supplied `price` previously went straight into the Viva charge,
@@ -416,15 +419,16 @@ const routes: FastifyPluginAsync = async (app) => {
     const service = service_id
       ? await prisma.service.findUnique({ where: { id: String(service_id) } })
       : await prisma.service.findFirst({
-          where: { provider_email, service_type: 'veterinary', is_active: true },
+          where: { provider_email: String(bodyProvider), service_type: 'veterinary', is_active: true },
         })
 
     if (!service) {
       return reply.code(404).send({ message: 'Η υπηρεσία τηλεϊατρικής δεν βρέθηκε' })
     }
-    if (service.provider_email !== provider_email) {
+    if (bodyProvider && service.provider_email !== bodyProvider) {
       return reply.code(400).send({ message: 'Η υπηρεσία δεν ανήκει στον συγκεκριμένο πάροχο' })
     }
+    const provider_email = service.provider_email
     // Με ρητό service_id: μόνο ΕΝΕΡΓΗ ΚΤΗΝΙΑΤΡΙΚΗ υπηρεσία. Πριν, οποιαδήποτε
     // υπηρεσία του παρόχου (π.χ. ανενεργή ή κούρεμα με άλλη τιμή) γινόταν
     // «τηλεϊατρική» με την τιμή της.

@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { viewerOf, canSeeProvider } from '../lib/publicView.js'
 import type { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma.js'
 
@@ -189,9 +190,16 @@ const routes: FastifyPluginAsync = async (app) => {
       orderBy: { created_at: 'desc' },
       take: 200,
     })
-    // Δημόσιο endpoint: το email του πελάτη δεν επιστρέφεται (το όνομα αρκεί
-    // για την εμφάνιση· καμία οθόνη δεν το χρησιμοποιεί).
-    return { data: data.map(({ customer_email: _omit, ...r }) => r) }
+    // Δημόσιο endpoint: ούτε το email του πελάτη ούτε του παρόχου. Το αν ο
+    // θεατής μπορεί να απαντήσει (ο πάροχος της κριτικής ή ο διαχειριστής) το
+    // λέει ο server στο can_reply — οι εφαρμογές το σύγκριναν με το provider_email.
+    const viewer = await viewerOf(req)
+    return {
+      data: data.map(({ customer_email: _c, provider_email, ...r }) => ({
+        ...r,
+        can_reply: canSeeProvider(viewer, provider_email),
+      })),
+    }
   })
 
   /**

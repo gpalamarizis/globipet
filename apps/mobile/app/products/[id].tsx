@@ -258,7 +258,7 @@ export default function ProductDetailScreen() {
                 {!!r.comment && <Text style={s.reviewText}>{r.comment}</Text>}
                 {/* Απάντηση πωλητή (δημόσια)· ο πωλητής απαντά από εδώ — όπως στο web. */}
                 <ReviewReply review={r} label={t('reviews.sellerReply')}
-                  canEdit={isAuthenticated && !!user?.email && (user.email === r.provider_email || user.role === 'admin')}
+                  canEdit={isAuthenticated && (r.can_reply === true || user?.role === 'admin')}
                   invalidate={[['product-reviews', id], ['provider-reviews']]} />
               </View>
             ))}
