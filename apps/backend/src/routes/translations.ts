@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import prisma from '../lib/prisma.js'
+import { Prisma } from '@prisma/client'
 import { audit } from '../lib/audit.js'
 import {
   SUPPORTED, TRANSLATABLE, PROVIDER_OWNED, normLang,
@@ -26,6 +27,16 @@ const OWNERSHIP: Record<string, { table: string; emailCol: string; via?: string 
   service:         { table: 'services',         emailCol: 'provider_email' },
   product:         { table: 'products',         emailCol: 'provider_email' },
   service_package: { table: 'service_packages', emailCol: 'provider_email', via: 'services' },
+}
+
+/** Οντότητες πλατφόρμας για το «τι λείπει»: πίνακας και πεδίο αναφοράς. */
+const PLATFORM_TABLES: Record<string, { table: string; field: string }> = {
+  // Το όνομα της ράτσας είναι ήδη αγγλικό (και name_el)· λείπει η περιγραφή.
+  breed:              { table: 'breeds',                field: 'description' },
+  achievement:        { table: 'achievements',          field: 'name' },
+  insurance_provider: { table: 'insurance_providers',   field: 'name' },
+  insurance_plan:     { table: 'insurance_plans',       field: 'name' },
+  ai_plan:            { table: 'ai_subscription_plans', field: 'name' },
 }
 
 const translationsRoutes: FastifyPluginAsync = async (app) => {
@@ -229,6 +240,17 @@ const translationsRoutes: FastifyPluginAsync = async (app) => {
                               WHERE t.entity='catalog_template' AND t.entity_id=ct.id
                                 AND t.field='name' AND t.lang=${lang})
            ORDER BY ct.category, ct.display_order LIMIT 200`
+      } else if (PLATFORM_TABLES[entity]) {
+        // Περιεχόμενο πλατφόρμας (ράτσες, πλάνα, ασφάλειες…). Πριν: 400, οπότε η
+        // σελίδα Μεταφράσεις του admin έδειχνε κενή λίστα για αυτά στο «λείπει».
+        // Ο πίνακας και το πεδίο είναι από τη σταθερή λίστα, όχι από το αίτημα.
+        const { table, field } = PLATFORM_TABLES[entity]
+        rows = await prisma.$queryRaw`
+          SELECT x.id, x.name AS label FROM ${Prisma.raw(`"${table}"`)} x
+           WHERE NOT EXISTS (SELECT 1 FROM translations t
+                              WHERE t.entity=${entity} AND t.entity_id=x.id
+                                AND t.field=${field} AND t.lang=${lang})
+           ORDER BY x.name LIMIT 500`
       } else {
         return reply.code(400).send({ message: 'Δεν υποστηρίζεται αναφορά για αυτή την οντότητα' })
       }

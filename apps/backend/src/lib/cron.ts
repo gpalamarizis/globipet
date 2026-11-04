@@ -5,7 +5,7 @@ import prisma from './prisma.js'
 import { auditSystem } from './audit.js'
 import { broadcastToUser } from '../routes/notifications.js'
 import { sendPushToUser } from './push.js'
-import { resolveStuckBookingRefunds, resolveStuckTelehealthRefunds } from './cancellation.js'
+import { resolveStuckBookingRefunds, resolveStuckTelehealthRefunds, bookingStart } from './cancellation.js'
 import { resolveStuckEventRefunds } from '../routes/events.js'
 import { deleteUserUploads } from './storage.js'
 import { cancelAllStripeSubscriptionsOfUser, StripeCancelError, AI_SUB_ACTIVATED_ACTION } from './stripeSubscriptions.js'
@@ -599,6 +599,64 @@ export function startStuckRefundsCron() {
       }
     } catch (err: any) {
       console.error('Stuck refunds cron error:', err?.message ?? err)
+    } finally {
+      running = false
+    }
+  })
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ΛΗΞΗ ΑΠΛΗΡΩΤΩΝ ΚΡΑΤΗΣΕΩΝ — κάθε 10'
+
+   Η κράτηση γεννιέται pending/unpaid και ο πελάτης πάει στη Viva. Αν δεν
+   πληρώσει, έμενε «Εκκρεμεί» για πάντα: στη λίστα του πελάτη και του
+   παρόχου, ακόμα και μέρες μετά την ώρα του ραντεβού, πιάνοντας την ώρα.
+
+   Ακυρώνεται όταν (και τα δύο μόνο για pending + unpaid):
+     • πέρασαν UNPAID_BOOKING_TTL_HOURS από τη δημιουργία της, ή
+     • πέρασε η ώρα του ραντεβού.
+
+   Ασφαλές με καθυστερημένη πληρωμή: αν η Viva επιβεβαιώσει χρέωση για
+   ακυρωμένη κράτηση, το confirmBookingPayment την επιστρέφει αυτόματα
+   (lib/bookingPayment.ts). Η αλλαγή γίνεται ατομικά (updateMany με τους
+   ίδιους όρους), ώστε μια πληρωμή που ήρθε στο μεταξύ να μην ακυρώνεται.
+   Καμία ειδοποίηση: ο πελάτης δεν πλήρωσε, ο πάροχος δεν ενημερώθηκε ποτέ.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const UNPAID_BOOKING_TTL_HOURS = 2
+
+export async function expireUnpaidBookings(now = new Date()): Promise<number> {
+  const candidates = await prisma.booking.findMany({
+    where: { status: 'pending', payment_status: 'unpaid' },
+    select: { id: true, created_at: true, booking_date: true, booking_time: true },
+    take: 500,
+  })
+  const cutoff = now.getTime() - UNPAID_BOOKING_TTL_HOURS * 3600_000
+  const ids = candidates.filter(b => {
+    const start = bookingStart(b.booking_date, b.booking_time)
+    return b.created_at.getTime() < cutoff || (!!start && start.getTime() <= now.getTime())
+  }).map(b => b.id)
+  if (!ids.length) return 0
+  const r = await prisma.booking.updateMany({
+    where: { id: { in: ids }, status: 'pending', payment_status: 'unpaid' },
+    data: { status: 'cancelled' },
+  })
+  if (r.count > 0) {
+    await auditSystem({ action: 'booking_unpaid_expired', resource: 'booking', metadata: { count: r.count, ids } })
+  }
+  return r.count
+}
+
+export function startUnpaidBookingExpiryCron() {
+  let running = false
+  cron.schedule('*/10 * * * *', async () => {
+    if (running) return
+    running = true
+    try {
+      const n = await expireUnpaidBookings()
+      if (n) console.log(`⌛ Απλήρωτες κρατήσεις που έληξαν: ${n}`)
+    } catch (err: any) {
+      console.error('Unpaid booking expiry cron error:', err?.message ?? err)
     } finally {
       running = false
     }

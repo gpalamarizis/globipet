@@ -57,7 +57,7 @@ import catalogRoutes from './routes/catalog.js'
 import registryRoutes from './routes/registry.js'
 import aiSubscriptionsRoutes from './routes/ai-subscriptions.js'
 import membershipRoutes from './routes/membership.js'
-import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron, startStuckRefundsCron } from './lib/cron.js'
+import { startAiTrialExpiryCron, startAccountDeletionCron, startRetentionCron, startStuckRefundsCron, startUnpaidBookingExpiryCron } from './lib/cron.js'
 import { registerMessageTranslation } from './lib/apiMessages.js'
 import { assertProductionEnv } from './lib/envCheck.js'
 import settingsRoutes from './routes/settings.js'
@@ -632,6 +632,7 @@ startAiTrialExpiryCron()
 startAccountDeletionCron()   // GDPR Άρθρο 17 — εκτέλεση αιτημάτων διαγραφής
 startRetentionCron()         // GDPR Άρθρο 5 §1 ε΄ — επιβολή χρόνων διατήρησης
 startStuckRefundsCron()      // Κολλημένες επιστροφές (`refunding`) — κάθε 15'
+startUnpaidBookingExpiryCron() // Απλήρωτες κρατήσεις: ακύρωση μετά από 2 ώρες ή μετά την ώρα του ραντεβού — κάθε 10'
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
