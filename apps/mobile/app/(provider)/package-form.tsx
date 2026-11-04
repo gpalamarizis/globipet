@@ -8,7 +8,7 @@ import { Screen, Card, Button, Input, Loading } from '@/components/ui'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { Chips } from '@/components/Chips'
 import { SwitchRow } from '@/components/SwitchRow'
-import { GROUP_KEYS, SIZE_OPTIONS, PET_OPTIONS, MODALITY_OPTIONS } from '@/components/packageOptions'
+import { GROUP_KEYS, SIZE_OPTIONS, PET_OPTIONS, MODALITY_OPTIONS, withCurrent } from '@/components/packageOptions'
 import { space } from '@/theme'
 
 /**
@@ -87,7 +87,7 @@ export default function PackageFormScreen() {
     <Screen title={isNew ? t('providerPkg.newPackage') : t('providerPkg.editPackage')} back>
       <Card>
         <Chips label={t('providerPkg.fCategory')} value={form.group} onChange={v => set('group', v)}
-          options={Object.entries(GROUP_KEYS).map(([value, key]) => ({ value, label: t(key) }))} />
+          options={withCurrent(Object.entries(GROUP_KEYS).map(([value, key]) => ({ value, label: t(key) })), form.group)} />
         <Input label={t('providerPkg.fName')} value={form.name} onChangeText={v => set('name', v)} />
         <Input label={t('providerPkg.fDescription')} value={form.description} onChangeText={v => set('description', v)} multiline />
 
@@ -103,7 +103,7 @@ export default function PackageFormScreen() {
           </View>
         </View>
 
-        <Chips label={t('providerPkg.fSize')} value={form.size} onChange={v => set('size', v)} options={opts(SIZE_OPTIONS)} />
+        <Chips label={t('providerPkg.fSize')} value={form.size} onChange={v => set('size', v)} options={withCurrent(opts(SIZE_OPTIONS), form.size)} />
         <Chips label={t('providerPkg.fPetType')} value={form.pet_type} onChange={v => set('pet_type', v)} options={opts(PET_OPTIONS)} />
         <Chips label={t('providerPkg.fModality')} value={form.modality} onChange={v => set('modality', v)} options={opts(MODALITY_OPTIONS)} />
 

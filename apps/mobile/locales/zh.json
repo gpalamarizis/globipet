@@ -34,7 +34,8 @@
     "email": "邮箱",
     "edit": "编辑",
     "delete": "删除",
-    "no_reviews_yet": "暂无评价"
+    "no_reviews_yet": "暂无评价",
+    "from_price": "{{price}} 欧元起"
   },
   "tabs": {
     "home": "首页",
@@ -1128,7 +1129,8 @@
     "upcomingBookings": "即将到来的预约",
     "uploadFile": "上传文件",
     "wordDetected": "检测到 Word 文件，将自动提取数据。",
-    "changePractitioner": "更换接诊人员"
+    "changePractitioner": "更换接诊人员",
+    "viewPublic": "查看"
   },
   "providerStaff": {
     "title": "我的团队",
@@ -1276,6 +1278,7 @@
     "petDog": "🐕 狗",
     "pkgAdded": "已添加套餐",
     "pkgCatCount": "{{p}} 个套餐 · {{c}} 个类别",
+    "pkgCount_one": "{{count}} 个套餐",
     "pkgCount": "{{count}} 个套餐",
     "pkgDeleted": "已删除套餐",
     "pkgUpdated": "套餐已更新",

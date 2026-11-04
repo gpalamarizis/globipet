@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Switch, Alert, TouchableOpacity } from 'react-n
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { Scissors, Plus, Pencil, Layers } from 'lucide-react-native'
+import { Scissors, Plus, Pencil, Layers, Eye } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, EmptyState, SkeletonRows, Button } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
@@ -71,7 +71,7 @@ export default function ProviderServices() {
                 trackColor={{ true: colors.brand, false: colors.border }} thumbColor={colors.surface} />
             </View>
 
-            {/* Δύο ενέργειες ίσου πλάτους κάτω από τα στοιχεία. */}
+            {/* Τρεις ενέργειες ίσου πλάτους κάτω από τα στοιχεία. */}
             <View style={s.actions}>
               <TouchableOpacity style={s.action} activeOpacity={0.7}
                 onPress={() => router.push({ pathname: '/(provider)/service-form', params: { id: sv.id } } as any)}>
@@ -82,6 +82,12 @@ export default function ProviderServices() {
                 onPress={() => router.push({ pathname: '/(provider)/packages', params: { serviceId: sv.id } } as any)}>
                 <Layers size={icon.sm} color={colors.brand} />
                 <Text style={s.actionTxt}>{t('providerPkg.title')}</Text>
+              </TouchableOpacity>
+              {/* Η σελίδα όπως τη βλέπουν οι πελάτες (ίδιο με το web). */}
+              <TouchableOpacity style={s.action} activeOpacity={0.7}
+                onPress={() => router.push(`/services/${sv.id}` as any)}>
+                <Eye size={icon.sm} color={colors.brand} />
+                <Text style={s.actionTxt}>{t('providerDash.viewPublic')}</Text>
               </TouchableOpacity>
             </View>
           </Card>

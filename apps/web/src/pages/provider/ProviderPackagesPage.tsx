@@ -33,6 +33,16 @@ const GROUP_META: Record<string, { labelKey: string; color: string; emoji: strin
 /** Ανώτατη τιμή — ίδια με τον server (packages.ts MAX_PRICE). */
 const MAX_PRICE = 100_000
 const SIZE_LABELS: Record<string, string> = { small: 'providerPkg.szSmall', medium: 'providerPkg.szMedium', large: 'providerPkg.szLarge', xlarge: 'providerPkg.szXLarge' }
+/**
+ * Ομάδα/μέγεθος πακέτου: κωδικός (consultation, small…) → μεταφρασμένη
+ * ετικέτα· ελεύθερο κείμενο (π.χ. «Χειρουργεία», «Μικρόσωμος» από παλαιότερες
+ * εισαγωγές) → εμφανίζεται όπως είναι. Πριν, ό,τι δεν ήταν κωδικός έβγαινε
+ * «Άλλα» και το μέγεθος χανόταν (τρεις ίδιες «Στείρωση θηλυκού»).
+ */
+const groupLabel = (t: (k: string) => string, g?: string | null) =>
+  !g ? t(GROUP_META.other.labelKey) : GROUP_META[g] ? t(GROUP_META[g].labelKey) : g
+const sizeLabel = (t: (k: string) => string, s?: string | null) =>
+  !s ? '' : SIZE_LABELS[s] ? t(SIZE_LABELS[s]) : s
 const MODALITY_LABELS: Record<string, string> = {
   in_clinic: 'providerPkg.modInClinic', home_visit: 'providerPkg.modHomeVisit', telehealth: 'providerPkg.modTelehealth', emergency: 'providerPkg.modEmergency'
 }
@@ -243,7 +253,7 @@ export default function ProviderPackagesPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{meta.emoji}</span>
                     <div className="text-left">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{t(meta.labelKey)}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{groupLabel(t, group)}</h3>
                       <p className="text-xs text-gray-500">{t('providerPkg.pkgCount', { count: items.length })}</p>
                     </div>
                   </div>
@@ -259,7 +269,7 @@ export default function ProviderPackagesPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium text-sm text-gray-900 dark:text-white">{pkg.name}</p>
-                                {pkg.size && <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', meta.color, 'border')}>{t(SIZE_LABELS[pkg.size])}</span>}
+                                {pkg.size && <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', meta.color, 'border')}>{sizeLabel(t, pkg.size)}</span>}
                                 {pkg.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200">{MODALITY_LABELS[pkg.modality] ? t(MODALITY_LABELS[pkg.modality]) : pkg.modality}</span>}
                                 {pkg.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-orange-50 text-orange-700 border border-orange-200">{pkg.pet_type === 'dog' ? '🐕' : pkg.pet_type === 'cat' ? '🐈' : '🐾'}</span>}
                                 {pkg.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">{t('pgProvPackages.addon')}</span>}
@@ -466,12 +476,12 @@ function PresetCatalogModal({ open, onClose, serviceId, category, existingNames 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm text-gray-900 dark:text-white">{tpl.name}</p>
-                              {tpl.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{t(SIZE_LABELS[tpl.size])}</span>}
+                              {tpl.size && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{sizeLabel(t, tpl.size)}</span>}
                               {tpl.modality && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">{MODALITY_LABELS[tpl.modality] ? t(MODALITY_LABELS[tpl.modality]) : tpl.modality}</span>}
                               {tpl.pet_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700">{tpl.pet_type === 'dog' ? '🐕' : tpl.pet_type === 'cat' ? '🐈' : '🐾'}</span>}
                               {tpl.is_addon && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">{t('pgProvPackages.addon')}</span>}
                             </div>
-                            <p className="text-xs text-gray-400 mt-0.5">{t('pgProvPackages.minutes', { count: tpl.duration_minutes })} · {t(meta.labelKey)}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{t('pgProvPackages.minutes', { count: tpl.duration_minutes })} · {groupLabel(t, tpl.group)}</p>
                             {tpl.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{tpl.description}</p>}
                           </div>
                         </div>
@@ -834,6 +844,8 @@ function CustomPackageModal({ open, onClose, serviceId, editing, onSaved }: any)
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fCategory')}</label>
                 <select className="input" value={form.group} onChange={e => setForm({...form, group: e.target.value})}>
+                  {/* Παλαιότερη τιμή σε ελεύθερο κείμενο: μένει επιλεγμένη, δεν αλλάζει σιωπηλά. */}
+                  {form.group && !GROUP_META[form.group] && <option value={form.group}>📋 {form.group}</option>}
                   {Object.entries(GROUP_META).map(([key, meta]) => (
                     <option key={key} value={key}>{meta.emoji} {t(meta.labelKey)}</option>
                   ))}
@@ -857,6 +869,7 @@ function CustomPackageModal({ open, onClose, serviceId, editing, onSaved }: any)
                 <label className="text-xs font-medium text-gray-500 mb-1 block">{t('providerPkg.fSize')}</label>
                 <select className="input" value={form.size || ''} onChange={e => setForm({...form, size: e.target.value || null})}>
                   <option value="">{t('providerPkg.anyNone')}</option>
+                  {form.size && !SIZE_LABELS[form.size] && <option value={form.size}>{form.size}</option>}
                   <option value="small">{t('providerPkg.szSmall')}</option>
                   <option value="medium">{t('providerPkg.szMedium')}</option>
                   <option value="large">{t('providerPkg.szLarge')}</option>

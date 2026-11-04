@@ -39,3 +39,20 @@ export const MODALITY_OPTIONS = [
   { value: 'home_visit', key: 'providerPkg.fHomeVisits' },
   { value: 'telehealth', key: 'providerPkg.modTelehealth' },
 ]
+
+const SIZE_KEYS: Record<string, string> = Object.fromEntries(SIZE_OPTIONS.filter(o => o.value).map(o => [o.value, o.key]))
+
+/**
+ * Ετικέτα ομάδας/μεγέθους: κωδικός → μετάφραση· ελεύθερο κείμενο από
+ * παλαιότερες εισαγωγές («Χειρουργεία», «Μικρόσωμος») → όπως είναι.
+ * Πριν, έβγαινε «Άλλα» και το μέγεθος δεν φαινόταν (όπως στο web).
+ */
+export const groupLabel = (t: (k: string) => string, g?: string | null) =>
+  !g ? t(GROUP_KEYS.other) : GROUP_KEYS[g] ? t(GROUP_KEYS[g]) : g
+export const sizeLabel = (t: (k: string) => string, s?: string | null) =>
+  !s ? '' : SIZE_KEYS[s] ? t(SIZE_KEYS[s]) : s
+
+/** Επιλογές για Chips, με την τρέχουσα τιμή αν είναι ελεύθερο κείμενο. */
+export function withCurrent(options: { value: string; label: string }[], current?: string | null) {
+  return current && !options.some(o => o.value === current) ? [{ value: current, label: current }, ...options] : options
+}

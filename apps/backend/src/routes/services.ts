@@ -26,6 +26,25 @@ function pickService(body: any, isAdmin: boolean) {
   return Object.fromEntries(Object.entries(src).filter(([k]) => SERVICE_EDITABLE.has(k)))
 }
 
+/**
+ * «Από €X»: η μικρότερη τιμή ενεργού πακέτου (> 0) κάθε υπηρεσίας.
+ *
+ * Υπηρεσίες που τιμολογούνται μόνο με πακέτα έχουν price = 0· οι κάρτες
+ * έγραφαν «από €0» και η σελίδα της υπηρεσίας «Δωρεάν», ενώ η φθηνότερη
+ * επιλογή ήταν π.χ. €20. Ένα ερώτημα για όλη τη σελίδα, όχι ένα ανά υπηρεσία.
+ * Το price της υπηρεσίας δεν αλλάζει (το χρησιμοποιούν οι κρατήσεις).
+ */
+async function withPriceFrom<T extends { id: string }>(rows: T[]): Promise<(T & { price_from: number | null })[]> {
+  if (!rows.length) return rows as any
+  const mins = await prisma.servicePackage.groupBy({
+    by: ['service_id'],
+    where: { service_id: { in: rows.map(r => r.id) }, is_active: true, price: { gt: 0 } },
+    _min: { price: true },
+  })
+  const by = new Map(mins.map(m => [m.service_id, m._min.price ?? null]))
+  return rows.map(r => ({ ...r, price_from: by.get(r.id) ?? null }))
+}
+
 const servicesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (req: any) => {
     const lang = getRequestLang(req)
@@ -53,7 +72,8 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
       prisma.service.count({ where })
     ])
     const translated = await translateRecords('service', data, lang)
-    return { data: translated.map((s: any) => withoutProviderEmail(s, viewer)), total, page: pageNo, totalPages: Math.ceil(total / take) }
+    const priced = await withPriceFrom(translated as any[])
+    return { data: priced.map((s: any) => withoutProviderEmail(s, viewer)), total, page: pageNo, totalPages: Math.ceil(total / take) }
   })
 
   // Οι υπηρεσίες του συνδεδεμένου παρόχου.
@@ -109,13 +129,14 @@ const servicesRoutes: FastifyPluginAsync = async (app) => {
       where: { provider_email: email },
       orderBy: [{ created_at: 'desc' }, { id: 'asc' }],
     })
-    return { data, total: data.length }
+    return { data: await withPriceFrom(data), total: data.length }
   })
 
   app.get('/:id', async (req: any) => {
     const lang = getRequestLang(req)
     const service = await prisma.service.findUniqueOrThrow({ where: { id: req.params.id } })
-    return withoutProviderEmail(await translateRecord('service', service, lang) as any, await viewerOf(req))
+    const [priced] = await withPriceFrom([await translateRecord('service', service, lang) as any])
+    return withoutProviderEmail(priced, await viewerOf(req))
   })
 
   app.post('/', { preHandler: [(app as any).authenticate] }, async (req: any, reply: any) => {

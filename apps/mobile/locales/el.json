@@ -34,7 +34,8 @@
     "email": "Email",
     "edit": "Επεξεργασία",
     "delete": "Διαγραφή",
-    "no_reviews_yet": "Χωρίς κριτικές ακόμα"
+    "no_reviews_yet": "Χωρίς κριτικές ακόμα",
+    "from_price": "από €{{price}}"
   },
   "tabs": {
     "home": "Αρχική",
@@ -1069,7 +1070,7 @@
     "errImport": "Σφάλμα εισαγωγής δεδομένων",
     "errNoAuthUrl": "Δεν επιστράφηκε διεύθυνση σύνδεσης",
     "error": "Σφάλμα",
-    "importExcel": "Import από Excel",
+    "importExcel": "Εισαγωγή από Excel",
     "importProducts": "Εισαγωγή προϊόντων marketplace",
     "importRecords": "Εισαγωγή {{count}} εγγραφών",
     "importServices": "Εισαγωγή υπηρεσιών",
@@ -1118,9 +1119,9 @@
     "teleOff": "Εκτός Τηλεϊατρικής",
     "teleOffMsg": "⚫ Απενεργοποιήσατε τη διαθεσιμότητα",
     "teleOn": "🟢 Είστε πλέον διαθέσιμος για τηλεϊατρική",
-    "templateDownloaded": "Template κατεβάστηκε!",
-    "templateProducts": "Template Προϊόντων (.xlsx)",
-    "templateServices": "Template Υπηρεσιών (.xlsx)",
+    "templateDownloaded": "Το πρότυπο κατέβηκε!",
+    "templateProducts": "Πρότυπο προϊόντων (.xlsx)",
+    "templateServices": "Πρότυπο υπηρεσιών (.xlsx)",
     "title": "Πίνακας παρόχου",
     "totalBookings": "Συνολικές κρατήσεις",
     "totalRevenue": "Συνολικά έσοδα",
@@ -1128,7 +1129,8 @@
     "upcomingBookings": "Επερχόμενες κρατήσεις",
     "uploadFile": "Ανέβασμα αρχείου",
     "wordDetected": "Αρχείο Word εντοπίστηκε. Θα εξαχθούν δεδομένα αυτόματα.",
-    "changePractitioner": "Αλλαγή γιατρού"
+    "changePractitioner": "Αλλαγή γιατρού",
+    "viewPublic": "Προβολή"
   },
   "providerStaff": {
     "title": "Η ομάδα μου",
@@ -1276,6 +1278,7 @@
     "petDog": "🐕 Σκύλος",
     "pkgAdded": "Πακέτο προστέθηκε",
     "pkgCatCount": "{{p}} πακέτα · {{c}} κατηγορίες",
+    "pkgCount_one": "{{count}} πακέτο",
     "pkgCount": "{{count}} πακέτα",
     "pkgDeleted": "Πακέτο διαγράφηκε",
     "pkgUpdated": "Πακέτο ενημερώθηκε",

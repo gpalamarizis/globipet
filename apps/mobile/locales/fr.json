@@ -34,7 +34,8 @@
     "email": "E-mail",
     "edit": "Modifier",
     "delete": "Supprimer",
-    "no_reviews_yet": "Pas encore d'avis"
+    "no_reviews_yet": "Pas encore d'avis",
+    "from_price": "à partir de {{price}} €"
   },
   "tabs": {
     "home": "Accueil",
@@ -1128,7 +1129,8 @@
     "upcomingBookings": "Réservations à venir",
     "uploadFile": "Téléverser un fichier",
     "wordDetected": "Fichier Word détecté. Les données seront extraites automatiquement.",
-    "changePractitioner": "Changer de praticien"
+    "changePractitioner": "Changer de praticien",
+    "viewPublic": "Voir"
   },
   "providerStaff": {
     "title": "Mon équipe",
@@ -1276,6 +1278,7 @@
     "petDog": "🐕 Chien",
     "pkgAdded": "Forfait ajouté",
     "pkgCatCount": "{{p}} forfaits · {{c}} catégories",
+    "pkgCount_one": "{{count}} forfait",
     "pkgCount": "{{count}} forfaits",
     "pkgDeleted": "Forfait supprimé",
     "pkgUpdated": "Forfait mis à jour",

@@ -2,7 +2,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame, Inbox, Compass, Users, Wrench, Info } from 'lucide-react'
+import { Home, Heart, ShoppingBag, Scissors, Search, Bell, ShoppingCart, Menu, X, ChevronDown, LogOut, User, Settings, PawPrint, Calendar, MessageSquare, Stethoscope, MapPin, Shield, Brain, BookOpen, Building2, MoreHorizontal, Video, FileText, Dna, Scale, Sun, Moon, Home as HomeIcon, HeartHandshake, HeartPulse, FlaskConical, CalendarDays, Dog, Flame, Inbox, Compass, Users, Wrench, Info, LayoutDashboard } from 'lucide-react'
 import { useThemeStore } from '@/store/theme'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -82,6 +82,18 @@ const bottomTabs: { path: string | null; labelKey: string; icon: any }[] = [
   { path: null,           labelKey: 'navGroups.explore', icon: Compass },
   { path: '/marketplace', labelKey: 'nav.shop',         icon: ShoppingBag },
   { path: '/profile',     labelKey: 'nav.profile',      icon: User },
+]
+
+/**
+ * Κάτω μενού του καθαρού παρόχου. Το καταναλωτικό (Κατοικίδια, Κατάστημα,
+ * Εξερεύνησε) τον έστελνε πίσω στον πίνακα σε κάθε πάτημα — βλ. φύλακα
+ * στο MainLayout. Εδώ μόνο ό,τι μπορεί πράγματι να ανοίξει.
+ */
+const providerBottomTabs: { path: string | null; labelKey: string; icon: any }[] = [
+  { path: '/provider',          labelKey: 'nav.panel',    icon: LayoutDashboard },
+  { path: '/provider/packages', labelKey: 'nav.services', icon: Scissors },
+  { path: '/inbox',             labelKey: 'nav.inbox',    icon: Inbox },
+  { path: '/profile',           labelKey: 'nav.profile',  icon: User },
 ]
 
 // ─── Desktop NavDropdown ─────────────────────────────────────────
@@ -168,7 +180,10 @@ export default function MainLayout() {
    * (PROVIDER_SHARED_PATHS). Χωρίς αυτές ο καθαρός πάροχος δεν είχε αλλαγή
    * κωδικού, εξαγωγή/διαγραφή δεδομένων ή τους όρους — τον έστελνε πίσω.
    */
+  // + η σελίδα μιας υπηρεσίας (/services/:id): ο πάροχος πρέπει να μπορεί να
+  // δει πώς εμφανίζεται η δική του στους πελάτες (σύνδεσμος «Προβολή»).
   const providerAllowed = PROVIDER_SHARED_PATHS.includes(guardPath.replace(/\/+$/, '') || '/')
+    || /^\/services\/[^/]+\/?$/.test(guardPath)
   useEffect(() => {
     if (authUser?.role === 'service_provider' && !providerAllowed) navigateGuard('/provider', { replace: true })
   }, [authUser?.role, providerAllowed, navigateGuard])
@@ -305,7 +320,7 @@ export default function MainLayout() {
                       </span>
                     )}
                   </button>
-                  <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative"
+                  {user?.role !== 'service_provider' && <button onClick={() => setCartOpen(true)} className="btn-ghost p-2.5 relative"
                     aria-label={`${t('nav.cart')}${cartItems.length > 0 ? ` (${t('nav.cartItems', { count: cartItems.length })})` : ''}`}>
                     <ShoppingCart size={18} className="text-gray-500" aria-hidden="true" />
                     {cartItems.length > 0 && (
@@ -313,7 +328,7 @@ export default function MainLayout() {
                         {cartItems.length}
                       </span>
                     )}
-                  </button>
+                  </button>}
 
                   {/* User menu (desktop) */}
                   <div className="hidden lg:block relative" ref={userMenuRef}>
@@ -460,7 +475,7 @@ export default function MainLayout() {
       {/* ── MOBILE BOTTOM TAB BAR ─────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 safe-area-bottom" aria-label={t('nav.mobileNav')}>
         <div className="flex items-center justify-around px-1 py-2">
-          {bottomTabs.map(tab => {
+          {(user?.role === 'service_provider' ? providerBottomTabs : bottomTabs).map(tab => {
             // «Εξερεύνησε»: κουμπί που ανοίγει το μενού ομάδων — ενεργό όταν
             // είναι ανοιχτό ή όταν η τρέχουσα σελίδα ανήκει σε κάποια ομάδα.
             if (tab.path === null) {
@@ -478,7 +493,7 @@ export default function MainLayout() {
               )
             }
             const path = tab.path
-            const isActive = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
+            const isActive = path === '/' || path === '/provider' ? location.pathname === path : location.pathname.startsWith(path)
             return (
               <Link key={path} to={path}
                 aria-current={isActive ? 'page' : undefined}

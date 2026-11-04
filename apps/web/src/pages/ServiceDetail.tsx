@@ -610,7 +610,9 @@ export default function ServiceDetail() {
           {/* Price card */}
           <div className="card p-5 sticky top-20">
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-              {service.price ? formatCurrency(service.price) : t('common.free')}
+              {service.price > 0 ? formatCurrency(service.price)
+                : service.price_from > 0 ? t('cmpServiceCard.fromPrice', { price: service.price_from })
+                : t('common.free')}
             </div>
             {/* There is no price_per column, so neither branch ever
                 rendered and the price showed with no unit beside it. Services
@@ -655,7 +657,9 @@ export default function ServiceDetail() {
         <div>
           <p className="text-xs text-gray-500">{t('serviceDetailExtra.price')}</p>
           <p className="text-lg font-bold text-gray-900 dark:text-white">
-            {service.price ? formatCurrency(service.price) : t('common.free')}
+            {service.price > 0 ? formatCurrency(service.price)
+              : service.price_from > 0 ? t('cmpServiceCard.fromPrice', { price: service.price_from })
+              : t('common.free')}
           </p>
         </div>
         <button onClick={goToBooking} className="btn-primary flex-1 max-w-[200px] flex items-center justify-center gap-2 py-3">

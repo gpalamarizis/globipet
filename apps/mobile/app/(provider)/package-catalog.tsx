@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BookOpen } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input } from '@/components/ui'
-import { GROUP_KEYS } from '@/components/packageOptions'
+import { groupLabel } from '@/components/packageOptions'
 import { colors, space, radius, type, weight } from '@/theme'
 
 /**
@@ -71,7 +71,7 @@ export default function PackageCatalogScreen() {
        groups.length === 0 ? <EmptyState icon={BookOpen} title={t('providerPkg.noServicesFound')} /> :
        groups.map(([group, items]) => (
         <View key={group}>
-          <Text style={s.group}>{t(GROUP_KEYS[group] ?? GROUP_KEYS.other)}</Text>
+          <Text style={s.group}>{groupLabel(t, group)}</Text>
           {items.map(tpl => (
             <Card key={tpl.id}>
               {/* Όνομα αριστερά, πεδίο τιμής δεξιά με σταθερό πλάτος —

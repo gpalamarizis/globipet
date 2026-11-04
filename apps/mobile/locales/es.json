@@ -34,7 +34,8 @@
     "email": "Email",
     "edit": "Editar",
     "delete": "Eliminar",
-    "no_reviews_yet": "Aún sin reseñas"
+    "no_reviews_yet": "Aún sin reseñas",
+    "from_price": "desde {{price}} €"
   },
   "tabs": {
     "home": "Inicio",
@@ -1128,7 +1129,8 @@
     "upcomingBookings": "Próximas reservas",
     "uploadFile": "Subir archivo",
     "wordDetected": "Archivo Word detectado. Los datos se extraerán automáticamente.",
-    "changePractitioner": "Cambiar profesional"
+    "changePractitioner": "Cambiar profesional",
+    "viewPublic": "Ver"
   },
   "providerStaff": {
     "title": "Mi equipo",
@@ -1276,6 +1278,7 @@
     "petDog": "🐕 Perro",
     "pkgAdded": "Paquete añadido",
     "pkgCatCount": "{{p}} paquetes · {{c}} categorías",
+    "pkgCount_one": "{{count}} paquete",
     "pkgCount": "{{count}} paquetes",
     "pkgDeleted": "Paquete eliminado",
     "pkgUpdated": "Paquete actualizado",

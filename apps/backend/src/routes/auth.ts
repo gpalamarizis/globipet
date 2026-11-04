@@ -467,7 +467,10 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     const parsed = parseBody(loginSchema, req.body, reply)
     if (!parsed) return
     const { email, password } = parsed
+    // Παλιοί λογαριασμοί που φτιάχτηκαν από τη διαχείριση με κεφαλαία στο
+    // email: η ακριβής αναζήτηση (με πεζά) δεν τους έβρισκε ποτέ.
     const user = await prisma.user.findUnique({ where: { email } })
+      ?? await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } })
     if (!user || !user.password_hash) {
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH) // σταθερός χρόνος (βλ. DUMMY_PASSWORD_HASH)
       await audit(req, { action: 'login', resource: 'user', outcome: 'failure', metadata: { reason: 'no_such_user', email } })

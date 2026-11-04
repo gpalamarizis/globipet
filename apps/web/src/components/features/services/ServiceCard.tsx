@@ -5,6 +5,7 @@ import {
   Building2, Car, Camera, Pill, PawPrint, BadgeCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { serviceFromPrice } from '@/lib/price'
 import type { Service } from '@/types'
 import { useTranslation } from 'react-i18next'
 
@@ -94,7 +95,7 @@ export default function ServiceCard({ service }: { service: Service }) {
           ) : (
             <span className="text-xs text-gray-400">{t('common.noReviewsYet')}</span>
           )}
-          <p className="font-bold text-sm text-brand-900 dark:text-brand-400">{t('cmpServiceCard.fromPrice', { price: service.price })}</p>
+          <p className="font-bold text-sm text-brand-900 dark:text-brand-400">{t('cmpServiceCard.fromPrice', { price: serviceFromPrice(service) })}</p>
         </div>
         <div className="flex gap-2 mt-2">
           {service.home_visits && <span className="flex items-center gap-0.5 text-[10px] text-green-600"><Home size={10}/>{t('services.homeVisits')}</span>}

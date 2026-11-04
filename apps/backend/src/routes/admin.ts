@@ -409,7 +409,10 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/users', async (req: any, reply) => {
-    const { full_name, email, password, role, phone } = req.body as any
+    const { full_name, email: rawEmail, password, role, phone } = req.body as any
+    // Πεζά, όπως στην εγγραφή και στη σύνδεση (validate.ts → email): με
+    // κεφαλαίο γράμμα ο λογαριασμός δεν μπορούσε ποτέ να συνδεθεί.
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : rawEmail
     if (!email || !password) {
       return reply.code(400).send({ message: 'Email και κωδικός είναι υποχρεωτικά' })
     }

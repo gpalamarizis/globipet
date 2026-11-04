@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layers, Plus, BookOpen } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { Screen, Card, Badge, Button, EmptyState, Loading } from '@/components/ui'
-import { GROUP_KEYS } from '@/components/packageOptions'
+import { groupLabel as labelOfGroup, sizeLabel } from '@/components/packageOptions'
 import { colors, space, type, weight } from '@/theme'
 
 /**
@@ -50,7 +50,7 @@ export default function PackagesScreen() {
   if (isLoading) return <Screen title={t('providerPkg.title')} back><Loading /></Screen>
 
   const noPrice = pkgs.filter(p => !(p.price > 0)).length
-  const groupLabel = (g: string) => t(GROUP_KEYS[g] ?? GROUP_KEYS.other)
+  const groupLabel = (g: string) => labelOfGroup(t, g)
 
   return (
     <Screen title={t('providerPkg.title')} subtitle={service?.title} back onRefresh={onRefresh} refreshing={refreshing}>
@@ -79,7 +79,7 @@ export default function PackagesScreen() {
                       ? <Badge label={`€${Number(p.price).toFixed(2)}`} tone="brand" />
                       : <Badge label={t('providerPkg.noPrice')} tone="warning" />}
                     <Badge label={`${p.duration_minutes ?? 60}′`} tone="neutral" />
-                    {!!p.size && <Badge label={t(`providerPkg.sz${p.size === 'xlarge' ? 'XLarge' : p.size.charAt(0).toUpperCase() + p.size.slice(1)}`)} tone="neutral" />}
+                    {!!p.size && <Badge label={sizeLabel(t, p.size)} tone="neutral" />}
                     {!!p.pet_type && <Badge label={t(p.pet_type === 'cat' ? 'providerPkg.petCat' : 'providerPkg.petDog')} tone="neutral" />}
                     {p.is_addon && <Badge label={t('providerPkg.addon')} tone="info" />}
                   </View>

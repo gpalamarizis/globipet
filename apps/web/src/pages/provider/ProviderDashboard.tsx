@@ -648,8 +648,11 @@ function ServicesTab() {
                 {s.city ? ` · ${s.city}` : ''}
               </p>
             </div>
-            <p className="font-bold text-gray-900 dark:text-white">€{s.price}</p>
+            <p className="font-bold text-gray-900 dark:text-white">
+              {s.price > 0 ? `€${s.price}` : s.price_from > 0 ? t('cmpServiceCard.fromPrice', { price: s.price_from }) : `€${s.price ?? 0}`}
+            </p>
             <div className="flex gap-1">
+              <Link to={`/services/${s.id}`} className="btn-ghost p-2" title={t('providerDash.viewPublic')} aria-label={t('providerDash.viewPublic')}><Eye size={14} className="text-gray-400"/></Link>
               <Link to="/provider/packages" className="btn-ghost p-2" title={t('providerPkg.title')} aria-label={t('providerPkg.edit')}><Edit size={14} className="text-gray-400"/></Link>
               <button onClick={() => { if(confirm(t('providerDash.confirmDelete'))) deleteService.mutate(s.id) }} className="btn-ghost p-2"><Trash2 size={14} className="text-red-400"/></button>
             </div>
@@ -874,7 +877,7 @@ export default function ProviderDashboard() {
     { id: 'translations', label: t('providerDash.tabTranslations'), icon: Languages },
     // The insights page existed with no way to reach it.
     ...(sellsProducts ? [{ id: 'insights', label: t('providerDash.tabInsights'), icon: BarChart3 }] : []),
-    ...(sellsProducts ? [{ id: 'import', label: 'Import', icon: Upload }] : []),
+    ...(sellsProducts ? [{ id: 'import', label: t('providerDash.tabImport'), icon: Upload }] : []),
   ]
 
   if (!canAccess) return <Navigate to="/" replace />

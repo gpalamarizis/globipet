@@ -24,3 +24,15 @@ export function salePercent(p: { price?: unknown; sale_price?: unknown } | null 
   if (!p || !isOnSale(p)) return 0
   return Math.round((1 - Number(p.sale_price) / Number(p.price)) * 100)
 }
+
+/**
+ * Τιμή «από» μιας υπηρεσίας: η βασική της τιμή αν είναι > 0, αλλιώς η
+ * φθηνότερη επιλογή πακέτου (price_from από τον server). Υπηρεσίες με
+ * τιμολόγηση μόνο σε πακέτα έδειχναν «από 0€» / «Δωρεάν».
+ */
+export function serviceFromPrice(s: { price?: unknown; price_from?: unknown } | null | undefined): number {
+  const p = Number(s?.price)
+  if (Number.isFinite(p) && p > 0) return p
+  const f = Number(s?.price_from)
+  return Number.isFinite(f) && f > 0 ? f : 0
+}

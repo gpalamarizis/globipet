@@ -306,7 +306,12 @@ export default function ServicesScreen() {
             </View>
 
             <View style={s.priceBox}>
-              <Text style={s.price}>€{Number(item.price ?? 0).toFixed(2)}</Text>
+              {/* Υπηρεσία μόνο με πακέτα: «από €X» (φθηνότερο πακέτο), όχι €0.00. */}
+              <Text style={s.price}>
+                {Number(item.price) > 0 || !(Number(item.price_from) > 0)
+                  ? `€${Number(item.price ?? 0).toFixed(2)}`
+                  : t('common.from_price', { price: Number(item.price_from).toFixed(2) })}
+              </Text>
               {item.is_verified && <Text style={s.verified}>✓</Text>}
             </View>
           </TouchableOpacity>
