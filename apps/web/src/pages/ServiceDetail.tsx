@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -101,6 +101,16 @@ export default function ServiceDetail() {
     queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
     enabled: isAuthenticated,
   })
+  // Ένα μόνο κατοικίδιο: επιλέγεται αυτόματα. Πριν φαινόταν στη φόρμα αλλά
+  // δεν ήταν επιλεγμένο, και η κράτηση έφευγε χωρίς ζώο. Αν ο χρήστης το
+  // αποεπιλέξει (υπηρεσία χωρίς συγκεκριμένο ζώο), δεν ξαναεπιλέγεται.
+  const petAuto = useRef(false)
+  useEffect(() => {
+    if (!petAuto.current && (pets as any[]).length === 1) {
+      petAuto.current = true
+      setSelectedPet((pets as any[])[0].id)
+    }
+  }, [pets])
 
   // Τα πακέτα της υπηρεσίας με τις τιμές τους. Όταν ο πάροχος έχει ορίσει
   // πακέτα, η επιλογή είναι υποχρεωτική και ο server το επιβάλλει.
@@ -427,6 +437,9 @@ export default function ServiceDetail() {
                           </button>
                         ))}
                       </div>
+                      {!selectedPet && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">{t('serviceDetailExtra.noPetHint')}</p>
+                      )}
                     </div>
                   )}
 

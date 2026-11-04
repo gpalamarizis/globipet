@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share, Platform } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -66,6 +66,15 @@ export default function ServiceDetailScreen() {
     queryFn: () => api.get('/pets').then(r => r.data?.data ?? r.data ?? []),
     enabled: isAuthenticated,
   })
+  // Ένα μόνο κατοικίδιο: επιλέγεται αυτόματα (όπως στο web). Αν ο χρήστης το
+  // αποεπιλέξει, δεν ξαναεπιλέγεται.
+  const petAuto = useRef(false)
+  useEffect(() => {
+    if (!petAuto.current && (pets as any[]).length === 1) {
+      petAuto.current = true
+      setPetId((pets as any[])[0].id)
+    }
+  }, [pets])
 
   const { data: packages = [] } = useQuery({
     queryKey: ['service-packages', id],
@@ -275,6 +284,7 @@ export default function ServiceDetailScreen() {
                     )
                   })}
                 </View>
+                {!petId && <Text style={s.petHint}>{t('serviceDetail.noPetHint')}</Text>}
               </View>
             )}
 
@@ -525,4 +535,5 @@ const s = StyleSheet.create({
   strike: { color: colors.textLight, textDecorationLine: 'line-through', fontWeight: weight.regular },
   totalValue: { ...type.section, color: colors.brand, fontWeight: weight.black },
   payNote: { ...type.caption, color: colors.textLight, textAlign: 'center' },
+  petHint: { ...type.caption, color: colors.warning, marginTop: space.xs },
 })

@@ -999,7 +999,8 @@
     "total": "Total",
     "bookAndPay": "Réserver et payer",
     "booking": "Réservation…",
-    "vivaNote": "Vous serez redirigé vers la page de paiement Viva. La réservation est confirmée dès le paiement effectué."
+    "vivaNote": "Vous serez redirigé vers la page de paiement Viva. La réservation est confirmée dès le paiement effectué.",
+    "noPetHint": "Aucun animal choisi — le prestataire ne saura pas pour quel animal est le rendez-vous."
   },
   "booking": {
     "noPaymentPage": "Aucune page de paiement créée. Consultez vos réservations.",

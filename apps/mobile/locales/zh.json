@@ -999,7 +999,8 @@
     "total": "合计",
     "bookAndPay": "预约并支付",
     "booking": "预约中…",
-    "vivaNote": "您将跳转至 Viva 支付页面。付款完成后预约即确认。"
+    "vivaNote": "您将跳转至 Viva 支付页面。付款完成后预约即确认。",
+    "noPetHint": "未选择宠物——服务商将不知道预约是为哪只宠物。"
   },
   "booking": {
     "noPaymentPage": "未生成支付页面，请查看您的预约。",

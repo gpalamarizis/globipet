@@ -999,7 +999,8 @@
     "total": "Total",
     "bookAndPay": "Book and pay",
     "booking": "Booking…",
-    "vivaNote": "You will be taken to the Viva payment page. The booking is confirmed once the payment goes through."
+    "vivaNote": "You will be taken to the Viva payment page. The booking is confirmed once the payment goes through.",
+    "noPetHint": "No pet selected — the provider will not know which animal the appointment is for."
   },
   "booking": {
     "noPaymentPage": "No payment page was created. Check your bookings.",
