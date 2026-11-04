@@ -8,6 +8,7 @@ import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen, Card, Button, EmptyState, SkeletonRows, Input, Badge } from '@/components/ui'
 import { colors, space, radius, type, weight, icon } from '@/theme'
+import { sizeLabel } from '@/components/packageOptions'
 import { ErrorState, NotFoundState } from '@/components/ErrorState'
 import { ReviewReply } from '@/components/ReviewReply'
 import { dateLocale } from '@/lib/dates'
@@ -290,7 +291,8 @@ export default function ServiceDetailScreen() {
                   return (
                     <View key={p.id} style={[s.pkg, n > 0 && s.pkgOn]}>
                       <View style={s.pkgInfo}>
-                        <Text style={s.pkgName} numberOfLines={1}>{p.name}</Text>
+                        {/* Μέγεθος ζώου: χωρίς αυτό, π.χ. τρεις «Στείρωση θηλυκού» φαίνονταν ίδιες. */}
+                        <Text style={s.pkgName} numberOfLines={1}>{p.name}{p.size ? ` · ${sizeLabel(t, p.size)}` : ''}</Text>
                         {!!p.description && (
                           <Text style={s.pkgDesc} numberOfLines={1}>{p.description}</Text>
                         )}

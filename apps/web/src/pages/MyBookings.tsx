@@ -17,6 +17,12 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
 }
 
+/** Εικονίδιο ανά είδος υπηρεσίας — πριν ήταν ✂️ σε όλες (και στον κτηνίατρο). */
+const SERVICE_EMOJI: Record<string, string> = {
+  veterinary: '🩺', veterinary_clinic: '🏥', grooming: '✂️', walking: '🦮', sitting: '🏠', pet_sitting: '🏠',
+  boarding: '🏨', training: '🎓', transport: '🚗', photography: '📷', telehealth: '💻',
+}
+
 export default function MyBookings() {
   const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuthStore()
@@ -157,7 +163,7 @@ export default function MyBookings() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center shrink-0">
-                    <span className="text-2xl">✂️</span>
+                    <span className="text-2xl">{SERVICE_EMOJI[booking.service?.service_type] ?? '🐾'}</span>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{booking.service?.title || t('bookingsExtra.service')}</p>

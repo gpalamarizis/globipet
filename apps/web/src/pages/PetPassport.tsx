@@ -664,25 +664,27 @@ export default function PetPassport() {
             {/* ── TRAVEL / PASSPORT ── */}
             {activeTab === 'travel' && (
               <>
-                {/* Info banner */}
+                {/* Τι ΑΠΑΙΤΕΙΤΑΙ για κάθε ταξίδι — ουδέτερες κουκκίδες. Πριν είχαν ✅,
+                    που διαβαζόταν «το ζώο σου τα έχει» ακόμα και χωρίς μικροτσίπ
+                    ή εμβόλιο. Η πραγματική κατάσταση είναι στην κάρτα από κάτω. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div className="card p-4 border-l-4 border-blue-500">
                     <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">{t('pgPassport.domesticTravel')}</p>
                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>✅ {t('pgPassport.microchipIso')}</li>
-                      <li>✅ {t('pgPassport.rabiesValid')}</li>
-                      <li>✅ {t('pgPassport.healthBooklet')}</li>
-                      <li>✅ {t('pgPassport.vetCertificate')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.microchipIso')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.rabiesValid')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.healthBooklet')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.vetCertificate')}</li>
                     </ul>
                   </div>
                   <div className="card p-4 border-l-4 border-orange-500">
                     <p className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">{t('pgPassport.intlTravel')}</p>
                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>✅ {t('pgPassport.euPetPassport')}</li>
-                      <li>✅ {t('pgPassport.microchipBeforeVaccine')}</li>
-                      <li>✅ {t('pgPassport.rabies21')}</li>
-                      <li>✅ {t('pgPassport.antibodyTitre')}</li>
-                      <li>✅ {t('pgPassport.echinococcus')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.euPetPassport')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.microchipBeforeVaccine')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.rabies21')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.antibodyTitre')}</li>
+                      <li className="flex gap-1.5"><span className="text-gray-400" aria-hidden="true">•</span>{t('pgPassport.echinococcus')}</li>
                     </ul>
                   </div>
                 </div>

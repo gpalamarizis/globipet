@@ -48,6 +48,8 @@ const fromYmd = (s: string) => {
   return new Date(y, m - 1, d)
 }
 
+const PKG_SIZE: Record<string, string> = { small: 'providerPkg.szSmall', medium: 'providerPkg.szMedium', large: 'providerPkg.szLarge', xlarge: 'providerPkg.szXLarge' }
+
 export default function ServiceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -318,7 +320,7 @@ export default function ServiceDetail() {
                       ? 'border-brand-900 text-brand-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700')}>
                   {t_ === 'about' ? t('serviceDetailExtra.about')
-                   : t_ === 'reviews' ? t('common.reviews')
+                   : t_ === 'reviews' ? (r => r.charAt(0).toLocaleUpperCase() + r.slice(1))(t('common.reviews'))
                    : t('services.bookNow')}
                 </button>
               ))}
@@ -445,7 +447,10 @@ export default function ServiceDetail() {
                                 qty > 0 ? 'border-brand-900 bg-brand-50 dark:bg-brand-900/20'
                                         : 'border-gray-200 dark:border-gray-700')}>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{pk.name}</p>
+                                {/* Μέγεθος ζώου: χωρίς αυτό, π.χ. τρεις «Στείρωση θηλυκού» φαίνονταν ίδιες. */}
+                                <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                                  {pk.name}{pk.size ? ` · ${PKG_SIZE[pk.size] ? t(PKG_SIZE[pk.size]) : pk.size}` : ''}
+                                </p>
                                 {pk.description && (
                                   <p className="text-xs text-gray-500 truncate">{pk.description}</p>
                                 )}

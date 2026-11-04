@@ -195,11 +195,16 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // A booking may reference a pet, but only one the caller owns.
+    // Το όνομα του ζώου κρατιέται στην κράτηση: το web/κινητό έστελναν μόνο
+    // pet_id, οπότε η κάρτα «Οι κρατήσεις μου» και ο πάροχος δεν έβλεπαν ποτέ
+    // για ποιο κατοικίδιο είναι το ραντεβού.
+    let petName: string | null = null
     if (body.pet_id) {
-      const pet = await prisma.pet.findUnique({ where: { id: body.pet_id }, select: { owner_email: true } })
+      const pet = await prisma.pet.findUnique({ where: { id: body.pet_id }, select: { owner_email: true, name: true } })
       if (!pet || pet.owner_email !== email) {
         return reply.code(403).send({ message: 'Το κατοικίδιο δεν σου ανήκει' })
       }
+      petName = pet.name
     }
 
     // Price the selected packages from the database. Body shape:
@@ -306,7 +311,7 @@ const bookingsRoutes: FastifyPluginAsync = async (app) => {
         booking_time: String(body.booking_time),
         duration: body.duration ? parseInt(body.duration) : null,
         pet_id: body.pet_id || null,
-        pet_name: body.pet_name || null,
+        pet_name: petName ?? (typeof body.pet_name === 'string' ? body.pet_name.slice(0, 100) : null),
         notes: body.notes || null,
         staff_id: staffId,
         staff_name: staffName,

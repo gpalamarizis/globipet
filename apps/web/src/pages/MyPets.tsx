@@ -51,7 +51,7 @@ export default function MyPets() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 dark:text-white">{t('pets.title')}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{pets.length} {t('pets.subtitle')}</p>
+          <p className="text-sm text-gray-500 mt-0.5">{isLoading ? '\u00a0' : t('pets.count', { count: pets.length })}</p>
         </div>
         <button onClick={() => setAddOpen(true)} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> {t('pets.addPet')}
