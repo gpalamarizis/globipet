@@ -151,7 +151,8 @@
     "trialExpired": "Caducada — Ver planes",
     "nextBooking": "Próxima reserva",
     "appointment": "Cita",
-    "noBooking": "Sin reservas próximas. ¡Reserva ya!"
+    "noBooking": "Sin reservas próximas. ¡Reserva ya!",
+    "trialEnded": "Prueba finalizada"
   },
   "services": {
     "title": "Servicios",
@@ -2531,7 +2532,8 @@
     "cancelledText": "Elige un plan para seguir usando las funciones de IA.",
     "subscriptionLabel": "Suscripción de IA",
     "paymentFailedShort": "Pago fallido",
-    "required": "Se requiere suscripción de IA"
+    "required": "Se requiere suscripción de IA",
+    "inactiveText": "Las funciones de IA no están activas en tu cuenta."
   },
   "orderOos": {
     "refunded": "El producto se agotó: se te ha devuelto el dinero",
@@ -3008,7 +3010,8 @@
     "banner": "{{name}}: toda la IA, ×{{multiplier}} puntos en cada pago y soporte prioritario.",
     "bannerNoMult": "{{name}}: toda la IA y soporte prioritario.",
     "bannerMore": "Ver la membresía",
-    "notMember": "No eres miembro de GlobiPet Plus."
+    "notMember": "No eres miembro de GlobiPet Plus.",
+    "paymentFailedHintStore": "El último cargo en tu tarjeta ha fallado, por lo que tus ventajas de miembro están en pausa hasta que se complete el pago."
   },
   "payments": {
     "title": "Pagos y justificantes",

@@ -262,7 +262,7 @@ export default function ProfileScreen() {
     : aiSt === 'active' ? (aiPlanName ? t('accountHub.aiActive', { plan: aiPlanName }) : t('mySubs.status_active'))
     : aiSt === 'payment_failed' ? t('aiGate.paymentFailedShort')
     : aiSt === 'cancelled' ? t('mySubs.status_cancelled')
-    : aiSt === 'expired' ? t('home.trialExpired')
+    : aiSt === 'expired' ? (DIGITAL_PURCHASES_IN_APP ? t('home.trialExpired') : t('home.trialEnded'))
     : t('accountHub.aiNone')
   const aiRenews = aiSt === 'active' && aiStatus?.current_period_end ? fmtDateShort(String(aiStatus.current_period_end), i18n.language) : ''
   const aiTone = aiSt === 'payment_failed' || aiSt === 'expired' ? colors.danger
@@ -480,7 +480,7 @@ export default function ProfileScreen() {
               <Text style={[s.rowSub, { color: aiTone }]} numberOfLines={1}>{aiText}</Text>
               {!!aiRenews && <Text style={s.rowSub} numberOfLines={1}>{t('accountHub.aiRenews', { date: aiRenews })}</Text>}
             </View>
-            <Text style={s.rowAction} numberOfLines={1}>{t('accountHub.plans')}</Text>
+            {DIGITAL_PURCHASES_IN_APP && <Text style={s.rowAction} numberOfLines={1}>{t('accountHub.plans')}</Text>}
             <ChevronRight size={icon.md} color={colors.textLight} />
           </TouchableOpacity>
           <TouchableOpacity style={s.row} activeOpacity={0.7}

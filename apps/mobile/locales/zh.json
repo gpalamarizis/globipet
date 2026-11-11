@@ -151,7 +151,8 @@
     "trialExpired": "已过期 — 查看方案",
     "nextBooking": "下次预约",
     "appointment": "预约",
-    "noBooking": "暂无预约。立即预订！"
+    "noBooking": "暂无预约。立即预订！",
+    "trialEnded": "试用已结束"
   },
   "services": {
     "title": "服务",
@@ -2531,7 +2532,8 @@
     "cancelledText": "选择一个方案，继续使用 AI 功能。",
     "subscriptionLabel": "AI 订阅",
     "paymentFailedShort": "付款失败",
-    "required": "需要 AI 订阅"
+    "required": "需要 AI 订阅",
+    "inactiveText": "你的账户尚未启用 AI 功能。"
   },
   "orderOos": {
     "refunded": "商品已售罄——款项已退还",
@@ -3008,7 +3010,8 @@
     "banner": "{{name}}：全部 AI 功能、每笔付款 ×{{multiplier}} 积分，以及优先客服支持。",
     "bannerNoMult": "{{name}}：全部 AI 功能以及优先客服支持。",
     "bannerMore": "查看会员订阅",
-    "notMember": "您还不是 GlobiPet Plus 会员。"
+    "notMember": "您还不是 GlobiPet Plus 会员。",
+    "paymentFailedHintStore": "你的银行卡最近一次扣款失败，会员权益将暂停，直到付款完成。"
   },
   "payments": {
     "title": "付款与凭证",

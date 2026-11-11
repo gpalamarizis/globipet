@@ -189,10 +189,16 @@ export default function MembershipScreen() {
               </View>
               <Badge label={t('mySubs.status_payment_failed')} tone="danger" />
             </View>
-            <Text style={[s.text, { marginTop: space.sm }]}>{t('membership.paymentFailedHint')}</Text>
-            <Button full label={t('membership.manageCard')}
-              loading={portal.opening} disabled={portal.opening}
-              onPress={portal.open} style={{ marginTop: space.md }} />
+            {/* Χωρίς αγορά στο κινητό (storePolicy): καμία σελίδα πληρωμής του Stripe
+                για ψηφιακή συνδρομή — μόνο η κατάσταση· η ακύρωση μένει. */}
+            <Text style={[s.text, { marginTop: space.sm }]}>
+              {DIGITAL_PURCHASES_IN_APP ? t('membership.paymentFailedHint') : t('membership.paymentFailedHintStore')}
+            </Text>
+            {DIGITAL_PURCHASES_IN_APP && (
+              <Button full label={t('membership.manageCard')}
+                loading={portal.opening} disabled={portal.opening}
+                onPress={portal.open} style={{ marginTop: space.md }} />
+            )}
             {me?.can_cancel && (
               <Button label={t('mySubs.cancel')} variant="ghost" size="sm"
                 loading={cancel.isPending} disabled={cancel.isPending}

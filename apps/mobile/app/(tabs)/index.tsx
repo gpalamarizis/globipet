@@ -16,6 +16,7 @@ import { colors, space, radius, type, weight, shadow, icon, touch } from '@/them
 import { effectivePrice } from '@/lib/price'
 import NotificationBell from '@/components/NotificationBell'
 import { dateLocale } from '@/lib/dates'
+import { DIGITAL_PURCHASES_IN_APP } from '../../src/lib/storePolicy'
 
 /**
  * Ύψος μπάρας κατάστασης συν αναπνοή.
@@ -369,7 +370,9 @@ export default function HomeScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={s.trialLabel} numberOfLines={1}>{t('home.trialLabel')}</Text>
               <Text style={s.trialValue} numberOfLines={1}>
-                {trialExpired ? t('home.trialExpired') : t('home.trialDays', { count: trialLeft })}
+                {trialExpired
+                  ? (DIGITAL_PURCHASES_IN_APP ? t('home.trialExpired') : t('home.trialEnded'))
+                  : t('home.trialDays', { count: trialLeft })}
               </Text>
             </View>
             <ChevronRight size={icon.sm} color={colors.textLight} />

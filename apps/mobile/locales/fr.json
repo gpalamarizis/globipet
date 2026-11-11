@@ -151,7 +151,8 @@
     "trialExpired": "Expiré — Voir les formules",
     "nextBooking": "Prochain rendez-vous",
     "appointment": "Rendez-vous",
-    "noBooking": "Aucun rendez-vous prévu. Réservez maintenant !"
+    "noBooking": "Aucun rendez-vous prévu. Réservez maintenant !",
+    "trialEnded": "Essai terminé"
   },
   "services": {
     "title": "Services",
@@ -2531,7 +2532,8 @@
     "cancelledText": "Choisissez une formule pour continuer à utiliser les fonctions IA.",
     "subscriptionLabel": "Abonnement IA",
     "paymentFailedShort": "Échec du paiement",
-    "required": "Abonnement IA requis"
+    "required": "Abonnement IA requis",
+    "inactiveText": "Les fonctions IA ne sont pas actives sur votre compte."
   },
   "orderOos": {
     "refunded": "Le produit est épuisé — vous avez été remboursé",
@@ -3008,7 +3010,8 @@
     "banner": "{{name}} : toute l'IA, ×{{multiplier}} points à chaque paiement et une assistance prioritaire.",
     "bannerNoMult": "{{name}} : toute l'IA et une assistance prioritaire.",
     "bannerMore": "Voir l'adhésion",
-    "notMember": "Vous n'êtes pas membre GlobiPet Plus."
+    "notMember": "Vous n'êtes pas membre GlobiPet Plus.",
+    "paymentFailedHintStore": "Le dernier prélèvement sur votre carte a échoué : vos avantages de membre sont suspendus jusqu’à ce que le paiement aboutisse."
   },
   "payments": {
     "title": "Paiements et justificatifs",

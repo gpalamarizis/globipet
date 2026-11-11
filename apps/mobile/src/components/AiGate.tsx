@@ -116,8 +116,9 @@ export default function AiGate({ title, children }: { title: string; children: R
           </Text>
           <Text style={s.gateText}>
             {st === 'payment_failed' ? t('aiSub.paymentFailedHint')
-              : st === 'expired' ? t('ai.trial_sub')
-              : expired ? t('aiGate.cancelledText')
+              // Χωρίς αγορά στο κινητό: ουδέτερη κατάσταση, όχι «επίλεξε πλάνο» (storePolicy).
+              : st === 'expired' ? (DIGITAL_PURCHASES_IN_APP ? t('ai.trial_sub') : t('aiGate.inactiveText'))
+              : expired ? (DIGITAL_PURCHASES_IN_APP ? t('aiGate.cancelledText') : t('aiGate.inactiveText'))
               : t('ai.trial_desc')}
           </Text>
           {expired ? (

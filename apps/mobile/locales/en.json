@@ -151,7 +151,8 @@
     "trialExpired": "Expired — See plans",
     "nextBooking": "Next booking",
     "appointment": "Appointment",
-    "noBooking": "No upcoming booking. Book now!"
+    "noBooking": "No upcoming booking. Book now!",
+    "trialEnded": "Trial ended"
   },
   "services": {
     "title": "Services",
@@ -2531,7 +2532,8 @@
     "cancelledText": "Choose a plan to keep using the AI features.",
     "subscriptionLabel": "AI subscription",
     "paymentFailedShort": "Payment failed",
-    "required": "AI subscription required"
+    "required": "AI subscription required",
+    "inactiveText": "AI features are not active on your account."
   },
   "orderOos": {
     "refunded": "The product sold out — your money has been refunded",
@@ -3008,7 +3010,8 @@
     "banner": "{{name}}: all the AI, ×{{multiplier}} points on every payment and priority support.",
     "bannerNoMult": "{{name}}: all the AI and priority support.",
     "bannerMore": "See the membership",
-    "notMember": "You are not a GlobiPet Plus member."
+    "notMember": "You are not a GlobiPet Plus member.",
+    "paymentFailedHintStore": "The last charge to your card failed, so your member benefits are on hold until the payment goes through."
   },
   "payments": {
     "title": "Payments and receipts",
