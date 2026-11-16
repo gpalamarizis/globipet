@@ -20,8 +20,8 @@ import { audit } from '../lib/audit.js'
  * Το περιεχόμενο αναγνωρίζεται με (type, id) — ο client δεν ξέρει email.
  */
 
-type Kind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message'
-const KINDS: Kind[] = ['post', 'comment', 'topic', 'reply', 'community_message']
+type Kind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message' | 'adoption_listing'
+const KINDS: Kind[] = ['post', 'comment', 'topic', 'reply', 'community_message', 'adoption_listing']
 
 const KIND_LABEL: Record<Kind, string> = {
   post: 'Δημοσίευση',
@@ -29,6 +29,7 @@ const KIND_LABEL: Record<Kind, string> = {
   topic: 'Θέμα forum',
   reply: 'Απάντηση forum',
   community_message: 'Μήνυμα κοινότητας',
+  adoption_listing: 'Αγγελία υιοθεσίας',
 }
 
 function esc(v: string) {
@@ -53,6 +54,11 @@ async function resolveContent(kind: Kind, id: string): Promise<{ author_email: s
     case 'reply': {
       const r = await prisma.forumReply.findUnique({ where: { id }, select: { author_email: true, author_name: true, content: true } as any }) as any
       return r ? { author_email: r.author_email, author_name: r.author_name, excerpt: String(r.content ?? '') } : null
+    }
+    case 'adoption_listing': {
+      // Ο admin την κρύβει από τη «Διαχείριση → Υιοθεσίες» (PATCH /adoption/admin/listings/:id).
+      const r = await prisma.adoptionListing.findUnique({ where: { id }, select: { lister_email: true, lister_name: true, name: true, description: true } })
+      return r ? { author_email: r.lister_email, author_name: r.lister_name, excerpt: `${r.name}\n${r.description}` } : null
     }
     case 'community_message': {
       const r = await prisma.communityMessage.findUnique({ where: { id }, select: { author_email: true, author_name: true, content: true, image_url: true } })

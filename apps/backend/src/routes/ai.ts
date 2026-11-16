@@ -7,6 +7,8 @@ import { audit } from '../lib/audit.js'
 import { bookingStart } from '../lib/cancellation.js'
 import { resolveForAi } from '../lib/storage.js'
 import { getMembershipConfig, isMembershipPlanId } from '../lib/membership.js'
+import { aiKnowledge, GUIDE_COUNTRIES, GUIDE_UPDATED } from '../lib/adoptionContent.js'
+import { rulesFor, ageWeeks } from '../lib/adoptionRules.js'
 
 const TRIAL_DAYS = 30
 
@@ -675,6 +677,86 @@ ${contextParts}
       return parseJsonResponse(text)
     } catch (err: any) {
       console.error('AI legal error:', err)
+      return serverError(reply, err, 'ai', 'Η ενέργεια δεν ολοκληρώθηκε.')
+    }
+  })
+
+  /**
+   * Βοηθός υιοθεσίας — νομικά και πρακτικά για GR, ES, GB, FR, CN (και γενικά
+   * για άλλες χώρες), για όποιον υιοθετεί ΚΑΙ για όποιον δίνει ζώο.
+   *
+   *   · Γνωσιακή βάση: ο ίδιος οδηγός που βλέπουν web/κινητό
+   *     (lib/adoptionContent.ts) — ποτέ δύο εκδοχές του νόμου.
+   *   · Απαντά στη γλώσσα του χρήστη (`lang`), όχι πάντα ελληνικά.
+   *   · Προαιρετικό listing_id: το μοντέλο βλέπει είδος/ηλικία/χώρα της
+   *     αγγελίας (ποτέ email) για συγκεκριμένη απάντηση.
+   *   · Ίδια φύλαξη/όρια με τα υπόλοιπα AI (aiGuard, recordAiCall).
+   */
+  app.post('/adoption', { preHandler: aiGuard }, async (req: any, reply) => {
+    const { question, country, role, listing_id } = (req.body || {}) as any
+    if (!question || typeof question !== 'string' || !question.trim()) return reply.code(400).send({ message: 'Απαιτείται ερώτηση' })
+    const tooLong = textLimitError(req.body, { question: LONG_TEXT, country: SHORT_TEXT, role: SHORT_TEXT, listing_id: SHORT_TEXT })
+    if (tooLong) return reply.code(400).send(tooLong)
+
+    const cc = typeof country === 'string' && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : 'GR'
+    const who = role === 'giver' ? 'a person or organisation GIVING an animal for adoption'
+      : role === 'adopter' ? 'a person who wants to ADOPT an animal' : 'someone interested in adoption'
+    const lang = normLang(req.body?.lang)
+    const langName = lang === 'el' ? 'Greek' : (LANG_NAMES[lang] ?? 'Greek')
+
+    let listingContext = ''
+    if (typeof listing_id === 'string' && listing_id) {
+      const l = await prisma.adoptionListing.findUnique({
+        where: { id: listing_id },
+        select: { name: true, species: true, breed: true, sex: true, birth_date_est: true, country: true, city: true,
+          is_sterilized: true, is_vaccinated: true, microchip_number: true, lister_type: true, adoption_fee: true, fee_currency: true, is_hidden: true },
+      })
+      if (l && !l.is_hidden) {
+        listingContext = `\nThe question is about this listing: ${l.species}${l.breed ? ` (${l.breed})` : ''}, ${l.sex}, about ${ageWeeks(new Date(l.birth_date_est))} weeks old, in ${l.city}, ${l.country}; listed by ${l.lister_type === 'organisation' ? 'an organisation' : 'a private person'}; microchip ${l.microchip_number ? 'yes' : 'no'}; neutered ${l.is_sterilized ? 'yes' : 'no'}; vaccinated ${l.is_vaccinated ? 'yes' : 'no'}; contribution ${l.adoption_fee > 0 ? `${l.adoption_fee} ${l.fee_currency}` : 'none'}.`
+      }
+    }
+
+    const rules = rulesFor(cc)
+    const systemPrompt = `You are GlobiPet's adoption assistant: an expert on the law and good practice of adopting and rehoming companion animals in Greece (GR), Spain (ES), the United Kingdom (GB), France (FR) and China (CN), with general knowledge of other countries and EU law.
+
+You are talking to ${who}. Their country: ${cc}${(GUIDE_COUNTRIES as readonly string[]).includes(cc) ? '' : ' (no dedicated guide — give general guidance, name the national authority to check, and say clearly that rules vary)'}.
+
+GlobiPet platform policy (always applies, on top of national law): private persons may only give animals away FREE of charge (never sell); minimum age 8 weeks; GlobiPet never takes payment for adoptions — any organisation contribution is cost recovery paid directly to the organisation. Machine-readable rules for ${cc}: ${JSON.stringify(rules)}
+
+Verified knowledge base (checked ${GUIDE_UPDATED}). Prefer it over memory; if the user asks about something not covered, answer from general knowledge but say it should be verified with the competent authority:
+${aiKnowledge()}
+${listingContext}
+
+Rules for your answer:
+1. Write every free-text value in ${langName}. Keep law names/references in their original form (e.g. "Ν. 4830/2021", "Ley 7/2023", "Code rural L214-8", "《动物防疫法》").
+2. Be concrete and practical: who does what, which documents, which registry, deadlines.
+3. Never invent article numbers. If unsure of an exact article, cite the law without the article.
+4. Never help sell animals, evade identification/registration, breed or rehome banned dog types, or get around welfare rules.
+5. Remind that this is information, not legal advice, and recommend a lawyer/vet/authority when stakes are high.
+6. Reply ONLY with JSON:
+{
+  "answer": "full answer in Markdown",
+  "relevant_laws": ["law or regulation reference", "..."],
+  "practical_steps": ["step 1", "step 2"],
+  "documents": ["document needed", "..."],
+  "urgency": "low"|"medium"|"high",
+  "recommend_lawyer": true|false,
+  "disclaimer": "short disclaimer"
+}`
+
+    try {
+      if (!(await recordAiCall(req, reply))) return reply
+      const response = await createMessage({
+        ...aiModelParams(),
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question.trim() }],
+      })
+      const text = extractFinalText(response.content as any[])
+      const parsed = parseJsonResponse(text)
+      return { ...parsed, country: cc }
+    } catch (err: any) {
+      console.error('AI adoption error:', err)
       return serverError(reply, err, 'ai', 'Η ενέργεια δεν ολοκληρώθηκε.')
     }
   })

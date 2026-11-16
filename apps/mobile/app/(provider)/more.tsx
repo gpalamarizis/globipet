@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, Upload, BadgeCheck, Inbox } from 'lucide-react-native'
+import { Package, Users, Megaphone, Languages, LogOut, ChevronRight, Globe, CalendarDays, BarChart3, Languages as Languages2, ShieldCheck, SlidersHorizontal, FileText, Lock, Bell, KeyRound, LifeBuoy, Upload, BadgeCheck, Inbox, HeartHandshake } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { useAuthStore } from '../../src/store/auth'
 import { Screen } from '@/components/ui'
@@ -21,6 +21,8 @@ import { colors, space, radius, type, weight, icon } from '@/theme'
 const PRODUCT_TYPES = ['veterinary', 'grooming', 'boarding', 'training']
 
 const ITEMS = [
+  // Υιοθεσία — καταφύγια/φιλοζωικά (ίδιο με την καρτέλα «Υιοθεσία» του πίνακα στο web).
+  { key: 'adoption',  Icon: HeartHandshake, labelKey: 'adoption.nav',   route: '/adoption-manage' },
   { key: 'products',  Icon: Package,   labelKey: 'providerTabs.products',  route: '/(provider)/products' },
   { key: 'import',    Icon: Upload,    labelKey: 'providerImport.menu',    route: '/(provider)/import' },
   { key: 'staff',     Icon: Users,     labelKey: 'providerTabs.staff',     route: '/(provider)/staff' },
@@ -61,6 +63,7 @@ export default function ProviderMore() {
   const socialOnly = !!(user as any)?.google_id || !!(user as any)?.facebook_id
   const items = ITEMS.filter(i => sells || (i.key !== 'products' && i.key !== 'import' && i.key !== 'insights'))
     .filter(i => !(socialOnly && i.key === 'password'))
+    .filter(i => i.key !== 'adoption' || (myServices ?? []).some((sv: any) => sv.service_type === 'shelter' || sv.service_type === 'adoption'))
 
   return (
     <Screen title={t('providerTabs.more')} subtitle={user?.email}>

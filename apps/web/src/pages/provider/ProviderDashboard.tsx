@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft, Megaphone, Users, BarChart3 } from 'lucide-react'
+import { Plus, Upload, FileSpreadsheet, FileText, Package, Scissors, Calendar, Star, TrendingUp, Eye, Edit, Trash2, CheckCircle, Clock, X, ChevronRight, Download, AlertCircle, Video, Stethoscope, Languages, ArrowLeft, Megaphone, Users, BarChart3, HeartHandshake } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, getInitials } from '@/lib/utils'
@@ -19,10 +19,11 @@ import ProviderCustomersPage from './ProviderCustomersPage'
 import ProviderReviewsPage from './ProviderReviewsPage'
 import ProviderTelehealthToday from '@/components/features/telehealth/ProviderTelehealthToday'
 import StaffInvitationsCard from '@/components/StaffInvitationsCard'
+import AdoptionManager from '@/components/features/adoption/AdoptionManager'
 
 // Το 'insights' υπήρχε στον πίνακα των καρτελών και στην απεικόνιση,
 // αλλά έλειπε από τον τύπο — ο μεταγλωττιστής θεωρούσε τη σύγκριση αδύνατη.
-type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers' | 'insights' | 'reviews'
+type Tab = 'overview' | 'services' | 'staff' | 'products' | 'bookings' | 'calendar' | 'import' | 'translations' | 'marketing' | 'customers' | 'insights' | 'reviews' | 'adoption'
 
 // Ποιοι τύποι παρόχων πουλάνε ΚΑΙ προϊόντα (τροφές, σαμπουάν, αξεσουάρ).
 // Ένας walker ή sitter δεν έχει κατάστημα — δεν βλέπει καθόλου Προϊόντα
@@ -820,7 +821,9 @@ export default function ProviderDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  // ?tab=adoption: επιστροφή από μια αίτηση υιοθεσίας (AdoptionApplication) στην ίδια καρτέλα.
+  const [activeTab, setActiveTab] = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'adoption' ? 'adoption' : 'overview')
 
   const canAccess = user?.role === 'service_provider' || user?.role === 'both' || user?.role === 'admin'
 
@@ -856,6 +859,8 @@ export default function ProviderDashboard() {
   const providerServiceType = allMyServices[0]?.service_type || ''
   const sellsProducts = PRODUCT_TYPES.includes(providerServiceType)
   const isClinic = providerServiceType === 'veterinary'
+  // Υιοθεσία: καταφύγια και φιλοζωικά (υπηρεσία shelter/adoption).
+  const isShelter = allMyServices.some((s: any) => s.service_type === 'shelter' || s.service_type === 'adoption')
 
   useEffect(() => {
     if (!sellsProducts && (activeTab === 'products' || activeTab === 'import')) {
@@ -865,6 +870,7 @@ export default function ProviderDashboard() {
 
   const tabs = [
     { id: 'overview',  label: t('providerDash.tabOverview'), icon: TrendingUp },
+    ...(isShelter || activeTab === 'adoption' ? [{ id: 'adoption', label: t('adoption.nav'), icon: HeartHandshake }] : []),
     { id: 'services',  label: t('providerDash.tabServices'),  icon: Scissors },
     { id: 'staff',     label: isClinic ? t('providerDash.tabDoctors') : t('providerDash.tabStaff'), icon: Stethoscope },
     ...(sellsProducts ? [{ id: 'products', label: t('providerDash.tabProducts'), icon: Package }] : []),
@@ -943,6 +949,9 @@ export default function ProviderDashboard() {
       {activeTab === 'marketing' && <ProviderMarketingPage />}
       {activeTab === 'customers' && <ProviderCustomersPage />}
       {activeTab === 'reviews' && <ProviderReviewsPage />}
+
+      {/* Υιοθεσία — ίδια διαχείριση με τους ιδιώτες (/adoption/manage) */}
+      {activeTab === 'adoption' && <AdoptionManager />}
 
       {/* Overview */}
       {activeTab === 'overview' && (

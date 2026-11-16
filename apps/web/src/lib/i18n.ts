@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { detectAndApplyGeoLanguage } from './geoLocale'
+import { adoptionI18n } from './i18nAdoption'
 
 const el = {
   orgs: {
@@ -22876,11 +22877,11 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      el: { translation: el },
-      en: { translation: en },
-      es: { translation: es },
-      fr: { translation: fr },
-      zh: { translation: zh },
+      el: { translation: { ...el, adoption: adoptionI18n.el } },
+      en: { translation: { ...en, adoption: adoptionI18n.en } },
+      es: { translation: { ...es, adoption: adoptionI18n.es } },
+      fr: { translation: { ...fr, adoption: adoptionI18n.fr } },
+      zh: { translation: { ...zh, adoption: adoptionI18n.zh } },
     },
     fallbackLng: 'el',
     defaultNS: 'translation',

@@ -118,6 +118,12 @@ const DELETE_MAP: DeleteEntry[] = [
   { accessor: 'petTracker',           field: 'owner_email' },
   // Tokens ημερολογίου: δίνουν πρόσβαση στο ημερολόγιο του ανθρώπου.
   { accessor: 'calendarConnection',   field: 'user_email' },
+  // Υιοθεσία: αγαπημένα, αιτήσεις και μηνύματα του χρήστη ως αιτούντα.
+  // Οι αγγελίες του (και ό,τι κρέμεται από αυτές) σβήνουν με cascade.
+  { accessor: 'adoptionFavorite',     field: 'user_email' },
+  { accessor: 'adoptionMessage',      field: 'sender_email' },
+  { accessor: 'adoptionApplication',  field: 'applicant_email' },
+  { accessor: 'adoptionListing',      field: 'lister_email' },
   { accessor: 'oAuthState',           field: 'user_email' },
   { accessor: 'contactMessage',       field: 'user_email' },
   // Μηνύματα φόρμας επικοινωνίας χωρίς σύνδεση: το email είναι στη στήλη `email`.

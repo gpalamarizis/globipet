@@ -129,6 +129,7 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       calendarConnections, contactMessages, providerMessages, verificationRequests,
       pushSubscriptions, staffProfiles, services, products,
       customerNotes, campaignAudience, auditLogs, providerBookings, providerTelehealth,
+      adoptionListings, adoptionApplications, adoptionMessages, adoptionFavorites,
     ] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -240,6 +241,12 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       // Ως πάροχος: κρατήσεις και τηλεσυμβουλευτικές όπου είμαι ο πάροχος.
       prisma.booking.findMany({ where: { provider_email: email } }),
       prisma.telehealthConsultation.findMany({ where: { provider_email: email } }),
+      // Υιοθεσία: οι αγγελίες μου, οι αιτήσεις μου (χωρίς την ιδιωτική σημείωση
+      // του καταχωρίζοντος — είναι δεδομένο εκείνου), τα μηνύματά μου, τα αγαπημένα.
+      prisma.adoptionListing.findMany({ where: { lister_email: email } }),
+      prisma.adoptionApplication.findMany({ where: { applicant_email: email } }),
+      prisma.adoptionMessage.findMany({ where: { sender_email: email } }),
+      prisma.adoptionFavorite.findMany({ where: { user_email: email } }),
     ])
 
     const payload = {
@@ -307,6 +314,10 @@ const userRightsRoutes: FastifyPluginAsync = async (app) => {
       audit_logs: auditLogs.map(r => redactAuditRow(r, userId, email)),
       bookings_as_provider: providerBookings,
       telehealth_as_provider: providerTelehealth,
+      adoption_listings: adoptionListings,
+      adoption_applications: adoptionApplications.map(({ lister_note: _ln, ...a }) => a),
+      adoption_messages: adoptionMessages,
+      adoption_favorites: adoptionFavorites,
     }
 
     // Force download as JSON attachment

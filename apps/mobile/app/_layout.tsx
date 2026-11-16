@@ -59,6 +59,12 @@ const CARD_ROUTES = [
  */
 const PROVIDER_SHARED = new Set([
   'about',
+  // Υιοθεσία: τα καταφύγια (καθαροί πάροχοι) διαχειρίζονται αγγελίες/αιτήσεις
+  // από το «Περισσότερα» — ίδιο με το PROVIDER_SHARED_PATTERNS του web.
+  'adoption',
+  'adoption-application',
+  'adoption-form',
+  'adoption-manage',
   'change-password',
   'consents',
   'contact',

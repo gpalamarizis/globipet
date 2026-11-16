@@ -40,6 +40,8 @@ const toolsDropdown: NavItem[] = [
 ]
 
 const communityDropdown: NavItem[] = [
+  // Υιοθεσία ζώων — από καταφύγια/φιλοζωικά και ιδιώτες (ίδια θέση με το κινητό: Εξερεύνηση → Κοινότητα).
+  { path: '/adoption',    labelKey: 'adoption.nav',    icon: HeartHandshake, color: 'text-rose-500' },
   { path: '/forum',       labelKey: 'nav.forum',       icon: MessageSquare, color: 'text-blue-500' },
   { path: '/communities', labelKey: 'nav.communities', icon: Building2,     color: 'text-purple-500' },
   { path: '/events',      labelKey: 'nav.events',      icon: CalendarDays,  color: 'text-orange-500' },
@@ -72,6 +74,14 @@ const exploreGroups: { labelKey: string; items: NavItem[] }[] = [
  * PROVIDER_SHARED του κινητού (mobile/app/_layout.tsx).
  */
 const PROVIDER_SHARED_PATHS = ['/profile', '/inbox', '/privacy', '/terms', '/delete-account', '/account-deletion', '/cookies', '/help', '/faq', '/contact', '/about']
+
+/**
+ * Υιοθεσία για καταφύγια/φιλοζωικά (καθαροί πάροχοι): η διαχείριση είναι στην
+ * καρτέλα «Υιοθεσία» του πίνακα, αλλά η αίτηση (μηνύματα, ολοκλήρωση) και η
+ * προβολή της αγγελίας ανοίγουν εδώ — όπως το /services/:id. Ίδια λίστα με το
+ * PROVIDER_SHARED του κινητού (adoption-application, adoption).
+ */
+const PROVIDER_SHARED_PATTERNS = [/^\/adoption\/applications\/[^/]+\/?$/, /^\/adoption\/manage\/?$/, /^\/adoption\/(?!applications\/?$)[^/]+\/?$/]
 
 // ─── Bottom tab bar items (mobile) ───────────────────────────────
 // Ίδια σειρά με την εφαρμογή κινητού: Αρχική · Κατοικίδια · Εξερεύνησε ·
@@ -184,6 +194,7 @@ export default function MainLayout() {
   // δει πώς εμφανίζεται η δική του στους πελάτες (σύνδεσμος «Προβολή»).
   const providerAllowed = PROVIDER_SHARED_PATHS.includes(guardPath.replace(/\/+$/, '') || '/')
     || /^\/services\/[^/]+\/?$/.test(guardPath)
+    || PROVIDER_SHARED_PATTERNS.some(rx => rx.test(guardPath))
   useEffect(() => {
     if (authUser?.role === 'service_provider' && !providerAllowed) navigateGuard('/provider', { replace: true })
   }, [authUser?.role, providerAllowed, navigateGuard])

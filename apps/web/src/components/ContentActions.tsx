@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/auth'
  *   Αναφορά     → POST /moderation/report (ο admin ειδοποιείται, δράση ≤ 24 ώρες)
  *   Αποκλεισμός → POST /moderation/block (αναίρεση: Προφίλ → Αποκλεισμένοι χρήστες)
  */
-export type ContentKind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message'
+export type ContentKind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message' | 'adoption_listing'
 const REASONS = ['spam', 'harassment', 'hate', 'inappropriate', 'other'] as const
 
 export default function ContentActions({ type, id, isMine, size = 16, onBlocked, className = '' }: {

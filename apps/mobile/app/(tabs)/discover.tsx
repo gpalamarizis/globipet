@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Platform, StatusBar } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Stethoscope, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake } from 'lucide-react-native'
+import { Stethoscope, Brain, Heart, Shield, MapPin, PawPrint, Users, Calendar, ChevronRight, FlaskConical, MessagesSquare, CalendarDays, Dog, Scale, HeartPulse, Home as HomeIcon, HeartHandshake, HandHeart } from 'lucide-react-native'
 import { api } from '../../src/lib/api'
 import { colors, space, radius, type, weight, shadow, icon } from '@/theme'
 import { fmtYmd } from '@/lib/dates'
@@ -52,6 +52,7 @@ const GROUPS: { key: string; titleKey: string; items: Entry[] }[] = [
     { key: 'insurance',   Icon: Shield,      titleKey: 'cat.insurance',          subKey: 'discover.pet_protection',    route: '/insurance',  tint: 'hosting' },
   ] },
   { key: 'community', titleKey: 'explore.community', items: [
+    { key: 'adoption', Icon: HandHeart, titleKey: 'adoption.title', subKey: 'adoption.subtitle', route: '/adoption', tint: 'photography' },
     { key: 'forum',  Icon: MessagesSquare, titleKey: 'forum.title',  subKey: 'forum.emptyHint',  route: '/forum',  tint: 'training' },
     { key: 'communities', Icon: Users,       titleKey: 'discover.communities',        subKey: 'discover.owner_groups',        route: '/communities',tint: 'photography' },
     { key: 'events', Icon: CalendarDays,   titleKey: 'events.title', subKey: 'events.emptyHint', route: '/events', tint: 'hosting' },

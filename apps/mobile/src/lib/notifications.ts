@@ -172,6 +172,11 @@ export function internalRoute(target: unknown, type?: unknown): string | null {
   // Στο κινητό ο χώρος παρόχου είναι η ομάδα (provider): εκεί η Επισκόπηση
   // δείχνει τις σημερινές τηλεσυνεδρίες με κουμπί εισόδου στην κλήση.
   if (target === '/provider' || target.startsWith('/provider/')) return '/(provider)'
+  // Υιοθεσία: ο server στέλνει διαδρομές του web (/adoption/applications/:id).
+  const adoptionApp = /^\/adoption\/applications\/([^/?#]+)/.exec(target)
+  if (adoptionApp) return `/adoption-application/${adoptionApp[1]}`
+  if (target === '/adoption/manage') return '/adoption-manage'
+  if (target === '/adoption/applications') return '/adoption-applications'
   return target
 }
 

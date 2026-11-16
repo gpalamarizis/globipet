@@ -71,6 +71,7 @@ import userConsentsRoutes from './routes/user-consents.js'
 import governanceRoutes from './routes/governance.js'
 import moderationRoutes from './routes/moderation.js'      // App Store 1.2 — αναφορά/αποκλεισμός
 import providerScanRoutes from './routes/provider-scan.js'   // Ε20 — σάρωση παρόχων (Google Places)
+import adoptionRoutes from './routes/adoption.js'            // Υιοθεσία ζώων (11/2026)
 
 /**
  * ΤΟ trustProxy ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ ΕΔΩ
@@ -554,6 +555,7 @@ const routes = [
   { prefix: '/api/user-consents', handler: userConsentsRoutes },
   { prefix: '/api/admin/governance', handler: governanceRoutes },
   { prefix: '/api/admin/provider-scan', handler: providerScanRoutes },   // Ε20
+  { prefix: '/api/adoption', handler: adoptionRoutes },                  // Υιοθεσία ζώων
   { prefix: '/api', handler: insuranceRoutes },
 ]
 

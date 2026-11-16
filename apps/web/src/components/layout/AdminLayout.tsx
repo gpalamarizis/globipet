@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home, RotateCcw, UserX, Award, Crown, Inbox, Radar } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Building2, Package, Layers, Percent, Mail, Brain, ScrollText, ShieldCheck, BadgeCheck, Languages, Home, RotateCcw, UserX, Award, Crown, Inbox, Radar, HeartHandshake } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -28,6 +28,8 @@ const tabs = [
   { path: '/admin/deletion-requests', labelKey: 'adminLayout.deletionRequests', icon: UserX },
   // Ε20 — σάρωση παρόχων (Google Places) για πρόσκληση στο GlobiPet.
   { path: '/admin/provider-scan', labelKey: 'adminScan.menu', icon: Radar },
+  // Υιοθεσία — εποπτεία αγγελιών.
+  { path: '/admin/adoption',      labelKey: 'adoption.admin.title',      icon: HeartHandshake },
 ]
 
 export default function AdminLayout() {

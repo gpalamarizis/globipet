@@ -96,6 +96,13 @@ const AdminRefundsPage    = lazy(() => import('@/pages/admin/AdminRefundsPage'))
 const AdminDeletionRequestsPage = lazy(() => import('@/pages/admin/AdminDeletionRequestsPage'))
 const AdminContactMessagesPage = lazy(() => import('@/pages/admin/AdminContactMessagesPage'))
 const AdminProviderScanPage = lazy(() => import('@/pages/admin/AdminProviderScanPage'))   // Ε20
+// Υιοθεσία ζώων
+const AdoptionPage = lazy(() => import('@/pages/Adoption'))
+const AdoptionDetail = lazy(() => import('@/pages/AdoptionDetail'))
+const AdoptionManagePage = lazy(() => import('@/pages/AdoptionManage'))
+const AdoptionApplicationsPage = lazy(() => import('@/pages/AdoptionApplications'))
+const AdoptionApplicationPage = lazy(() => import('@/pages/AdoptionApplication'))
+const AdminAdoptionPage = lazy(() => import('@/pages/admin/AdminAdoptionPage'))
 const ProductSubscribe  = lazy(() => import('@/pages/ProductSubscribe'))
 const NotFound          = lazy(() => import('@/pages/NotFound'))
 const AboutPage         = lazy(() => import('@/pages/AboutPage'))
@@ -275,6 +282,12 @@ export default function App() {
                 <Route path="/passport"        element={<PrivateRoute><PetPassport /></PrivateRoute>} />
                 <Route path="/shelters"       element={<Shelters />} />
                 <Route path="/welfare-organisations" element={<WelfareOrgs />} />
+                {/* Υιοθεσία: ο κατάλογος και η σελίδα ζώου είναι δημόσια· τα υπόλοιπα με λογαριασμό. */}
+                <Route path="/adoption"       element={<AdoptionPage />} />
+                <Route path="/adoption/manage" element={<PrivateRoute><AdoptionManagePage /></PrivateRoute>} />
+                <Route path="/adoption/applications" element={<PrivateRoute><AdoptionApplicationsPage /></PrivateRoute>} />
+                <Route path="/adoption/applications/:id" element={<PrivateRoute><AdoptionApplicationPage /></PrivateRoute>} />
+                <Route path="/adoption/:id"   element={<AdoptionDetail />} />
                 <Route path="/playdates"       element={<PrivateRoute><Playdates /></PrivateRoute>} />
                 <Route path="/communities"     element={<PrivateRoute><Communities /></PrivateRoute>} />
                 <Route path="/communities/:id" element={<PrivateRoute><Communities /></PrivateRoute>} />
@@ -341,6 +354,7 @@ export default function App() {
                 <Route path="/admin/deletion-requests" element={<AdminDeletionRequestsPage />} />
                 <Route path="/admin/contact-messages" element={<AdminContactMessagesPage />} />
                 <Route path="/admin/provider-scan" element={<AdminProviderScanPage />} />
+                <Route path="/admin/adoption"     element={<AdminAdoptionPage />} />
                 <Route path="/admin/*"             element={<AdminDashboard />} />
               </Route>
               <Route path="*"        element={<NotFound />} />

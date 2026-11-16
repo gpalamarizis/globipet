@@ -19,7 +19,7 @@ import { colors, space, radius, type, weight, icon, touch } from '@/theme'
  * Στο δικό μου περιεχόμενο δεν εμφανίζεται (is_mine).
  * Ίδια λειτουργία με το web (components/ContentActions.tsx).
  */
-export type ContentKind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message'
+export type ContentKind = 'post' | 'comment' | 'topic' | 'reply' | 'community_message' | 'adoption_listing'
 
 const REASONS = ['spam', 'harassment', 'hate', 'inappropriate', 'other'] as const
 

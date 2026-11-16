@@ -1678,3 +1678,147 @@ model UserBlock {
   @@index([blocker_email], map: "user_blocks_blocker_idx")
   @@map("user_blocks")
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ΥΙΟΘΕΣΙΑ ΖΩΩΝ (Νοέμβριος 2026)
+// ═══════════════════════════════════════════════════════════════════════
+//  Αγγελίες από φιλοζωικά/καταφύγια (λογαριασμοί παρόχου με υπηρεσία
+//  shelter/adoption ή διεκδικημένη εγγραφή μητρώου) ΚΑΙ από ιδιώτες.
+//  Οι κανόνες ανά χώρα (GR, ES, GB, FR, CN) είναι στο lib/adoptionRules.ts.
+//  Η GlobiPet ΔΕΝ εισπράττει τίποτα: το τυχόν αντίτιμο οργανισμού
+//  (κάλυψη εξόδων) καταβάλλεται απευθείας σε αυτόν. Ιδιώτες: μόνο δωρεάν.
+//  Τα email δεν επιστρέφονται ποτέ σε τρίτους (is_mine / my_role).
+
+model AdoptionListing {
+  id                     String    @id @default(uuid())
+  lister_email           String
+  lister_name            String    @db.VarChar(255)
+  /// organisation | individual — το ορίζει ο server, όχι ο client.
+  lister_type            String    @db.VarChar(20)
+  /// shelter | foster | own_pet | found
+  source                 String    @db.VarChar(20)
+  /// Η υπηρεσία του οργανισμού (σύνδεσμος «Προφίλ οργανισμού»).
+  service_id             String?
+  /// Κατοικίδιο του ιδιώτη από το οποίο συμπληρώθηκε η αγγελία.
+  pet_id                 String?
+  name                   String    @db.VarChar(80)
+  /// dog | cat | rabbit | ferret | bird | rodent | reptile | other
+  species                String    @db.VarChar(20)
+  breed                  String?   @db.VarChar(120)
+  is_mixed               Boolean   @default(false)
+  /// male | female | unknown
+  sex                    String    @db.VarChar(10)
+  /// Εκτιμώμενη ημερομηνία γέννησης — η ηλικία υπολογίζεται πάντα από εδώ.
+  birth_date_est         DateTime  @db.Date
+  /// small | medium | large | xlarge
+  size                   String?   @db.VarChar(10)
+  color                  String?   @db.VarChar(80)
+  weight_kg              Float?
+  microchip_number       String?   @db.VarChar(20)
+  is_sterilized          Boolean   @default(false)
+  is_vaccinated          Boolean   @default(false)
+  is_dewormed            Boolean   @default(false)
+  health_notes           String?
+  special_needs          Boolean   @default(false)
+  /// yes | no | unknown
+  good_with_kids         String    @default("unknown") @db.VarChar(10)
+  good_with_dogs         String    @default("unknown") @db.VarChar(10)
+  good_with_cats         String    @default("unknown") @db.VarChar(10)
+  house_trained          Boolean?
+  /// low | medium | high
+  energy_level           String?   @db.VarChar(10)
+  description            String
+  photos                 String[]
+  /// ISO 3166-1 alpha-2 (GR, ES, GB, FR, CN, …)
+  country                String    @db.VarChar(2)
+  city                   String    @db.VarChar(120)
+  latitude               Float?
+  longitude              Float?
+  /// Μόνο οργανισμοί, μόνο κάλυψη εξόδων. Ιδιώτες: πάντα 0.
+  adoption_fee           Float     @default(0)
+  fee_currency           String    @default("EUR") @db.VarChar(3)
+  fee_breakdown          String?
+  requirements           String?
+  allows_abroad          Boolean   @default(false)
+  /// Ηνωμένο Βασίλειο (Lucy's Law): ο ιδιώτης δηλώνει ότι το γέννησε δικό του ζώο.
+  bred_by_lister         Boolean   @default(false)
+  /// Πότε ο καταχωρίζων δήλωσε ότι τηρεί τη νομοθεσία της χώρας.
+  legal_ack_at           DateTime  @db.Timestamptz(6)
+  /// available | reserved | adopted | withdrawn
+  status                 String    @default("available") @db.VarChar(20)
+  /// Εποπτεία (admin) — κρυφή αγγελία δεν εμφανίζεται πουθενά εκτός από τον κάτοχο.
+  is_hidden              Boolean   @default(false)
+  hidden_reason          String?
+  adopted_at             DateTime? @db.Timestamptz(6)
+  adopter_application_id String?
+  views_count            Int       @default(0)
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  applications           AdoptionApplication[]
+  favorites              AdoptionFavorite[]
+
+  @@index([status, country, species], map: "adoption_listings_browse_idx")
+  @@index([lister_email], map: "adoption_listings_lister_idx")
+  @@map("adoption_listings")
+}
+
+model AdoptionApplication {
+  id               String    @id @default(uuid())
+  listing_id       String
+  applicant_email  String
+  applicant_name   String    @db.VarChar(255)
+  /// Τηλέφωνο επικοινωνίας — το βλέπει ΜΟΝΟ ο καταχωρίζων της αγγελίας.
+  applicant_phone  String?   @db.VarChar(30)
+  /// pending | reviewing | approved | rejected | withdrawn | completed
+  status           String    @default("pending") @db.VarChar(20)
+  /// Ερωτηματολόγιο (κατοικία, νοικοκυριό, εμπειρία, χώρα διαμονής …).
+  answers          Json
+  message          String?
+  /// Ιδιωτική σημείωση του καταχωρίζοντος — ποτέ στον αιτούντα.
+  lister_note      String?
+  decision_reason  String?
+  /// Γαλλία: ημερομηνία παράδοσης του certificat d'engagement et de connaissance.
+  cec_date         DateTime? @db.Date
+  /// Επιβεβαιώσεις ολοκλήρωσης ανά χώρα (κλειδιά από lib/adoptionRules.ts).
+  completion_acks  Json?
+  decided_at       DateTime? @db.Timestamptz(6)
+  completed_at     DateTime? @db.Timestamptz(6)
+  /// Το κατοικίδιο που δημιουργήθηκε στον λογαριασμό του νέου κηδεμόνα.
+  pet_created_id   String?
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  listing          AdoptionListing @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages         AdoptionMessage[]
+
+  @@unique([listing_id, applicant_email], map: "adoption_applications_listing_applicant_key")
+  @@index([applicant_email], map: "adoption_applications_applicant_idx")
+  @@index([listing_id, status], map: "adoption_applications_listing_status_idx")
+  @@map("adoption_applications")
+}
+
+model AdoptionMessage {
+  id             String    @id @default(uuid())
+  application_id String
+  sender_email   String
+  /// lister | applicant
+  sender_role    String    @db.VarChar(10)
+  body           String
+  read_at        DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  application    AdoptionApplication @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([application_id, created_at], map: "adoption_messages_thread_idx")
+  @@map("adoption_messages")
+}
+
+model AdoptionFavorite {
+  id         String   @id @default(uuid())
+  listing_id String
+  user_email String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  listing    AdoptionListing @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([listing_id, user_email], map: "adoption_favorites_listing_user_key")
+  @@index([user_email], map: "adoption_favorites_user_idx")
+  @@map("adoption_favorites")
+}
