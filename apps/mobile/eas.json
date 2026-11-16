@@ -16,6 +16,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://globipetbackend-production.up.railway.app/api"
       },
